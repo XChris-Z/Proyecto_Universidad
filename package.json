@@ -1,0 +1,21 @@
+{
+  "name": "sgd-unitropico",
+  "version": "1.0.0",
+  "description": "Sistema de Gestión Documental y Archivo Institucional - SGD Unitrópico",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "gestion-documental",
+    "sgd",
+    "unitropico",
+    "universidad",
+    "javascript",
+    "html5",
+    "css3"
+  ],
+  "author": "XChris-Z",
+  "license": "MIT"
+}

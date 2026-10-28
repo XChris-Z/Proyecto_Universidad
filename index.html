@@ -1,0 +1,2690 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SGD Unitrópico - Sistema de Gestión Documental</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- Barra lateral -->
+    <aside class="sidebar">
+      <div class="brand-section">
+        <div class="brand-logo" title="Unitrópico">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 2L2 7v7c0 5.55 3.84 10.74 10 12 6.16-1.26 10-6.45 10-12V7l-10-5zm0 3.3l7 3.5v5.2c0 4.38-2.94 8.48-7 9.58-4.06-1.1-7-5.2-7-9.58V8.8l7-3.5z" fill="#ffffff"/>
+            <path d="M11 11h2v5h-2zm0-4h2v2h-2z" fill="#B5A160"/>
+          </svg>
+        </div>
+        <div class="brand-info">
+          <div class="brand-title">UNI<span>TRÓPICO</span></div>
+          <div class="brand-subtitle">Gestión Documental</div>
+        </div>
+        <button class="mobile-sidebar-close" id="btn-mobile-sidebar-close" aria-label="Cerrar menú">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <nav class="nav-menu">
+        <div class="nav-label">Navegación Principal</div>
+
+        <div class="nav-item active" data-view="dashboard" id="nav-dashboard">
+          <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+          <span>Dashboard</span>
+        </div>
+
+        <div class="nav-item" data-view="archivos" id="nav-archivos">
+          <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+          <span>Módulo Archivos</span>
+          <span class="nav-badge" id="badge-total-docs">4</span>
+        </div>
+
+        <div class="nav-item" data-view="peticiones" id="nav-peticiones">
+          <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <span>Derechos de Petición</span>
+          <span class="nav-badge" id="badge-total-peticiones" style="background: var(--status-warn);">3</span>
+        </div>
+
+        <div class="nav-item" data-action="open-upload-modal">
+          <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+          <span>Radicar Archivo / PQRS</span>
+        </div>
+
+        <div class="nav-label">Gobierno y Normativa</div>
+
+        <div class="nav-item" data-view="normas" id="nav-normas">
+          <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+          <span>Cuerpos Colegiados</span>
+          <span class="nav-badge" id="badge-total-normas">12</span>
+        </div>
+
+        <div class="nav-item" data-view="juridicos" id="nav-juridicos">
+          <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>
+          <span>Asuntos Jurídicos</span>
+          <span class="nav-badge" id="badge-total-juridicos" style="background: #e11d48;">18</span>
+        </div>
+
+        <div class="nav-label">Control y Disciplinario</div>
+
+        <div class="nav-item" data-view="juzgamiento" id="nav-juzgamiento">
+          <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          <span>Fase de Juzgamiento</span>
+          <span class="nav-badge" id="badge-total-juzgamiento" style="background: #9333ea;">5</span>
+        </div>
+
+        <div class="nav-item" data-view="calendario" id="nav-calendario">
+          <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <span>Calendario</span>
+          <span class="nav-badge danger" id="badge-alert-count">2</span>
+        </div>
+
+        <div class="nav-label">Academia y Estrategia</div>
+
+        <div class="nav-item" data-view="programas" id="nav-programas">
+          <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222"/></svg>
+          <span>Programas Académicos</span>
+          <span class="nav-badge" id="badge-total-programas" style="background: var(--primary);">8</span>
+        </div>
+
+        <div class="nav-item" data-view="planeacion" id="nav-planeacion">
+          <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          <span>Planeación y Gestión CSU</span>
+        </div>
+
+        <div class="nav-item" data-view="relacionamiento" id="nav-relacionamiento">
+          <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
+          <span>Relacionamiento Institucional</span>
+          <span class="nav-badge" id="badge-total-convenios" style="background: var(--secondary);">11</span>
+        </div>
+
+        <div class="nav-label">Estructura y Dependencias</div>
+
+        <div class="nav-item" data-view="dependencias" id="nav-dependencias">
+          <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+          <span>Dependencias Universitarias</span>
+          <span class="nav-badge" id="badge-total-dependencias" style="background: var(--primary);">10</span>
+        </div>
+
+        <div class="nav-label">Seguridad y Auditoría</div>
+
+        <div class="nav-item" data-view="auditoria" id="nav-auditoria">
+          <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+          <span>Auditoría y Trazabilidad</span>
+        </div>
+      </nav>
+
+      <!-- Perfil de usuario y cambio de rol -->
+      <div class="user-profile-section">
+        <div class="user-profile-header">
+          <div class="user-avatar" id="avatar-initials">CL</div>
+          <div class="user-info">
+            <div class="user-name" id="user-display-name">Dr. Cristian Lemus</div>
+            <div class="role-badge admin" id="user-role-badge">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+              <span>RECTOR MAGNÍFICO</span>
+            </div>
+          </div>
+        <div style="display: flex; gap: 6px; margin-top: 8px;">
+          <button class="role-switch-btn" id="btn-toggle-role" title="Conmutar usuario entre Rector, Jefes de Dependencia y Funcionarios" style="flex: 1;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+            <span>Cambiar Rol</span>
+          </button>
+          <button class="btn-logout" id="btn-logout" title="Cerrar Sesión del SGD Unitrópico">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <span>Salir</span>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Telón de fondo para menú lateral en móviles y tablets -->
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+    <!-- Contenido principal -->
+    <main class="main-wrapper">
+      <header class="topbar">
+        <div class="topbar-left-wrap">
+          <button class="btn-hamburger" id="btn-mobile-menu-toggle" aria-label="Abrir menú de navegación" title="Abrir menú de navegación">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+          <div class="page-header-title">
+            <h1 class="page-title" id="view-title">
+              Dashboard — Panel de Control
+              <span class="accent-dot"></span>
+            </h1>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input type="text" id="global-search-input" placeholder="Buscar documento, radicado...">
+          </div>
+
+          <!-- Semáforo y Alertas del Despacho Rectoral -->
+          <button class="btn-rector-alerts" id="btn-rector-alerts" title="Centro de Notificaciones y Semáforo de Vencimientos para el Rector">
+            <span class="bell-icon-wrap">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              <span class="bell-pulse-dot"></span>
+            </span>
+            <span class="rector-alert-label">Despacho Rector</span>
+            <span class="alert-count-pill" id="rector-critical-count">3 Alertas</span>
+          </button>
+
+          <div class="date-badge">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span id="current-date-text">Octubre 2026</span>
+          </div>
+
+          <button class="btn btn-primary" id="btn-topbar-upload">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>Subir Archivo</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="content-body">
+
+        <!-- Vista: Dashboard -->
+        <!-- Vista: Dashboard (Centro de Mando Institucional del Rector) -->
+        <section class="view-container active" id="view-dashboard-section">
+          <!-- Hero Banner Despacho Rectoral -->
+          <div class="hero-banner">
+            <div class="hero-content">
+              <h2>Despacho Rectoral — <span>Centro de Mando Institucional</span></h2>
+              <p>Monitoreo integral de gobierno universitario: cuerpos colegiados, asuntos jurídicos, fase de juzgamiento, planeación financiera CSU y calendario institucional de Unitrópico.</p>
+            </div>
+            <div class="hero-stats-quick">
+              <div class="hero-pill" onclick="switchView('dependencias')" style="cursor: pointer;" title="Ver dependencias universitarias">
+                <div class="number" id="quick-total-dependencias">10</div>
+                <div class="label">Dependencias</div>
+              </div>
+              <div class="hero-pill" onclick="switchView('normas')" style="cursor: pointer;" title="Ver cuerpos colegiados y normas">
+                <div class="number" id="quick-total-normas" style="color: var(--secondary);">12</div>
+                <div class="label">Actos Colegiados</div>
+              </div>
+              <div class="hero-pill" onclick="switchView('planeacion')" style="cursor: pointer;" title="Ver ejecución presupuestal CSU">
+                <div class="number" id="quick-budget-csu" style="color: var(--status-safe);">$48.5B</div>
+                <div class="label">Presupuesto CSU</div>
+              </div>
+              <div class="hero-pill" onclick="switchView('juridicos')" style="cursor: pointer;" title="Ver brechas normativas">
+                <div class="number" id="quick-normative-coverage" style="color: #6366f1;">78%</div>
+                <div class="label">Cobertura Normativa</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Métricas KPI Ejecutivas (6 Módulos Principales) -->
+          <div class="kpi-grid-6">
+            <!-- 1. Peticiones y Radicados -->
+            <div class="kpi-card gold interactive" onclick="switchView('peticiones')" title="Ir al módulo de Derechos de Petición">
+              <div class="kpi-header">
+                <span class="kpi-title">Peticiones / PQRS</span>
+                <div class="kpi-icon-wrap">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                </div>
+              </div>
+              <div class="kpi-value-row">
+                <div class="kpi-number" id="kpi-total-docs">4</div>
+                <span class="kpi-trend positive" id="kpi-pending-docs">3 Pendientes</span>
+              </div>
+              <div class="kpi-footer">
+                <span>Eficacia Institucional</span>
+                <span style="color: var(--secondary); font-weight: 700;" id="kpi-response-rate">25% Resuelto</span>
+              </div>
+            </div>
+
+            <!-- 2. Cuerpos Colegiados -->
+            <div class="kpi-card interactive" onclick="switchView('normas')" title="Ir a Normativa y Cuerpos Colegiados">
+              <div class="kpi-header">
+                <span class="kpi-title">Cuerpos Colegiados</span>
+                <div class="kpi-icon-wrap" style="color: var(--primary); background: var(--primary-subtle); border-color: var(--primary-border);">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                </div>
+              </div>
+              <div class="kpi-value-row">
+                <div class="kpi-number" id="kpi-total-normas">12</div>
+                <span class="kpi-trend positive">CSU &bull; CA &bull; Rec</span>
+              </div>
+              <div class="kpi-footer">
+                <span>Actos Sistematizados</span>
+                <span style="color: var(--primary); font-weight: 700;">100% Vigentes</span>
+              </div>
+            </div>
+
+            <!-- 3. Asuntos Jurídicos y Brechas -->
+            <div class="kpi-card danger interactive" onclick="switchView('juridicos')" title="Ir a Asuntos Jurídicos y Brechas Normativas">
+              <div class="kpi-header">
+                <span class="kpi-title">Asuntos Jurídicos</span>
+                <div class="kpi-icon-wrap" style="color: #e11d48; background: #ffe4e6; border-color: #fecdd3;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>
+                </div>
+              </div>
+              <div class="kpi-value-row">
+                <div class="kpi-number" id="kpi-total-juridicos-dash">18</div>
+                <span class="kpi-trend positive">5 Conceptos</span>
+              </div>
+              <div class="kpi-footer">
+                <span>Brechas Mitigadas</span>
+                <span style="color: #e11d48; font-weight: 700;">8 Proyectos (78%)</span>
+              </div>
+            </div>
+
+            <!-- 4. Fase de Juzgamiento -->
+            <div class="kpi-card purple interactive" onclick="switchView('juzgamiento')" title="Ir a Fase de Juzgamiento Disciplinario">
+              <div class="kpi-header">
+                <span class="kpi-title">Juzgamiento Disciplinario</span>
+                <div class="kpi-icon-wrap" style="color: #9333ea; background: #f3e8ff; border-color: #e9d5ff;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                </div>
+              </div>
+              <div class="kpi-value-row">
+                <div class="kpi-number" id="kpi-total-juzgamiento-dash">5</div>
+                <span class="kpi-trend positive" style="background: #f3e8ff; color: #7e22ce;">3 Autos / 2 Apel.</span>
+              </div>
+              <div class="kpi-footer">
+                <span>Régimen Disciplinario</span>
+                <span style="color: #9333ea; font-weight: 700;">2da Instancia Rector</span>
+              </div>
+            </div>
+
+            <!-- 5. Planeación Estratégica CSU -->
+            <div class="kpi-card teal interactive" onclick="switchView('planeacion')" title="Ir a Planeación y Gestión CSU">
+              <div class="kpi-header">
+                <span class="kpi-title">Planeación y CSU</span>
+                <div class="kpi-icon-wrap" style="color: #0d9488; background: #ccfbf1; border-color: #99f6e4;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                </div>
+              </div>
+              <div class="kpi-value-row">
+                <div class="kpi-number" id="kpi-total-budget-dash" style="font-size: 1.85rem;">74.2%</div>
+                <span class="kpi-trend positive">$48.500M</span>
+              </div>
+              <div class="kpi-footer">
+                <span>Informes Presentados</span>
+                <span style="color: #0d9488; font-weight: 700;">8 Fin. / 3 Gestión</span>
+              </div>
+            </div>
+
+            <!-- 6. Google Calendar y Semáforo -->
+            <div class="kpi-card blue interactive" onclick="switchView('calendario')" title="Ir a Calendario y Semáforo">
+              <div class="kpi-header">
+                <span class="kpi-title">Agenda y Semáforo</span>
+                <div class="kpi-icon-wrap" style="color: #2563eb; background: #dbeafe; border-color: #bfdbfe;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                </div>
+              </div>
+              <div class="kpi-value-row">
+                <div class="kpi-number" id="kpi-total-sessions-dash">2</div>
+                <span class="kpi-trend positive" style="background: #dbeafe; color: #1d4ed8;">Sesión CSU 24 Oct</span>
+              </div>
+              <div class="kpi-footer">
+                <span>Google Calendar Sync</span>
+                <span style="color: #2563eb; font-weight: 700;">En Línea &bull; 6 Eventos</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fila 1 de Paneles: Reparto Prioritario & SLA de Peticiones -->
+          <div class="dashboard-split-grid">
+            <!-- Columna Principal: Reparto Rectoral Prioritario -->
+            <div class="panel-box">
+              <div class="panel-header">
+                <div class="panel-title">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  <span>Reparto Rectoral Prioritario: Expedientes y Términos</span>
+                </div>
+                <span class="panel-link" onclick="switchView('archivos')">Ver todos los radicados &rarr;</span>
+              </div>
+
+              <div id="dashboard-critical-list" style="display: flex; flex-direction: column; gap: 14px;">
+                <!-- Dinámico desde JS -->
+              </div>
+            </div>
+
+            <!-- Columna Lateral: Eficacia en Peticiones y Distribución SLA -->
+            <div class="dashboard-side-column">
+              <!-- Widget: Eficacia en Respuestas a Peticiones -->
+              <div class="panel-box">
+                <div class="panel-header">
+                  <div class="panel-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><polyline points="9 10 12 7 15 10"/><line x1="12" y1="7" x2="12" y2="13"/></svg>
+                    <span>Eficacia en Peticiones</span>
+                  </div>
+                  <span class="badge-response-status responded" style="cursor: pointer;" onclick="switchView('peticiones')" id="widget-efficacy-badge">25% Resuelto</span>
+                </div>
+
+                <div class="efficacy-card-body">
+                  <div class="efficacy-stats-row">
+                    <div class="efficacy-metric-box">
+                      <span class="efficacy-metric-num" id="widget-responded-count" style="color: var(--status-safe);">1</span>
+                      <span class="efficacy-metric-label">Oficios Emitidos</span>
+                    </div>
+                    <div class="efficacy-metric-box">
+                      <span class="efficacy-metric-num" id="widget-pending-count" style="color: var(--status-warn);">3</span>
+                      <span class="efficacy-metric-label">Pendientes de Trámite</span>
+                    </div>
+                  </div>
+
+                  <div class="dist-item" style="margin-top: 6px;">
+                    <div class="dist-meta">
+                      <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-main);">Tasa de Respuesta Institucional</span>
+                      <span id="widget-response-pct" style="color: var(--primary); font-weight: 800;">25%</span>
+                    </div>
+                    <div class="dist-progress-bg" style="height: 10px;">
+                      <div class="dist-progress-fill" id="widget-response-bar" style="width: 25%; background: linear-gradient(90deg, var(--secondary) 0%, var(--primary) 100%);"></div>
+                    </div>
+                  </div>
+
+                  <button class="btn-manage-petitions" id="btn-quick-manage-petitions" onclick="filterByPendingPetitions()">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <span>Atender Peticiones Pendientes</span>
+                    <span class="badge-counter" id="widget-pending-badge">3</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Widget: Distribución de Términos SLA -->
+              <div class="panel-box">
+                <div class="panel-header">
+                  <div class="panel-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0110 10H12V2z"/></svg>
+                    <span>Términos de Radicación (SLA)</span>
+                  </div>
+                </div>
+
+                <div class="stats-distribution-list">
+                  <div class="dist-item">
+                    <div class="dist-meta">
+                      <span><span class="dist-dot" style="background: #10B981;"></span> En Término Óptimo (&lt;50%)</span>
+                      <span id="dist-count-safe">2 docs (50%)</span>
+                    </div>
+                    <div class="dist-progress-bg">
+                      <div class="dist-progress-fill" id="dist-bar-safe" style="width: 50%; background: #10B981;"></div>
+                    </div>
+                  </div>
+
+                  <div class="dist-item">
+                    <div class="dist-meta">
+                      <span><span class="dist-dot" style="background: #F59E0B;"></span> Advertencia Media (50%-80%)</span>
+                      <span id="dist-count-warn">1 doc (25%)</span>
+                    </div>
+                    <div class="dist-progress-bg">
+                      <div class="dist-progress-fill" id="dist-bar-warn" style="width: 25%; background: #F59E0B;"></div>
+                    </div>
+                  </div>
+
+                  <div class="dist-item">
+                    <div class="dist-meta">
+                      <span><span class="dist-dot" style="background: #EF4444;"></span> Alerta Crítica (&gt;80%)</span>
+                      <span id="dist-count-danger">1 doc (25%)</span>
+                    </div>
+                    <div class="dist-progress-bg">
+                      <div class="dist-progress-fill" id="dist-bar-danger" style="width: 25%; background: #EF4444;"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="institutional-compliance-note">
+                  <div class="note-header">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    <span>Seguimiento y Cumplimiento Normativo</span>
+                  </div>
+                  <p>
+                    Semáforo de plazos automatizado conforme a la <strong>Ley 1755 de 2015</strong> y las políticas de gestión documental de Unitrópico.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fila 2 de Paneles: Cuerpos Colegiados Recientes & Agenda de la Semana -->
+          <div class="dashboard-grid-2x2">
+            <!-- Panel Colegiados Recientes -->
+            <div class="panel-box">
+              <div class="panel-header">
+                <div class="panel-title">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                  <span>Cuerpos Colegiados: Resoluciones y Acuerdos Recientes</span>
+                </div>
+                <span class="panel-link" onclick="switchView('normas')">Explorar normativa (12) &rarr;</span>
+              </div>
+              <div class="dashboard-colegiados-mini-list" id="dashboard-colegiados-recent-list">
+                <!-- Dinámico desde JS -->
+              </div>
+            </div>
+
+            <!-- Panel Agenda Rectoral y Google Calendar -->
+            <div class="panel-box">
+              <div class="panel-header">
+                <div class="panel-title">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  <span>Agenda Institucional &amp; Google Calendar</span>
+                </div>
+                <span class="panel-link" onclick="switchView('calendario')">Ver calendario &rarr;</span>
+              </div>
+              <div class="dashboard-cal-mini-list" id="dashboard-calendar-recent-list">
+                <!-- Dinámico desde JS -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Fila 3: Carga Operativa por Dependencias -->
+          <div class="panel-box">
+            <div class="panel-header">
+              <div class="panel-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <span>Carga Operativa y Despachos por Dependencia Universitaria</span>
+              </div>
+              <span class="panel-link" onclick="switchView('dependencias')">Ver las 10 dependencias y oficios &rarr;</span>
+            </div>
+            <div id="dashboard-dependencias-workload-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
+              <!-- Dinámico desde JS -->
+            </div>
+          </div>
+        </section>
+
+        <!-- Vista: Módulo de Archivos -->
+        <section class="view-container" id="view-archivos-section">
+          <div class="section-toolbar">
+            <div class="filter-tabs">
+              <button class="filter-tab active" data-filter="all">
+                <span>Todos</span>
+                <span class="filter-count" id="count-all">4</span>
+              </button>
+              <button class="filter-tab" data-filter="pending">
+                <span class="dist-dot" style="background: #F59E0B;"></span>
+                <span>Pendientes Resp.</span>
+                <span class="filter-count" id="count-pending">3</span>
+              </button>
+              <button class="filter-tab" data-filter="responded">
+                <span class="dist-dot" style="background: #10B981;"></span>
+                <span>Respondidas</span>
+                <span class="filter-count" id="count-responded">1</span>
+              </button>
+              <button class="filter-tab" data-filter="safe">
+                <span class="dist-dot" style="background: #10B981;"></span>
+                <span>En Plazo</span>
+                <span class="filter-count" id="count-safe">2</span>
+              </button>
+              <button class="filter-tab" data-filter="warn">
+                <span class="dist-dot" style="background: #F59E0B;"></span>
+                <span>Por Vencer</span>
+                <span class="filter-count" id="count-warn">1</span>
+              </button>
+              <button class="filter-tab" data-filter="critical">
+                <span class="dist-dot" style="background: #EF4444;"></span>
+                <span>Críticos (&gt;80%)</span>
+                <span class="filter-count" id="count-critical">1</span>
+              </button>
+            </div>
+
+            <div>
+              <button class="btn btn-primary" id="btn-open-upload-modal-view">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <span>Subir Nuevo Archivo</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="doc-table">
+              <thead>
+                <tr>
+                  <th>Archivo / Petición</th>
+                  <th>Radicado</th>
+                  <th>Fechas (Radicado - Plazo)</th>
+                  <th>Plazo de Vencimiento (Progreso)</th>
+                  <th>Responsable Asignado</th>
+                  <th>Estado Trámite / Respuesta</th>
+                  <th style="text-align: right;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="documents-table-body">
+                <!-- Dinámico desde JS -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Vista: Dependencias Universitarias y Funcionarios Adscritos -->
+        <section class="view-container" id="view-dependencias-section">
+          <div class="dependencias-hero-banner">
+            <div class="dependencias-hero-title">
+              <h2>Estructura Orgánica y <span>Dependencias Universitarias</span></h2>
+              <p>Despachos, vicerrectorías, oficinas asesoras y facultades de Unitrópico. En cada dependencia se gestionan los funcionarios adscritos y se reciben los expedientes repartidos por el Despacho del Rector.</p>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <button class="btn btn-secondary" id="btn-open-add-official-modal" style="background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3); color: #ffffff;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+                <span>+ Vincular Funcionario</span>
+              </button>
+              <button class="btn btn-primary" id="btn-open-new-dep-modal" style="background: var(--secondary); color: #ffffff; border-color: var(--secondary);">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                <span>+ Crear Nueva Dependencia</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Métricas de Dependencias -->
+          <div class="dependencias-kpi-row">
+            <div class="dependencia-kpi-card">
+              <div class="val" id="dep-stat-total">10</div>
+              <div class="lbl">Dependencias Oficiales</div>
+            </div>
+            <div class="dependencia-kpi-card">
+              <div class="val" id="dep-stat-officials" style="color: var(--secondary);">24</div>
+              <div class="lbl">Funcionarios Vinculados</div>
+            </div>
+            <div class="dependencia-kpi-card">
+              <div class="val" id="dep-stat-active-files" style="color: #0284c7;">42</div>
+              <div class="lbl">Expedientes en Trámite</div>
+            </div>
+            <div class="dependencia-kpi-card">
+              <div class="val" id="dep-stat-rate" style="color: #059669;">96%</div>
+              <div class="lbl">Eficacia de Despacho</div>
+            </div>
+          </div>
+
+          <!-- Barra de Búsqueda y Filtros de Dependencias -->
+          <div style="display: flex; gap: 14px; margin-bottom: 20px; flex-wrap: wrap;">
+            <div class="search-box" style="flex: 1; min-width: 280px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              <input type="text" id="dep-search-input" placeholder="Buscar dependencia por nombre, sigla o funcionario...">
+            </div>
+            <select class="form-select" id="dep-filter-level" style="width: 220px;">
+              <option value="all" selected>Todos los Niveles</option>
+              <option value="Directivo Superior">Directivo Superior</option>
+              <option value="Asesor">Nivel Asesor</option>
+              <option value="Misional">Nivel Misional (Académico / Investigación)</option>
+              <option value="Apoyo">Nivel de Apoyo y Administrativo</option>
+              <option value="Control">Control Disciplinario</option>
+            </select>
+          </div>
+
+          <!-- Grid de Dependencias Universitarias -->
+          <div class="dependencias-grid" id="dependencias-cards-grid">
+            <!-- Dinámico desde JS -->
+          </div>
+        </section>
+
+        <!-- Vista: Derechos de Petición (Con Fundamento y Procedencia del Derecho) -->
+        <section class="view-container" id="view-peticiones-section">
+          <div class="legal-basis-banner">
+            <div class="legal-basis-text">
+              <h4>Fundamentación Constitucional y Procedencia del Derecho</h4>
+              <p>Módulo de radicación, trazabilidad y respuesta formal conforme al Artículo 23 de la Constitución Política, la Ley Estatutaria 1755 de 2015, la Ley 1712 de 2014 (Transparencia) y el CPACA (Ley 1437 de 2011).</p>
+            </div>
+            <div class="legal-basis-badges">
+              <span class="badge-right-origin cp23">Constitución Art. 23</span>
+              <span class="badge-right-origin ley1755">Ley 1755 / 2015</span>
+              <span class="badge-right-origin ley1712">Ley 1712 / 2014</span>
+              <span class="badge-right-origin cpaca">Ley 1437 CPACA</span>
+              <span class="badge-right-origin interno">Reglamento Unitrópico</span>
+            </div>
+          </div>
+
+          <div class="section-toolbar">
+            <div class="filter-tabs" id="peticiones-filter-tabs">
+              <button class="filter-tab active" data-pfilter="all">
+                <span>Todas las Peticiones</span>
+                <span class="filter-count" id="pcount-all">0</span>
+              </button>
+              <button class="filter-tab" data-pfilter="particular">
+                <span class="dist-dot" style="background: var(--primary);"></span>
+                <span>Interés Particular (15d)</span>
+                <span class="filter-count" id="pcount-particular">0</span>
+              </button>
+              <button class="filter-tab" data-pfilter="general">
+                <span class="dist-dot" style="background: var(--secondary);"></span>
+                <span>Interés General (15d)</span>
+                <span class="filter-count" id="pcount-general">0</span>
+              </button>
+              <button class="filter-tab" data-pfilter="informacion">
+                <span class="dist-dot" style="background: #0284c7;"></span>
+                <span>Información y Copias (10d)</span>
+                <span class="filter-count" id="pcount-info">0</span>
+              </button>
+              <button class="filter-tab" data-pfilter="consulta">
+                <span class="dist-dot" style="background: #7c3aed;"></span>
+                <span>Consultas Jurídicas (30d)</span>
+                <span class="filter-count" id="pcount-consulta">0</span>
+              </button>
+              <button class="filter-tab" data-pfilter="pendientes">
+                <span class="dist-dot" style="background: #ef4444;"></span>
+                <span>Sin Respuesta</span>
+                <span class="filter-count" id="pcount-pendientes">0</span>
+              </button>
+            </div>
+
+            <div>
+              <button class="btn btn-primary" onclick="openUploadModal()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                <span>+ Radicar Derecho de Petición</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="doc-table">
+              <thead>
+                <tr>
+                  <th>Asunto / Peticionario</th>
+                  <th>Radicado Entrada</th>
+                  <th>Procedencia del Derecho (Norma)</th>
+                  <th>Término Legal (SLA)</th>
+                  <th>Semáforo de Plazo</th>
+                  <th>Responsable Asignado</th>
+                  <th>Estado Trámite</th>
+                  <th style="text-align: right;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="peticiones-table-body">
+                <!-- Dinámico desde JS -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Vista: Cuerpos Colegiados y Normativa Institucional -->
+        <section class="view-container" id="view-normas-section">
+          <div class="panel-box">
+            <div class="panel-header" style="flex-wrap: wrap; gap: 14px;">
+              <div>
+                <div class="panel-title">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                  <span>Sistematización de Normas y Actos de Cuerpos Colegiados</span>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--secondary-light); font-weight: 600; margin-top: 4px;">
+                  Compendio oficial y clasificado: Consejo Superior, Consejo Académico, Resoluciones Rectorales y Consejo Electoral
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 10px; align-items: center;">
+                <button class="btn btn-primary" id="btn-open-new-norma-modal">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                  <span>+ Radicar Nuevo Acto / Norma</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Submódulos por Cuerpo Colegiado -->
+            <div class="module-tabs" id="normas-module-tabs">
+              <button class="module-tab-btn active" data-org="all">
+                <span>Todos los Cuerpos Colegiados</span>
+                <span class="tab-count" id="normas-count-all">0</span>
+              </button>
+              <button class="module-tab-btn" data-org="csu">
+                <span>Consejo Superior (CSU)</span>
+                <span class="tab-count" id="normas-count-csu">0</span>
+              </button>
+              <button class="module-tab-btn" data-org="ca">
+                <span>Consejo Académico (CA)</span>
+                <span class="tab-count" id="normas-count-ca">0</span>
+              </button>
+              <button class="module-tab-btn" data-org="rectoria">
+                <span>Resoluciones Rectorales</span>
+                <span class="tab-count" id="normas-count-rectoria">0</span>
+              </button>
+              <button class="module-tab-btn" data-org="electoral">
+                <span>Consejo Electoral</span>
+                <span class="tab-count" id="normas-count-electoral">0</span>
+              </button>
+            </div>
+
+            <!-- Filtros de búsqueda para normas -->
+            <div style="display: flex; gap: 12px; margin-bottom: 18px; flex-wrap: wrap;">
+              <div class="search-box" style="flex: 1; min-width: 260px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                <input type="text" id="normas-search-input" placeholder="Buscar por número (Ej: Acuerdo 005), palabra clave o tema...">
+              </div>
+              <select class="form-select" id="normas-filter-vigencia" style="width: 180px;">
+                <option value="all">Todas las Vigencias</option>
+                <option value="vigente" selected>Vigente</option>
+                <option value="modificado">Modificado</option>
+                <option value="derogado">Derogado</option>
+              </select>
+              <select class="form-select" id="normas-filter-year" style="width: 140px;">
+                <option value="all">Todos los Años</option>
+                <option value="2026">2026</option>
+                <option value="2025">2025</option>
+                <option value="2024">2024</option>
+                <option value="2023">2023</option>
+              </select>
+            </div>
+
+            <div class="colegiados-grid" id="colegiados-cards-grid">
+              <!-- Dinámico desde JS -->
+            </div>
+          </div>
+        </section>
+
+        <!-- Vista: Asuntos Jurídicos y Normativos -->
+        <section class="view-container" id="view-juridicos-section">
+          <div class="panel-box">
+            <div class="panel-header" style="flex-wrap: wrap; gap: 14px;">
+              <div>
+                <div class="panel-title">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>
+                  <span>Asuntos Jurídicos y Normativos</span>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--secondary-light); font-weight: 600; margin-top: 4px;">
+                  Oficina Asesora Jurídica: Conceptos, Litigios, Auditorías, Directivas, Circulares y Seguimiento a Obligaciones Internas
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 10px; align-items: center;">
+                <button class="btn btn-primary" id="btn-open-gap-modal">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                  <span>+ Proponer Normativa Faltante</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Pestañas del Módulo Jurídico -->
+            <div class="module-tabs" id="juridicos-module-tabs">
+              <button class="module-tab-btn active" data-jtab="brechas">
+                <span>⚡ Brechas Normativas (Legal Gap)</span>
+                <span class="tab-count" id="jcount-brechas">5</span>
+              </button>
+              <button class="module-tab-btn" data-jtab="conceptos">
+                <span>Conceptos (Internos y Externos)</span>
+                <span class="tab-count" id="jcount-conceptos">6</span>
+              </button>
+              <button class="module-tab-btn" data-jtab="litigios">
+                <span>Litigios y Asuntos Judiciales</span>
+                <span class="tab-count" id="jcount-litigios">4</span>
+              </button>
+              <button class="module-tab-btn" data-jtab="auditorias">
+                <span>Auditorías de Entes de Control</span>
+                <span class="tab-count" id="jcount-auditorias">3</span>
+              </button>
+              <button class="module-tab-btn" data-jtab="directivas">
+                <span>Directivas y Circulares</span>
+                <span class="tab-count" id="jcount-directivas">5</span>
+              </button>
+            </div>
+
+            <div id="juridicos-tab-content">
+              <!-- Dinámico desde JS según pestaña activa -->
+            </div>
+          </div>
+        </section>
+
+        <!-- Vista: Fase de Juzgamiento Disciplinario -->
+        <section class="view-container" id="view-juzgamiento-section">
+          <div class="panel-box">
+            <div class="panel-header" style="flex-wrap: wrap; gap: 14px;">
+              <div>
+                <div class="panel-title">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                  <span>Fase de Juzgamiento y Régimen Disciplinario Institucional</span>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--secondary-light); font-weight: 600; margin-top: 4px;">
+                  Control Interno Disciplinario conforme a la Ley 1952 de 2019 / Ley 2094 de 2021: Autos y Apelaciones en Segunda Instancia
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 10px; align-items: center;">
+                <button class="btn btn-primary" id="btn-open-juzgamiento-modal">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                  <span>+ Radicar Auto / Apelación</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="juzgamiento-header-card">
+              <div>
+                <div style="font-size: 0.88rem; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">Línea de Términos Procesales de Juzgamiento</div>
+                <div class="stage-tracker-row">
+                  <div class="stage-step active">
+                    <span class="stage-step-dot">1</span>
+                    <span>Indagación Previa</span>
+                  </div>
+                  <span>&rarr;</span>
+                  <div class="stage-step active">
+                    <span class="stage-step-dot">2</span>
+                    <span>Pliego de Cargos</span>
+                  </div>
+                  <span>&rarr;</span>
+                  <div class="stage-step active">
+                    <span class="stage-step-dot">3</span>
+                    <span>Etapa Probatoria</span>
+                  </div>
+                  <span>&rarr;</span>
+                  <div class="stage-step">
+                    <span class="stage-step-dot">4</span>
+                    <span>Fallo 1ra Instancia</span>
+                  </div>
+                  <span>&rarr;</span>
+                  <div class="stage-step">
+                    <span class="stage-step-dot">5</span>
+                    <span>Apelación 2da Instancia (CSU / Rectoría)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="module-tabs" id="juzgamiento-module-tabs">
+              <button class="module-tab-btn active" data-jstage="all">
+                <span>Todos los Procesos</span>
+                <span class="tab-count" id="juzg-count-all">0</span>
+              </button>
+              <button class="module-tab-btn" data-jstage="autos">
+                <span>Autos Procesales (Cargos, Pruebas, Archivo)</span>
+                <span class="tab-count" id="juzg-count-autos">0</span>
+              </button>
+              <button class="module-tab-btn" data-jstage="apelaciones">
+                <span>Apelaciones en Segunda Instancia</span>
+                <span class="tab-count" id="juzg-count-apelaciones">0</span>
+              </button>
+            </div>
+
+            <div class="table-responsive">
+              <table class="doc-table">
+                <thead>
+                  <tr>
+                    <th>Expediente / Implicado</th>
+                    <th>Tipo de Acto / Auto</th>
+                    <th>Conducta / Causal Investigada</th>
+                    <th>Etapa Procesal</th>
+                    <th>Fecha Notificación</th>
+                    <th>Segunda Instancia (Competencia)</th>
+                    <th>Estado de Términos</th>
+                    <th style="text-align: right;">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="juzgamiento-table-body">
+                  <!-- Dinámico desde JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- Vista: Planeación Estratégica y Financiera -->
+        <section class="view-container" id="view-planeacion-section">
+          <div class="panel-box">
+            <div class="panel-header" style="flex-wrap: wrap; gap: 14px;">
+              <div>
+                <div class="panel-title">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                  <span>Planeación Estratégica y Financiera ante el Consejo Superior (CSU)</span>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--secondary-light); font-weight: 600; margin-top: 4px;">
+                  Informes Financieros Mensuales e Informes de Gestión Rectoral del Plan de Desarrollo Institucional (PDI Unitrópico)
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 10px; align-items: center;">
+                <button class="btn btn-primary" id="btn-open-planeacion-modal">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                  <span>+ Radicar Informe ante CSU</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- KPIs Financieros Globales -->
+            <div class="financial-kpi-row">
+              <div class="financial-stat-card">
+                <div class="label">Presupuesto Aprobado 2026</div>
+                <div class="value">$48.650 M</div>
+                <div class="subtext">100% Asignado por CSU</div>
+              </div>
+              <div class="financial-stat-card">
+                <div class="label">Ejecución Presupuestal Q3</div>
+                <div class="value" style="color: var(--primary);">74.2%</div>
+                <div class="subtext">&plus;8.4% vs año anterior</div>
+              </div>
+              <div class="financial-stat-card">
+                <div class="label">Aportes Casanare / Nación</div>
+                <div class="value">$36.200 M</div>
+                <div class="subtext">Gobernación y MEN al día</div>
+              </div>
+              <div class="financial-stat-card">
+                <div class="label">Avance Metas PDI Rectoral</div>
+                <div class="value" style="color: var(--secondary);">86.5%</div>
+                <div class="subtext">42 Metas Cumplidas</div>
+              </div>
+            </div>
+
+            <div class="module-tabs" id="planeacion-module-tabs">
+              <button class="module-tab-btn active" data-ptab="financieros">
+                <span>Informes Financieros Mensuales CSU</span>
+                <span class="tab-count" id="plan-count-fin">10</span>
+              </button>
+              <button class="module-tab-btn" data-ptab="rectorales">
+                <span>Informes de Gestión Rectoral CSU</span>
+                <span class="tab-count" id="plan-count-rec">4</span>
+              </button>
+              <button class="module-tab-btn" data-ptab="metas">
+                <span>Ejes Estratégicos PDI 2020-2030</span>
+                <span class="tab-count">5</span>
+              </button>
+            </div>
+
+            <div id="planeacion-tab-content">
+              <!-- Dinámico desde JS -->
+            </div>
+          </div>
+        </section>
+
+        <!-- Vista: Calendario Institucional tipo Google Calendar y Semáforo -->
+        <section class="view-container" id="view-calendario-section">
+          <div class="panel-box" style="padding: 0; overflow: hidden; border: none; background: transparent;">
+            
+            <div class="gcal-container">
+              <!-- Google Calendar Top Navigation Bar -->
+              <div class="gcal-topbar">
+                <div class="gcal-topbar-left">
+                  <button type="button" class="gcal-btn-create" id="btn-gcal-create-event">
+                    <svg viewBox="0 0 36 36"><path fill="#4285F4" d="M16 16v14h4V20z"/><path fill="#34A853" d="M30 16H20l-4 4h14z"/><path fill="#FBBC05" d="M6 16h10l4-4H6z"/><path fill="#EA4335" d="M20 16V2h-4v14z"/><path fill="none" d="M0 0h36v36H0z"/></svg>
+                    <span>Crear</span>
+                  </button>
+
+                  <button type="button" class="gcal-btn-today" id="gcal-btn-today">Hoy</button>
+
+                  <div class="gcal-nav-arrows">
+                    <button type="button" class="gcal-arrow-btn" id="gcal-btn-prev" title="Mes Anterior">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+                    </button>
+                    <button type="button" class="gcal-arrow-btn" id="gcal-btn-next" title="Mes Siguiente">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+                    </button>
+                  </div>
+
+                  <h3 class="gcal-current-date-title" id="gcal-current-label">Octubre de 2026</h3>
+                </div>
+
+                <div class="gcal-topbar-right">
+                  <div class="search-box" style="width: 220px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                    <input type="text" id="gcal-search-input" placeholder="Buscar en calendario...">
+                  </div>
+
+                  <div class="gcal-view-selector" id="gcal-view-switcher">
+                    <button type="button" class="gcal-view-btn active" data-gview="month">Mes</button>
+                    <button type="button" class="gcal-view-btn" data-gview="week">Semana</button>
+                    <button type="button" class="gcal-view-btn" data-gview="day">Día</button>
+                    <button type="button" class="gcal-view-btn" data-gview="agenda">Agenda</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Google Calendar Body (Sidebar + View Area) -->
+              <div class="gcal-body-split">
+                <!-- Sidebar Lateral (Google Calendar Style) -->
+                <aside class="gcal-sidebar-panel">
+                  <!-- Mini Calendario Interactivo -->
+                  <div class="gcal-mini-cal">
+                    <div class="gcal-mini-header">
+                      <span id="gcal-mini-title">Octubre 2026</span>
+                      <div style="display: flex; gap: 2px;">
+                        <button type="button" class="gcal-arrow-btn" id="gcal-mini-prev" style="width:22px; height:22px;">&larr;</button>
+                        <button type="button" class="gcal-arrow-btn" id="gcal-mini-next" style="width:22px; height:22px;">&rarr;</button>
+                      </div>
+                    </div>
+                    <div class="gcal-mini-grid">
+                      <span class="gcal-mini-day-title">D</span>
+                      <span class="gcal-mini-day-title">L</span>
+                      <span class="gcal-mini-day-title">M</span>
+                      <span class="gcal-mini-day-title">M</span>
+                      <span class="gcal-mini-day-title">J</span>
+                      <span class="gcal-mini-day-title">V</span>
+                      <span class="gcal-mini-day-title">S</span>
+                    </div>
+                    <div class="gcal-mini-grid" id="gcal-mini-days-container">
+                      <!-- Días generados dinámicamente -->
+                    </div>
+                  </div>
+
+                  <!-- Semáforo Institucional de Cumplimiento -->
+                  <div class="gcal-semaforo-box">
+                    <h5>
+                      <span>Semáforo Institucional</span>
+                      <span style="font-size: 0.65rem; color: var(--primary); font-weight: 700;">En Tiempo Real</span>
+                    </h5>
+                    <div class="gcal-semaforo-row">
+                      <span style="color: #dc2626; display: flex; align-items: center; gap: 6px;">
+                        <span class="gcal-cat-dot" style="background: #dc2626;"></span> Críticos / &lt;5 días
+                      </span>
+                      <span class="badge-counter" id="gcal-crit-count" style="background: #dc2626; color: #fff;">2</span>
+                    </div>
+                    <div class="gcal-semaforo-row">
+                      <span style="color: #d97706; display: flex; align-items: center; gap: 6px;">
+                        <span class="gcal-cat-dot" style="background: #f59e0b;"></span> Advertencia Media
+                      </span>
+                      <span class="badge-counter" id="gcal-warn-count" style="background: #f59e0b; color: #fff;">3</span>
+                    </div>
+                    <div class="gcal-semaforo-row">
+                      <span style="color: #059669; display: flex; align-items: center; gap: 6px;">
+                        <span class="gcal-cat-dot" style="background: #10b981;"></span> En Término Seguro
+                      </span>
+                      <span class="badge-counter" id="gcal-safe-count" style="background: #10b981; color: #fff;">6</span>
+                    </div>
+                  </div>
+
+                  <!-- Mis Calendarios y Filtros de Categoría -->
+                  <div class="gcal-categories-box">
+                    <h5>Mis Calendarios Unitrópico</h5>
+                    <div class="gcal-cal-checkbox-list" id="gcal-category-filters">
+                      <label class="gcal-cal-item-label">
+                        <input type="checkbox" value="peticion" checked>
+                        <span class="gcal-cat-dot" style="background: #d93025;"></span>
+                        <span>Vencimiento Peticiones (SLA)</span>
+                      </label>
+                      <label class="gcal-cal-item-label">
+                        <input type="checkbox" value="reporte" checked>
+                        <span class="gcal-cat-dot" style="background: #f29900;"></span>
+                        <span>Reportes MEN / Entes Control</span>
+                      </label>
+                      <label class="gcal-cal-item-label">
+                        <input type="checkbox" value="colegiado" checked>
+                        <span class="gcal-cat-dot" style="background: #1e8e3e;"></span>
+                        <span>Sesiones Cuerpos Colegiados</span>
+                      </label>
+                      <label class="gcal-cal-item-label">
+                        <input type="checkbox" value="academica" checked>
+                        <span class="gcal-cat-dot" style="background: #1a73e8;"></span>
+                        <span>Actividades Institucionales</span>
+                      </label>
+                      <label class="gcal-cal-item-label">
+                        <input type="checkbox" value="financiero" checked>
+                        <span class="gcal-cat-dot" style="background: #9334e6;"></span>
+                        <span>Cierres Financieros CSU</span>
+                      </label>
+                    </div>
+                  </div>
+                </aside>
+
+                <!-- Vista Principal de Calendario -->
+                <div class="gcal-view-area">
+                  <!-- Vista Mes (Default Google Calendar) -->
+                  <div class="gcal-month-table" id="gcal-month-view">
+                    <div class="gcal-weekdays-row">
+                      <div class="gcal-weekday-col">DOM</div>
+                      <div class="gcal-weekday-col">LUN</div>
+                      <div class="gcal-weekday-col">MAR</div>
+                      <div class="gcal-weekday-col">MIÉ</div>
+                      <div class="gcal-weekday-col">JUE</div>
+                      <div class="gcal-weekday-col">VIE</div>
+                      <div class="gcal-weekday-col">SÁB</div>
+                    </div>
+                    <div class="gcal-month-grid-cells" id="gcal-month-grid-cells">
+                      <!-- Generado dinámicamente celda por celda -->
+                    </div>
+                  </div>
+
+                  <!-- Vista Semana -->
+                  <div class="gcal-week-table" id="gcal-week-view" style="display: none;">
+                    <div class="gcal-week-grid" id="gcal-week-container">
+                      <!-- Generado dinámicamente -->
+                    </div>
+                  </div>
+
+                  <!-- Vista Día -->
+                  <div class="gcal-day-table" id="gcal-day-view" style="display: none;">
+                    <div id="gcal-day-container">
+                      <!-- Generado dinámicamente -->
+                    </div>
+                  </div>
+
+                  <!-- Vista Agenda / Semáforo Completo -->
+                  <div class="gcal-agenda-view" id="gcal-agenda-view" style="display: none;">
+                    <!-- Generado dinámicamente por fecha con chips de semáforo -->
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- Vista: Programas Académicos y Acreditación -->
+        <section class="view-container" id="view-programas-section">
+          <div class="panel-box">
+            <div class="panel-header" style="flex-wrap: wrap; gap: 14px;">
+              <div>
+                <div class="panel-title">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222"/></svg>
+                  <span>Gestión Académica y Acreditación Institucional</span>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--secondary-light); font-weight: 600; margin-top: 4px;">
+                  Historial de programas, actos administrativos MEN de aprobación y negación, radicados en SACES y acreditación de alta calidad CNA
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 10px; align-items: center;">
+                <button class="btn btn-primary" id="btn-open-programa-modal">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                  <span>+ Registrar Programa / Trámite MEN</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="module-tabs" id="programas-module-tabs">
+              <button class="module-tab-btn active" data-ptab="historial">
+                <span>Historial de Programas (Actos Aprobación y Negación)</span>
+                <span class="tab-count" id="prog-count-total">8</span>
+              </button>
+              <button class="module-tab-btn" data-ptab="saces">
+                <span>Procesos Radicados SACES / MEN</span>
+                <span class="tab-count" id="prog-count-saces">3</span>
+              </button>
+              <button class="module-tab-btn" data-ptab="acreditacion">
+                <span>Acreditación de Alta Calidad (CNA)</span>
+                <span class="tab-count" id="prog-count-cna">4</span>
+              </button>
+            </div>
+
+            <div id="programas-tab-content">
+              <!-- Dinámico desde JS -->
+            </div>
+          </div>
+        </section>
+
+        <!-- Vista: Relacionamiento Institucional y Convenios -->
+        <section class="view-container" id="view-relacionamiento-section">
+          <div class="panel-box">
+            <div class="panel-header" style="flex-wrap: wrap; gap: 14px;">
+              <div>
+                <div class="panel-title">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
+                  <span>Relacionamiento Institucional y Cooperación</span>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--secondary-light); font-weight: 600; margin-top: 4px;">
+                  Convenios con entes gubernamentales, cooperación nacional e internacional de la Universidad
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 10px; align-items: center;">
+                <button class="btn btn-primary" id="btn-open-convenio-modal">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                  <span>+ Registrar Nuevo Convenio</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="module-tabs" id="convenios-module-tabs">
+              <button class="module-tab-btn active" data-ctab="all">
+                <span>Todos los Convenios</span>
+                <span class="tab-count" id="conv-count-all">11</span>
+              </button>
+              <button class="module-tab-btn" data-ctab="gubernamental">
+                <span>Entes Gubernamentales</span>
+                <span class="tab-count" id="conv-count-gob">4</span>
+              </button>
+              <button class="module-tab-btn" data-ctab="internacional">
+                <span>Cooperación Internacional</span>
+                <span class="tab-count" id="conv-count-int">3</span>
+              </button>
+              <button class="module-tab-btn" data-ctab="nacional">
+                <span>Cooperación Nacional</span>
+                <span class="tab-count" id="conv-count-nal">4</span>
+              </button>
+            </div>
+
+            <div class="convenios-grid" id="convenios-cards-grid">
+              <!-- Dinámico desde JS -->
+            </div>
+          </div>
+        </section>
+
+        <!-- Vista: Auditoría, Logs y Trazabilidad Criptográfica -->
+        <section class="view-container" id="view-auditoria-section">
+          <!-- Hero Banner de Seguridad y Auditoría -->
+          <div class="hero-banner audit-hero-banner">
+            <div class="hero-content">
+              <h2>Auditoría Oficial — <span>Registro y Trazabilidad Inmutable</span></h2>
+              <p>Cadena de custodia documental en tiempo real. Cada radicación, modificación, descarga, oficio y eliminación queda registrada cronológicamente con firma digital, metadatos y sellado criptográfico <strong>SHA-256</strong> (Ley 594 de 2000 y directrices de auditoría pública).</p>
+              <div class="security-pills-row">
+                <span class="security-badge-pill green">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  Cifrado AES-256-GCM en Servidor
+                </span>
+                <span class="security-badge-pill blue">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                  Canal TLS 1.3 Seguro
+                </span>
+                <span class="security-badge-pill purple">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  Bitácora Inmutable (Append-Only)
+                </span>
+              </div>
+            </div>
+            <div class="audit-quick-actions">
+              <button class="btn btn-secondary" id="btn-verify-audit-chain" title="Verificar que ningún registro del log haya sido manipulado o adulterado">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>Verificar Integridad SHA-256</span>
+              </button>
+              <button class="btn btn-primary" id="btn-export-audit-json" title="Descargar bitácora certificada en JSON para entes de control">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span>Exportar Pista de Auditoría</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Métricas de Auditoría y Seguridad -->
+          <div class="kpi-grid-4 audit-kpi-grid">
+            <div class="kpi-card">
+              <div class="kpi-header">
+                <span class="kpi-title">Eventos Registrados</span>
+                <div class="kpi-icon-wrap" style="color: var(--primary); background: rgba(0, 89, 78, 0.1);">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                </div>
+              </div>
+              <div class="kpi-value-row">
+                <div class="kpi-number" id="audit-kpi-total">18</div>
+                <span class="kpi-trend positive">100% Inmutable</span>
+              </div>
+              <div class="kpi-footer">
+                <span>Pista de Auditoría Activa</span>
+                <span style="color: var(--primary); font-weight: 700;">Sin Interrupciones</span>
+              </div>
+            </div>
+
+            <div class="kpi-card danger">
+              <div class="kpi-header">
+                <span class="kpi-title">Operaciones Críticas</span>
+                <div class="kpi-icon-wrap" style="color: #ef4444; background: #fee2e2;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
+              </div>
+              <div class="kpi-value-row">
+                <div class="kpi-number" id="audit-kpi-critical">3</div>
+                <span class="kpi-trend" style="background: #fee2e2; color: #b91c1c;">Bajas / Anulaciones</span>
+              </div>
+              <div class="kpi-footer">
+                <span>Riesgo de Seguridad</span>
+                <span style="color: #10B981; font-weight: 700;">Monitoreado</span>
+              </div>
+            </div>
+
+            <div class="kpi-card teal">
+              <div class="kpi-header">
+                <span class="kpi-title">Cifrado &amp; Encriptación</span>
+                <div class="kpi-icon-wrap" style="color: #0d9488; background: #ccfbf1;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                </div>
+              </div>
+              <div class="kpi-value-row">
+                <div class="kpi-number" style="font-size: 1.65rem;">AES-256</div>
+                <span class="kpi-trend positive">GCM Modo AEAD</span>
+              </div>
+              <div class="kpi-footer">
+                <span>Repositorio y Carga</span>
+                <span style="color: #0d9488; font-weight: 700;">Protegido en Servidor</span>
+              </div>
+            </div>
+
+            <div class="kpi-card gold">
+              <div class="kpi-header">
+                <span class="kpi-title">Integridad Criptográfica</span>
+                <div class="kpi-icon-wrap" style="color: #b45309; background: #fef3c7;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+                </div>
+              </div>
+              <div class="kpi-value-row">
+                <div class="kpi-number" id="audit-kpi-integrity" style="color: var(--status-safe); font-size: 1.7rem;">100%</div>
+                <span class="kpi-trend positive" style="background: var(--status-safe-bg); color: var(--status-safe);">Sin Alteración</span>
+              </div>
+              <div class="kpi-footer">
+                <span>Cadena de Bloques SHA-256</span>
+                <span style="color: #b45309; font-weight: 700;">Encadenamiento Válido</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Barra de Filtros y Búsqueda de Logs -->
+          <div class="panel-box audit-panel-container">
+            <div class="audit-toolbar">
+              <div class="audit-search-wrap">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                <input type="text" id="audit-search-input" placeholder="Buscar por radicado, usuario, acción o hash...">
+              </div>
+
+              <div class="audit-filters-group">
+                <div class="filter-select-wrap">
+                  <label for="audit-filter-action">Tipo de Acción:</label>
+                  <select id="audit-filter-action" class="form-select-sm">
+                    <option value="ALL">Todas las Acciones (Global)</option>
+                    <option value="SUBIDA_ARCHIVO">Subida y Radicación de Archivos</option>
+                    <option value="ELIMINACION">Eliminación / Anulación</option>
+                    <option value="MODIFICACION">Modificación y Reasignación</option>
+                    <option value="RESPUESTA">Oficio / Respuesta Emitida</option>
+                    <option value="SEGURIDAD">Seguridad, Roles y Sesiones</option>
+                  </select>
+                </div>
+
+                <div class="filter-select-wrap">
+                  <label for="audit-filter-severity">Criticidad:</label>
+                  <select id="audit-filter-severity" class="form-select-sm">
+                    <option value="ALL">Todas las Criticidades</option>
+                    <option value="CRITICAL">Crítico (Bajas / Riesgo)</option>
+                    <option value="WARN">Advertencia (Cambios)</option>
+                    <option value="INFO">Informativo (Carga / Registro)</option>
+                  </select>
+                </div>
+
+                <button class="btn btn-ghost btn-sm" id="btn-reset-audit-filters" title="Restablecer filtros">
+                  Limpiar Filtros
+                </button>
+              </div>
+            </div>
+
+            <!-- Tabla de Trazabilidad y Logs -->
+            <div class="table-responsive audit-table-wrapper">
+              <table class="doc-table audit-table">
+                <thead>
+                  <tr>
+                    <th>Fecha y Hora (UTC-5)</th>
+                    <th>Funcionario / Despacho</th>
+                    <th>Acción Realizada</th>
+                    <th>Entidad / Radicado</th>
+                    <th>Detalle de la Operación</th>
+                    <th>Sello Criptográfico (SHA-256)</th>
+                  </tr>
+                </thead>
+                <tbody id="audit-logs-tbody">
+                  <!-- Generado dinámicamente desde JS -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Estado Vacío -->
+            <div class="audit-empty-state" id="audit-empty-state" style="display: none;">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="8"/></svg>
+              <h4>No se encontraron eventos coincidentes</h4>
+              <p>Intenta ajustar los términos de búsqueda o los filtros de acción seleccionados.</p>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal: Subir Archivo -->
+  <div class="modal-backdrop" id="upload-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span>Radicar Nuevo Archivo</span>
+        </h3>
+        <button class="btn-close-modal" id="btn-close-upload-modal">&times;</button>
+      </div>
+
+      <form id="upload-doc-form">
+        <div class="modal-body">
+          <div class="dropzone" id="file-dropzone">
+            <input type="file" id="file-input-selector" accept=".pdf,.doc,.docx,.xlsx,.xls,.png,.jpg">
+            <div class="dropzone-icon">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+            <div class="dropzone-text">Arrastra tu archivo aquí o haz clic para explorar</div>
+            <div class="dropzone-hint">Formatos compatibles: PDF, DOCX, XLSX (Máx. 50MB)</div>
+          </div>
+
+          <div class="file-preview-card" id="file-detected-card">
+            <div class="doc-icon-badge pdf" id="detected-icon-badge">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg>
+              <span id="detected-format-label">PDF</span>
+            </div>
+            <div style="flex: 1; overflow: hidden;">
+              <div style="font-weight: 700; font-size: 0.88rem; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" id="detected-file-name">documento_institucional.pdf</div>
+              <div style="font-size: 0.74rem; color: var(--text-muted);" id="detected-file-size">1.8 MB &bull; Archivo listo para radicar</div>
+            </div>
+            <span style="color: var(--secondary); font-size: 0.75rem; font-weight: 700;">Detectado &check;</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Título o Asunto del Documento / Petición *</label>
+            <input type="text" class="form-input" id="input-doc-title" placeholder="Ej: Solicitud de Información Curricular o Recurso de Grado" required>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Origen / De dónde proviene el derecho *</label>
+              <select class="form-select" id="select-doc-right-origin" required>
+                <option value="Art. 23 Constitución Política (Derecho de Petición)">Art. 23 Constitución Política (Derecho Fundamental de Petición)</option>
+                <option value="Ley Estatutaria 1755 de 2015 (Interés Particular)">Ley Estatutaria 1755 de 2015 (Petición de Interés Particular)</option>
+                <option value="Ley Estatutaria 1755 de 2015 (Interés General)">Ley Estatutaria 1755 de 2015 (Petición de Interés General)</option>
+                <option value="Ley 1712 de 2014 (Acceso a la Información y Transparencia)">Ley 1712 de 2014 (Acceso a Información y Transparencia)</option>
+                <option value="Ley 1437 de 2011 CPACA (Consulta Jurídica o Técnica)">Ley 1437 de 2011 CPACA (Consulta Jurídica o Técnica)</option>
+                <option value="Reglamento Estudiantil y Docente Unitrópico">Reglamento Estudiantil y Docente Unitrópico</option>
+                <option value="Estatuto Contractual / Petición de Contratistas">Estatuto Contractual / Petición de Proveedores</option>
+                <option value="Trámite Administrativo Interno">Trámite Administrativo Interno</option>
+              </select>
+              <span class="form-hint" style="color: var(--secondary-light); font-weight: 600;">Fundamento legal conforme al ordenamiento jurídico colombiano</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Calidad / Tipo de Peticionario *</label>
+              <select class="form-select" id="select-doc-applicant-type" required>
+                <option value="Estudiante de Pregrado/Posgrado">Estudiante de Pregrado / Posgrado</option>
+                <option value="Docente Institucional">Docente Institucional</option>
+                <option value="Egresado / Graduado">Egresado / Graduado</option>
+                <option value="Ciudadano / Veeduría Ciudadana">Ciudadano / Veeduría Ciudadana</option>
+                <option value="Ente de Control (Procuraduría, Contraloría, MEN)">Ente de Control (Procuraduría, Contraloría, MEN)</option>
+                <option value="Entidad Gubernamental (Gobernación / Alcaldía)">Entidad Gubernamental (Gobernación / Alcaldía)</option>
+                <option value="Proveedor / Contratista">Proveedor / Contratista</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Nombre del Peticionario / Solicitante *</label>
+              <input type="text" class="form-input" id="input-doc-applicant" placeholder="Ej: Juan Sebastián Gómez (Estudiante)" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Categoría / Tipo Documental</label>
+              <select class="form-select" id="select-doc-category">
+                <option value="Derecho de Petición">Derecho de Petición</option>
+                <option value="Auditoría / Calidad">Auditoría / Calidad</option>
+                <option value="Resolución Rectoral">Resolución Rectoral</option>
+                <option value="Acta de Consejo">Acta de Consejo</option>
+                <option value="Informe Financiero">Informe Financiero</option>
+                <option value="Contrato / Convenio">Contrato / Convenio</option>
+                <option value="Gestión Curricular">Gestión Curricular</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Término Legal de Respuesta (SLA) *</label>
+              <select class="form-select" id="select-doc-sla-type">
+                <option value="15">15 Días Hábiles (Petición de Interés Particular/General)</option>
+                <option value="10">10 Días Hábiles (Solicitud de Información / Copias)</option>
+                <option value="30">30 Días Hábiles (Consultas Jurídicas o Técnicas)</option>
+                <option value="5">5 Días Hábiles (Urgencia Manifiesta o Ente de Control)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Prioridad</label>
+              <select class="form-select" id="select-doc-priority">
+                <option value="Alta">Alta</option>
+                <option value="Media" selected>Media</option>
+                <option value="Baja">Baja</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Fecha de Subida / Radicación *</label>
+              <input type="date" class="form-input" id="input-upload-date" required>
+              <span class="form-hint">Fecha en la que ingresa al sistema</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Fecha de Vencimiento / Plazo *</label>
+              <input type="date" class="form-input" id="input-due-date" required>
+              <span class="form-hint">Límite para completar o tramitar</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Funcionario Responsable del Archivo *</label>
+            <select class="form-select" id="select-doc-responsible" required>
+              <!-- Opciones dinámicas -->
+            </select>
+            <div class="admin-only-notice">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+              <span>Privilegio de Administrador: Asignación y delegación oficial de tareas.</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Observaciones / Instrucciones de Gestión</label>
+            <textarea class="form-textarea" id="input-doc-notes" rows="2" placeholder="Detalles de requisitos o firmas pendientes..."></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" id="btn-cancel-upload">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-doc">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>Radicar Archivo</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Asignar Responsable -->
+  <div class="modal-backdrop" id="reassign-modal">
+    <div class="modal-card" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+          <span>Asignar Responsable</span>
+        </h3>
+        <button class="btn-close-modal" id="btn-close-reassign-modal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div style="font-size: 0.85rem; color: var(--text-muted);">
+          Documento: <strong id="reassign-doc-name" style="color: var(--text-main);">...</strong>
+        </div>
+
+        <div class="search-box" style="width: 100%;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          <input type="text" id="user-search-input" placeholder="Buscar funcionario por nombre o cargo...">
+        </div>
+
+        <div class="user-picker-list" id="user-picker-container">
+          <!-- Opciones dinámicas -->
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" id="btn-cancel-reassign">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btn-save-reassignment">Confirmar Asignación</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Previsualización con Pestañas (Petición vs Respuesta) -->
+  <div class="modal-backdrop" id="preview-modal">
+    <div class="modal-card" style="max-width: 780px;">
+      <div class="modal-header">
+        <h3>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span id="preview-modal-main-title">Ficha del Expediente y Trámite</span>
+        </h3>
+        <button class="btn-close-modal" id="btn-close-preview-modal">&times;</button>
+      </div>
+
+      <!-- Barra de pestañas en modal de previa -->
+      <div class="modal-tab-nav">
+        <button type="button" class="modal-tab-btn active" id="tab-btn-preview-doc">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span>1. Petición / Archivo Original</span>
+        </button>
+        <button type="button" class="modal-tab-btn" id="tab-btn-preview-response">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><polyline points="9 10 12 7 15 10"/><line x1="12" y1="7" x2="12" y2="13"/></svg>
+          <span>2. Oficio de Respuesta</span>
+          <span class="tab-badge" id="preview-response-tab-badge">Pendiente</span>
+        </button>
+      </div>
+
+      <div class="modal-body" id="preview-modal-content">
+        <!-- Contenido dinámico desde JS -->
+      </div>
+
+      <div class="modal-footer" style="justify-content: space-between;">
+        <button type="button" class="btn btn-ghost" id="btn-close-preview-footer">Cerrar</button>
+        <div style="display: flex; gap: 10px;">
+          <button type="button" class="btn btn-secondary" id="btn-download-preview">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span>Descargar Archivo Original</span>
+          </button>
+          <button type="button" class="btn btn-primary" id="btn-download-response-preview-footer" style="display: none;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span>Descargar Oficio Respuesta</span>
+          </button>
+          <button type="button" class="btn btn-primary" id="btn-open-response-from-preview" style="display: none;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span>Redactar Respuesta</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Responder Petición Institucional -->
+  <div class="modal-backdrop" id="response-modal">
+    <div class="modal-card" style="max-width: 820px;">
+      <div class="modal-header">
+        <h3>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><polyline points="9 10 12 7 15 10"/><line x1="12" y1="7" x2="12" y2="13"/></svg>
+          <span>Responder Petición / Solicitud Institucional</span>
+        </h3>
+        <button class="btn-close-modal" id="btn-close-response-modal">&times;</button>
+      </div>
+
+      <form id="response-doc-form">
+        <div class="modal-body">
+          <!-- Resumen de la petición asociada -->
+          <div class="petition-summary-box" id="response-petition-summary">
+            <!-- Dinámico desde JS -->
+          </div>
+
+          <!-- Selector de Plantillas Predeterminadas -->
+          <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <label class="form-label">Plantillas de Respuesta Automáticas / Predeterminadas</label>
+              <button type="button" class="btn-link-action" id="btn-open-new-template-modal">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span>+ Crear / Agregar Nueva Plantilla</span>
+              </button>
+            </div>
+            <select class="form-select" id="select-response-template">
+              <!-- Opciones dinámicas -->
+            </select>
+            <div class="template-quick-chips" id="template-chips-container">
+              <!-- Chips rápidos -->
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Radicado de Respuesta / Salida *</label>
+              <input type="text" class="form-input" id="input-response-radicado" readonly style="background: var(--bg-surface-elevated); font-weight: 700; color: var(--primary);">
+              <span class="form-hint">Generado automáticamente bajo nomenclatura oficial</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Sentido de la Decisión / Trámite *</label>
+              <select class="form-select" id="select-response-decision" required>
+                <option value="Favorable / Aprobado">Favorable / Solicitud Aprobada</option>
+                <option value="Informativo / En Trámite">Informativo / En Trámite</option>
+                <option value="Requerimiento de Información">Requerimiento de Información Adicional</option>
+                <option value="Desfavorable / No Procedente">No Procedente / Desfavorable</option>
+                <option value="Traslado por Competencia">Traslado por Competencia Administrativa</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Asunto Oficial de la Comunicación *</label>
+            <input type="text" class="form-input" id="input-response-subject" placeholder="Ej: Respuesta formal a solicitud de acreditación..." required>
+          </div>
+
+          <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <label class="form-label">Cuerpo del Oficio Institucional *</label>
+              <span class="form-hint" style="color: var(--secondary-light); font-weight: 600;">Membrete Institucional Unitrópico</span>
+            </div>
+            <textarea class="form-textarea" id="input-response-body" rows="8" style="font-family: inherit; font-size: 0.84rem; line-height: 1.6;" placeholder="Redacte el texto o seleccione una plantilla predeterminada..." required></textarea>
+          </div>
+
+          <div class="response-sign-preview">
+            <div class="sign-avatar" id="response-sign-avatar">CL</div>
+            <div style="flex: 1;">
+              <div style="font-size: 0.72rem; text-transform: uppercase; color: var(--secondary); font-weight: 700;">Funcionario Responsable de la Respuesta</div>
+              <div style="font-weight: 700; color: var(--text-main);" id="response-sign-name">Cristian Lemus</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);" id="response-sign-role">Administrador de Sistema SGD</div>
+            </div>
+            <span style="font-size: 0.75rem; color: var(--status-safe); font-weight: 700; background: var(--status-safe-bg); padding: 4px 10px; border-radius: var(--radius-full);">Firma Autorizada</span>
+          </div>
+        </div>
+
+        <div class="modal-footer" style="justify-content: space-between;">
+          <button type="button" class="btn btn-ghost" id="btn-cancel-response">Cancelar</button>
+          <div style="display: flex; gap: 10px;">
+            <button type="button" class="btn btn-secondary" id="btn-download-response-preview-form" title="Descargar o previsualizar oficio para enviar">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>Descargar Oficio Formal</span>
+            </button>
+            <button type="submit" class="btn btn-primary" id="btn-submit-response">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Guardar y Vincular Respuesta</span>
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Crear Nueva Plantilla Personalizada -->
+  <div class="modal-backdrop" id="new-template-modal">
+    <div class="modal-card" style="max-width: 580px;">
+      <div class="modal-header">
+        <h3>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          <span>Agregar Nueva Plantilla Institucional</span>
+        </h3>
+        <button class="btn-close-modal" id="btn-close-new-template-modal">&times;</button>
+      </div>
+
+      <form id="new-template-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Nombre de la Plantilla *</label>
+            <input type="text" class="form-input" id="input-new-template-title" placeholder="Ej: Respuesta a Solicitud de Grado Extemporáneo" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Decisión Predeterminada</label>
+            <select class="form-select" id="select-new-template-decision">
+              <option value="Favorable / Aprobado">Favorable / Solicitud Aprobada</option>
+              <option value="Informativo / En Trámite">Informativo / En Trámite</option>
+              <option value="Requerimiento de Información">Requerimiento de Información Adicional</option>
+              <option value="Desfavorable / No Procedente">No Procedente / Desfavorable</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Texto / Contenido Base de la Plantilla *</label>
+            <span class="form-hint">Puedes usar las variables: [NUMERO_RADICADO], [TITULO_DOCUMENTO], [FECHA], [FUNCIONARIO], [CARGO]</span>
+            <textarea class="form-textarea" id="input-new-template-body" rows="6" placeholder="Escriba aquí el cuerpo del modelo de respuesta..." required></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" id="btn-cancel-new-template">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-new-template">Guardar en Plantillas</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Crear Nuevo Usuario -->
+  <div class="modal-backdrop" id="create-user-modal">
+    <div class="modal-card" style="max-width: 560px;">
+      <div class="modal-header">
+        <h3>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+          <span>Registrar Nuevo Funcionario</span>
+        </h3>
+        <button class="btn-close-modal" id="btn-close-create-user-modal">&times;</button>
+      </div>
+
+      <form id="create-user-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Nombre Completo del Funcionario *</label>
+            <input type="text" class="form-input" id="input-new-user-name" placeholder="Ej: Dr. Alejandro Ramos Peña" required>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Cargo / Dependencia *</label>
+              <input type="text" class="form-input" id="input-new-user-role-desc" placeholder="Ej: Dirección de Investigaciones" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Correo Institucional *</label>
+              <input type="email" class="form-input" id="input-new-user-email" placeholder="investigacion@unitropico.edu.co" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Rol y Nivel de Acceso Asignado *</label>
+            <select class="form-select" id="select-new-user-role" required>
+              <!-- Dinámico desde JS -->
+            </select>
+            <span class="form-hint">El Administrador y Root pueden vincular cualquier rol existente o creado.</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Color de Avatar Identificador</label>
+            <div class="color-picker-row" id="user-avatar-color-options">
+              <label class="color-option-pill"><input type="radio" name="user-color" value="#00594E" checked> <span style="background: #00594E;"></span> Verde Unitrópico</label>
+              <label class="color-option-pill"><input type="radio" name="user-color" value="#B5A160"> <span style="background: #B5A160;"></span> Oro Institucional</label>
+              <label class="color-option-pill"><input type="radio" name="user-color" value="#0284c7"> <span style="background: #0284c7;"></span> Azul Gestor</label>
+              <label class="color-option-pill"><input type="radio" name="user-color" value="#7c3aed"> <span style="background: #7c3aed;"></span> Púrpura</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" id="btn-cancel-create-user">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-create-user">Guardar y Habilitar Acceso</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Crear Nuevo Rol -->
+  <div class="modal-backdrop" id="create-role-modal">
+    <div class="modal-card" style="max-width: 680px;">
+      <div class="modal-header">
+        <h3>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          <span>Crear Nuevo Rol Institucional</span>
+        </h3>
+        <button class="btn-close-modal" id="btn-close-create-role-modal">&times;</button>
+      </div>
+
+      <form id="create-role-form">
+        <div class="modal-body">
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Nombre del Rol *</label>
+              <input type="text" class="form-input" id="input-new-role-name" placeholder="Ej: Auditor Interno de Calidad" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Color del Rol</label>
+              <select class="form-select" id="select-new-role-color">
+                <option value="#0d9488">Verde Azulado (#0d9488)</option>
+                <option value="#d97706">Ámbar Ejecutivo (#d97706)</option>
+                <option value="#2563eb">Azul Administrativo (#2563eb)</option>
+                <option value="#9333ea">Púrpura Directivo (#9333ea)</option>
+                <option value="#e11d48">Rosa Jurídico (#e11d48)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Descripción de Responsabilidades *</label>
+            <input type="text" class="form-input" id="input-new-role-desc" placeholder="Ej: Supervisa expedientes académicos e informes de calidad" required>
+          </div>
+
+          <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <label class="form-label" style="margin: 0;">Asignación de Permisos Granulares *</label>
+              <div style="display: flex; gap: 8px;">
+                <button type="button" class="btn-link-action" id="btn-select-all-role-perms">Marcar Todos</button>
+                <span style="color: var(--border-color);">&bull;</span>
+                <button type="button" class="btn-link-action" id="btn-deselect-all-role-perms">Desmarcar Todos</button>
+              </div>
+            </div>
+            <div class="permissions-checklist-grid" id="new-role-permissions-container">
+              <!-- Checkboxes generados dinámicamente -->
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" id="btn-cancel-create-role">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-create-role">Crear Rol con Permisos</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Configurar Permisos de Rol Existente -->
+  <div class="modal-backdrop" id="edit-role-modal">
+    <div class="modal-card" style="max-width: 680px;">
+      <div class="modal-header">
+        <h3>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15h2a5 5 0 0 0 5-5 5 5 0 0 0-5-5H6a5 5 0 0 0-5 5 5 5 0 0 0 5 5h2"/></svg>
+          <span id="edit-role-modal-title">Configurar Permisos de Rol</span>
+        </h3>
+        <button class="btn-close-modal" id="btn-close-edit-role-modal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="role-edit-meta-card" id="edit-role-meta-box">
+          <!-- Metadatos dinámicos del rol -->
+        </div>
+
+        <div class="form-group">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <label class="form-label" style="margin: 0;">Permisos Habilitados para este Rol:</label>
+            <div style="display: flex; gap: 8px;" id="edit-role-quick-actions">
+              <button type="button" class="btn-link-action" id="btn-edit-select-all-perms">Marcar Todos</button>
+              <span style="color: var(--border-color);">&bull;</span>
+              <button type="button" class="btn-link-action" id="btn-edit-deselect-all-perms">Desmarcar Todos</button>
+            </div>
+          </div>
+          <div class="permissions-checklist-grid" id="edit-role-permissions-container">
+            <!-- Checkboxes generados dinámicamente -->
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="justify-content: space-between;">
+        <button type="button" class="btn btn-ghost" id="btn-cancel-edit-role">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btn-save-role-permissions">Guardar y Aplicar Permisos</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Conmutador de Perfiles y Simulación RBAC -->
+  <div class="modal-backdrop" id="switch-user-modal">
+    <div class="modal-card" style="max-width: 680px;">
+      <div class="modal-header">
+        <h3>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+          <span>Conmutador de Perfiles Institucionales (Simulador RBAC)</span>
+        </h3>
+        <button class="btn-close-modal" id="btn-close-switch-user-modal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px;">
+          Selecciona con qué usuario deseas interactuar para comprobar inmediatamente cómo se adapta la plataforma según sus permisos asignados por el Administrador:
+        </p>
+
+        <div class="user-switcher-list" id="user-switcher-container">
+          <!-- Opciones dinámicas de usuarios -->
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" id="btn-close-switch-modal-footer">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Radicar Nueva Norma de Cuerpo Colegiado -->
+  <div class="modal-backdrop" id="new-norma-modal">
+    <div class="modal-card" style="max-width: 640px;">
+      <div class="modal-header">
+        <h3>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+          <span>Radicar Acto / Norma de Cuerpo Colegiado</span>
+        </h3>
+        <button class="btn-close-modal" id="btn-close-new-norma-modal">&times;</button>
+      </div>
+      <form id="new-norma-form">
+        <div class="modal-body">
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Órgano Colegiado Emisor *</label>
+              <select class="form-select" id="select-norma-organo" required>
+                <option value="Consejo Superior">Consejo Superior Universitario (CSU)</option>
+                <option value="Consejo Académico">Consejo Académico (CA)</option>
+                <option value="Rectoría">Rectoría (Resolución Rectoral)</option>
+                <option value="Consejo Electoral">Consejo Electoral</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Tipo de Acto Administrativo *</label>
+              <select class="form-select" id="select-norma-tipo" required>
+                <option value="Acuerdo">Acuerdo</option>
+                <option value="Resolución">Resolución</option>
+                <option value="Circular Normativa">Circular Normativa</option>
+                <option value="Acta de Sesión">Acta de Sesión</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Número de Acto Oficial *</label>
+              <input type="text" class="form-input" id="input-norma-numero" placeholder="Ej: Acuerdo No. 018 de 2026" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Fecha de Expedición *</label>
+              <input type="date" class="form-input" id="input-norma-fecha" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Título o Epígrafe del Acto *</label>
+            <input type="text" class="form-input" id="input-norma-titulo" placeholder="Ej: Por el cual se adopta la política de gratuidad y estímulos a la investigación..." required>
+          </div>
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Descriptor Temático</label>
+              <select class="form-select" id="select-norma-tema">
+                <option value="Académico y Curricular">Académico y Curricular</option>
+                <option value="Financiero y Presupuestal">Financiero y Presupuestal</option>
+                <option value="Estatutario y Gobierno">Estatutario y Gobierno</option>
+                <option value="Electoral y Democrático">Electoral y Democrático</option>
+                <option value="Bienestar y Docencia">Bienestar y Docencia</option>
+                <option value="Investigación y Posgrados">Investigación y Posgrados</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Estado de Vigencia</label>
+              <select class="form-select" id="select-norma-vigencia">
+                <option value="vigente" selected>Vigente</option>
+                <option value="modificado">Modificado</option>
+                <option value="derogado">Derogado</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Resumen / Objeto del Acto Administrativo</label>
+            <textarea class="form-textarea" id="input-norma-resumen" rows="3" placeholder="Detalle de las disposiciones o artículos clave adoptados..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" id="btn-cancel-new-norma">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar e Incorporar a Colección</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Proponer Normativa Faltante (Legal Gap Analysis) -->
+  <div class="modal-backdrop" id="new-gap-modal">
+    <div class="modal-card" style="max-width: 620px;">
+      <div class="modal-header">
+        <h3>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          <span>Procesar y Formular Normativa Faltante</span>
+        </h3>
+        <button class="btn-close-modal" id="btn-close-new-gap-modal">&times;</button>
+      </div>
+      <form id="new-gap-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Nombre de la Normativa o Reglamento Faltante *</label>
+            <input type="text" class="form-input" id="input-gap-titulo" placeholder="Ej: Política Institucional de Inteligencia Artificial en Docencia e Investigación" required>
+          </div>
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Cuerpo Colegiado Competente *</label>
+              <select class="form-select" id="select-gap-organo" required>
+                <option value="Consejo Superior">Consejo Superior Universitario</option>
+                <option value="Consejo Académico">Consejo Académico</option>
+                <option value="Rectoría">Rectoría</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nivel de Necesidad / Urgencia *</label>
+              <select class="form-select" id="select-gap-urgencia" required>
+                <option value="Alta">Alta (Requerimiento MEN / Mandato Legal)</option>
+                <option value="Media">Media (Aseguramiento de Calidad)</option>
+                <option value="Baja">Baja (Mejora Continua)</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Fundamento Jurídico Nacional / Brecha Detectada *</label>
+            <input type="text" class="form-input" id="input-gap-mandato" placeholder="Ej: Ley 30 de 1992 / Decreto 1330 de 2019 / Circular Externa MinCiencias" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Justificación de la Falta y Alcance Propuesto</label>
+            <textarea class="form-textarea" id="input-gap-justificacion" rows="3" placeholder="Por qué es indispensable que la universidad cuente con esta normativa y cuál será su impacto..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" id="btn-cancel-new-gap">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Registrar Proyecto de Norma</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Radicar Auto o Apelación Disciplinaria -->
+  <div class="modal-backdrop" id="new-juzgamiento-modal">
+    <div class="modal-card" style="max-width: 640px;">
+      <div class="modal-header">
+        <h3>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          <span>Radicar Auto o Apelación Disciplinaria</span>
+        </h3>
+        <button class="btn-close-modal" id="btn-close-new-juzg-modal">&times;</button>
+      </div>
+      <form id="new-juzgamiento-form">
+        <div class="modal-body">
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Tipo de Actuación *</label>
+              <select class="form-select" id="select-juzg-tipo" required>
+                <option value="Auto de Formulación de Cargos">Auto de Formulación de Cargos</option>
+                <option value="Auto de Apertura de Indagación">Auto de Apertura de Indagación</option>
+                <option value="Auto de Pruebas">Auto de Decreto de Pruebas</option>
+                <option value="Recurso de Apelación 2da Instancia">Recurso de Apelación 2da Instancia</option>
+                <option value="Auto de Archivo">Auto de Archivo Definitivo</option>
+                <option value="Fallo de Segunda Instancia">Fallo de Segunda Instancia</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Radicado del Expediente *</label>
+              <input type="text" class="form-input" id="input-juzg-radicado" placeholder="Ej: EXP-DISC-2026-004" required>
+            </div>
+          </div>
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Nombre del Implicado / Disciplinado *</label>
+              <input type="text" class="form-input" id="input-juzg-implicado" placeholder="Ej: Docente / Funcionario / Estudiante" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Instancia Competente</label>
+              <select class="form-select" id="select-juzg-instancia">
+                <option value="Consejo Superior">Consejo Superior (Segunda Instancia)</option>
+                <option value="Rectoría">Rectoría (Segunda Instancia)</option>
+                <option value="Control Interno Disciplinario">Control Interno Disciplinario (Primera Instancia)</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Conducta o Causal Investigada *</label>
+            <input type="text" class="form-input" id="input-juzg-conducta" placeholder="Ej: Incumplimiento de deberes docentes y asistenciales..." required>
+          </div>
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Fecha de Notificación / Auto *</label>
+              <input type="date" class="form-input" id="input-juzg-fecha" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Vencimiento del Término Legal</label>
+              <input type="date" class="form-input" id="input-juzg-termino">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" id="btn-cancel-new-juzg">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Registrar en Juzgamiento</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Radicar Nuevo Convenio Institucional -->
+  <div class="modal-backdrop" id="new-convenio-modal">
+    <div class="modal-card" style="max-width: 640px;">
+      <div class="modal-header">
+        <h3>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
+          <span>Registrar Nuevo Convenio Institucional</span>
+        </h3>
+        <button class="btn-close-modal" id="btn-close-new-conv-modal">&times;</button>
+      </div>
+      <form id="new-convenio-form">
+        <div class="modal-body">
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Tipo de Cooperación *</label>
+              <select class="form-select" id="select-conv-tipo" required>
+                <option value="gubernamental">Ente Gubernamental (Gobernación / Alcaldía / Min)</option>
+                <option value="internacional">Cooperación Internacional</option>
+                <option value="nacional">Cooperación Nacional</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Número de Convenio *</label>
+              <input type="text" class="form-input" id="input-conv-numero" placeholder="Ej: CONV-GOB-2026-009" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Entidad o Institución Aliada *</label>
+            <input type="text" class="form-input" id="input-conv-entidad" placeholder="Ej: Gobernación de Casanare o Universidad Nacional Autónoma de México" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Objeto del Convenio *</label>
+            <textarea class="form-textarea" id="input-conv-objeto" rows="2" placeholder="Describa el objetivo de la cooperación institucional..." required></textarea>
+          </div>
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Fecha de Inicio *</label>
+              <input type="date" class="form-input" id="input-conv-inicio" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Fecha de Terminación *</label>
+              <input type="date" class="form-input" id="input-conv-fin" required>
+            </div>
+          </div>
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Supervisor Interno Unitrópico</label>
+              <input type="text" class="form-input" id="input-conv-supervisor" placeholder="Ej: Vicerrectoría de Investigación">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Aporte / Cuantía</label>
+              <input type="text" class="form-input" id="input-conv-cuantia" placeholder="Ej: $2.400.000.000 COP o Sin cuantía pecuniaria">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" id="btn-cancel-new-conv">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Registrar Convenio</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Agendar Actividad o Reporte en Calendario -->
+  <div class="modal-backdrop" id="new-calendario-modal">
+    <div class="modal-card" style="max-width: 580px;">
+      <div class="modal-header">
+        <h3>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <span>Agendar Actividad o Reporte Institucional</span>
+        </h3>
+        <button class="btn-close-modal" id="btn-close-new-cal-modal">&times;</button>
+      </div>
+      <form id="new-calendario-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Título del Compromiso / Evento *</label>
+            <input type="text" class="form-input" id="input-cal-titulo" placeholder="Ej: Reporte SNIES al MEN o Sesión Ordinaria CSU" required>
+          </div>
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Tipo de Evento *</label>
+              <select class="form-select" id="select-cal-tipo" required>
+                <option value="reporte">Reporte Obligatorio a Ente de Control</option>
+                <option value="colegiado">Sesión de Cuerpo Colegiado (CSU / CA)</option>
+                <option value="academica">Actividad Académica Institucional</option>
+                <option value="financiero">Cierre Financiero o Presupuestal</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Entidad Receptora / Destino</label>
+              <input type="text" class="form-input" id="input-cal-destino" placeholder="Ej: MEN / Contraloría / DIAN / CSU">
+            </div>
+          </div>
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Fecha Límite / Día de Evento *</label>
+              <input type="date" class="form-input" id="input-cal-fecha" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Dependencia Responsable</label>
+              <input type="text" class="form-input" id="input-cal-responsable" placeholder="Ej: Dirección de Planeación">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" id="btn-cancel-new-cal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Agendar en Semáforo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Visor Universal de Ficha Formal Institucional -->
+  <div class="modal-backdrop" id="universal-detail-modal">
+    <div class="modal-card" style="max-width: 760px;">
+      <div class="modal-header">
+        <h3>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg>
+          <span id="universal-modal-title">Detalle del Registro Institucional</span>
+        </h3>
+        <button class="btn-close-modal" id="btn-close-universal-modal">&times;</button>
+      </div>
+      <div class="modal-body" id="universal-modal-content">
+        <!-- Dinámico desde JS -->
+      </div>
+      <div class="modal-footer" style="justify-content: space-between;">
+        <button type="button" class="btn btn-ghost" id="btn-close-universal-footer">Cerrar</button>
+        <button type="button" class="btn btn-primary" id="btn-download-universal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span>Descargar Constancia / Acto Oficial</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Centro de Notificaciones y Alertas SLA Institucionales -->
+  <div class="modal-backdrop" id="rector-alerts-modal">
+    <div class="modal-card" style="max-width: 880px;">
+      <div class="modal-header" style="background: linear-gradient(135deg, rgba(220, 38, 38, 0.08) 0%, rgba(0, 89, 78, 0.08) 100%);">
+        <h3>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span style="color: var(--text-main);">Centro de Notificaciones y Alertas SLA Institucionales</span>
+        </h3>
+        <button class="btn-close-modal" id="btn-close-rector-alerts">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Toolbar con filtros de alertas -->
+        <div class="notif-center-toolbar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+          <div class="filter-tabs" id="notif-filter-tabs">
+            <button type="button" class="filter-tab active" data-notif-filter="all">Todas</button>
+            <button type="button" class="filter-tab" data-notif-filter="critical">🔴 SLA Crítico (&le;3 días)</button>
+            <button type="button" class="filter-tab" data-notif-filter="petitions">Peticiones / PQRS</button>
+            <button type="button" class="filter-tab" data-notif-filter="reports">Reportes Obligatorios</button>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-mark-all-notifs-read" style="font-size: 0.76rem;">
+              <span>✓ Marcar todas leídas</span>
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" id="btn-jump-to-calendar-notifs" style="font-size: 0.76rem;">
+              <span>📅 Ver Calendario</span>
+            </button>
+          </div>
+        </div>
+
+        <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 0.82rem; color: #991b1b; display: flex; align-items: center; gap: 10px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div>
+            <strong>Control Automático de Términos (Ley 1755 / Ley 1952):</strong> Los expedientes con vencimiento en menos de 3 días hábiles disparan alertas automáticas de semáforo rojo para evitar silencios administrativos o sanciones disciplinarias.
+          </div>
+        </div>
+
+        <div class="rector-alerts-grid" id="rector-alerts-list">
+          <!-- Generado dinámicamente desde JS -->
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content: space-between;">
+        <span style="font-size: 0.78rem; color: var(--text-muted);">Universidad Internacional del Trópico Americano &bull; Sistema de Notificaciones</span>
+        <button type="button" class="btn btn-ghost" id="btn-close-rector-alerts-footer">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Reparto de Expediente a Dependencia Responsable -->
+  <div class="modal-backdrop" id="reparto-doc-modal">
+    <div class="modal-card" style="max-width: 650px;">
+      <div class="modal-header">
+        <h3>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+          <span>Reparto Rectoral — Remitir Expediente a Dependencia</span>
+        </h3>
+        <button class="btn-close-modal" id="btn-close-reparto-modal">&times;</button>
+      </div>
+      <form id="reparto-doc-form">
+        <div class="modal-body">
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;">
+            <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: var(--secondary);">Expediente Seleccionado</div>
+            <div style="font-weight: 800; font-size: 0.95rem; color: var(--text-main);" id="reparto-doc-title">...</div>
+            <div style="font-size: 0.78rem; color: var(--primary); font-weight: 700; margin-top: 2px;" id="reparto-doc-radicado">...</div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Dependencia Universitaria Receptora *</label>
+              <select class="form-select" id="select-reparto-dependencia" required>
+                <!-- Opciones dinámicas de dependencias -->
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Funcionario Responsable en Dependencia *</label>
+              <select class="form-select" id="select-reparto-funcionario" required>
+                <!-- Opciones dinámicas según dependencia seleccionada -->
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Prioridad del Reparto *</label>
+              <select class="form-select" id="select-reparto-prioridad" required>
+                <option value="Urgente">Urgente (Trámite Inmediato &lt; 48 Horas)</option>
+                <option value="Alta">Alta Prioridad (Término Legal Próximo)</option>
+                <option value="Ordinaria" selected>Ordinaria (Término Legal Regular)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Plazo Perentorio de Entrega *</label>
+              <input type="date" class="form-input" id="input-reparto-plazo" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Instrucciones u Orden del Despacho Rectoral *</label>
+            <textarea class="form-textarea" id="input-reparto-instrucciones" rows="3" placeholder="Ej: Se remite por competencia para sustanciar y emitir respuesta formal al peticionario..." required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" id="btn-cancel-reparto">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Confirmar Reparto Institucional</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Registrar Nueva Dependencia Universitaria -->
+  <div class="modal-backdrop" id="new-dependencia-modal">
+    <div class="modal-card" style="max-width: 620px;">
+      <div class="modal-header">
+        <h3>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+          <span>Crear Nueva Dependencia Universitaria</span>
+        </h3>
+        <button class="btn-close-modal" id="btn-close-new-dep">&times;</button>
+      </div>
+      <form id="new-dependencia-form">
+        <div class="modal-body">
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Nombre de la Dependencia *</label>
+              <input type="text" class="form-input" id="input-dep-nombre" placeholder="Ej: Dirección de Bienestar Universitario" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Sigla / Código Oficial *</label>
+              <input type="text" class="form-input" id="input-dep-sigla" placeholder="Ej: DBU" required>
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Nivel Orgánico *</label>
+              <select class="form-select" id="select-dep-nivel" required>
+                <option value="Directivo Superior">Directivo Superior</option>
+                <option value="Asesor">Nivel Asesor</option>
+                <option value="Misional">Nivel Misional</option>
+                <option value="Apoyo" selected>Nivel de Apoyo y Administrativo</option>
+                <option value="Control">Nivel de Control</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Jefe o Titular de la Dependencia *</label>
+              <input type="text" class="form-input" id="input-dep-jefe" placeholder="Ej: Dr. Wilson Barreto" required>
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Correo Oficial *</label>
+              <input type="email" class="form-input" id="input-dep-correo" placeholder="bienestar@unitropico.edu.co" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Extensión Telefónica</label>
+              <input type="text" class="form-input" id="input-dep-ext" placeholder="Ej: Ext. 140">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Competencias y Funciones Principales *</label>
+            <textarea class="form-textarea" id="input-dep-competencias" rows="3" placeholder="Detalle los trámites, expedientes y asuntos que atiende esta dependencia..." required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" id="btn-cancel-new-dep">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Registrar Dependencia</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Vincular Funcionario a Dependencia -->
+  <div class="modal-backdrop" id="add-official-modal">
+    <div class="modal-card" style="max-width: 580px;">
+      <div class="modal-header">
+        <h3>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+          <span>Vincular Funcionario a Dependencia</span>
+        </h3>
+        <button class="btn-close-modal" id="btn-close-add-official">&times;</button>
+      </div>
+      <form id="add-official-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Dependencia de Destino *</label>
+            <select class="form-select" id="select-official-dependencia" required>
+              <!-- Dinámico desde JS -->
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Nombre Completo del Funcionario *</label>
+            <input type="text" class="form-input" id="input-official-name" placeholder="Ej: Dra. Natalia Ramírez Celis" required>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Cargo o Función *</label>
+              <input type="text" class="form-input" id="input-official-role" placeholder="Ej: Abogada Sustanciadora" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Correo Institucional *</label>
+              <input type="email" class="form-input" id="input-official-email" placeholder="nramirez@unitropico.edu.co" required>
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Teléfono o Extensión</label>
+              <input type="text" class="form-input" id="input-official-ext" placeholder="Ej: Ext. 115">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nivel de Acceso</label>
+              <select class="form-select" id="select-official-access">
+                <option value="Jefe">Jefe / Director de Dependencia</option>
+                <option value="Funcionario" selected>Funcionario Sustanciador / Operativo</option>
+                <option value="Asistente">Asistente de Gestión Documental</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" id="btn-cancel-add-official">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Vincular Funcionario</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Detalle de Evento Google Calendar -->
+  <div class="modal-backdrop" id="cal-event-detail-modal">
+    <div class="modal-card" style="max-width: 620px;">
+      <div class="modal-header">
+        <h3>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <span id="cal-event-detail-title">Detalle del Compromiso</span>
+        </h3>
+        <button class="btn-close-modal" id="btn-close-cal-event-detail">&times;</button>
+      </div>
+      <div class="modal-body" id="cal-event-detail-body">
+        <!-- Dinámico desde JS -->
+      </div>
+      <div class="modal-footer" style="justify-content: space-between;">
+        <button type="button" class="btn btn-ghost" id="btn-close-cal-event-detail-footer">Cerrar</button>
+        <button type="button" class="btn btn-primary" id="btn-cal-event-action">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+          <span>Repartir / Tramitar Trámite</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Compromisos del Día en Calendario (Expansión con Semáforo) -->
+  <div class="modal-backdrop" id="cal-day-events-modal">
+    <div class="modal-card" style="max-width: 680px;">
+      <div class="modal-header">
+        <h3>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <span id="cal-day-modal-title">Compromisos del Día</span>
+        </h3>
+        <button class="btn-close-modal" id="btn-close-cal-day-modal">&times;</button>
+      </div>
+      <div class="modal-body" id="cal-day-modal-body">
+        <!-- Lista de compromisos con semáforo institucional -->
+      </div>
+      <div class="modal-footer" style="justify-content: space-between;">
+        <button type="button" class="btn btn-ghost" id="btn-close-cal-day-modal-footer">Cerrar</button>
+        <button type="button" class="btn btn-primary" id="btn-cal-day-switch-to-day">
+          <span>Ver en Vista Día Completa</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Verificación Criptográfica de la Cadena de Logs -->
+  <div class="modal-backdrop" id="audit-verify-modal">
+    <div class="modal-card" style="max-width: 620px;">
+      <div class="modal-header">
+        <h3>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+          <span>Certificado de Integridad y Trazabilidad</span>
+        </h3>
+        <button class="btn-close-modal" id="btn-close-audit-verify-modal">&times;</button>
+      </div>
+      <div class="modal-body" id="audit-verify-modal-body">
+        <!-- Generado dinámicamente desde JS -->
+      </div>
+      <div class="modal-footer" style="justify-content: flex-end;">
+        <button type="button" class="btn btn-primary" id="btn-close-audit-verify-btn">Entendido y Conforme</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pantalla de Autenticación y Login Institucional Unitrópico -->
+  <div class="login-overlay" id="login-overlay" style="display: none;">
+    <div class="login-card-container">
+      <div class="login-branding">
+        <div class="login-logo-circle">
+          <svg viewBox="0 0 24 24" width="40" height="40">
+            <path d="M12 2L2 7v7c0 5.55 3.84 10.74 10 12 6.16-1.26 10-6.45 10-12V7l-10-5zm0 3.3l7 3.5v5.2c0 4.38-2.94 8.48-7 9.58-4.06-1.1-7-5.2-7-9.58V8.8l7-3.5z" fill="#ffffff"/>
+            <path d="M11 11h2v5h-2zm0-4h2v2h-2z" fill="#B5A160"/>
+          </svg>
+        </div>
+        <div class="login-brand-title">UNIVERSIDAD INTERNACIONAL DEL TRÓPICO AMERICANO</div>
+        <div class="login-brand-subtitle">SISTEMA DE GESTIÓN DOCUMENTAL Y GOBIERNO INSTITUCIONAL (SGD)</div>
+      </div>
+
+      <div class="login-box">
+        <div class="login-box-header">
+          <h2>Iniciar Sesión Segura</h2>
+          <p>Ingrese con sus credenciales institucionales o use un perfil de demostración.</p>
+        </div>
+
+        <form id="login-form">
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label">Correo Institucional *</label>
+            <div class="login-input-wrap">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              <input type="email" class="form-input" id="input-login-email" placeholder="usuario@unitropico.edu.co" value="root@unitropico.edu.co" required>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label">Contraseña de Seguridad *</label>
+            <div class="login-input-wrap">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <input type="password" class="form-input" id="input-login-password" placeholder="••••••••••••" value="rector2026" required>
+              <button type="button" class="btn-toggle-pwd" id="btn-toggle-pwd" tabindex="-1" title="Mostrar u ocultar contraseña">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 0.8rem;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-muted);">
+              <input type="checkbox" id="chk-remember-session" checked style="accent-color: var(--primary);">
+              <span>Recordar sesión</span>
+            </label>
+            <span style="color: var(--primary); font-weight: 700; cursor: pointer;" onclick="showToast('Comuníquese con la Dirección de Tecnologías (DTI) para restaurar credenciales.')">¿Olvidó su contraseña?</span>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 12px; font-size: 0.95rem; font-weight: 800;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+            <span>Ingresar al Sistema SGD</span>
+          </button>
+        </form>
+
+        <!-- Atajos de Acceso Rápido para Demostración -->
+        <div class="login-quick-roles">
+          <div class="login-quick-roles-title">
+            <span>O ingrese con 1 clic para demostración:</span>
+          </div>
+          <div class="login-demo-pills">
+            <button type="button" class="login-demo-pill" id="demo-login-root">
+              <span class="demo-avatar" style="background: #6b21a8;">CL</span>
+              <div class="demo-info">
+                <strong>Dr. Cristian Lemus</strong>
+                <span>Rector Magnífico / Root</span>
+              </div>
+            </button>
+            <button type="button" class="login-demo-pill" id="demo-login-sec">
+              <span class="demo-avatar" style="background: #B5A160;">FO</span>
+              <div class="demo-info">
+                <strong>Dr. Fernando Ortiz</strong>
+                <span>Secretario General</span>
+              </div>
+            </button>
+            <button type="button" class="login-demo-pill" id="demo-login-oaj">
+              <span class="demo-avatar" style="background: #dc2626;">RG</span>
+              <div class="demo-info">
+                <strong>Dr. Roberto Gómez</strong>
+                <span>Asesor Jurídico</span>
+              </div>
+            </button>
+            <button type="button" class="login-demo-pill" id="demo-login-acad">
+              <span class="demo-avatar" style="background: #0284c7;">CR</span>
+              <div class="demo-info">
+                <strong>Dra. Carmen Vargas</strong>
+                <span>Vicerrectoría Académica</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <div class="login-security-footer">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span>Conexión segura TLS 1.3 &bull; Trazabilidad criptográfica SHA-256 de accesos activa.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenedor Toast -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
