@@ -30,3 +30,4 @@ Para mantener el repositorio permanentemente sincronizado con el remoto en GitHu
 
 4. **Despliegues Automáticos:**
    * Cada `git push origin main` dispara el despliegue en producción en Vercel. Verifica el estado del despliegue cuando el usuario solicite comprobar la disponibilidad en vivo.
+

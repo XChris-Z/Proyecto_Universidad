@@ -5,18 +5,56 @@ import { sendPeticionAssignmentEmail } from '@lib/email';
 
 export const POST: APIRoute = async ({ request, url }) => {
   try {
-    const body = await request.json();
-    const {
-      asunto,
-      descripcion,
-      solicitante_nombre,
-      solicitante_email,
-      solicitante_tipo = 'Ciudadano',
-      categoria = 'Petición General',
-      prioridad = 'Media',
-      fecha_limite_entrega,
-      oficina_ids = [],
-    } = body;
+    const contentType = request.headers.get('content-type') || '';
+    
+    let asunto = '';
+    let descripcion = '';
+    let solicitante_nombre = '';
+    let solicitante_email = '';
+    let solicitante_tipo = 'Ciudadano';
+    let categoria = 'Petición General';
+    let prioridad = 'Media';
+    let fecha_limite_entrega = '';
+    let oficina_ids: string[] = [];
+    let primaryFile: File | null = null;
+
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData();
+      asunto = (formData.get('asunto') as string) || '';
+      descripcion = (formData.get('descripcion') as string) || '';
+      solicitante_nombre = (formData.get('solicitante_nombre') as string) || '';
+      solicitante_email = (formData.get('solicitante_email') as string) || '';
+      solicitante_tipo = (formData.get('solicitante_tipo') as string) || 'Ciudadano';
+      categoria = (formData.get('categoria') as string) || 'Petición General';
+      prioridad = (formData.get('prioridad') as string) || 'Media';
+      fecha_limite_entrega = (formData.get('fecha_limite_entrega') as string) || '';
+      
+      const rawOficinas = formData.getAll('oficina_ids');
+      if (rawOficinas.length > 0) {
+        oficina_ids = rawOficinas.map(o => String(o));
+      } else {
+        const rawJsonOficinas = formData.get('oficinas_json') as string;
+        if (rawJsonOficinas) {
+          try { oficina_ids = JSON.parse(rawJsonOficinas); } catch (e) {}
+        }
+      }
+
+      primaryFile = formData.get('archivo_peticion') as File | null;
+      if (primaryFile && primaryFile.size === 0) {
+        primaryFile = null;
+      }
+    } else {
+      const body = await request.json();
+      asunto = body.asunto;
+      descripcion = body.descripcion;
+      solicitante_nombre = body.solicitante_nombre;
+      solicitante_email = body.solicitante_email;
+      solicitante_tipo = body.solicitante_tipo || 'Ciudadano';
+      categoria = body.categoria || 'Petición General';
+      prioridad = body.prioridad || 'Media';
+      fecha_limite_entrega = body.fecha_limite_entrega;
+      oficina_ids = body.oficina_ids || [];
+    }
 
     if (!asunto || !solicitante_nombre || !fecha_limite_entrega) {
       return new Response(
@@ -38,7 +76,7 @@ export const POST: APIRoute = async ({ request, url }) => {
       );
     }
 
-    // 1. Insertar Petición en Base de Datos (Disparador calcula Radicado y Margen de 5 Días)
+    // 1. Insertar Petición en Base de Datos (Disparador PL/pgSQL calcula Radicado y Margen de 5 Días)
     const { data: peticionData, error: peticionError } = await (supabase
       .from('peticiones' as any)
       .insert({
@@ -50,7 +88,7 @@ export const POST: APIRoute = async ({ request, url }) => {
         categoria,
         prioridad,
         fecha_limite_entrega,
-        // fecha_limite_responsable y storage_folder_path son calculados automáticamente por trigger PL/pgSQL
+        // fecha_limite_responsable y storage_folder_path son calculados por trigger
       } as any)
       .select()
       .single() as any);
@@ -63,7 +101,53 @@ export const POST: APIRoute = async ({ request, url }) => {
       );
     }
 
-    // 2. Obtener información de las oficinas seleccionadas
+    // 2. Subir Archivo Principal de la Petición al Storage si fue proporcionado
+    let savedPrimaryFile = null;
+    if (primaryFile) {
+      const cleanFileName = primaryFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const storageRelativePath = `${peticionData.numero_radicado}/documento_principal_${Date.now()}_${cleanFileName}`;
+      const fullStoragePath = `peticiones/${storageRelativePath}`;
+
+      try {
+        const arrayBuf = await primaryFile.arrayBuffer();
+        const buffer = Buffer.from(arrayBuf);
+
+        const { error: uploadErr } = await supabase.storage
+          .from('peticiones')
+          .upload(storageRelativePath, buffer, {
+            contentType: primaryFile.type || 'application/pdf',
+            upsert: true,
+          });
+
+        if (uploadErr) {
+          console.warn('Error subiendo archivo principal al storage:', uploadErr.message);
+        }
+
+        // Registrar en peticion_anexos como documento raíz de entrada
+        const { data: anexoPrincipal } = await (supabase
+          .from('peticion_anexos' as any)
+          .insert({
+            peticion_id: peticionData.id,
+            nombre_archivo: primaryFile.name,
+            storage_path: fullStoragePath,
+            tamano_bytes: primaryFile.size,
+            mime_type: primaryFile.type,
+            subido_por_email: solicitante_email || 'radicacion@unitropico.edu.co',
+            es_anexo_oficina: false, // Archivo original de radicación
+          } as any)
+          .select()
+          .single() as any);
+
+        savedPrimaryFile = anexoPrincipal || {
+          nombre_archivo: primaryFile.name,
+          storage_path: fullStoragePath,
+        };
+      } catch (uploadException) {
+        console.error('Excepción al subir archivo principal:', uploadException);
+      }
+    }
+
+    // 3. Obtener información de las oficinas seleccionadas
     const { data: oficinasData, error: oficinasError } = await (supabase
       .from('oficinas' as any)
       .select('id, nombre, email_institucional')
@@ -76,7 +160,7 @@ export const POST: APIRoute = async ({ request, url }) => {
       );
     }
 
-    // 3. Crear asignaciones en peticion_responsables (Trigger genera código único y subcarpeta)
+    // 4. Crear asignaciones en peticion_responsables (Trigger genera código único y subcarpeta)
     const asignacionesToInsert = oficinasData.map((ofi: any) => ({
       peticion_id: peticionData.id,
       oficina_id: ofi.id,
@@ -96,7 +180,7 @@ export const POST: APIRoute = async ({ request, url }) => {
       );
     }
 
-    // 4. Enviar correos automáticos institucionales a cada oficina con su código y enlace
+    // 5. Enviar correos automáticos institucionales a cada oficina con su código y enlace
     const baseUrl = url.origin;
     const portalUrl = `${baseUrl}/portal-responsable`;
 
@@ -131,6 +215,7 @@ export const POST: APIRoute = async ({ request, url }) => {
           fecha_limite_entrega: peticionData.fecha_limite_entrega,
           fecha_limite_responsable: peticionData.fecha_limite_responsable,
           storage_folder_path: peticionData.storage_folder_path,
+          archivo_principal: savedPrimaryFile,
         },
         responsables: responsablesData.map((r: any) => {
           const ofi = oficinasData.find((o: any) => o.id === r.oficina_id);
@@ -153,4 +238,3 @@ export const POST: APIRoute = async ({ request, url }) => {
     );
   }
 };
-

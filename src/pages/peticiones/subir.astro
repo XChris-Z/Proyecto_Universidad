@@ -3,7 +3,7 @@
 import AppLayout from '@layouts/AppLayout.astro';
 import { supabase } from '@lib/supabase';
 
-// Obtener catálogo de oficinas institucionales activas
+// Obtener catálogo de oficinas institucionales activas directamente desde Supabase PostgreSQL
 const { data: oficinasData } = await (supabase
   .from('oficinas' as any)
   .select('id, codigo, nombre, email_institucional, titular_cargo')
@@ -33,7 +33,7 @@ const oficinas = oficinasData || [
           <span class="role-badge admin">Radicación Oficial</span>
         </div>
         <p style="font-size: 0.84rem; color: var(--text-muted); margin: 4px 0 0 0;">
-          Generación automática de número de radicado consecutivo, cálculo estricto de margen de 5 días para oficinas y envío automatizado de credenciales de acceso.
+          Carga del documento oficial de petición, generación automática de radicado consecutivo, cálculo estricto de margen de 5 días para oficinas y envío automatizado de credenciales de acceso.
         </p>
       </div>
 
@@ -45,8 +45,45 @@ const oficinas = oficinasData || [
 
     <!-- Formulario de Radicación de Petición -->
     <form id="form-subir-peticion" style="display: flex; flex-direction: column; gap: 24px;">
+
+      <!-- SECCIÓN 0: CARGA DEL ARCHIVO PRINCIPAL DE LA PETICIÓN -->
+      <div class="card" style="padding: 24px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle);">
+          <div style="width: 32px; height: 32px; border-radius: var(--radius-sm); background: var(--dorado-suave-bg); color: var(--dorado-oscuro); display: flex; align-items: center; justify-content: center;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </div>
+          <div>
+            <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin: 0;">Documento Original de la Petición</h3>
+            <span style="font-size: 0.74rem; color: var(--text-muted);">Suba el oficio o memorial recibido (PDF, Word o imagen escaneada). Al subirlo se sugerirá el asunto automáticamente.</span>
+          </div>
+        </div>
+
+        <div id="drop-zone-peticion" style="border: 2px dashed var(--verde-borde); background: var(--verde-suave-bg); border-radius: var(--radius-md); padding: 32px 20px; text-align: center; cursor: pointer; transition: all 0.15s ease;">
+          <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="var(--verde-principal)" stroke-width="2" style="margin-bottom: 10px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+          <div style="font-weight: 800; font-size: 0.95rem; color: var(--verde-principal);" id="drop-zone-title">
+            Arrastre el archivo de la petición aquí o haga clic para seleccionar
+          </div>
+          <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 4px;" id="drop-zone-subtitle">
+            Formatos soportados: PDF, DOCX, JPG, PNG (hasta 50 MB)
+          </div>
+          <input type="file" id="input-archivo-peticion" accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png" style="display: none;" />
+        </div>
+
+        <div id="file-selected-indicator" style="display: none; margin-top: 12px; background: #ffffff; border: 1px solid var(--verde-borde); border-radius: var(--radius-sm); padding: 10px 14px; align-items: center; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--verde-principal)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <div>
+              <strong style="color: var(--text-main); font-size: 0.85rem;" id="selected-file-name">archivo.pdf</strong>
+              <div style="color: var(--text-muted); font-size: 0.72rem;" id="selected-file-size">0 KB</div>
+            </div>
+          </div>
+          <button type="button" id="btn-remove-selected-file" style="background: none; border: none; color: #DC2626; font-size: 0.75rem; font-weight: 700; cursor: pointer;">
+            Quitar archivo
+          </button>
+        </div>
+      </div>
       
-      <!-- Sección 1: Datos de la Petición y Solicitante -->
+      <!-- SECCIÓN 1: DATOS DE LA PETICIÓN Y SOLICITANTE -->
       <div class="card" style="padding: 24px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle);">
           <div style="width: 32px; height: 32px; border-radius: var(--radius-sm); background: var(--verde-suave-bg); color: var(--verde-principal); display: flex; align-items: center; justify-content: center;">
@@ -54,7 +91,7 @@ const oficinas = oficinasData || [
           </div>
           <div>
             <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin: 0;">1. Información General del Radicado</h3>
-            <span style="font-size: 0.74rem; color: var(--text-muted);">Asunto, datos del peticionario y fechas de control de términos</span>
+            <span style="font-size: 0.74rem; color: var(--text-muted);">Asunto, datos del peticionario y alcance de la solicitud</span>
           </div>
         </div>
 
@@ -112,7 +149,7 @@ const oficinas = oficinasData || [
         </div>
       </div>
 
-      <!-- Sección 2: Control de Fechas y Regla de los 5 Días -->
+      <!-- SECCIÓN 2: CONTROL DE FECHAS Y REGLA DE LOS 5 DÍAS -->
       <div class="card" style="padding: 24px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle);">
           <div style="width: 32px; height: 32px; border-radius: var(--radius-sm); background: var(--dorado-suave-bg); color: var(--dorado-oscuro); display: flex; align-items: center; justify-content: center;">
@@ -147,7 +184,7 @@ const oficinas = oficinasData || [
         </div>
       </div>
 
-      <!-- Sección 3: Selector Múltiple de Oficinas Responsables -->
+      <!-- SECCIÓN 3: SELECTOR MÚLTIPLE DE OFICINAS RESPONSABLES -->
       <div class="card" style="padding: 24px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle); flex-wrap: wrap; gap: 10px;">
           <div style="display: flex; align-items: center; gap: 10px;">
@@ -178,7 +215,7 @@ const oficinas = oficinasData || [
         </div>
       </div>
 
-      <!-- Botón de Envío y Guardado -->
+      <!-- BOTÓN DE ENVÍO Y GUARDADO -->
       <div style="display: flex; justify-content: flex-end; gap: 12px;">
         <button type="submit" id="btn-submit-peticion" class="btn btn-primary" style="padding: 13px 28px; font-size: 0.95rem; font-weight: 800; box-shadow: var(--shadow-sm); display: inline-flex; align-items: center; gap: 8px;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
@@ -210,6 +247,10 @@ const oficinas = oficinasData || [
             <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
               <span style="color: var(--text-muted);">Límite para Oficinas (-5 Días):</span>
               <strong style="color: var(--verde-principal);" id="modal-fecha-responsable">--</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+              <span style="color: var(--text-muted);">Documento Original Guardado:</span>
+              <strong style="color: var(--text-main);" id="modal-doc-name">Ninguno</strong>
             </div>
             <div style="display: flex; justify-content: space-between;">
               <span style="color: var(--text-muted);">Estructura de Carpeta en Storage:</span>
@@ -268,6 +309,72 @@ const oficinas = oficinasData || [
   </style>
 
   <script>
+    // 0. Archivo Principal de la Petición & Auto-rellenado inteligente
+    let primaryFile: File | null = null;
+    const dropZone = document.getElementById('drop-zone-peticion');
+    const fileInput = document.getElementById('input-archivo-peticion') as HTMLInputElement;
+    const fileIndicator = document.getElementById('file-selected-indicator');
+    const selectedFileName = document.getElementById('selected-file-name');
+    const selectedFileSize = document.getElementById('selected-file-size');
+    const btnRemoveFile = document.getElementById('btn-remove-selected-file');
+    const asuntoInput = document.getElementById('peticion-asunto') as HTMLInputElement;
+    const solicitanteInput = document.getElementById('solicitante-nombre') as HTMLInputElement;
+
+    function setPrimaryFile(file: File) {
+      primaryFile = file;
+      if (selectedFileName) selectedFileName.textContent = file.name;
+      if (selectedFileSize) selectedFileSize.textContent = `${(file.size / 1024).toFixed(1)} KB`;
+      if (fileIndicator) fileIndicator.style.display = 'flex';
+      if (dropZone) dropZone.style.display = 'none';
+
+      // Auto-rellenar Asunto si está vacío a partir del nombre del archivo
+      if (asuntoInput && !asuntoInput.value.trim()) {
+        const cleanName = file.name
+          .replace(/\.[^/.]+$/, '') // quitar extensión
+          .replace(/[-_]+/g, ' ')   // reemplazar guiones por espacios
+          .trim();
+        // Capitalizar primera letra
+        asuntoInput.value = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
+      }
+    }
+
+    function removePrimaryFile() {
+      primaryFile = null;
+      if (fileInput) fileInput.value = '';
+      if (fileIndicator) fileIndicator.style.display = 'none';
+      if (dropZone) dropZone.style.display = 'block';
+    }
+
+    if (dropZone && fileInput) {
+      dropZone.addEventListener('click', () => fileInput.click());
+
+      dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.style.background = 'rgba(0, 89, 78, 0.15)';
+      });
+
+      dropZone.addEventListener('dragleave', () => {
+        dropZone.style.background = 'var(--verde-suave-bg)';
+      });
+
+      dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.style.background = 'var(--verde-suave-bg)';
+        const files = e.dataTransfer?.files;
+        if (files && files.length > 0) {
+          setPrimaryFile(files[0]!);
+        }
+      });
+
+      fileInput.addEventListener('change', () => {
+        if (fileInput.files && fileInput.files.length > 0) {
+          setPrimaryFile(fileInput.files[0]!);
+        }
+      });
+    }
+
+    btnRemoveFile?.addEventListener('click', removePrimaryFile);
+
     // 1. Cálculo en Vivo de la Regla de los 5 Días
     const inputFechaEntrega = document.getElementById('fecha-limite-entrega') as HTMLInputElement;
     const previewFechaResp = document.getElementById('preview-fecha-responsable');
@@ -332,7 +439,7 @@ const oficinas = oficinasData || [
       cb.addEventListener('change', updateOficinasCount);
     });
 
-    // 3. Envío del Formulario vía fetch a /api/peticiones/crear
+    // 3. Envío del Formulario vía FormData a /api/peticiones/crear
     const form = document.getElementById('form-subir-peticion');
     const submitBtn = document.getElementById('btn-submit-peticion') as HTMLButtonElement;
     const modalSuccess = document.getElementById('modal-radicado-success');
@@ -351,28 +458,32 @@ const oficinas = oficinasData || [
           return;
         }
 
-        const payload = {
-          asunto: (document.getElementById('peticion-asunto') as HTMLInputElement).value,
-          descripcion: (document.getElementById('peticion-descripcion') as HTMLTextAreaElement).value,
-          solicitante_nombre: (document.getElementById('solicitante-nombre') as HTMLInputElement).value,
-          solicitante_email: (document.getElementById('solicitante-email') as HTMLInputElement).value,
-          solicitante_tipo: (document.getElementById('solicitante-tipo') as HTMLSelectElement).value,
-          categoria: (document.getElementById('peticion-categoria') as HTMLSelectElement).value,
-          prioridad: (document.getElementById('peticion-prioridad') as HTMLSelectElement).value,
-          fecha_limite_entrega: inputFechaEntrega.value,
-          oficina_ids: selectedOfficeIds,
-        };
+        const formData = new FormData();
+        formData.append('asunto', (document.getElementById('peticion-asunto') as HTMLInputElement).value);
+        formData.append('descripcion', (document.getElementById('peticion-descripcion') as HTMLTextAreaElement).value);
+        formData.append('solicitante_nombre', (document.getElementById('solicitante-nombre') as HTMLInputElement).value);
+        formData.append('solicitante_email', (document.getElementById('solicitante-email') as HTMLInputElement).value);
+        formData.append('solicitante_tipo', (document.getElementById('solicitante-tipo') as HTMLSelectElement).value);
+        formData.append('categoria', (document.getElementById('peticion-categoria') as HTMLSelectElement).value);
+        formData.append('prioridad', (document.getElementById('peticion-prioridad') as HTMLSelectElement).value);
+        formData.append('fecha_limite_entrega', inputFechaEntrega.value);
+        formData.append('oficinas_json', JSON.stringify(selectedOfficeIds));
+        
+        selectedOfficeIds.forEach(id => formData.append('oficina_ids', id));
+
+        if (primaryFile) {
+          formData.append('archivo_peticion', primaryFile);
+        }
 
         if (submitBtn) {
           submitBtn.disabled = true;
-          submitBtn.innerHTML = `<span>Procesando y generando radicado...</span>`;
+          submitBtn.innerHTML = `<span>Subiendo archivo y radicando en Supabase...</span>`;
         }
 
         try {
           const res = await fetch('/api/peticiones/crear', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
+            body: formData,
           });
 
           const data = await res.json();
@@ -386,12 +497,16 @@ const oficinas = oficinasData || [
           const modalNum = document.getElementById('modal-radicado-number');
           const modalEntrega = document.getElementById('modal-fecha-entrega');
           const modalResp = document.getElementById('modal-fecha-responsable');
+          const modalDoc = document.getElementById('modal-doc-name');
           const modalPath = document.getElementById('modal-storage-path');
           const listContainer = document.getElementById('modal-responsables-list');
 
           if (modalNum) modalNum.textContent = data.peticion.numero_radicado;
           if (modalEntrega) modalEntrega.textContent = data.peticion.fecha_limite_entrega;
           if (modalResp) modalResp.textContent = `${data.peticion.fecha_limite_responsable} (Cierre para oficinas)`;
+          if (modalDoc) {
+            modalDoc.textContent = data.peticion.archivo_principal?.nombre_archivo || (primaryFile ? primaryFile.name : 'Ninguno adjunto');
+          }
           if (modalPath) modalPath.textContent = data.peticion.storage_folder_path;
 
           if (listContainer && Array.isArray(data.responsables)) {
@@ -403,7 +518,7 @@ const oficinas = oficinasData || [
                 </div>
                 <div style="text-align: right;">
                   <span style="font-family: monospace; font-weight: 900; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 3px 8px; border-radius: 4px; border: 1px solid var(--verde-borde);">${r.codigo_acceso}</span>
-                  <div style="font-size: 0.65rem; color: #059669; margin-top: 2px;">✔ Notificado</div>
+                  <div style="font-size: 0.65rem; color: #059669; margin-top: 2px;">✔ Código Asignado</div>
                 </div>
               </div>
             `).join('');
@@ -411,6 +526,7 @@ const oficinas = oficinasData || [
 
           if (modalSuccess) modalSuccess.style.display = 'flex';
           (form as HTMLFormElement).reset();
+          removePrimaryFile();
           updateOficinasCount();
         } catch (err) {
           console.error(err);
@@ -434,4 +550,3 @@ const oficinas = oficinasData || [
     });
   </script>
 </AppLayout>
-

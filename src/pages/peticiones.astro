@@ -34,6 +34,7 @@ const { data: dbPeticiones } = await (supabase
   .order('created_at', { ascending: false }) as any);
 
 const peticionesList = dbPeticiones || [];
+const pendientesCount = peticionesList.filter((p: any) => p.estado !== 'respondida' && p.estado !== 'completada').length;
 ---
 
 <AppLayout title="Peticiones Radicadas y Expedientes" activeNav="peticiones">
@@ -54,12 +55,12 @@ const peticionesList = dbPeticiones || [];
     <div class="filter-tabs" id="peticiones-filter-tabs">
       <button class="filter-tab active" data-pfilter="all">
         <span>Todas las Peticiones</span>
-        <span class="filter-count" id="pcount-all">{peticionesList.length || 1}</span>
+        <span class="filter-count" id="pcount-all">{peticionesList.length}</span>
       </button>
       <button class="filter-tab" data-pfilter="pendientes">
         <span class="dist-dot" style="background: var(--dorado-oscuro);"></span>
         <span>En Trámite</span>
-        <span class="filter-count">1</span>
+        <span class="filter-count">{pendientesCount}</span>
       </button>
     </div>
 
