@@ -6,6 +6,8 @@ npm-debug.log*
 .env
 .env.local
 .env.*.local
+.env.example
+env.example
 
 # Astro build output
 dist/
@@ -30,4 +32,8 @@ Desktop.ini
 # Supabase CLI temp
 supabase/.temp/
 
-
+# Documentos y configuraciones privadas
+Documentos/
+documentos/
+GEMINI.md
+gemini.md

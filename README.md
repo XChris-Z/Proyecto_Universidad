@@ -1,5 +1,4 @@
-# SGD Unitrópico — Sistema de Gestión Documental y Gobierno Institucional
-
+# SGD Unitrópico 
 > **Versión 2.0 (Arquitectura Astro + TypeScript + Supabase + Vercel)**  
 > Plataforma de gestión documental, archivo oficial, seguimiento de peticiones (PQRS / Tutelas), sistematización de normativa colegiada, control disciplinario, planeación financiera CSU y trazabilidad inmutable de la Universidad Internacional del Trópico Americano.
 
