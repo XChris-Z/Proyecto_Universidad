@@ -1,20 +1,39 @@
 /* ==========================================================================
    SGD Unitrópico - Estilos del Sistema de Gestión Documental
+   Sistema de Diseño Sobrio Institucional: Verde y Dorado
    ========================================================================== */
 
 :root {
-  --primary: #00594E;
-  --primary-hover: #00453c;
-  --primary-light: #0d796b;
-  --primary-subtle: rgba(0, 89, 78, 0.08);
-  --primary-border: rgba(0, 89, 78, 0.22);
-  
-  --secondary: #B5A160;
-  --secondary-hover: #9c8849;
-  --secondary-light: #7a6a35;
-  --secondary-subtle: rgba(181, 161, 96, 0.12);
-  --secondary-border: rgba(181, 161, 96, 0.35);
+  /* Paleta Estricta Institucional: Verde Unitrópico y variaciones */
+  --verde-oscuro: #004239;
+  --verde-principal: #00594E;
+  --verde-claro: #0d796b;
+  --verde-suave-bg: rgba(0, 89, 78, 0.08);
+  --verde-borde: rgba(0, 89, 78, 0.22);
+  --verde-hover: #00453c;
 
+  /* Paleta Estricta Institucional: Dorado/Oro y variaciones */
+  --dorado-oscuro: #7a6a35;
+  --dorado-principal: #B5A160;
+  --dorado-claro: #cfbe85;
+  --dorado-suave-bg: rgba(181, 161, 96, 0.12);
+  --dorado-borde: rgba(181, 161, 96, 0.35);
+  --dorado-hover: #9c8849;
+
+  /* Aliases para compatibilidad con componentes existentes */
+  --primary: var(--verde-principal);
+  --primary-hover: var(--verde-hover);
+  --primary-light: var(--verde-claro);
+  --primary-subtle: var(--verde-suave-bg);
+  --primary-border: var(--verde-borde);
+  
+  --secondary: var(--dorado-principal);
+  --secondary-hover: var(--dorado-hover);
+  --secondary-light: var(--dorado-oscuro);
+  --secondary-subtle: var(--dorado-suave-bg);
+  --secondary-border: var(--dorado-borde);
+
+  /* Soporte Neutro Sobrio */
   --bg-body: #F8FAFC;
   --bg-surface: #FFFFFF;
   --bg-surface-elevated: #F1F5F9;
@@ -26,6 +45,9 @@
   --text-muted: #64748B;
   --text-inverse: #FFFFFF;
 
+  /* ==========================================================================
+     SEMÁFORO DE VENCIMIENTOS (EXCLUSIVO PARA CALENDARIO / INDICADORES DE SLA)
+     ========================================================================== */
   --status-safe: #059669;
   --status-safe-bg: #ECFDF5;
   --status-safe-border: #A7F3D0;
@@ -302,33 +324,19 @@ h1, h2, h3, h4, .brand-font {
   margin-top: 1px;
 }
 
-.role-badge.root {
-  background: linear-gradient(135deg, rgba(107, 33, 168, 0.16) 0%, rgba(181, 161, 96, 0.22) 100%);
-  color: #6b21a8;
-  border: 1px solid rgba(107, 33, 168, 0.4);
-  box-shadow: 0 0 10px rgba(107, 33, 168, 0.16);
-  font-weight: 800;
-}
-
+.role-badge.root,
 .role-badge.admin {
-  background: rgba(0, 89, 78, 0.12);
-  color: var(--primary);
-  border: 1px solid var(--primary-border);
+  background: var(--verde-suave-bg);
+  color: var(--verde-principal);
+  border: 1px solid var(--verde-borde);
   font-weight: 700;
 }
 
-.role-badge.funcionario, .role-badge.user {
-  background: rgba(2, 132, 199, 0.12);
-  color: #0284c7;
-  border: 1px solid rgba(2, 132, 199, 0.28);
-  font-weight: 600;
-}
-
-.role-badge.custom {
-  background: rgba(100, 116, 139, 0.12);
-  color: #475569;
-  border: 1px solid rgba(100, 116, 139, 0.25);
-  font-weight: 600;
+.role-badge.funcionario, .role-badge.user, .role-badge.custom {
+  background: var(--dorado-suave-bg);
+  color: var(--dorado-oscuro);
+  border: 1px solid var(--dorado-borde);
+  font-weight: 700;
 }
 
 .role-switch-btn {
@@ -678,15 +686,15 @@ h1, h2, h3, h4, .brand-font {
 }
 
 .kpi-card.purple::before {
-  background: #9333ea;
+  background: var(--verde-oscuro);
 }
 
 .kpi-card.teal::before {
-  background: #0d9488;
+  background: var(--verde-claro);
 }
 
 .kpi-card.blue::before {
-  background: #2563eb;
+  background: var(--dorado-oscuro);
 }
 
 .kpi-card {
@@ -718,27 +726,27 @@ h1, h2, h3, h4, .brand-font {
   left: 0;
   width: 4px;
   height: 100%;
-  background: var(--primary);
+  background: var(--verde-principal);
 }
 
 .kpi-card.safe::before {
-  background: var(--status-safe);
+  background: var(--verde-principal);
 }
 
 .kpi-card.warning::before {
-  background: var(--status-warn);
+  background: var(--dorado-principal);
 }
 
 .kpi-card.danger::before {
-  background: var(--status-critical);
+  background: var(--dorado-oscuro);
 }
 
 .kpi-card.gold::before {
-  background: var(--secondary);
+  background: var(--dorado-principal);
 }
 
 .kpi-card.responded::before {
-  background: var(--primary);
+  background: var(--verde-claro);
 }
 
 .kpi-header {
@@ -3113,16 +3121,13 @@ h1, h2, h3, h4, .brand-font {
   box-shadow: var(--shadow-md);
 }
 
-.hierarchy-step.root-step {
-  border-top: 3px solid #6b21a8;
-}
-
+.hierarchy-step.root-step,
 .hierarchy-step.admin-step {
-  border-top: 3px solid var(--primary);
+  border-top: 3px solid var(--verde-principal);
 }
 
 .hierarchy-step.user-step {
-  border-top: 3px solid #0284c7;
+  border-top: 3px solid var(--dorado-principal);
 }
 
 .hierarchy-badge {
@@ -3136,22 +3141,17 @@ h1, h2, h3, h4, .brand-font {
   letter-spacing: 0.04em;
 }
 
-.hierarchy-badge.root {
-  background: rgba(107, 33, 168, 0.12);
-  color: #6b21a8;
-  border: 1px solid rgba(107, 33, 168, 0.3);
-}
-
+.hierarchy-badge.root,
 .hierarchy-badge.admin {
-  background: rgba(0, 89, 78, 0.12);
-  color: var(--primary);
-  border: 1px solid var(--primary-border);
+  background: var(--verde-suave-bg);
+  color: var(--verde-principal);
+  border: 1px solid var(--verde-borde);
 }
 
 .hierarchy-badge.user {
-  background: rgba(2, 132, 199, 0.12);
-  color: #0284c7;
-  border: 1px solid rgba(2, 132, 199, 0.3);
+  background: var(--dorado-suave-bg);
+  color: var(--dorado-oscuro);
+  border: 1px solid var(--dorado-borde);
 }
 
 .hierarchy-step p {
@@ -3507,27 +3507,27 @@ h1, h2, h3, h4, .brand-font {
 }
 
 .badge-right-origin.ley1755 {
-  background: rgba(181, 161, 96, 0.15);
-  color: #8b7738;
-  border: 1px solid rgba(181, 161, 96, 0.35);
+  background: var(--dorado-suave-bg);
+  color: var(--dorado-oscuro);
+  border: 1px solid var(--dorado-borde);
 }
 
 .badge-right-origin.ley1712 {
-  background: rgba(2, 132, 199, 0.1);
-  color: #0284c7;
-  border: 1px solid rgba(2, 132, 199, 0.25);
+  background: var(--verde-suave-bg);
+  color: var(--verde-claro);
+  border: 1px solid var(--verde-borde);
 }
 
 .badge-right-origin.cpaca {
-  background: rgba(124, 58, 237, 0.1);
-  color: #7c3aed;
-  border: 1px solid rgba(124, 58, 237, 0.25);
+  background: rgba(0, 66, 57, 0.08);
+  color: var(--verde-oscuro);
+  border: 1px solid rgba(0, 66, 57, 0.2);
 }
 
 .badge-right-origin.interno {
-  background: rgba(16, 185, 129, 0.1);
-  color: #059669;
-  border: 1px solid rgba(16, 185, 129, 0.25);
+  background: var(--verde-suave-bg);
+  color: var(--verde-principal);
+  border: 1px solid var(--verde-borde);
 }
 
 /* Tarjeta informativa de Fundamento Constitucional */
@@ -3599,10 +3599,10 @@ h1, h2, h3, h4, .brand-font {
   background: var(--primary);
 }
 
-.colegiado-card.superior::before { background: #00594E; }
-.colegiado-card.academico::before { background: #B5A160; }
-.colegiado-card.rectoral::before { background: #0284c7; }
-.colegiado-card.electoral::before { background: #7c3aed; }
+.colegiado-card.superior::before { background: var(--verde-principal); }
+.colegiado-card.academico::before { background: var(--dorado-principal); }
+.colegiado-card.rectoral::before { background: var(--verde-oscuro); }
+.colegiado-card.electoral::before { background: var(--dorado-oscuro); }
 
 .colegiado-header {
   display: flex;
@@ -3620,10 +3620,10 @@ h1, h2, h3, h4, .brand-font {
   text-transform: uppercase;
 }
 
-.colegiado-badge.superior { background: rgba(0, 89, 78, 0.12); color: #00594E; }
-.colegiado-badge.academico { background: rgba(181, 161, 96, 0.18); color: #827030; }
-.colegiado-badge.rectoral { background: rgba(2, 132, 199, 0.12); color: #0284c7; }
-.colegiado-badge.electoral { background: rgba(124, 58, 237, 0.12); color: #7c3aed; }
+.colegiado-badge.superior { background: var(--verde-suave-bg); color: var(--verde-principal); }
+.colegiado-badge.academico { background: var(--dorado-suave-bg); color: var(--dorado-oscuro); }
+.colegiado-badge.rectoral { background: rgba(0, 66, 57, 0.1); color: var(--verde-oscuro); }
+.colegiado-badge.electoral { background: rgba(122, 106, 53, 0.14); color: var(--dorado-oscuro); }
 
 .norma-num-badge {
   font-family: monospace;
@@ -4017,15 +4017,15 @@ h1, h2, h3, h4, .brand-font {
 }
 
 .acreditacion-badge.en-tramite {
-  background: rgba(2, 132, 199, 0.1);
-  color: #0284c7;
-  border: 1px solid rgba(2, 132, 199, 0.25);
+  background: var(--dorado-suave-bg);
+  color: var(--dorado-oscuro);
+  border: 1px solid var(--dorado-borde);
 }
 
 .acreditacion-badge.negado {
-  background: var(--status-critical-bg);
-  color: var(--status-critical);
-  border: 1px solid var(--status-critical-border);
+  background: rgba(100, 116, 139, 0.12);
+  color: #475569;
+  border: 1px solid rgba(100, 116, 139, 0.25);
 }
 
 .programa-title {
@@ -4154,9 +4154,9 @@ h1, h2, h3, h4, .brand-font {
   border-radius: var(--radius-full);
 }
 
-.convenio-type-badge.gubernamental { background: rgba(0, 89, 78, 0.12); color: #00594E; }
-.convenio-type-badge.internacional { background: rgba(2, 132, 199, 0.12); color: #0284c7; }
-.convenio-type-badge.nacional { background: rgba(181, 161, 96, 0.2); color: #796628; }
+.convenio-type-badge.gubernamental { background: var(--verde-suave-bg); color: var(--verde-principal); }
+.convenio-type-badge.internacional { background: rgba(0, 66, 57, 0.1); color: var(--verde-oscuro); }
+.convenio-type-badge.nacional { background: var(--dorado-suave-bg); color: var(--dorado-oscuro); }
 
 .convenio-entity {
   font-size: 1.05rem;
@@ -5380,15 +5380,15 @@ h1, h2, h3, h4, .brand-font {
 }
 
 .security-badge-pill.blue {
-  background: #dbeafe;
-  color: #1e40af;
-  border: 1px solid #bfdbfe;
+  background: var(--verde-suave-bg);
+  color: var(--verde-principal);
+  border: 1px solid var(--verde-borde);
 }
 
 .security-badge-pill.purple {
-  background: #f3e8ff;
-  color: #6b21a8;
-  border: 1px solid #e9d5ff;
+  background: var(--dorado-suave-bg);
+  color: var(--dorado-oscuro);
+  border: 1px solid var(--dorado-borde);
 }
 
 .audit-quick-actions {
@@ -5573,15 +5573,15 @@ h1, h2, h3, h4, .brand-font {
 }
 
 .audit-badge-action.respuesta {
-  background: #dbeafe;
-  color: #1d4ed8;
-  border: 1px solid #bfdbfe;
+  background: var(--verde-suave-bg);
+  color: var(--verde-principal);
+  border: 1px solid var(--verde-borde);
 }
 
 .audit-badge-action.seguridad {
-  background: #f3e8ff;
-  color: #7e22ce;
-  border: 1px solid #e9d5ff;
+  background: var(--dorado-suave-bg);
+  color: var(--dorado-oscuro);
+  border: 1px solid var(--dorado-borde);
 }
 
 .audit-hash-chip {
