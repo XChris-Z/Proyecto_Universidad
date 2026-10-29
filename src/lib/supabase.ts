@@ -4,6 +4,7 @@
 // En Fase 2+ reemplazará los datos mock de src/data/*.ts
 
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from './database.types';
 
 const rawUrl = import.meta.env.PUBLIC_SUPABASE_URL as string | undefined;
 // Normalizar la URL en caso de que incluya /rest/v1/ o barras finales
@@ -21,7 +22,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 // El cliente se exporta siempre; si las vars no están disponibles lanzará
 // errores solo cuando se intente hacer una petición real.
-export const supabase = createClient(
+export const supabase = createClient<Database>(
   supabaseUrl ?? '',
   supabaseAnonKey ?? ''
 );
