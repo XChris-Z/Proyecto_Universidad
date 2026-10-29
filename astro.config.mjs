@@ -7,8 +7,6 @@ export default defineConfig({
   // para leer y escribir cookies de sesión de forma segura.
   output: 'server',
 
-  adapter: vercel({
-    webAnalytics: { enabled: true },
-  }),
+  adapter: vercel(),
 });
 
