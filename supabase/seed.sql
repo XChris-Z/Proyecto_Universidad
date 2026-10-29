@@ -76,3 +76,4 @@ INSERT INTO public.convenios (id, tipo, tipo_label, numero, entidad, objeto, ini
 ('conv-001', 'gubernamental', 'Ente Gubernamental', 'CONV-GOB-2026-004', 'Gobernación de Casanare', 'Aunar esfuerzos técnicos y financieros para el fortalecimiento de la infraestructura de investigación agroforestal.', '2026-02-01', '2027-01-31', '$2.400.000.000 COP', 'Vicerrectoría de Investigación', 'Activo / En Ejecución', 'minuta_conv_gob_004.pdf'),
 ('conv-002', 'internacional', 'Cooperación Internacional', 'CONV-INT-2025-019', 'Universidad Nacional Autónoma de México (UNAM)', 'Movilidad docente, estudiantil y proyectos conjuntos de investigación en biodiversidad de la Orinoquía.', '2025-06-15', '2028-06-14', 'Sin cuantía pecuniaria', 'Oficina de Relaciones Internacionales', 'Activo / En Ejecución', 'minuta_conv_unam.pdf')
 ON CONFLICT (id) DO NOTHING;
+

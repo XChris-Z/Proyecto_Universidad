@@ -5,7 +5,9 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL as string | undefined;
+const rawUrl = import.meta.env.PUBLIC_SUPABASE_URL as string | undefined;
+// Normalizar la URL en caso de que incluya /rest/v1/ o barras finales
+const supabaseUrl = rawUrl ? rawUrl.replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '') : undefined;
 const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY as string | undefined;
 
 if (!supabaseUrl || !supabaseAnonKey) {
