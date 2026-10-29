@@ -363,6 +363,36 @@ export type Database = {
           },
         ]
       }
+      oficinas: {
+        Row: {
+          activo: boolean | null
+          codigo: string
+          created_at: string | null
+          email_institucional: string
+          id: string
+          nombre: string
+          titular_cargo: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          codigo: string
+          created_at?: string | null
+          email_institucional: string
+          id?: string
+          nombre: string
+          titular_cargo?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          codigo?: string
+          created_at?: string | null
+          email_institucional?: string
+          id?: string
+          nombre?: string
+          titular_cargo?: string | null
+        }
+        Relationships: []
+      }
       permissions: {
         Row: {
           category: string
@@ -384,6 +414,224 @@ export type Database = {
           description?: string | null
           id?: string
           label?: string
+        }
+        Relationships: []
+      }
+      peticion_anexos: {
+        Row: {
+          created_at: string | null
+          es_anexo_oficina: boolean | null
+          id: string
+          mime_type: string | null
+          nombre_archivo: string
+          peticion_id: string
+          peticion_responsable_id: string | null
+          storage_path: string
+          subido_por_email: string
+          tamano_bytes: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          es_anexo_oficina?: boolean | null
+          id?: string
+          mime_type?: string | null
+          nombre_archivo: string
+          peticion_id: string
+          peticion_responsable_id?: string | null
+          storage_path: string
+          subido_por_email: string
+          tamano_bytes?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          es_anexo_oficina?: boolean | null
+          id?: string
+          mime_type?: string | null
+          nombre_archivo?: string
+          peticion_id?: string
+          peticion_responsable_id?: string | null
+          storage_path?: string
+          subido_por_email?: string
+          tamano_bytes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "peticion_anexos_peticion_id_fkey"
+            columns: ["peticion_id"]
+            isOneToOne: false
+            referencedRelation: "peticiones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "peticion_anexos_peticion_responsable_id_fkey"
+            columns: ["peticion_responsable_id"]
+            isOneToOne: false
+            referencedRelation: "peticion_responsables"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      peticion_responsables: {
+        Row: {
+          codigo_acceso: string
+          created_at: string | null
+          email_enviado_at: string | null
+          estado_entrega: string | null
+          fecha_entrega: string | null
+          fecha_expiracion_codigo: string
+          id: string
+          observaciones_entrega: string | null
+          oficina_id: string
+          peticion_id: string
+          storage_subfolder_path: string
+        }
+        Insert: {
+          codigo_acceso: string
+          created_at?: string | null
+          email_enviado_at?: string | null
+          estado_entrega?: string | null
+          fecha_entrega?: string | null
+          fecha_expiracion_codigo: string
+          id?: string
+          observaciones_entrega?: string | null
+          oficina_id: string
+          peticion_id: string
+          storage_subfolder_path: string
+        }
+        Update: {
+          codigo_acceso?: string
+          created_at?: string | null
+          email_enviado_at?: string | null
+          estado_entrega?: string | null
+          fecha_entrega?: string | null
+          fecha_expiracion_codigo?: string
+          id?: string
+          observaciones_entrega?: string | null
+          oficina_id?: string
+          peticion_id?: string
+          storage_subfolder_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "peticion_responsables_oficina_id_fkey"
+            columns: ["oficina_id"]
+            isOneToOne: false
+            referencedRelation: "oficinas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "peticion_responsables_peticion_id_fkey"
+            columns: ["peticion_id"]
+            isOneToOne: false
+            referencedRelation: "peticiones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      peticiones: {
+        Row: {
+          asunto: string
+          categoria: string | null
+          creado_por: string | null
+          created_at: string | null
+          descripcion: string | null
+          estado: string | null
+          fecha_limite_entrega: string
+          fecha_limite_responsable: string
+          fecha_radicacion: string | null
+          id: string
+          numero_radicado: string
+          prioridad: string | null
+          solicitante_email: string | null
+          solicitante_nombre: string
+          solicitante_tipo: string | null
+          storage_folder_path: string
+          updated_at: string | null
+        }
+        Insert: {
+          asunto: string
+          categoria?: string | null
+          creado_por?: string | null
+          created_at?: string | null
+          descripcion?: string | null
+          estado?: string | null
+          fecha_limite_entrega: string
+          fecha_limite_responsable: string
+          fecha_radicacion?: string | null
+          id?: string
+          numero_radicado: string
+          prioridad?: string | null
+          solicitante_email?: string | null
+          solicitante_nombre: string
+          solicitante_tipo?: string | null
+          storage_folder_path: string
+          updated_at?: string | null
+        }
+        Update: {
+          asunto?: string
+          categoria?: string | null
+          creado_por?: string | null
+          created_at?: string | null
+          descripcion?: string | null
+          estado?: string | null
+          fecha_limite_entrega?: string
+          fecha_limite_responsable?: string
+          fecha_radicacion?: string | null
+          id?: string
+          numero_radicado?: string
+          prioridad?: string | null
+          solicitante_email?: string | null
+          solicitante_nombre?: string
+          solicitante_tipo?: string | null
+          storage_folder_path?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "peticiones_creado_por_fkey"
+            columns: ["creado_por"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          cargo: string | null
+          created_at: string | null
+          email: string
+          full_name: string
+          id: string
+          is_provisional_password: boolean | null
+          phone: string | null
+          role: string
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          cargo?: string | null
+          created_at?: string | null
+          email: string
+          full_name: string
+          id: string
+          is_provisional_password?: boolean | null
+          phone?: string | null
+          role?: string
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          cargo?: string | null
+          created_at?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          is_provisional_password?: boolean | null
+          phone?: string | null
+          role?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -452,6 +700,58 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      user_permissions: {
+        Row: {
+          created_at: string | null
+          granted_by: string | null
+          id: string
+          is_granted: boolean | null
+          permission_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          granted_by?: string | null
+          id?: string
+          is_granted?: boolean | null
+          permission_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          granted_by?: string | null
+          id?: string
+          is_granted?: boolean | null
+          permission_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_permissions_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_permissions_permission_id_fkey"
+            columns: ["permission_id"]
+            isOneToOne: false
+            referencedRelation: "permissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_permissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       users: {
         Row: {
@@ -532,6 +832,10 @@ export type Database = {
           p_severity?: string
         }
         Returns: string
+      }
+      fn_validar_acceso_portal: {
+        Args: { p_codigo: string; p_email: string }
+        Returns: Json
       }
       get_dashboard_stats: { Args: never; Returns: Json }
     }

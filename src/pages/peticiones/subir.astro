@@ -1,0 +1,436 @@
+---
+// src/pages/peticiones/subir.astro
+import AppLayout from '@layouts/AppLayout.astro';
+import { supabase } from '@lib/supabase';
+
+// Obtener catálogo de oficinas institucionales activas
+const { data: oficinasData } = await (supabase
+  .from('oficinas' as any)
+  .select('id, codigo, nombre, email_institucional, titular_cargo')
+  .eq('activo', true)
+  .order('nombre') as any);
+
+const oficinas = oficinasData || [
+  { id: '1', codigo: 'REC', nombre: 'Despacho de Rectoría', email_institucional: 'rectoria@unitropico.edu.co' },
+  { id: '2', codigo: 'SEC-GEN', nombre: 'Secretaría General', email_institucional: 'secretaria.general@unitropico.edu.co' },
+  { id: '3', codigo: 'OFI-JUR', nombre: 'Oficina Asesora Jurídica', email_institucional: 'juridica@unitropico.edu.co' },
+  { id: '4', codigo: 'VIC-ACAD', nombre: 'Vicerrectoría Académica', email_institucional: 'viceacademica@unitropico.edu.co' },
+  { id: '5', codigo: 'VIC-ADMIN', nombre: 'Vicerrectoría Administrativa y Financiera', email_institucional: 'vicefinanciera@unitropico.edu.co' },
+  { id: '6', codigo: 'PLA-INST', nombre: 'Dirección de Planeación', email_institucional: 'planeacion@unitropico.edu.co' },
+  { id: '7', codigo: 'ADM-REG', nombre: 'Admisiones, Registro y Control', email_institucional: 'admisiones@unitropico.edu.co' },
+  { id: '8', codigo: 'CORRESP', nombre: 'Gestión Documental y Correspondencia', email_institucional: 'correspondencia@unitropico.edu.co' },
+];
+---
+
+<AppLayout title="Subir Petición Institucional" activeNav="subir-peticion">
+  <div class="subir-peticion-container" style="max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px;">
+    
+    <!-- Banner de Encabezado Institucional -->
+    <div class="card" style="padding: 24px 28px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); border-left: 5px solid var(--verde-principal); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+      <div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--text-main); margin: 0;">Módulo Subir Petición</h2>
+          <span class="role-badge admin">Radicación Oficial</span>
+        </div>
+        <p style="font-size: 0.84rem; color: var(--text-muted); margin: 4px 0 0 0;">
+          Generación automática de número de radicado consecutivo, cálculo estricto de margen de 5 días para oficinas y envío automatizado de credenciales de acceso.
+        </p>
+      </div>
+
+      <a href="/peticiones" style="background: var(--verde-suave-bg); color: var(--verde-principal); border: 1px solid var(--verde-borde); padding: 8px 16px; border-radius: var(--radius-sm); font-size: 0.8rem; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        <span>Volver a Radicados</span>
+      </a>
+    </div>
+
+    <!-- Formulario de Radicación de Petición -->
+    <form id="form-subir-peticion" style="display: flex; flex-direction: column; gap: 24px;">
+      
+      <!-- Sección 1: Datos de la Petición y Solicitante -->
+      <div class="card" style="padding: 24px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle);">
+          <div style="width: 32px; height: 32px; border-radius: var(--radius-sm); background: var(--verde-suave-bg); color: var(--verde-principal); display: flex; align-items: center; justify-content: center;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          </div>
+          <div>
+            <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin: 0;">1. Información General del Radicado</h3>
+            <span style="font-size: 0.74rem; color: var(--text-muted);">Asunto, datos del peticionario y fechas de control de términos</span>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <div class="form-group">
+            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Asunto o Título de la Petición *</label>
+            <input type="text" id="peticion-asunto" required placeholder="Ej. Solicitud de expedición y entrega de soporte de grado 2024" class="form-input" />
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;" class="grid-two-cols">
+            <div class="form-group">
+              <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Nombre del Solicitante / Peticionario *</label>
+              <input type="text" id="solicitante-nombre" required placeholder="Ej. Dr. Mario Andrés Rincón" class="form-input" />
+            </div>
+            <div class="form-group">
+              <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Correo del Solicitante</label>
+              <input type="email" id="solicitante-email" placeholder="peticionario@ejemplo.com" class="form-input" />
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;" class="grid-three-cols">
+            <div class="form-group">
+              <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Tipo de Solicitante</label>
+              <select id="solicitante-tipo" class="form-input">
+                <option value="Ciudadano" selected>Ciudadano / Particular</option>
+                <option value="Estudiante">Estudiante / Graduado</option>
+                <option value="Docente">Docente / Investigador</option>
+                <option value="Entidad Pública">Entidad Pública / Órgano de Control</option>
+                <option value="Empresa Privada">Empresa / Convenio</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Categoría Legal</label>
+              <select id="peticion-categoria" class="form-input">
+                <option value="Petición General" selected>Petición General (CP art. 23)</option>
+                <option value="Información y Documentos">Solicitud de Información y Documentos (Ley 1755)</option>
+                <option value="Consulta Jurídica">Consulta Jurídica / Técnica</option>
+                <option value="Reclamo Administrativo">Reclamo / Queja Administrativa</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Prioridad</label>
+              <select id="peticion-prioridad" class="form-input">
+                <option value="Alta">Alta</option>
+                <option value="Media" selected>Media</option>
+                <option value="Baja">Baja</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Descripción o Alcance de la Solicitud</label>
+            <textarea id="peticion-descripcion" rows="3" placeholder="Detalle qué documentos o soportes deben remitir las oficinas asignadas..." class="form-input" style="resize: vertical;"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sección 2: Control de Fechas y Regla de los 5 Días -->
+      <div class="card" style="padding: 24px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle);">
+          <div style="width: 32px; height: 32px; border-radius: var(--radius-sm); background: var(--dorado-suave-bg); color: var(--dorado-oscuro); display: flex; align-items: center; justify-content: center;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </div>
+          <div>
+            <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin: 0;">2. Vencimiento General y Regla de los 5 Días</h3>
+            <span style="font-size: 0.74rem; color: var(--text-muted);">Cálculo automático de la fecha límite para las oficinas responsables</span>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;" class="grid-two-cols">
+          <div class="form-group">
+            <label for="fecha-limite-entrega" style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Fecha Límite de Cierre de la Petición *</label>
+            <input type="date" id="fecha-limite-entrega" required class="form-input" style="font-weight: 700; font-size: 0.95rem;" />
+            <small style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; display: block;">
+              Fecha final improrrogable para responder al peticionario.
+            </small>
+          </div>
+
+          <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px 18px; display: flex; flex-direction: column; justify-content: center;">
+            <div style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; color: var(--dorado-oscuro); letter-spacing: 0.05em; margin-bottom: 2px;">
+              Plazo Máximo para Oficinas Responsables (-5 Días)
+            </div>
+            <div id="preview-fecha-responsable" style="font-size: 1.25rem; font-weight: 800; color: var(--verde-principal); font-family: monospace;">
+              -- Seleccione fecha de cierre --
+            </div>
+            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">
+              * Las oficinas tienen plazo hasta este día (23:59:59) para subir sus anexos. Luego su acceso queda bloqueado para dar 5 días de consolidación.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sección 3: Selector Múltiple de Oficinas Responsables -->
+      <div class="card" style="padding: 24px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle); flex-wrap: wrap; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 32px; height: 32px; border-radius: var(--radius-sm); background: var(--verde-suave-bg); color: var(--verde-principal); display: flex; align-items: center; justify-content: center;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <div>
+              <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin: 0;">3. Asignación de Oficinas Responsables</h3>
+              <span style="font-size: 0.74rem; color: var(--text-muted);">Seleccione una o varias dependencias que deben remitir anexos</span>
+            </div>
+          </div>
+
+          <span style="font-size: 0.76rem; font-weight: 700; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 4px 10px; border-radius: var(--radius-sm);" id="selected-offices-count">
+            0 seleccionadas
+          </span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;" id="oficinas-checkbox-grid">
+          {oficinas.map((ofi: any) => (
+            <label class="oficina-card-label" style="display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.12s ease; background: #ffffff;">
+              <input type="checkbox" name="oficinas_selected" value={ofi.id} data-email={ofi.email_institucional} data-nombre={ofi.nombre} style="margin-top: 3px; accent-color: var(--verde-principal); width: 17px; height: 17px;" />
+              <div style="flex: 1;">
+                <div style="font-size: 0.84rem; font-weight: 700; color: var(--text-main); line-height: 1.3;">{ofi.nombre}</div>
+                <div style="font-size: 0.72rem; color: var(--text-muted); font-family: monospace; margin-top: 2px;">{ofi.email_institucional}</div>
+              </div>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <!-- Botón de Envío y Guardado -->
+      <div style="display: flex; justify-content: flex-end; gap: 12px;">
+        <button type="submit" id="btn-submit-peticion" class="btn btn-primary" style="padding: 13px 28px; font-size: 0.95rem; font-weight: 800; box-shadow: var(--shadow-sm); display: inline-flex; align-items: center; gap: 8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          <span>Radicar Petición y Notificar Oficinas</span>
+        </button>
+      </div>
+
+    </form>
+
+    <!-- Modal de Éxito / Radicado Generado -->
+    <div class="modal-backdrop" id="modal-radicado-success" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; align-items: center; justify-content: center; padding: 16px;">
+      <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 620px; border-radius: var(--radius-md); box-shadow: var(--shadow-md); overflow: hidden;">
+        <div style="background: var(--verde-principal); color: #ffffff; padding: 24px; text-align: center;">
+          <div style="width: 52px; height: 52px; border-radius: 50%; background: rgba(255, 255, 255, 0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px auto;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <h3 style="font-size: 1.3rem; font-weight: 800; margin: 0;">Petición Radicada Exitosamente</h3>
+          <div id="modal-radicado-number" style="font-size: 1.4rem; font-weight: 900; letter-spacing: 2px; font-family: monospace; color: var(--dorado-principal); margin-top: 6px;">
+            RAD-2026-XXXXX
+          </div>
+        </div>
+
+        <div style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+          <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px; font-size: 0.82rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+              <span style="color: var(--text-muted);">Fecha Límite de Entrega:</span>
+              <strong id="modal-fecha-entrega">--</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+              <span style="color: var(--text-muted);">Límite para Oficinas (-5 Días):</span>
+              <strong style="color: var(--verde-principal);" id="modal-fecha-responsable">--</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-muted);">Estructura de Carpeta en Storage:</span>
+              <code id="modal-storage-path" style="font-size: 0.78rem; color: var(--verde-oscuro);">peticiones/RAD-.../</code>
+            </div>
+          </div>
+
+          <div>
+            <div style="font-size: 0.82rem; font-weight: 800; color: var(--text-main); margin-bottom: 8px;">
+              Oficinas Notificadas con Código Único Temporal:
+            </div>
+            <div id="modal-responsables-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 180px; overflow-y: auto;">
+              <!-- Se inyecta dinámicamente -->
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+            <a href="/peticiones" class="btn btn-secondary" style="text-decoration: none;">Ver Todas las Peticiones</a>
+            <button type="button" class="btn btn-primary" id="btn-modal-close-reset">Radicar Otra Petición</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <style>
+    @media (max-width: 768px) {
+      .grid-two-cols, .grid-three-cols {
+        grid-template-columns: 1fr !important;
+      }
+    }
+    .form-input {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 0.85rem;
+      color: var(--text-main);
+      transition: var(--transition-normal);
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: var(--verde-principal);
+      box-shadow: 0 0 0 3px var(--verde-suave-bg);
+    }
+    .oficina-card-label:hover {
+      border-color: var(--verde-principal) !important;
+      background: var(--verde-suave-bg) !important;
+    }
+    .oficina-card-label.selected {
+      border-color: var(--verde-principal) !important;
+      background: var(--verde-suave-bg) !important;
+    }
+  </style>
+
+  <script>
+    // 1. Cálculo en Vivo de la Regla de los 5 Días
+    const inputFechaEntrega = document.getElementById('fecha-limite-entrega') as HTMLInputElement;
+    const previewFechaResp = document.getElementById('preview-fecha-responsable');
+
+    // Por defecto sugerir fecha a 15 días calendario a partir de hoy
+    const today = new Date();
+    const defaultEntrega = new Date(today);
+    defaultEntrega.setDate(today.getDate() + 15);
+    if (inputFechaEntrega) {
+      inputFechaEntrega.value = defaultEntrega.toISOString().split('T')[0];
+      calculateFiveDaysRule();
+      inputFechaEntrega.addEventListener('change', calculateFiveDaysRule);
+      inputFechaEntrega.addEventListener('input', calculateFiveDaysRule);
+    }
+
+    function calculateFiveDaysRule() {
+      if (!inputFechaEntrega || !previewFechaResp) return;
+      const val = inputFechaEntrega.value;
+      if (!val) {
+        previewFechaResp.textContent = '-- Seleccione fecha de cierre --';
+        return;
+      }
+
+      const dateObj = new Date(val + 'T12:00:00');
+      if (isNaN(dateObj.getTime())) return;
+
+      // Restar exactamente 5 días calendario
+      const fechaResp = new Date(dateObj);
+      fechaResp.setDate(fechaResp.getDate() - 5);
+
+      const formatted = fechaResp.toLocaleDateString('es-CO', {
+        weekday: 'short',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+
+      previewFechaResp.textContent = `${formatted} (5 días antes)`;
+    }
+
+    // 2. Contador y Estilos de Selección de Oficinas
+    const oficinaCheckboxes = document.querySelectorAll('input[name="oficinas_selected"]') as NodeListOf<HTMLInputElement>;
+    const countLabel = document.getElementById('selected-offices-count');
+
+    function updateOficinasCount() {
+      let count = 0;
+      oficinaCheckboxes.forEach((cb) => {
+        const label = cb.closest('.oficina-card-label');
+        if (cb.checked) {
+          count++;
+          label?.classList.add('selected');
+        } else {
+          label?.classList.remove('selected');
+        }
+      });
+      if (countLabel) {
+        countLabel.textContent = `${count} seleccionada${count === 1 ? '' : 's'}`;
+      }
+    }
+
+    oficinaCheckboxes.forEach((cb) => {
+      cb.addEventListener('change', updateOficinasCount);
+    });
+
+    // 3. Envío del Formulario vía fetch a /api/peticiones/crear
+    const form = document.getElementById('form-subir-peticion');
+    const submitBtn = document.getElementById('btn-submit-peticion') as HTMLButtonElement;
+    const modalSuccess = document.getElementById('modal-radicado-success');
+
+    if (form) {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const selectedOfficeIds: string[] = [];
+        oficinaCheckboxes.forEach((cb) => {
+          if (cb.checked) selectedOfficeIds.push(cb.value);
+        });
+
+        if (selectedOfficeIds.length === 0) {
+          alert('Por favor seleccione al menos una oficina responsable para esta petición.');
+          return;
+        }
+
+        const payload = {
+          asunto: (document.getElementById('peticion-asunto') as HTMLInputElement).value,
+          descripcion: (document.getElementById('peticion-descripcion') as HTMLTextAreaElement).value,
+          solicitante_nombre: (document.getElementById('solicitante-nombre') as HTMLInputElement).value,
+          solicitante_email: (document.getElementById('solicitante-email') as HTMLInputElement).value,
+          solicitante_tipo: (document.getElementById('solicitante-tipo') as HTMLSelectElement).value,
+          categoria: (document.getElementById('peticion-categoria') as HTMLSelectElement).value,
+          prioridad: (document.getElementById('peticion-prioridad') as HTMLSelectElement).value,
+          fecha_limite_entrega: inputFechaEntrega.value,
+          oficina_ids: selectedOfficeIds,
+        };
+
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = `<span>Procesando y generando radicado...</span>`;
+        }
+
+        try {
+          const res = await fetch('/api/peticiones/crear', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+
+          const data = await res.json();
+
+          if (!res.ok || !data.success) {
+            alert('Error radicando petición: ' + (data.error || 'Ocurrió un error inesperado'));
+            return;
+          }
+
+          // Mostrar modal con los datos generados
+          const modalNum = document.getElementById('modal-radicado-number');
+          const modalEntrega = document.getElementById('modal-fecha-entrega');
+          const modalResp = document.getElementById('modal-fecha-responsable');
+          const modalPath = document.getElementById('modal-storage-path');
+          const listContainer = document.getElementById('modal-responsables-list');
+
+          if (modalNum) modalNum.textContent = data.peticion.numero_radicado;
+          if (modalEntrega) modalEntrega.textContent = data.peticion.fecha_limite_entrega;
+          if (modalResp) modalResp.textContent = `${data.peticion.fecha_limite_responsable} (Cierre para oficinas)`;
+          if (modalPath) modalPath.textContent = data.peticion.storage_folder_path;
+
+          if (listContainer && Array.isArray(data.responsables)) {
+            listContainer.innerHTML = data.responsables.map((r: any) => `
+              <div style="background: var(--bg-body); border: 1px solid var(--border-subtle); padding: 8px 12px; border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem;">
+                <div>
+                  <strong style="color: var(--text-main);">${r.oficina_nombre}</strong>
+                  <div style="color: var(--text-muted); font-size: 0.70rem;">${r.email_institucional}</div>
+                </div>
+                <div style="text-align: right;">
+                  <span style="font-family: monospace; font-weight: 900; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 3px 8px; border-radius: 4px; border: 1px solid var(--verde-borde);">${r.codigo_acceso}</span>
+                  <div style="font-size: 0.65rem; color: #059669; margin-top: 2px;">✔ Notificado</div>
+                </div>
+              </div>
+            `).join('');
+          }
+
+          if (modalSuccess) modalSuccess.style.display = 'flex';
+          (form as HTMLFormElement).reset();
+          updateOficinasCount();
+        } catch (err) {
+          console.error(err);
+          alert('Error de conexión al servidor.');
+        } finally {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = `
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              <span>Radicar Petición y Notificar Oficinas</span>
+            `;
+          }
+        }
+      });
+    }
+
+    // Cerrar modal y reiniciar
+    document.getElementById('btn-modal-close-reset')?.addEventListener('click', () => {
+      if (modalSuccess) modalSuccess.style.display = 'none';
+      calculateFiveDaysRule();
+    });
+  </script>
+</AppLayout>

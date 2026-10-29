@@ -60,38 +60,40 @@ import AuthLayout from '@layouts/AuthLayout.astro';
         <!-- Atajos de Acceso Rápido para Demostración -->
         <div class="login-quick-roles">
           <div class="login-quick-roles-title">
-            <span>O ingrese con 1 clic para demostración:</span>
+            <span>Acceso rápido por roles:</span>
           </div>
-          <div class="login-demo-pills">
+          <div class="login-demo-pills" style="grid-template-columns: 1fr 1fr; display: grid; gap: 10px;">
             <button type="button" class="login-demo-pill" id="demo-login-root">
-              <span class="demo-avatar" style="background: #6b21a8;">CL</span>
+              <span class="demo-avatar" style="background: var(--verde-principal); color: #ffffff;">CL</span>
               <div class="demo-info">
                 <strong>Dr. Cristian Lemus</strong>
-                <span>Rector Magnífico / Root</span>
+                <span>Rol: Administrador</span>
               </div>
             </button>
             <button type="button" class="login-demo-pill" id="demo-login-sec">
-              <span class="demo-avatar" style="background: #B5A160;">FO</span>
+              <span class="demo-avatar" style="background: var(--dorado-principal); color: #000000;">FO</span>
               <div class="demo-info">
                 <strong>Dr. Fernando Ortiz</strong>
-                <span>Secretario General</span>
-              </div>
-            </button>
-            <button type="button" class="login-demo-pill" id="demo-login-oaj">
-              <span class="demo-avatar" style="background: #dc2626;">RG</span>
-              <div class="demo-info">
-                <strong>Dr. Roberto Gómez</strong>
-                <span>Asesor Jurídico</span>
-              </div>
-            </button>
-            <button type="button" class="login-demo-pill" id="demo-login-acad">
-              <span class="demo-avatar" style="background: #0284c7;">CR</span>
-              <div class="demo-info">
-                <strong>Dra. Carmen Vargas</strong>
-                <span>Vicerrectoría Académica</span>
+                <span>Rol: Funcionario</span>
               </div>
             </button>
           </div>
+        </div>
+
+        <!-- Banner de Acceso al Portal Externo para Oficinas Responsables -->
+        <div style="margin-top: 18px; padding: 12px 14px; border-radius: var(--radius-sm); background: var(--dorado-suave-bg); border: 1px solid var(--dorado-borde); display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+          <div style="flex: 1; min-width: 200px;">
+            <div style="font-size: 0.82rem; font-weight: 800; color: var(--dorado-oscuro); display: flex; align-items: center; gap: 6px;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+              Portal Externo de Responsables
+            </div>
+            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">
+              Entrega de anexos institucionales mediante código único temporal (regla de los 5 días).
+            </div>
+          </div>
+          <a href="/portal-responsable" style="background: var(--dorado-oscuro); color: #ffffff; padding: 6px 12px; font-size: 0.75rem; font-weight: 700; text-decoration: none; border-radius: var(--radius-sm); white-space: nowrap; box-shadow: var(--shadow-sm);">
+            Portal de Entrega &rarr;
+          </a>
         </div>
 
         <div class="login-security-footer">
@@ -155,6 +157,7 @@ import AuthLayout from '@layouts/AuthLayout.astro';
       sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionPayload));
     }
 
+    localStorage.setItem('sgd_current_user', JSON.stringify(user));
     setSessionCookie(user.id);
 
     logSystemActivity({

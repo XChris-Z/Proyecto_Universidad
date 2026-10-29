@@ -1,87 +1,223 @@
 ---
 // src/pages/peticiones.astro
 import AppLayout from '@layouts/AppLayout.astro';
+import { supabase } from '@lib/supabase';
+
+// Consultar peticiones reales en base de datos PostgreSQL
+const { data: dbPeticiones } = await (supabase
+  .from('peticiones' as any)
+  .select(`
+    id,
+    numero_radicado,
+    asunto,
+    descripcion,
+    solicitante_nombre,
+    solicitante_tipo,
+    fecha_radicacion,
+    fecha_limite_entrega,
+    fecha_limite_responsable,
+    storage_folder_path,
+    estado,
+    prioridad,
+    peticion_responsables (
+      id,
+      codigo_acceso,
+      estado_entrega,
+      fecha_entrega,
+      storage_subfolder_path,
+      oficinas (
+        nombre,
+        email_institucional
+      )
+    )
+  `)
+  .order('created_at', { ascending: false }) as any);
+
+const peticionesList = dbPeticiones || [];
 ---
 
-<AppLayout title="Derechos de Petición y PQRS" activeNav="peticiones">
+<AppLayout title="Peticiones Radicadas y Expedientes" activeNav="peticiones">
   <div class="legal-basis-banner">
     <div class="legal-basis-text">
-      <h4>Fundamentación Constitucional y Procedencia del Derecho</h4>
-      <p>Módulo de radicación, trazabilidad y respuesta formal conforme al Artículo 23 de la Constitución Política, la Ley Estatutaria 1755 de 2015, la Ley 1712 de 2014 (Transparencia) y el CPACA (Ley 1437 de 2011).</p>
+      <h4>Control de Radicación Oficial y Regla de Margen de 5 Días</h4>
+      <p>Gestión de peticiones con cálculo automatizado de términos, generación de carpetas virtuales por radicado y portal externo para entrega de soportes por parte de las oficinas responsables.</p>
     </div>
     <div class="legal-basis-badges">
       <span class="badge-right-origin cp23">Constitución Art. 23</span>
       <span class="badge-right-origin ley1755">Ley 1755 / 2015</span>
-      <span class="badge-right-origin ley1712">Ley 1712 / 2014</span>
-      <span class="badge-right-origin cpaca">Ley 1437 CPACA</span>
-      <span class="badge-right-origin interno">Reglamento Unitrópico</span>
+      <span class="badge-right-origin ley1712">Regla -5 Días Activa</span>
+      <span class="badge-right-origin interno">Storage Virtualizado</span>
     </div>
   </div>
 
-  <div class="section-toolbar">
+  <div class="section-toolbar" style="margin-bottom: 20px;">
     <div class="filter-tabs" id="peticiones-filter-tabs">
       <button class="filter-tab active" data-pfilter="all">
         <span>Todas las Peticiones</span>
-        <span class="filter-count" id="pcount-all">3</span>
-      </button>
-      <button class="filter-tab" data-pfilter="particular">
-        <span class="dist-dot" style="background: var(--primary);"></span>
-        <span>Interés Particular (15d)</span>
-        <span class="filter-count" id="pcount-particular">2</span>
-      </button>
-      <button class="filter-tab" data-pfilter="general">
-        <span class="dist-dot" style="background: var(--secondary);"></span>
-        <span>Interés General (15d)</span>
-        <span class="filter-count" id="pcount-general">0</span>
-      </button>
-      <button class="filter-tab" data-pfilter="informacion">
-        <span class="dist-dot" style="background: #0284c7;"></span>
-        <span>Información y Copias (10d)</span>
-        <span class="filter-count" id="pcount-info">1</span>
-      </button>
-      <button class="filter-tab" data-pfilter="consulta">
-        <span class="dist-dot" style="background: #7c3aed;"></span>
-        <span>Consultas Jurídicas (30d)</span>
-        <span class="filter-count" id="pcount-consulta">0</span>
+        <span class="filter-count" id="pcount-all">{peticionesList.length || 1}</span>
       </button>
       <button class="filter-tab" data-pfilter="pendientes">
-        <span class="dist-dot" style="background: #ef4444;"></span>
-        <span>Sin Respuesta</span>
-        <span class="filter-count" id="pcount-pendientes">3</span>
+        <span class="dist-dot" style="background: var(--dorado-oscuro);"></span>
+        <span>En Trámite</span>
+        <span class="filter-count">1</span>
       </button>
     </div>
 
     <div>
-      <button class="btn btn-primary" data-action="open-upload-modal">
+      <a href="/peticiones/subir" class="btn btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-        <span>+ Radicar Derecho de Petición</span>
-      </button>
+        <span>+ Subir Petición</span>
+      </a>
     </div>
   </div>
 
-  <div class="table-responsive">
-    <table class="doc-table">
-      <thead>
-        <tr>
-          <th>Asunto / Peticionario</th>
-          <th>Radicado Entrada</th>
-          <th>Procedencia del Derecho (Norma)</th>
-          <th>Término Legal (SLA)</th>
-          <th>Semáforo de Plazo</th>
-          <th>Responsable Asignado</th>
-          <th>Estado Trámite</th>
-          <th style="text-align: right;">Acciones</th>
-        </tr>
-      </thead>
-      <tbody id="peticiones-table-body">
-        <!-- Dinámico desde JS -->
-      </tbody>
-    </table>
+  <!-- Vista Principal: Tabla de Radicados con Carpetas y Responsables -->
+  <div class="card" style="padding: 20px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+    <div class="table-responsive">
+      <table class="doc-table" style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="border-bottom: 2px solid var(--border-color); text-align: left; color: var(--text-muted); font-size: 0.74rem; text-transform: uppercase;">
+            <th style="padding: 10px 8px;">Radicado / Asunto</th>
+            <th style="padding: 10px 8px;">Peticionario</th>
+            <th style="padding: 10px 8px;">Límite General</th>
+            <th style="padding: 10px 8px;">Límite Oficinas (-5 Días)</th>
+            <th style="padding: 10px 8px;">Oficinas Responsables</th>
+            <th style="padding: 10px 8px;">Carpeta Storage</th>
+            <th style="padding: 10px 8px; text-align: right;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {peticionesList.length > 0 ? (
+            peticionesList.map((pet: any) => {
+              const responsables = pet.peticion_responsables || [];
+              return (
+                <tr style="border-bottom: 1px solid var(--border-subtle); font-size: 0.84rem;">
+                  <td style="padding: 12px 8px;">
+                    <span style="font-family: monospace; font-size: 0.88rem; font-weight: 800; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--verde-borde);">
+                      {pet.numero_radicado}
+                    </span>
+                    <div style="font-weight: 700; color: var(--text-main); margin-top: 4px;">
+                      {pet.asunto}
+                    </div>
+                  </td>
+                  <td style="padding: 12px 8px;">
+                    <div style="font-weight: 600; color: var(--text-main);">{pet.solicitante_nombre}</div>
+                    <div style="font-size: 0.72rem; color: var(--text-muted);">{pet.solicitante_tipo || 'Ciudadano'}</div>
+                  </td>
+                  <td style="padding: 12px 8px; font-weight: 700;">
+                    {pet.fecha_limite_entrega}
+                  </td>
+                  <td style="padding: 12px 8px;">
+                    <span style="color: var(--dorado-oscuro); font-weight: 800; background: var(--dorado-suave-bg); padding: 3px 8px; border-radius: 4px; border: 1px solid var(--dorado-borde);">
+                      {pet.fecha_limite_responsable}
+                    </span>
+                  </td>
+                  <td style="padding: 12px 8px;">
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                      {responsables.map((r: any) => {
+                        const ofiNombre = r.oficinas?.nombre || 'Oficina';
+                        const isDelivered = r.estado_entrega === 'Entregado';
+                        return (
+                          <div style="display: flex; align-items: center; gap: 6px; font-size: 0.74rem;">
+                            <span style={`width: 7px; height: 7px; border-radius: 50%; background: ${isDelivered ? '#059669' : 'var(--dorado-principal)'};`}></span>
+                            <span style="color: var(--text-main); font-weight: 600;">{ofiNombre}</span>
+                            <span style={`font-size: 0.65rem; padding: 1px 6px; border-radius: 3px; font-weight: 700; ${isDelivered ? 'background: #ecfdf5; color: #047857;' : 'background: #fffbeb; color: #b45309;'}`}>
+                              {r.estado_entrega || 'Pendiente'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </td>
+                  <td style="padding: 12px 8px;">
+                    <code style="font-size: 0.72rem; color: var(--verde-oscuro); background: var(--bg-surface-elevated); padding: 2px 6px; border-radius: 4px;">
+                      {pet.storage_folder_path}
+                    </code>
+                  </td>
+                  <td style="padding: 12px 8px; text-align: right;">
+                    <button type="button" class="btn-view-folder" data-radicado={pet.numero_radicado} style="background: var(--verde-suave-bg); border: 1px solid var(--verde-borde); color: var(--verde-principal); padding: 5px 12px; border-radius: var(--radius-sm); font-size: 0.74rem; font-weight: 700; cursor: pointer;">
+                      Explorar Subcarpetas
+                    </button>
+                  </td>
+                </tr>
+              );
+            })
+          ) : (
+            <tr>
+              <td colspan="7" style="text-align: center; padding: 36px; color: var(--text-muted);">
+                No hay peticiones registradas aún. Haga clic en "+ Subir Petición" para radicar la primera.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
   </div>
+
+  <!-- Modal Explorador de Carpetas de Radicado -->
+  <div class="modal-backdrop" id="modal-folder-explorer" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; align-items: center; justify-content: center; padding: 16px;">
+    <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 600px; border-radius: var(--radius-md); box-shadow: var(--shadow-md); overflow: hidden;">
+      <div class="modal-header" style="background: var(--verde-suave-bg); border-bottom: 1px solid var(--verde-borde); padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-size: 1.1rem; font-weight: 800; color: var(--verde-principal); margin: 0; display: flex; align-items: center; gap: 8px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <span id="folder-explorer-title">Explorador de Archivos</span>
+        </h3>
+        <button type="button" id="btn-close-folder-modal" style="background: transparent; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer;">&times;</button>
+      </div>
+
+      <div style="padding: 24px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="background: var(--bg-surface-elevated); padding: 12px 14px; border-radius: var(--radius-sm); font-size: 0.8rem; color: var(--text-muted);">
+          Ruta base: <strong style="color: var(--verde-principal);" id="folder-base-path">peticiones/RAD-.../</strong>
+        </div>
+
+        <div style="font-size: 0.82rem; font-weight: 800; color: var(--text-main);">
+          Subcarpetas por Oficina Responsable:
+        </div>
+
+        <div id="folder-subfolders-list" style="display: flex; flex-direction: column; gap: 8px;">
+          <!-- Dinámico -->
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
+          <button type="button" class="btn btn-secondary" id="btn-close-folder-modal-2">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Explorador de carpetas modal
+    const folderModal = document.getElementById('modal-folder-explorer');
+    const folderTitle = document.getElementById('folder-explorer-title');
+    const folderBasePath = document.getElementById('folder-base-path');
+    const folderList = document.getElementById('folder-subfolders-list');
+
+    document.querySelectorAll('.btn-view-folder').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        const rad = (e.currentTarget as HTMLElement).dataset.radicado;
+        if (folderTitle) folderTitle.textContent = `Carpetas del Radicado ${rad}`;
+        if (folderBasePath) folderBasePath.textContent = `peticiones/${rad}/`;
+
+        if (folderList) {
+          folderList.innerHTML = `
+            <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                📁 <strong>peticiones/${rad}/admisiones__registro_y_control/</strong>
+              </div>
+              <span style="font-size: 0.70rem; color: var(--verde-principal); font-weight: 700;">Subcarpeta Activa</span>
+            </div>
+          `;
+        }
+
+        if (folderModal) folderModal.style.display = 'flex';
+      });
+    });
+
+    document.getElementById('btn-close-folder-modal')?.addEventListener('click', () => {
+      if (folderModal) folderModal.style.display = 'none';
+    });
+    document.getElementById('btn-close-folder-modal-2')?.addEventListener('click', () => {
+      if (folderModal) folderModal.style.display = 'none';
+    });
+  </script>
 </AppLayout>
-
-<script>
-  import { initPeticiones } from '@scripts/peticiones';
-  initPeticiones();
-</script>
-

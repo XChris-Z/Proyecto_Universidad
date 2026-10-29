@@ -430,3 +430,97 @@ export interface DeadlineProgress {
   statusBadge: string;
 }
 
+// ──────────────────────────────────────────────
+// Módulo Subir Petición y Portal Externo (Fase 2 & 3)
+// ──────────────────────────────────────────────
+
+export type RolSistema = 'admin' | 'funcionario';
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  full_name: string;
+  role: RolSistema;
+  avatar_url?: string | null;
+  is_provisional_password: boolean;
+  phone?: string | null;
+  cargo?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Oficina {
+  id: string;
+  codigo: string;
+  nombre: string;
+  email_institucional: string;
+  titular_cargo?: string | null;
+  activo: boolean;
+}
+
+export interface Peticion {
+  id: string;
+  numero_radicado: string;
+  asunto: string;
+  descripcion?: string | null;
+  solicitante_nombre: string;
+  solicitante_email?: string | null;
+  solicitante_tipo: string;
+  categoria: string;
+  prioridad: 'Alta' | 'Media' | 'Baja';
+  estado: 'En Trámite' | 'Revisión' | 'Respondida' | 'Vencida';
+  fecha_radicacion: string;
+  fecha_limite_entrega: string;
+  fecha_limite_responsable: string;
+  storage_folder_path: string;
+  creado_por?: string | null;
+  created_at: string;
+  updated_at: string;
+  responsables?: PeticionResponsable[];
+}
+
+export interface PeticionResponsable {
+  id: string;
+  peticion_id: string;
+  oficina_id: string;
+  codigo_acceso: string;
+  fecha_expiracion_codigo: string;
+  storage_subfolder_path: string;
+  estado_entrega: 'Pendiente' | 'Entregado' | 'Extemporáneo';
+  fecha_entrega?: string | null;
+  observaciones_entrega?: string | null;
+  email_enviado_at?: string | null;
+  oficina?: Oficina;
+}
+
+export interface PeticionAnexo {
+  id: string;
+  peticion_id: string;
+  peticion_responsable_id?: string | null;
+  nombre_archivo: string;
+  storage_path: string;
+  tamano_bytes?: number | null;
+  mime_type?: string | null;
+  subido_por_email: string;
+  es_anexo_oficina: boolean;
+  created_at: string;
+}
+
+export interface PortalValidationResult {
+  success: boolean;
+  code?: 'INVALID_CREDENTIALS' | 'EXPIRED_DEADLINE';
+  message?: string;
+  responsable_id?: string;
+  peticion_id?: string;
+  numero_radicado?: string;
+  oficina_nombre?: string;
+  email_institucional?: string;
+  asunto?: string;
+  descripcion?: string;
+  fecha_limite_responsable?: string;
+  fecha_limite_entrega?: string;
+  storage_subfolder_path?: string;
+  estado_entrega?: 'Pendiente' | 'Entregado' | 'Extemporáneo';
+}
+
+

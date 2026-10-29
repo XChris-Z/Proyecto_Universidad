@@ -27,3 +27,7 @@ Desktop.ini
 # TypeScript
 *.tsbuildinfo
 
+# Supabase CLI temp
+supabase/.temp/
+
+

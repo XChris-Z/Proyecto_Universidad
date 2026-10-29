@@ -1,0 +1,399 @@
+---
+// src/pages/portal-responsable/index.astro
+import Layout from '@layouts/Layout.astro';
+---
+
+<Layout title="Portal de Entrega de Anexos — SGD Unitrópico">
+  <div class="portal-page-wrapper" style="min-height: 100vh; background: #F8FAFC; display: flex; flex-direction: column;">
+    
+    <!-- Header Institucional del Portal -->
+    <header style="background: var(--verde-principal); color: #ffffff; padding: 18px 24px; box-shadow: var(--shadow-sm); border-bottom: 3px solid var(--dorado-principal);">
+      <div style="max-width: 1080px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <div style="width: 42px; height: 42px; background: rgba(255,255,255,0.12); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.25);">
+            <svg viewBox="0 0 24 24" width="26" height="26">
+              <path d="M12 2L2 7v7c0 5.55 3.84 10.74 10 12 6.16-1.26 10-6.45 10-12V7l-10-5zm0 3.3l7 3.5v5.2c0 4.38-2.94 8.48-7 9.58-4.06-1.1-7-5.2-7-9.58V8.8l7-3.5z" fill="#ffffff"/>
+              <path d="M11 11h2v5h-2zm0-4h2v2h-2z" fill="#B5A160"/>
+            </svg>
+          </div>
+          <div>
+            <div style="font-weight: 800; font-size: 1.15rem; letter-spacing: -0.01em;">UNITRÓPICO</div>
+            <div style="font-size: 0.72rem; color: var(--dorado-principal); text-transform: uppercase; font-weight: 700; letter-spacing: 0.08em;">
+              Portal Institucional de Entrega de Anexos
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <a href="/login" style="color: #ffffff; text-decoration: none; font-size: 0.78rem; font-weight: 700; background: rgba(255,255,255,0.12); padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.2);">
+            Ir al Acceso Principal &rarr;
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Contenedor Principal -->
+    <main style="flex: 1; max-width: 960px; width: 100%; margin: 32px auto; padding: 0 20px;">
+      
+      <!-- PANTALLA 1: Formulario de Autenticación Rápida (Solo 2 Campos) -->
+      <div id="portal-login-section" class="card" style="background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 32px; max-width: 520px; margin: 40px auto; box-shadow: var(--shadow-md);">
+        
+        <div style="text-align: center; margin-bottom: 24px;">
+          <div style="width: 54px; height: 54px; border-radius: 50%; background: var(--dorado-suave-bg); color: var(--dorado-oscuro); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px auto; border: 1px solid var(--dorado-borde);">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--text-main); margin: 0;">Entrega de Anexos</h2>
+          <p style="font-size: 0.82rem; color: var(--text-muted); margin: 6px 0 0 0;">
+            Ingrese el correo institucional de su oficina y el código único temporal recibido en la notificación.
+          </p>
+        </div>
+
+        <form id="form-portal-login" style="display: flex; flex-direction: column; gap: 16px;">
+          <div class="form-group">
+            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Correo de la Oficina Responsable *</label>
+            <div style="position: relative;">
+              <input type="email" id="portal-input-email" required placeholder="ej. juridica@unitropico.edu.co" class="form-input" style="padding-left: 38px;" />
+              <div style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted);">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Código Único Temporal *</label>
+            <div style="position: relative;">
+              <input type="text" id="portal-input-codigo" required placeholder="Ej. UPQ-A1B2C3D4" class="form-input" style="padding-left: 38px; font-family: monospace; font-size: 1.05rem; font-weight: 800; text-transform: uppercase; letter-spacing: 2px;" />
+              <div style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted);">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-1-1l-3 3m2-2l2 2m-7 4l-4 4m2-2l2 2m-6-1l-3 3m2-2l2 2"/></svg>
+              </div>
+            </div>
+            <small style="font-size: 0.70rem; color: var(--text-muted); margin-top: 4px; display: block;">
+              Este código fue enviado a su correo institucional y expira 5 días antes del vencimiento general.
+            </small>
+          </div>
+
+          <!-- Mensaje de Error / Expiración -->
+          <div id="portal-login-error" style="display: none; background: #FEF2F2; border: 1px solid #FECACA; color: #DC2626; padding: 12px; border-radius: var(--radius-sm); font-size: 0.78rem; line-height: 1.4;"></div>
+
+          <button type="submit" id="btn-portal-enter" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 12px; font-size: 0.95rem; font-weight: 800; margin-top: 4px;">
+            <span>Validar Acceso y Entregar Anexos</span>
+          </button>
+        </form>
+
+        <div style="margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--border-subtle); text-align: center; font-size: 0.72rem; color: var(--text-muted);">
+          Validación criptográfica en tiempo real sobre PostgreSQL PL/pgSQL &bull; Regla institucional de -5 días.
+        </div>
+      </div>
+
+      <!-- PANTALLA 2: Módulo de Carga de Anexos (Una vez Validado) -->
+      <div id="portal-upload-section" style="display: none; flex-direction: column; gap: 24px;">
+        
+        <!-- Tarjeta de Información de la Petición -->
+        <div class="card" style="background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 24px; border-left: 5px solid var(--verde-principal);">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                <span class="role-badge admin" style="font-family: monospace; font-size: 0.95rem;" id="portal-disp-radicado">RAD-2026-XXXXX</span>
+                <span class="role-badge funcionario" id="portal-disp-oficina">Oficina Asignada</span>
+              </div>
+              <h2 id="portal-disp-asunto" style="font-size: 1.3rem; font-weight: 800; color: var(--text-main); margin: 0 0 6px 0;">Asunto de la petición</h2>
+              <p id="portal-disp-desc" style="font-size: 0.84rem; color: var(--text-muted); margin: 0; line-height: 1.5;">Descripción del trámite solicitado.</p>
+            </div>
+
+            <button type="button" id="btn-portal-logout" style="background: var(--bg-surface-elevated); border: 1px solid var(--border-color); color: var(--text-muted); padding: 6px 12px; border-radius: var(--radius-sm); font-size: 0.75rem; font-weight: 700; cursor: pointer;">
+              Salir del Portal
+            </button>
+          </div>
+
+          <!-- Banner Alerta de Margen de 5 Días -->
+          <div style="background: var(--dorado-suave-bg); border: 1px solid var(--dorado-borde); border-radius: var(--radius-sm); padding: 12px 16px; margin-top: 18px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--dorado-oscuro)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <div>
+                <strong style="color: var(--dorado-oscuro); font-size: 0.82rem;">Plazo de Entrega para su Oficina:</strong>
+                <span id="portal-disp-fecha-resp" style="font-size: 0.82rem; font-weight: 800; color: var(--text-main); margin-left: 4px;">--</span>
+              </div>
+            </div>
+            <div style="font-size: 0.72rem; color: var(--text-muted);">
+              Cierre general peticionario: <span id="portal-disp-fecha-entrega">--</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Zona de Drag and Drop para Subir Archivos -->
+        <div class="card" style="background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 24px;">
+          <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin: 0 0 4px 0;">Cargar Anexos y Documentos de Soporte</h3>
+          <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0 0 18px 0;">
+            Los archivos se almacenarán de forma aislada en la subcarpeta virtual asignada a su oficina en Supabase Storage.
+          </p>
+
+          <div id="drop-zone" style="border: 2px dashed var(--verde-borde); background: var(--verde-suave-bg); border-radius: var(--radius-md); padding: 36px 20px; text-align: center; cursor: pointer; transition: all 0.15s ease;">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--verde-principal)" stroke-width="2" style="margin-bottom: 10px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <div style="font-weight: 800; font-size: 0.95rem; color: var(--verde-principal);">Arrastre sus archivos aquí o haga clic para examinar</div>
+            <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 4px;">Formatos soportados: PDF, DOCX, XLSX, JPG, PNG, ZIP (máx. 50 MB por archivo)</div>
+            <input type="file" id="portal-file-input" multiple style="display: none;" />
+          </div>
+
+          <div class="form-group" style="margin-top: 16px;">
+            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Observaciones o Aclaraciones de la Entrega (Opcional)</label>
+            <textarea id="portal-observaciones" rows="2" placeholder="Agregue comentarios sobre los anexos aportados..." class="form-input" style="resize: vertical;"></textarea>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; margin-top: 14px;">
+            <button type="button" id="btn-upload-files" class="btn btn-primary" style="padding: 10px 22px; font-weight: 800;">
+              Confirmar y Subir Archivos
+            </button>
+          </div>
+        </div>
+
+        <!-- Lista de Anexos Entregados / Radicados -->
+        <div class="card" style="background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 24px;">
+          <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin: 0 0 14px 0;">Soportes Entregados en esta Petición</h3>
+          
+          <div id="portal-anexos-list" style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 0.82rem;" id="no-anexos-msg">
+              Aún no ha subido archivos para esta solicitud.
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer style="background: #ffffff; border-top: 1px solid var(--border-color); padding: 18px 24px; text-align: center; font-size: 0.74rem; color: var(--text-muted); margin-top: auto;">
+      Universidad Internacional del Trópico Americano &bull; Sistema de Gestión Documental &bull; Módulo de Entrega Segura
+    </footer>
+
+  </div>
+
+  <style>
+    .form-input {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 0.85rem;
+      color: var(--text-main);
+      transition: var(--transition-normal);
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: var(--verde-principal);
+      box-shadow: 0 0 0 3px var(--verde-suave-bg);
+    }
+  </style>
+
+  <script>
+    let activeSessionData: any = null;
+    let selectedFilesToUpload: File[] = [];
+
+    const loginSection = document.getElementById('portal-login-section');
+    const uploadSection = document.getElementById('portal-upload-section');
+    const loginForm = document.getElementById('form-portal-login');
+    const loginError = document.getElementById('portal-login-error');
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('portal-file-input') as HTMLInputElement;
+    const uploadBtn = document.getElementById('btn-upload-files') as HTMLButtonElement;
+
+    // 1. Manejo del Login de Responsables
+    if (loginForm) {
+      loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = (document.getElementById('portal-input-email') as HTMLInputElement).value;
+        const codigo = (document.getElementById('portal-input-codigo') as HTMLInputElement).value;
+
+        if (loginError) loginError.style.display = 'none';
+
+        try {
+          const res = await fetch('/api/portal/validar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, codigo }),
+          });
+
+          const resData = await res.json();
+
+          if (!res.ok || !resData.success) {
+            if (loginError) {
+              loginError.textContent = resData.message || 'Código de acceso o correo institucional no válidos.';
+              loginError.style.display = 'block';
+            }
+            return;
+          }
+
+          // Sesión autorizada
+          activeSessionData = resData.data;
+          renderPortalDashboard();
+        } catch (err) {
+          console.error(err);
+          if (loginError) {
+            loginError.textContent = 'Error de conexión con el servidor.';
+            loginError.style.display = 'block';
+          }
+        }
+      });
+    }
+
+    // 2. Renderizar Pantalla de Carga
+    function renderPortalDashboard() {
+      if (!activeSessionData) return;
+      if (loginSection) loginSection.style.display = 'none';
+      if (uploadSection) uploadSection.style.display = 'flex';
+
+      const radEl = document.getElementById('portal-disp-radicado');
+      const ofiEl = document.getElementById('portal-disp-oficina');
+      const asuntoEl = document.getElementById('portal-disp-asunto');
+      const descEl = document.getElementById('portal-disp-desc');
+      const fechaRespEl = document.getElementById('portal-disp-fecha-resp');
+      const fechaEntEl = document.getElementById('portal-disp-fecha-entrega');
+
+      if (radEl) radEl.textContent = activeSessionData.numero_radicado;
+      if (ofiEl) ofiEl.textContent = activeSessionData.oficina_nombre;
+      if (asuntoEl) asuntoEl.textContent = activeSessionData.asunto;
+      if (descEl) descEl.textContent = activeSessionData.descripcion || 'Sin descripción adicional.';
+      if (fechaRespEl) fechaRespEl.textContent = `${activeSessionData.fecha_limite_responsable} (Cierre)`;
+      if (fechaEntEl) fechaEntEl.textContent = activeSessionData.fecha_limite_entrega;
+
+      renderAnexosList(activeSessionData.anexos || []);
+    }
+
+    function renderAnexosList(anexos: any[]) {
+      const container = document.getElementById('portal-anexos-list');
+      const noMsg = document.getElementById('no-anexos-msg');
+      if (!container) return;
+
+      if (!anexos || anexos.length === 0) {
+        if (noMsg) noMsg.style.display = 'block';
+        return;
+      }
+
+      if (noMsg) noMsg.style.display = 'none';
+      container.innerHTML = anexos.map((a: any) => `
+        <div style="background: var(--bg-body); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--verde-principal)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <div>
+              <strong style="color: var(--text-main);">${a.nombre_archivo}</strong>
+              <div style="color: var(--text-muted); font-size: 0.70rem;">Entregado: ${new Date(a.created_at).toLocaleString('es-CO')}</div>
+            </div>
+          </div>
+          <span style="font-size: 0.72rem; font-weight: 700; color: #059669; background: #ECFDF5; padding: 3px 8px; border-radius: 4px; border: 1px solid #A7F3D0;">
+            ✔ Radicado en Subcarpeta
+          </span>
+        </div>
+      `).join('');
+    }
+
+    // 3. Drag and Drop de Archivos
+    if (dropZone && fileInput) {
+      dropZone.addEventListener('click', () => fileInput.click());
+
+      dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.style.background = 'rgba(0, 89, 78, 0.15)';
+      });
+
+      dropZone.addEventListener('dragleave', () => {
+        dropZone.style.background = 'var(--verde-suave-bg)';
+      });
+
+      dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.style.background = 'var(--verde-suave-bg)';
+        if (e.dataTransfer?.files) {
+          handleFilesSelected(Array.from(e.dataTransfer.files));
+        }
+      });
+
+      fileInput.addEventListener('change', () => {
+        if (fileInput.files) {
+          handleFilesSelected(Array.from(fileInput.files));
+        }
+      });
+    }
+
+    function handleFilesSelected(files: File[]) {
+      selectedFilesToUpload = files;
+      if (dropZone) {
+        dropZone.innerHTML = `
+          <div style="font-weight: 800; font-size: 0.95rem; color: var(--verde-principal);">
+            ✔ ${files.length} archivo(s) listo(s) para subir:
+          </div>
+          <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
+            ${files.map(f => f.name).join(', ')}
+          </div>
+          <div style="font-size: 0.70rem; color: var(--dorado-oscuro); margin-top: 8px;">Haga clic en 'Confirmar y Subir Archivos' abajo.</div>
+        `;
+      }
+    }
+
+    // 4. Subir Archivos vía API
+    if (uploadBtn) {
+      uploadBtn.addEventListener('click', async () => {
+        if (!selectedFilesToUpload || selectedFilesToUpload.length === 0) {
+          alert('Por favor seleccione al menos un archivo para subir.');
+          return;
+        }
+
+        uploadBtn.disabled = true;
+        uploadBtn.textContent = 'Subiendo archivos...';
+
+        const obs = (document.getElementById('portal-observaciones') as HTMLTextAreaElement)?.value || '';
+
+        try {
+          for (const file of selectedFilesToUpload) {
+            const formData = new FormData();
+            formData.append('archivo', file);
+            formData.append('peticion_id', activeSessionData.peticion_id);
+            formData.append('responsable_id', activeSessionData.responsable_id);
+            formData.append('numero_radicado', activeSessionData.numero_radicado);
+            formData.append('email_institucional', activeSessionData.email_institucional);
+            formData.append('storage_subfolder_path', activeSessionData.storage_subfolder_path);
+            formData.append('observaciones', obs);
+
+            const res = await fetch('/api/portal/subir-anexo', {
+              method: 'POST',
+              body: formData,
+            });
+
+            const resData = await res.json();
+            if (!res.ok || !resData.success) {
+              alert('Error subiendo ' + file.name + ': ' + (resData.error || 'Fallo de subida'));
+            } else {
+              if (!activeSessionData.anexos) activeSessionData.anexos = [];
+              activeSessionData.anexos.unshift(resData.anexo);
+            }
+          }
+
+          alert('Todos los anexos se subieron y radicaron correctamente.');
+          selectedFilesToUpload = [];
+          if (dropZone) {
+            dropZone.innerHTML = `
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--verde-principal)" stroke-width="2" style="margin-bottom: 10px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <div style="font-weight: 800; font-size: 0.95rem; color: var(--verde-principal);">Arrastre más archivos aquí o haga clic para examinar</div>
+              <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 4px;">Formatos soportados: PDF, DOCX, XLSX, JPG, PNG, ZIP</div>
+            `;
+          }
+          renderAnexosList(activeSessionData.anexos);
+        } catch (err) {
+          console.error(err);
+          alert('Error de red al subir archivos.');
+        } finally {
+          uploadBtn.disabled = false;
+          uploadBtn.textContent = 'Confirmar y Subir Archivos';
+        }
+      });
+    }
+
+    // Salir del portal
+    document.getElementById('btn-portal-logout')?.addEventListener('click', () => {
+      activeSessionData = null;
+      if (loginSection) loginSection.style.display = 'block';
+      if (uploadSection) uploadSection.style.display = 'none';
+      if (loginForm) (loginForm as HTMLFormElement).reset();
+    });
+  </script>
+</Layout>

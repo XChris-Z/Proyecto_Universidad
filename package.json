@@ -16,11 +16,12 @@
   "dependencies": {
     "@astrojs/vercel": "^8.0.0",
     "@supabase/supabase-js": "^2.49.0",
-    "astro": "^5.6.0"
+    "astro": "^5.6.0",
+    "nodemailer": "^10.2.1"
   },
   "devDependencies": {
-    "typescript": "^5.8.0",
-    "@types/node": "^22.0.0"
+    "@types/node": "^22.0.0",
+    "@types/nodemailer": "^8.0.2",
+    "typescript": "^5.8.0"
   }
 }
-
