@@ -12,7 +12,7 @@ export const SESSION_COOKIE_KEY = 'sgd_session';
 export const SESSION_STORAGE_KEY = 'sgd_unitropico_session';
 
 /** Rutas públicas que NO requieren autenticación */
-export const PUBLIC_ROUTES = ['/login', '/404'];
+export const PUBLIC_ROUTES = ['/login', '/404', '/portal-responsable', '/api/portal'];
 
 /** Rutas exclusivas de administrador/root */
 export const ADMIN_ROUTES = ['/admin/usuarios', '/admin/roles'];
