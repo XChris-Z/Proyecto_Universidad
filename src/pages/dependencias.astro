@@ -1,0 +1,192 @@
+---
+// src/pages/dependencias.astro
+import AppLayout from '@layouts/AppLayout.astro';
+---
+
+<AppLayout title="Dependencias Universitarias" activeNav="dependencias">
+  <div class="dependencias-hero-banner">
+    <div class="dependencias-hero-title">
+      <h2>Estructura Orgánica y <span>Dependencias Universitarias</span></h2>
+      <p>Despachos, vicerrectorías, oficinas asesoras y facultades de Unitrópico. En cada dependencia se gestionan los funcionarios adscritos y se reciben los expedientes repartidos por el Despacho del Rector.</p>
+    </div>
+    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+      <button class="btn btn-secondary" id="btn-open-add-official-modal" style="background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3); color: #ffffff;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+        <span>+ Vincular Funcionario</span>
+      </button>
+      <button class="btn btn-primary" id="btn-open-new-dep-modal" style="background: var(--secondary); color: #ffffff; border-color: var(--secondary);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        <span>+ Crear Nueva Dependencia</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Métricas de Dependencias -->
+  <div class="dependencias-kpi-row">
+    <div class="dependencia-kpi-card">
+      <div class="val" id="dep-stat-total">10</div>
+      <div class="lbl">Dependencias Oficiales</div>
+    </div>
+    <div class="dependencia-kpi-card">
+      <div class="val" id="dep-stat-officials" style="color: var(--secondary);">24</div>
+      <div class="lbl">Funcionarios Vinculados</div>
+    </div>
+    <div class="dependencia-kpi-card">
+      <div class="val" id="dep-stat-active-files" style="color: #0284c7;">42</div>
+      <div class="lbl">Expedientes en Trámite</div>
+    </div>
+    <div class="dependencia-kpi-card">
+      <div class="val" id="dep-stat-rate" style="color: #059669;">96%</div>
+      <div class="lbl">Eficacia de Despacho</div>
+    </div>
+  </div>
+
+  <!-- Barra de Búsqueda y Filtros de Dependencias -->
+  <div style="display: flex; gap: 14px; margin-bottom: 20px; flex-wrap: wrap;">
+    <div class="search-box" style="flex: 1; min-width: 280px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input type="text" id="dep-search-input" placeholder="Buscar dependencia por nombre, sigla o funcionario...">
+    </div>
+    <select class="form-select" id="dep-filter-level" style="width: 220px;">
+      <option value="all" selected>Todos los Niveles</option>
+      <option value="Directivo Superior">Directivo Superior</option>
+      <option value="Asesor">Nivel Asesor</option>
+      <option value="Misional">Nivel Misional (Académico / Investigación)</option>
+      <option value="Apoyo">Nivel de Apoyo y Administrativo</option>
+      <option value="Control">Control Disciplinario</option>
+    </select>
+  </div>
+
+  <!-- Grid de Dependencias Universitarias -->
+  <div class="dependencias-grid" id="dependencias-cards-grid">
+    <!-- Dinámico desde JS -->
+  </div>
+
+  <!-- Modal: Crear Nueva Dependencia Universitaria -->
+  <div class="modal-backdrop" id="new-dependencia-modal">
+    <div class="modal-card" style="max-width: 620px;">
+      <div class="modal-header">
+        <h3>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+          <span>Crear Nueva Dependencia Universitaria</span>
+        </h3>
+        <button class="btn-close-modal" id="btn-close-new-dep">&times;</button>
+      </div>
+      <form id="new-dependencia-form">
+        <div class="modal-body">
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Nombre de la Dependencia *</label>
+              <input type="text" class="form-input" id="input-dep-nombre" placeholder="Ej: Dirección de Bienestar Universitario" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Sigla / Código Oficial *</label>
+              <input type="text" class="form-input" id="input-dep-sigla" placeholder="Ej: DBU" required>
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Nivel Orgánico *</label>
+              <select class="form-select" id="select-dep-nivel" required>
+                <option value="Directivo Superior">Directivo Superior</option>
+                <option value="Asesor">Nivel Asesor</option>
+                <option value="Misional">Nivel Misional</option>
+                <option value="Apoyo" selected>Nivel de Apoyo y Administrativo</option>
+                <option value="Control">Nivel de Control</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Jefe o Titular de la Dependencia *</label>
+              <input type="text" class="form-input" id="input-dep-jefe" placeholder="Ej: Dr. Wilson Barreto" required>
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Correo Oficial *</label>
+              <input type="email" class="form-input" id="input-dep-correo" placeholder="bienestar@unitropico.edu.co" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Extensión Telefónica</label>
+              <input type="text" class="form-input" id="input-dep-ext" placeholder="Ej: Ext. 140">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Competencias y Funciones Principales *</label>
+            <textarea class="form-textarea" id="input-dep-competencias" rows="3" placeholder="Detalle los trámites, expedientes y asuntos que atiende esta dependencia..." required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" id="btn-cancel-new-dep">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Registrar Dependencia</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Vincular Funcionario a Dependencia -->
+  <div class="modal-backdrop" id="add-official-modal">
+    <div class="modal-card" style="max-width: 580px;">
+      <div class="modal-header">
+        <h3>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+          <span>Vincular Funcionario a Dependencia</span>
+        </h3>
+        <button class="btn-close-modal" id="btn-close-add-official">&times;</button>
+      </div>
+      <form id="add-official-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Dependencia de Destino *</label>
+            <select class="form-select" id="select-official-dependencia" required>
+              <!-- Dinámico desde JS -->
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Nombre Completo del Funcionario *</label>
+            <input type="text" class="form-input" id="input-official-name" placeholder="Ej: Dra. Natalia Ramírez Celis" required>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Cargo o Función *</label>
+              <input type="text" class="form-input" id="input-official-role" placeholder="Ej: Abogada Sustanciadora" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Correo Institucional *</label>
+              <input type="email" class="form-input" id="input-official-email" placeholder="nramirez@unitropico.edu.co" required>
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Teléfono o Extensión</label>
+              <input type="text" class="form-input" id="input-official-ext" placeholder="Ej: Ext. 115">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nivel de Acceso</label>
+              <select class="form-select" id="select-official-access">
+                <option value="Jefe">Jefe / Director de Dependencia</option>
+                <option value="Funcionario" selected>Funcionario Sustanciador / Operativo</option>
+                <option value="Asistente">Asistente de Gestión Documental</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" id="btn-cancel-add-official">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Vincular Funcionario</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</AppLayout>
+
+<script>
+  import { initDependencias } from '@scripts/dependencias';
+  initDependencias();
+</script>
+

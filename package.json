@@ -1,21 +1,23 @@
 {
   "name": "sgd-unitropico",
-  "version": "1.0.0",
-  "description": "Sistema de Gestión Documental y Archivo Institucional - SGD Unitrópico",
-  "main": "server.js",
+  "version": "2.0.0",
+  "description": "Sistema de Gestión Documental y Archivo — SGD Unitrópico (Astro + TypeScript + Supabase)",
+  "type": "module",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "typecheck": "tsc --noEmit"
   },
-  "keywords": [
-    "gestion-documental",
-    "sgd",
-    "unitropico",
-    "universidad",
-    "javascript",
-    "html5",
-    "css3"
-  ],
-  "author": "XChris-Z",
-  "license": "MIT"
+  "dependencies": {
+    "@astrojs/vercel": "^8.0.0",
+    "@supabase/supabase-js": "^2.49.0",
+    "astro": "^5.6.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0",
+    "@types/node": "^22.0.0"
+  }
 }
+

@@ -1,0 +1,87 @@
+---
+// src/pages/peticiones.astro
+import AppLayout from '@layouts/AppLayout.astro';
+---
+
+<AppLayout title="Derechos de Petición y PQRS" activeNav="peticiones">
+  <div class="legal-basis-banner">
+    <div class="legal-basis-text">
+      <h4>Fundamentación Constitucional y Procedencia del Derecho</h4>
+      <p>Módulo de radicación, trazabilidad y respuesta formal conforme al Artículo 23 de la Constitución Política, la Ley Estatutaria 1755 de 2015, la Ley 1712 de 2014 (Transparencia) y el CPACA (Ley 1437 de 2011).</p>
+    </div>
+    <div class="legal-basis-badges">
+      <span class="badge-right-origin cp23">Constitución Art. 23</span>
+      <span class="badge-right-origin ley1755">Ley 1755 / 2015</span>
+      <span class="badge-right-origin ley1712">Ley 1712 / 2014</span>
+      <span class="badge-right-origin cpaca">Ley 1437 CPACA</span>
+      <span class="badge-right-origin interno">Reglamento Unitrópico</span>
+    </div>
+  </div>
+
+  <div class="section-toolbar">
+    <div class="filter-tabs" id="peticiones-filter-tabs">
+      <button class="filter-tab active" data-pfilter="all">
+        <span>Todas las Peticiones</span>
+        <span class="filter-count" id="pcount-all">3</span>
+      </button>
+      <button class="filter-tab" data-pfilter="particular">
+        <span class="dist-dot" style="background: var(--primary);"></span>
+        <span>Interés Particular (15d)</span>
+        <span class="filter-count" id="pcount-particular">2</span>
+      </button>
+      <button class="filter-tab" data-pfilter="general">
+        <span class="dist-dot" style="background: var(--secondary);"></span>
+        <span>Interés General (15d)</span>
+        <span class="filter-count" id="pcount-general">0</span>
+      </button>
+      <button class="filter-tab" data-pfilter="informacion">
+        <span class="dist-dot" style="background: #0284c7;"></span>
+        <span>Información y Copias (10d)</span>
+        <span class="filter-count" id="pcount-info">1</span>
+      </button>
+      <button class="filter-tab" data-pfilter="consulta">
+        <span class="dist-dot" style="background: #7c3aed;"></span>
+        <span>Consultas Jurídicas (30d)</span>
+        <span class="filter-count" id="pcount-consulta">0</span>
+      </button>
+      <button class="filter-tab" data-pfilter="pendientes">
+        <span class="dist-dot" style="background: #ef4444;"></span>
+        <span>Sin Respuesta</span>
+        <span class="filter-count" id="pcount-pendientes">3</span>
+      </button>
+    </div>
+
+    <div>
+      <button class="btn btn-primary" data-action="open-upload-modal">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        <span>+ Radicar Derecho de Petición</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="doc-table">
+      <thead>
+        <tr>
+          <th>Asunto / Peticionario</th>
+          <th>Radicado Entrada</th>
+          <th>Procedencia del Derecho (Norma)</th>
+          <th>Término Legal (SLA)</th>
+          <th>Semáforo de Plazo</th>
+          <th>Responsable Asignado</th>
+          <th>Estado Trámite</th>
+          <th style="text-align: right;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="peticiones-table-body">
+        <!-- Dinámico desde JS -->
+      </tbody>
+    </table>
+  </div>
+</AppLayout>
+
+<script>
+  import { initPeticiones } from '@scripts/peticiones';
+  initPeticiones();
+</script>
+

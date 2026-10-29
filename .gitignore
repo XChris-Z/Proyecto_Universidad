@@ -1,42 +1,29 @@
-# Node.js y dependencias
+# Node.js
 node_modules/
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
-.pnpm-debug.log*
 
-# Variables de entorno y secretos
+# Entorno y secretos — NUNCA subir a Git
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
-*.env
+.env.*.local
 
-# Archivos del sistema operativo
+# Astro build output
+dist/
+.astro/
+.vercel/
+
+# Sistema operativo
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 Desktop.ini
 
-# Editores e IDEs
+# Editores
 .vscode/
 !.vscode/extensions.json
 .idea/
 *.suo
-*.ntvs*
-*.njsproj
-*.sln
 *.sw?
 
-# Temporales y caches
-*.tmp
-*.temp
-.cache/
-dist/
-build/
+# TypeScript
+*.tsbuildinfo
+

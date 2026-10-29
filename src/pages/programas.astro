@@ -1,0 +1,52 @@
+---
+// src/pages/programas.astro
+import AppLayout from '@layouts/AppLayout.astro';
+---
+
+<AppLayout title="Gestión Académica y Acreditación" activeNav="programas">
+  <div class="panel-box">
+    <div class="panel-header" style="flex-wrap: wrap; gap: 14px;">
+      <div>
+        <div class="panel-title">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222"/></svg>
+          <span>Gestión Académica y Acreditación Institucional</span>
+        </div>
+        <div style="font-size: 0.8rem; color: var(--secondary-light); font-weight: 600; margin-top: 4px;">
+          Historial de programas, actos administrativos MEN de aprobación y negación, radicados en SACES y acreditación de alta calidad CNA
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <button class="btn btn-primary" id="btn-open-programa-modal">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          <span>+ Registrar Programa / Trámite MEN</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="module-tabs" id="programas-module-tabs">
+      <button class="module-tab-btn active" data-ptab="historial">
+        <span>Historial de Programas (Actos Aprobación y Negación)</span>
+        <span class="tab-count" id="prog-count-total">8</span>
+      </button>
+      <button class="module-tab-btn" data-ptab="saces">
+        <span>Procesos Radicados SACES / MEN</span>
+        <span class="tab-count" id="prog-count-saces">3</span>
+      </button>
+      <button class="module-tab-btn" data-ptab="acreditacion">
+        <span>Acreditación de Alta Calidad (CNA)</span>
+        <span class="tab-count" id="prog-count-cna">4</span>
+      </button>
+    </div>
+
+    <div id="programas-tab-content">
+      <!-- Dinámico desde JS -->
+    </div>
+  </div>
+</AppLayout>
+
+<script>
+  import { initProgramas } from '@scripts/programas';
+  initProgramas();
+</script>
+

@@ -1,0 +1,198 @@
+---
+// src/pages/auditoria.astro
+import AppLayout from '@layouts/AppLayout.astro';
+---
+
+<AppLayout title="Auditoría Oficial y Trazabilidad Inmutable" activeNav="auditoria">
+  <!-- Hero Banner de Seguridad y Auditoría -->
+  <div class="hero-banner audit-hero-banner">
+    <div class="hero-content">
+      <h2>Auditoría Oficial — <span>Registro y Trazabilidad Inmutable</span></h2>
+      <p>Cadena de custodia documental en tiempo real. Cada radicación, modificación, descarga, oficio y eliminación queda registrada cronológicamente con firma digital, metadatos y sellado criptográfico <strong>SHA-256</strong> (Ley 594 de 2000 y directrices de auditoría pública).</p>
+      <div class="security-pills-row">
+        <span class="security-badge-pill green">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Cifrado AES-256-GCM en Servidor
+        </span>
+        <span class="security-badge-pill blue">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          Canal TLS 1.3 Seguro
+        </span>
+        <span class="security-badge-pill purple">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          Bitácora Inmutable (Append-Only)
+        </span>
+      </div>
+    </div>
+    <div class="audit-quick-actions">
+      <button class="btn btn-secondary" id="btn-verify-audit-chain" title="Verificar que ningún registro del log haya sido manipulado o adulterado">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        <span>Verificar Integridad SHA-256</span>
+      </button>
+      <button class="btn btn-primary" id="btn-export-audit-json" title="Descargar bitácora certificada en JSON para entes de control">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span>Exportar Pista de Auditoría</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Métricas de Auditoría y Seguridad -->
+  <div class="kpi-grid-4 audit-kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-header">
+        <span class="kpi-title">Eventos Registrados</span>
+        <div class="kpi-icon-wrap" style="color: var(--primary); background: rgba(0, 89, 78, 0.1);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        </div>
+      </div>
+      <div class="kpi-value-row">
+        <div class="kpi-number" id="audit-kpi-total">18</div>
+        <span class="kpi-trend positive">100% Inmutable</span>
+      </div>
+      <div class="kpi-footer">
+        <span>Pista de Auditoría Activa</span>
+        <span style="color: var(--primary); font-weight: 700;">Sin Interrupciones</span>
+      </div>
+    </div>
+
+    <div class="kpi-card danger">
+      <div class="kpi-header">
+        <span class="kpi-title">Operaciones Críticas</span>
+        <div class="kpi-icon-wrap" style="color: #ef4444; background: #fee2e2;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+      </div>
+      <div class="kpi-value-row">
+        <div class="kpi-number" id="audit-kpi-critical">3</div>
+        <span class="kpi-trend" style="background: #fee2e2; color: #b91c1c;">Bajas / Anulaciones</span>
+      </div>
+      <div class="kpi-footer">
+        <span>Riesgo de Seguridad</span>
+        <span style="color: #10B981; font-weight: 700;">Monitoreado</span>
+      </div>
+    </div>
+
+    <div class="kpi-card teal">
+      <div class="kpi-header">
+        <span class="kpi-title">Cifrado &amp; Encriptación</span>
+        <div class="kpi-icon-wrap" style="color: #0d9488; background: #ccfbf1;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        </div>
+      </div>
+      <div class="kpi-value-row">
+        <div class="kpi-number" style="font-size: 1.65rem;">AES-256</div>
+        <span class="kpi-trend positive">GCM Modo AEAD</span>
+      </div>
+      <div class="kpi-footer">
+        <span>Repositorio y Carga</span>
+        <span style="color: #0d9488; font-weight: 700;">Protegido en Servidor</span>
+      </div>
+    </div>
+
+    <div class="kpi-card gold">
+      <div class="kpi-header">
+        <span class="kpi-title">Integridad Criptográfica</span>
+        <div class="kpi-icon-wrap" style="color: #b45309; background: #fef3c7;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+        </div>
+      </div>
+      <div class="kpi-value-row">
+        <div class="kpi-number" id="audit-kpi-integrity" style="color: var(--status-safe); font-size: 1.7rem;">100%</div>
+        <span class="kpi-trend positive" style="background: var(--status-safe-bg); color: var(--status-safe);">Sin Alteración</span>
+      </div>
+      <div class="kpi-footer">
+        <span>Cadena de Bloques SHA-256</span>
+        <span style="color: #b45309; font-weight: 700;">Encadenamiento Válido</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Barra de Filtros y Búsqueda de Logs -->
+  <div class="panel-box audit-panel-container">
+    <div class="audit-toolbar">
+      <div class="audit-search-wrap">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" id="audit-search-input" placeholder="Buscar por radicado, usuario, acción o hash...">
+      </div>
+
+      <div class="audit-filters-group">
+        <div class="filter-select-wrap">
+          <label for="audit-filter-action">Tipo de Acción:</label>
+          <select id="audit-filter-action" class="form-select-sm">
+            <option value="ALL">Todas las Acciones (Global)</option>
+            <option value="SUBIDA_ARCHIVO">Subida y Radicación de Archivos</option>
+            <option value="ELIMINACION">Eliminación / Anulación</option>
+            <option value="MODIFICACION">Modificación y Reasignación</option>
+            <option value="RESPUESTA">Oficio / Respuesta Emitida</option>
+            <option value="SEGURIDAD">Seguridad, Roles y Sesiones</option>
+          </select>
+        </div>
+
+        <div class="filter-select-wrap">
+          <label for="audit-filter-severity">Criticidad:</label>
+          <select id="audit-filter-severity" class="form-select-sm">
+            <option value="ALL">Todas las Criticidades</option>
+            <option value="CRITICAL">Crítico (Bajas / Riesgo)</option>
+            <option value="WARN">Advertencia (Cambios)</option>
+            <option value="INFO">Informativo (Carga / Registro)</option>
+          </select>
+        </div>
+
+        <button class="btn btn-ghost btn-sm" id="btn-reset-audit-filters" title="Restablecer filtros">
+          Limpiar Filtros
+        </button>
+      </div>
+    </div>
+
+    <!-- Tabla de Trazabilidad y Logs -->
+    <div class="table-responsive audit-table-wrapper">
+      <table class="doc-table audit-table">
+        <thead>
+          <tr>
+            <th>Fecha y Hora (UTC-5)</th>
+            <th>Funcionario / Despacho</th>
+            <th>Acción Realizada</th>
+            <th>Entidad / Radicado</th>
+            <th>Detalle de la Operación</th>
+            <th>Sello Criptográfico (SHA-256)</th>
+          </tr>
+        </thead>
+        <tbody id="audit-logs-tbody">
+          <!-- Generado dinámicamente desde JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Estado Vacío -->
+    <div class="audit-empty-state" id="audit-empty-state" style="display: none;">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="8"/></svg>
+      <h4>No se encontraron eventos coincidentes</h4>
+      <p>Intenta ajustar los términos de búsqueda o los filtros de acción seleccionados.</p>
+    </div>
+  </div>
+
+  <!-- Modal: Verificación Criptográfica de la Cadena de Logs -->
+  <div class="modal-backdrop" id="audit-verify-modal">
+    <div class="modal-card" style="max-width: 620px;">
+      <div class="modal-header">
+        <h3>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+          <span>Certificado de Integridad y Trazabilidad</span>
+        </h3>
+        <button class="btn-close-modal" id="btn-close-audit-verify-modal">&times;</button>
+      </div>
+      <div class="modal-body" id="audit-verify-modal-body">
+        <!-- Generado dinámicamente desde JS -->
+      </div>
+      <div class="modal-footer" style="justify-content: flex-end;">
+        <button type="button" class="btn btn-primary" id="btn-close-audit-verify-btn">Entendido y Conforme</button>
+      </div>
+    </div>
+  </div>
+</AppLayout>
+
+<script>
+  import { initAuditoria } from '@scripts/auditoria';
+  initAuditoria();
+</script>
+

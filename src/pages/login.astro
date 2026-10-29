@@ -1,0 +1,233 @@
+---
+// src/pages/login.astro
+import AuthLayout from '@layouts/AuthLayout.astro';
+---
+
+<AuthLayout title="Iniciar Sesión — SGD Unitrópico">
+  <div class="login-wrapper">
+    <div class="login-card-container">
+      <div class="login-branding">
+        <div class="login-logo-circle">
+          <svg viewBox="0 0 24 24" width="40" height="40">
+            <path d="M12 2L2 7v7c0 5.55 3.84 10.74 10 12 6.16-1.26 10-6.45 10-12V7l-10-5zm0 3.3l7 3.5v5.2c0 4.38-2.94 8.48-7 9.58-4.06-1.1-7-5.2-7-9.58V8.8l7-3.5z" fill="#ffffff"/>
+            <path d="M11 11h2v5h-2zm0-4h2v2h-2z" fill="#B5A160"/>
+          </svg>
+        </div>
+        <div class="login-brand-title">UNIVERSIDAD INTERNACIONAL DEL TRÓPICO AMERICANO</div>
+        <div class="login-brand-subtitle">SISTEMA DE GESTIÓN DOCUMENTAL Y GOBIERNO INSTITUCIONAL (SGD)</div>
+      </div>
+
+      <div class="login-box">
+        <div class="login-box-header">
+          <h2>Iniciar Sesión Segura</h2>
+          <p>Ingrese con sus credenciales institucionales o use un perfil de demostración.</p>
+        </div>
+
+        <form id="login-form">
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label">Correo Institucional *</label>
+            <div class="login-input-wrap">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              <input type="email" class="form-input" id="input-login-email" placeholder="usuario@unitropico.edu.co" value="root@unitropico.edu.co" required>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label">Contraseña de Seguridad *</label>
+            <div class="login-input-wrap">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <input type="password" class="form-input" id="input-login-password" placeholder="••••••••••••" value="rector2026" required>
+              <button type="button" class="btn-toggle-pwd" id="btn-toggle-pwd" tabindex="-1" title="Mostrar u ocultar contraseña">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 0.8rem;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-muted);">
+              <input type="checkbox" id="chk-remember-session" checked style="accent-color: var(--primary);">
+              <span>Recordar sesión</span>
+            </label>
+            <span style="color: var(--primary); font-weight: 700; cursor: pointer;" id="btn-forgot-password">¿Olvidó su contraseña?</span>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 12px; font-size: 0.95rem; font-weight: 800;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+            <span>Ingresar al Sistema SGD</span>
+          </button>
+        </form>
+
+        <!-- Atajos de Acceso Rápido para Demostración -->
+        <div class="login-quick-roles">
+          <div class="login-quick-roles-title">
+            <span>O ingrese con 1 clic para demostración:</span>
+          </div>
+          <div class="login-demo-pills">
+            <button type="button" class="login-demo-pill" id="demo-login-root">
+              <span class="demo-avatar" style="background: #6b21a8;">CL</span>
+              <div class="demo-info">
+                <strong>Dr. Cristian Lemus</strong>
+                <span>Rector Magnífico / Root</span>
+              </div>
+            </button>
+            <button type="button" class="login-demo-pill" id="demo-login-sec">
+              <span class="demo-avatar" style="background: #B5A160;">FO</span>
+              <div class="demo-info">
+                <strong>Dr. Fernando Ortiz</strong>
+                <span>Secretario General</span>
+              </div>
+            </button>
+            <button type="button" class="login-demo-pill" id="demo-login-oaj">
+              <span class="demo-avatar" style="background: #dc2626;">RG</span>
+              <div class="demo-info">
+                <strong>Dr. Roberto Gómez</strong>
+                <span>Asesor Jurídico</span>
+              </div>
+            </button>
+            <button type="button" class="login-demo-pill" id="demo-login-acad">
+              <span class="demo-avatar" style="background: #0284c7;">CR</span>
+              <div class="demo-info">
+                <strong>Dra. Carmen Vargas</strong>
+                <span>Vicerrectoría Académica</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <div class="login-security-footer">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span>Conexión segura TLS 1.3 &bull; Trazabilidad criptográfica SHA-256 de accesos activa.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</AuthLayout>
+
+<style>
+  .login-wrapper {
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+</style>
+
+<script>
+  import { INSTITUTIONAL_USERS } from '@data/users';
+  import { SESSION_STORAGE_KEY, SESSION_COOKIE_KEY } from '@lib/constants';
+  import { logSystemActivity } from '@lib/audit';
+
+  function showToast(message: string, isError = false) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = `toast ${isError ? 'toast-error' : 'toast-success'}`;
+    toast.innerHTML = `
+      <div class="toast-content" style="display:flex; align-items:center; gap:8px;">
+        <span>${isError ? '⚠️' : '✅'}</span>
+        <span>${message}</span>
+      </div>
+    `;
+    container.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      setTimeout(() => toast.remove(), 300);
+    }, 3500);
+  }
+
+  function setSessionCookie(userId: string) {
+    // Cookie de sesión de 7 días
+    document.cookie = `${SESSION_COOKIE_KEY}=${userId}; path=/; max-age=${7 * 24 * 3600}; SameSite=Lax`;
+  }
+
+  function completeLogin(user: typeof INSTITUTIONAL_USERS[0], remember: boolean) {
+    const sessionPayload = {
+      userId: user.id,
+      email: user.email,
+      loggedAt: new Date().toISOString()
+    };
+
+    if (remember) {
+      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionPayload));
+    } else {
+      sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionPayload));
+    }
+
+    setSessionCookie(user.id);
+
+    logSystemActivity({
+      actor: user,
+      action: 'Inicio de Sesión Institucional Exitoso',
+      actionType: 'ACCESO',
+      entity: 'Control de Acceso Institucional',
+      entityId: user.id,
+      details: `El usuario ${user.name} (${user.role}) autenticó credenciales mediante protocolo TLS 1.3.`,
+      severity: 'INFO'
+    });
+
+    showToast(`¡Bienvenido al SGD Unitrópico, ${user.name}!`);
+
+    setTimeout(() => {
+      window.location.href = '/dashboard';
+    }, 600);
+  }
+
+  // Toggle password visibility
+  const btnTogglePwd = document.getElementById('btn-toggle-pwd');
+  const inputPwd = document.getElementById('input-login-password') as HTMLInputElement | null;
+  btnTogglePwd?.addEventListener('click', () => {
+    if (inputPwd) {
+      inputPwd.type = inputPwd.type === 'password' ? 'text' : 'password';
+    }
+  });
+
+  // Forgot password
+  document.getElementById('btn-forgot-password')?.addEventListener('click', () => {
+    showToast('Comuníquese con la Dirección de Tecnologías (DTI) para restaurar credenciales.', true);
+  });
+
+  // Login form submit
+  const loginForm = document.getElementById('login-form') as HTMLFormElement | null;
+  loginForm?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const emailInput = document.getElementById('input-login-email') as HTMLInputElement | null;
+    const pwdInput = document.getElementById('input-login-password') as HTMLInputElement | null;
+    const rememberChk = document.getElementById('chk-remember-session') as HTMLInputElement | null;
+
+    const email = (emailInput?.value || '').trim().toLowerCase();
+    const password = pwdInput?.value || '';
+
+    const user = INSTITUTIONAL_USERS.find(u => u.email.toLowerCase() === email);
+
+    if (!user || user.password !== password) {
+      showToast('Credenciales incorrectas. Verifique su correo y contraseña de seguridad.', true);
+      return;
+    }
+
+    completeLogin(user, rememberChk?.checked ?? true);
+  });
+
+  // Demo Quick Login Pills
+  document.getElementById('demo-login-root')?.addEventListener('click', () => {
+    const user = INSTITUTIONAL_USERS.find(u => u.id === 'usr-root');
+    if (user) completeLogin(user, true);
+  });
+
+  document.getElementById('demo-login-sec')?.addEventListener('click', () => {
+    const user = INSTITUTIONAL_USERS.find(u => u.id === 'usr-3');
+    if (user) completeLogin(user, true);
+  });
+
+  document.getElementById('demo-login-oaj')?.addEventListener('click', () => {
+    const user = INSTITUTIONAL_USERS.find(u => u.id === 'usr-oaj-1');
+    if (user) completeLogin(user, true);
+  });
+
+  document.getElementById('demo-login-acad')?.addEventListener('click', () => {
+    const user = INSTITUTIONAL_USERS.find(u => u.id === 'usr-1');
+    if (user) completeLogin(user, true);
+  });
+</script>
+

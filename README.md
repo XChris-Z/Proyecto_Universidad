@@ -1,156 +1,176 @@
-# SGD Unitrópico - Sistema de Gestión Documental y Archivo Institucional
+# SGD Unitrópico — Sistema de Gestión Documental y Gobierno Institucional
 
-![Licencia](https://img.shields.io/badge/licencia-MIT-green.svg)
-![Tecnología](https://img.shields.io/badge/Stack-HTML5%20%7C%20CSS3%20%7C%20JS%20Vanilla%20%7C%20Node.js-blue)
-![Estado](https://img.shields.io/badge/estado-funcional-brightgreen)
-
-Plataforma web integral para la administración, radicación, control archivístico, trazabilidad jurídica y seguimiento de expedientes de la **Universidad Internacional del Trópico Americano (Unitrópico)**.
+> **Versión 2.0 (Arquitectura Astro + TypeScript + Supabase + Vercel)**  
+> Plataforma de gestión documental, archivo oficial, seguimiento de peticiones (PQRS / Tutelas), sistematización de normativa colegiada, control disciplinario, planeación financiera CSU y trazabilidad inmutable de la Universidad Internacional del Trópico Americano.
 
 ---
 
-## 📋 Tabla de Contenidos
+## 🏛️ Stack Tecnológico
 
-1. [Descripción General](#-descripción-general)
-2. [Características y Módulos](#-características-y-módulos)
-3. [Tecnologías Utilizadas](#-tecnologías-utilizadas)
-4. [Estructura del Proyecto](#-estructura-del-proyecto)
-5. [Cuentas de Acceso (Demostración)](#-cuentas-de-acceso-demostración)
-6. [Instalación y Uso Local](#-instalación-y-uso-local)
-7. [Subir este proyecto a GitHub](#-subir-este-proyecto-a-github)
-8. [Licencia](#-licencia)
-
----
-
-## 📌 Descripción General
-
-El **SGD Unitrópico** es una solución diseñada para optimizar los flujos documentales institucionales, dando cumplimiento a los estándares de gestión documental (Tablas de Retención Documental - TRD), normatividad legal de derechos de petición y tutelas en Colombia, control de actas y resoluciones del Consejo Superior Universitario (CSU), convenios institucionales y seguimiento a procesos disciplinarios y de planeación.
+| Capa | Tecnología | Propósito |
+| :--- | :--- | :--- |
+| **Framework Web** | [Astro v5](https://astro.build/) | Arquitectura multipágina (MPA) con Server-Side Rendering (SSR) |
+| **Adaptador Hosting** | `@astrojs/vercel` | Despliegue optimizado en la infraestructura Serverless/Edge de Vercel |
+| **Lenguaje** | [TypeScript](https://www.typescriptlang.org/) (Estricto) | Tipado integral de entidades, APIs, componentes y manipulación DOM |
+| **BaaS & Base de Datos** | [Supabase](https://supabase.com/) (PostgreSQL 15+) | Almacenamiento relacional, Auth institucional, Storage y RPCs |
+| **Lógica de BD** | **PL/pgSQL** | Procedimientos almacenados, triggers de auditoría y políticas RLS |
+| **Estilos** | CSS Moderno Nativo | Hojas globales con variables institucionales y CSS con scope por componente |
 
 ---
 
-## 🚀 Características y Módulos
-
-- 📊 **Dashboard Ejecutivo**: Vista analítica centralizada con métricas en tiempo real, radicación diaria, documentos en trámite, vencimientos perentorios y distribución por dependencia.
-- 📁 **Módulo de Archivos & TRD**: Gestión de expedientes físicos y electrónicos, clasificación documental, series, subseries y control de tiempos de retención/conservación.
-- 🏛️ **Estructura Orgánica y Dependencias**: Directorio y mapa de dependencias de la universidad (Rectoría, Secretarías, Vicerrectorías, Decanaturas y Direcciones).
-- ⚖️ **Peticiones y PQRS**: Registro y semáforo de términos de ley (10, 15 y 30 días hábiles) con cálculo automático de días hábiles restantes y alertas de vencimiento.
-- 📜 **Normatividad Institucional**: Acuerdos del Consejo Superior Universitario (CSU), Resoluciones Rectorales, Circulares y Actas con visor y descarga.
-- 📑 **Asuntos Jurídicos y Tutelas**: Seguimiento de acciones de tutela, conceptos jurídicos institucionales y términos perentorios judiciales.
-- ⚖️ **Control Disciplinario y Juzgamiento**: Gestión de expedientes e investigaciones disciplinarias internas con reserva y estados procesales.
-- 📈 **Planeación y Gestión CSU**: Rendición de informes financieros, ejecución presupuestal y seguimiento a metas del plan de desarrollo.
-- 📅 **Calendario Institucional**: Agenda y cronograma dinámico con sincronización automática de vencimientos de documentos y peticiones.
-- 🎓 **Programas Académicos**: Registro de información de facultades, programas académicos y su respectivo archivo histórico.
-- 🤝 **Relacionamiento y Convenios**: Control de convenios de cooperación interinstitucional, vigencias, pólizas y supervisión.
-- 🛡️ **Auditoría y Trazabilidad**: Registro inmutable de eventos del sistema (login, radicación, modificaciones, descargas).
-- 🖨️ **Visor e Impresión Membretada**: Generación y visualización de oficios, providencias y certificados oficiales listos para imprimir o exportar a PDF.
-
----
-
-## 💻 Tecnologías Utilizadas
-
-- **Frontend**:
-  - HTML5 semántico
-  - CSS3 puro (Variables CSS, Flexbox, CSS Grid, diseño responsivo y adaptativo)
-  - JavaScript (ES6+ Vanilla, sin dependencias externas pesadas)
-  - Tipografía oficial: *Montserrat* vía Google Fonts
-- **Backend / Servidor**:
-  - Node.js (Servidor HTTP nativo sin dependencias de terceros para servir archivos estáticos con tipos MIME y manejo seguro de rutas)
-
----
-
-## 📂 Estructura del Proyecto
+## 📁 Estructura del Proyecto
 
 ```text
-Proyecto_universidad/
+sgd-unitropico/
+├── .env.example                # Variables de entorno requeridas (Supabase URL, Anon Key, Service Role)
+├── .gitignore                  # Exclusiones estándar de node_modules, build y dist
+├── astro.config.mjs            # Configuración Astro con adaptador Vercel (SSR)
+├── package.json                # Dependencias y scripts de ejecución
+├── tsconfig.json               # Configuración estricta de TypeScript con path aliases
 │
-├── index.html          # Interfaz de usuario completa y estructura de vistas
-├── server.js           # Servidor local HTTP en Node.js nativo (puerto 8080)
-├── package.json        # Configuración del proyecto y scripts de ejecución
-├── .gitignore          # Reglas de exclusión para Git
-├── LICENSE             # Licencia de código abierto MIT
-├── README.md           # Documentación del proyecto
+├── supabase/
+│   └── migrations/             # Scripts SQL y funciones PL/pgSQL
+│       ├── 0001_initial_schema.sql      # Tablas, claves foráneas, índices y checks
+│       ├── 0002_plpgsql_functions.sql   # Funciones RPC, triggers y estadísticas en PL/pgSQL
+│       └── 0003_rls_policies.sql        # Políticas de seguridad a nivel de fila (RLS)
 │
-├── css/
-│   └── styles.css      # Estilos globales, temas, componentes y responsividad
-│
-├── js/
-│   └── app.js          # Lógica de negocio, módulos, simulación y datos del SGD
-│
-└── Documentos/         # Carpeta para almacenamiento de archivos y anexos locales
+├── src/
+│   ├── layouts/                # Envoltorios de página
+│   │   ├── Layout.astro        # Base HTML5 con metadatos y fuentes Montserrat
+│   │   ├── AuthLayout.astro    # Shell con degradado institucional para Login
+│   │   └── AppLayout.astro     # Shell de la aplicación con Sidebar, Topbar y Modales globales
+│   │
+│   ├── components/layout/      # Componentes estructurales
+│   │   ├── Sidebar.astro       # Navegación lateral con badges y perfil
+│   │   └── Topbar.astro        # Barra superior con buscador, alertas del rector y selector de rol
+│   │
+│   ├── pages/                  # Rutas multipágina (SSR)
+│   │   ├── index.astro         # Redirección automática según sesión activa
+│   │   ├── login.astro         # Pantalla de autenticación con botones demo de 1 clic
+│   │   ├── dashboard.astro     # Panel de control ejecutivo y KPIs
+│   │   ├── archivos.astro      # Repositorio TRD, radicación y respuestas formales
+│   │   ├── peticiones.astro    # Derechos de petición, tutelas y términos constitucionales
+│   │   ├── normas.astro        # Acuerdos CSU, CA, resoluciones rectorales y actos electorales
+│   │   ├── juridicos.astro     # Asuntos jurídicos, matriz de brechas y litigios
+│   │   ├── juzgamiento.astro   # Procesos disciplinarios (Ley 1952 de 2019)
+│   │   ├── planeacion.astro    # Informes financieros CSU, reportes al MEN y metas PDI
+│   │   ├── calendario.astro    # Calendario institucional tipo Google Calendar y semáforo
+│   │   ├── programas.astro     # Programas académicos, SACES y acreditación CNA
+│   │   ├── relacionamiento.astro # Convenios con entes gubernamentales y cooperación
+│   │   ├── dependencias.astro  # Estructura orgánica, despachos y funcionarios
+│   │   ├── auditoria.astro     # Bitácora inmutable con verificación SHA-256
+│   │   └── 404.astro           # Vista institucional de página no encontrada
+│   │
+│   ├── scripts/                # Lógica de cliente desacoplada y tipada (1 script por página)
+│   │   ├── appLayout.ts        # Control global del shell, cajón móvil, alertas y conmutador de usuario
+│   │   ├── dashboard.ts
+│   │   ├── archivos.ts
+│   │   ├── peticiones.ts
+│   │   ├── normas.ts
+│   │   ├── juridicos.ts
+│   │   ├── juzgamiento.ts
+│   │   ├── planeacion.ts
+│   │   ├── calendario.ts
+│   │   ├── programas.ts
+│   │   ├── relacionamiento.ts
+│   │   ├── dependencias.ts
+│   │   └── auditoria.ts
+│   │
+│   ├── data/                   # Datos institucionales tipados y estructuras mock
+│   │   ├── audit.ts
+│   │   ├── calendar.ts
+│   │   ├── convenios.ts
+│   │   ├── dependencias.ts
+│   │   ├── documents.ts
+│   │   ├── juridicos.ts
+│   │   ├── juzgamiento.ts
+│   │   ├── normas.ts
+│   │   ├── planeacion.ts
+│   │   ├── programas.ts
+│   │   ├── roles.ts
+│   │   └── users.ts
+│   │
+│   ├── lib/                    # Utilidades de negocio, seguridad y clientes BaaS
+│   │   ├── audit.ts            # Encadenamiento criptográfico (hash chaining)
+│   │   ├── auth.ts             # Control de sesiones y autenticación institucional
+│   │   ├── constants.ts        # Códigos, nombres y rutas del sistema
+│   │   ├── permissions.ts      # Matriz de permisos RBAC por nivel jerárquico
+│   │   ├── supabase.ts         # Inicialización del cliente Supabase
+│   │   ├── types.ts            # Interfaces y modelos de dominio en TypeScript
+│   │   └── utils.ts            # Helpers de fechas, días hábiles y cálculos SLA
+│   │
+│   ├── middleware/             # Guardián de rutas server-side
+│   │   └── index.ts            # Validación de cookies `sgd_session` y redirección a `/login`
+│   │
+│   └── styles/
+│       └── global.css          # Variables CSS, colores corporativos (#00594E, #B5A160) y resets
 ```
 
 ---
 
-## 🔑 Cuentas de Acceso (Demostración)
+## 🚀 Puesta en Marcha en Local
 
-El sistema incluye perfiles preconfigurados para simular los roles institucionales:
+### 1. Prerrequisitos
+- **Node.js**: v18.17.0 o superior (recomendado v20+).
+- **npm** o gestor compatible.
 
-| Rol Institucional | Funcionario | Correo Electrónico | Contraseña |
-|---|---|---|---|
-| **Rector Magnífico / Root** | Dr. Cristian Lemus | `root@unitropico.edu.co` | `rector2026` |
-| **Administradora de Sistema SGD** | Lic. Andrea Morales | `admin.sgd@unitropico.edu.co` | `admin2026` |
-| **Vicerrectoría Académica** | Dra. Carmen Rosa Vargas | `vicerrectoria@unitropico.edu.co` | `academica2026` |
-| **Decano Facultad de Ingenierías** | Ing. Carlos Mendoza | `ingenieria@unitropico.edu.co` | `ingenieria2026` |
-| **Secretaría General** | Dr. Fernando Ortiz | `secretaria@unitropico.edu.co` | `secgen2026` |
-| **Asesor Jurídico** | Dr. Roberto Gómez | `juridica@unitropico.edu.co` | `juridica2026` |
-| **Dirección Financiera** | C.P. Sandra Milena Peña | `financiera@unitropico.edu.co` | `financiera2026` |
-
----
-
-## ⚙️ Instalación y Uso Local
-
-### Opción 1: Con Node.js (Recomendada)
-
-1. Abre una terminal en la carpeta del proyecto.
-2. Ejecuta el servidor:
-   ```bash
-   npm start
-   ```
-   *(O directamente con: `node server.js`)*
-3. Abre tu navegador web en:
-   ```
-   http://localhost:8080
-   ```
-
-### Opción 2: Sin Node.js (Directo en el navegador)
-
-Simplemente haz doble clic en el archivo `index.html` o ábrelo desde cualquier navegador web moderno (Chrome, Edge, Firefox, Safari).
-
-### Opción 3: Con la extensión Live Server de VS Code
-
-1. Abre la carpeta del proyecto en Visual Studio Code.
-2. Haz clic derecho sobre `index.html`.
-3. Selecciona **"Open with Live Server"**.
-
----
-
-## 📤 Subir este proyecto a GitHub
-
-Sigue estos sencillos pasos para publicar tu repositorio:
-
-### 1. Crear el repositorio en GitHub
-1. Ve a [GitHub](https://github.com/) e inicia sesión en tu cuenta.
-2. En la esquina superior derecha, haz clic en **+** y selecciona **New repository**.
-3. Nombra tu repositorio (por ejemplo: `sgd-unitropico` o `Proyecto_universidad`).
-4. Déjalo como **Público** o **Privado** según prefieras.
-5. **No** selecciones "Add a README file", ni ".gitignore", ni "license" (ya los tenemos creados localmente).
-6. Haz clic en **Create repository**.
-
-### 2. Vincular y enviar el código
-En tu terminal (PowerShell, CMD o Git Bash dentro de la carpeta del proyecto), ejecuta:
-
+### 2. Instalación de Dependencias
 ```bash
-# 1. Vincular el repositorio remoto (reemplaza TU_USUARIO y TU_REPOSITORIO por los tuyos)
-git remote add origin https://github.com/TU_USUARIO/TU_REPOSITORIO.git
-
-# 2. Asegurarte de estar en la rama main
-git branch -M main
-
-# 3. Subir todos los archivos y commits
-git push -u origin main
+npm install
 ```
+
+### 3. Configuración de Variables de Entorno
+Copia el archivo base y ajusta las credenciales de tu proyecto en Supabase:
+```bash
+cp .env.example .env
+```
+Contenido de `.env`:
+```ini
+PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co
+PUBLIC_SUPABASE_ANON_KEY=tu-anon-key-aqui
+SUPABASE_SERVICE_ROLE_KEY=tu-service-role-key-aqui
+```
+
+### 4. Servidor de Desarrollo
+```bash
+npm run dev
+```
+Abre en tu navegador: [http://localhost:4321](http://localhost:4321)
 
 ---
 
-## 📄 Licencia
+## 🔒 Usuarios de Demostración (Acceso de 1 Clic)
 
-Este proyecto se distribuye bajo la licencia [MIT](LICENSE).
+En la pantalla `/login`, dispones de accesos directos para probar los diferentes roles y niveles jerárquicos:
+
+| Usuario | Cargo / Despacho | Nivel RBAC | Permisos Clave |
+| :--- | :--- | :--- | :--- |
+| **Dr. Cristian Lemus** | Superusuario Root / Sec. General | Nivel 1 (Total) | Acceso irrestricto, auditoría, configuración |
+| **Dr. Wilson Barreto** | Jefe de Oficina Jurídica | Nivel 2 (Directivo) | Matriz de brechas, litigios, conceptos, reparto |
+| **Dra. Natalia Ramírez** | Abogada Sustanciadora | Nivel 3 (Operativo) | Proyectar respuestas, consultar TRD asignada |
+| **Lic. Gloria Vargas** | Auxiliar de Archivo y Correspondencia | Nivel 4 (Ventanilla) | Radicación, digitalización, registro físico |
+
+---
+
+## ☁️ Despliegue en Vercel
+
+El proyecto está configurado con `@astrojs/vercel` en modo `server` (SSR):
+
+1. Conecta tu repositorio de GitHub a tu cuenta de **Vercel**.
+2. Vercel detectará automáticamente el framework **Astro**.
+3. En la sección **Environment Variables** de Vercel, agrega:
+   - `PUBLIC_SUPABASE_URL`
+   - `PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+4. Haz clic en **Deploy**.
+
+---
+
+## 📜 Fundamentación Jurídica y Normativa Aplicada
+- **Constitución Política de Colombia (Art. 23):** Derecho fundamental de petición.
+- **Ley Estatutaria 1755 de 2015:** Términos de resolución de peticiones (10, 15 y 30 días hábiles).
+- **Ley 1437 de 2011 (CPACA):** Código de Procedimiento Administrativo y de lo Contencioso Administrativo.
+- **Ley 594 de 2000 (Ley General de Archivos):** Principios de integridad, autenticidad y Tablas de Retención Documental (TRD).
+- **Ley 1952 de 2019 / Ley 2094 de 2021:** Código General Disciplinario (fases de instrucción y juzgamiento).
+- **Ley 1712 de 2014:** Transparencia y del Derecho de Acceso a la Información Pública Nacional.
+

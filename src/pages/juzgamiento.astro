@@ -1,0 +1,145 @@
+---
+// src/pages/juzgamiento.astro
+import AppLayout from '@layouts/AppLayout.astro';
+---
+
+<AppLayout title="Fase de Juzgamiento Disciplinario" activeNav="juzgamiento">
+  <div class="panel-box">
+    <div class="panel-header" style="flex-wrap: wrap; gap: 14px;">
+      <div>
+        <div class="panel-title">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          <span>Fase de Juzgamiento y Régimen Disciplinario Institucional</span>
+        </div>
+        <div style="font-size: 0.8rem; color: var(--secondary-light); font-weight: 600; margin-top: 4px;">
+          Control Interno Disciplinario conforme a la Ley 1952 de 2019 / Ley 2094 de 2021: Autos y Apelaciones en Segunda Instancia
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <button class="btn btn-primary" id="btn-open-juzgamiento-modal">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          <span>+ Radicar Auto / Apelación</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="juzgamiento-header-card" style="background: var(--bg-surface-elevated); padding: 16px; border-radius: 8px; margin-bottom: 18px;">
+      <div>
+        <div style="font-size: 0.88rem; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">Línea de Términos Procesales de Juzgamiento</div>
+        <div class="stage-tracker-row" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 0.78rem;">
+          <div class="stage-step active" style="font-weight: 700; color: var(--primary);">
+            <span class="stage-step-dot" style="display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--primary); color: #fff; text-align: center; line-height: 20px; margin-right: 4px;">1</span>
+            <span>Indagación Previa</span>
+          </div>
+          <span>&rarr;</span>
+          <div class="stage-step active" style="font-weight: 700; color: var(--primary);">
+            <span class="stage-step-dot" style="display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--primary); color: #fff; text-align: center; line-height: 20px; margin-right: 4px;">2</span>
+            <span>Pliego de Cargos</span>
+          </div>
+          <span>&rarr;</span>
+          <div class="stage-step active" style="font-weight: 700; color: var(--primary);">
+            <span class="stage-step-dot" style="display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--primary); color: #fff; text-align: center; line-height: 20px; margin-right: 4px;">3</span>
+            <span>Etapa Probatoria</span>
+          </div>
+          <span>&rarr;</span>
+          <div class="stage-step" style="color: var(--text-muted);">
+            <span class="stage-step-dot" style="display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--border-color); color: var(--text-main); text-align: center; line-height: 20px; margin-right: 4px;">4</span>
+            <span>Fallo 1ra Instancia</span>
+          </div>
+          <span>&rarr;</span>
+          <div class="stage-step" style="color: var(--text-muted);">
+            <span class="stage-step-dot" style="display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--border-color); color: var(--text-main); text-align: center; line-height: 20px; margin-right: 4px;">5</span>
+            <span>Apelación 2da Instancia (CSU / Rectoría)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="module-tabs" id="juzgamiento-module-tabs">
+      <button class="module-tab-btn active" data-jstage="all">
+        <span>Todos los Procesos</span>
+        <span class="tab-count" id="juzg-count-all">5</span>
+      </button>
+      <button class="module-tab-btn" data-jstage="autos">
+        <span>Autos Procesales</span>
+        <span class="tab-count" id="juzg-count-autos">4</span>
+      </button>
+      <button class="module-tab-btn" data-jstage="apelaciones">
+        <span>Apelaciones en Segunda Instancia</span>
+        <span class="tab-count" id="juzg-count-apelaciones">1</span>
+      </button>
+    </div>
+
+    <div class="table-responsive">
+      <table class="doc-table">
+        <thead>
+          <tr>
+            <th>Expediente / Implicado</th>
+            <th>Tipo de Acto / Auto</th>
+            <th>Conducta / Causal Investigada</th>
+            <th>Etapa Procesal</th>
+            <th>Fecha Notificación</th>
+            <th>Segunda Instancia</th>
+            <th>Estado de Términos</th>
+            <th style="text-align: right;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="juzgamiento-table-body">
+          <!-- Dinámico desde JS -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal: Radicar Auto / Apelación -->
+  <div class="modal-backdrop" id="new-juzgamiento-modal" style="display: none;">
+    <div class="modal-card" style="max-width: 640px;">
+      <div class="modal-header">
+        <h3>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          <span>Radicar Auto / Pieza Procesal Disciplinaria</span>
+        </h3>
+        <button class="btn-close-modal" id="btn-close-new-juzg-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row-2">
+          <div class="form-group">
+            <label class="form-label">Radicado del Expediente *</label>
+            <input type="text" class="form-input" placeholder="Ej: EXP-DISC-2026-005">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Funcionario / Implicado *</label>
+            <input type="text" class="form-input" placeholder="Nombre completo">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tipo de Acto / Auto *</label>
+          <select class="form-select">
+            <option>Auto de Formulación de Cargos</option>
+            <option>Auto de Apertura de Indagación Previa</option>
+            <option>Recurso de Apelación 2da Instancia</option>
+            <option>Auto de Decreto de Pruebas Periciales</option>
+            <option>Auto de Archivo Definitivo</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Conducta o Causal Investigada</label>
+          <textarea class="form-textarea" rows="2" placeholder="Descripción sucinta de los hechos..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('new-juzgamiento-modal').style.display='none';">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="window.showToast('Auto procesal radicado en libro disciplinario'); document.getElementById('new-juzgamiento-modal').style.display='none';">
+          Incorporar al Expediente
+        </button>
+      </div>
+    </div>
+  </div>
+</AppLayout>
+
+<script>
+  import { initJuzgamiento } from '@scripts/juzgamiento';
+  initJuzgamiento();
+</script>
+

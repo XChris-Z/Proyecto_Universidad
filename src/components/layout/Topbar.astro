@@ -1,0 +1,50 @@
+---
+// src/components/layout/Topbar.astro
+interface Props {
+  title?: string;
+}
+
+const { title = 'Dashboard — Panel de Control' } = Astro.props;
+---
+
+<header class="topbar">
+  <div class="topbar-left-wrap">
+    <button class="btn-hamburger" id="btn-mobile-menu-toggle" aria-label="Abrir menú de navegación" title="Abrir menú de navegación">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="page-header-title">
+      <h1 class="page-title" id="view-title">
+        {title}
+        <span class="accent-dot"></span>
+      </h1>
+    </div>
+  </div>
+
+  <div class="topbar-actions">
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input type="text" id="global-search-input" placeholder="Buscar documento, radicado...">
+    </div>
+
+    <!-- Semáforo y Alertas del Despacho Rectoral -->
+    <button class="btn-rector-alerts" id="btn-rector-alerts" title="Centro de Notificaciones y Semáforo de Vencimientos para el Rector">
+      <span class="bell-icon-wrap">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span class="bell-pulse-dot"></span>
+      </span>
+      <span class="rector-alert-label">Despacho Rector</span>
+      <span class="alert-count-pill" id="rector-critical-count">3 Alertas</span>
+    </button>
+
+    <div class="date-badge">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span id="current-date-text">Octubre 2026</span>
+    </div>
+
+    <button class="btn btn-primary" id="btn-topbar-upload">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <span>Subir Archivo</span>
+    </button>
+  </div>
+</header>
+

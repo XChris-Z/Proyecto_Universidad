@@ -1,0 +1,307 @@
+---
+// src/pages/dashboard.astro
+import AppLayout from '@layouts/AppLayout.astro';
+---
+
+<AppLayout title="Dashboard — Panel de Control" activeNav="dashboard">
+  <!-- Hero Banner Despacho Rectoral -->
+  <div class="hero-banner">
+    <div class="hero-content">
+      <h2>Despacho Rectoral — <span>Centro de Mando Institucional</span></h2>
+      <p>Monitoreo integral de gobierno universitario: cuerpos colegiados, asuntos jurídicos, fase de juzgamiento, planeación financiera CSU y calendario institucional de Unitrópico.</p>
+    </div>
+    <div class="hero-stats-quick">
+      <a href="/dependencias" class="hero-pill" style="cursor: pointer; text-decoration: none;" title="Ver dependencias universitarias">
+        <div class="number" id="quick-total-dependencias">10</div>
+        <div class="label">Dependencias</div>
+      </a>
+      <a href="/normas" class="hero-pill" style="cursor: pointer; text-decoration: none;" title="Ver cuerpos colegiados y normas">
+        <div class="number" id="quick-total-normas" style="color: var(--secondary);">12</div>
+        <div class="label">Actos Colegiados</div>
+      </a>
+      <a href="/planeacion" class="hero-pill" style="cursor: pointer; text-decoration: none;" title="Ver ejecución presupuestal CSU">
+        <div class="number" id="quick-budget-csu" style="color: var(--status-safe);">$48.5B</div>
+        <div class="label">Presupuesto CSU</div>
+      </a>
+      <a href="/juridicos" class="hero-pill" style="cursor: pointer; text-decoration: none;" title="Ver brechas normativas">
+        <div class="number" id="quick-normative-coverage" style="color: #6366f1;">78%</div>
+        <div class="label">Cobertura Normativa</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Métricas KPI Ejecutivas (6 Módulos Principales) -->
+  <div class="kpi-grid-6">
+    <!-- 1. Peticiones y Radicados -->
+    <a href="/peticiones" class="kpi-card gold interactive" style="text-decoration: none;" title="Ir al módulo de Derechos de Petición">
+      <div class="kpi-header">
+        <span class="kpi-title">Peticiones / PQRS</span>
+        <div class="kpi-icon-wrap">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+      </div>
+      <div class="kpi-value-row">
+        <div class="kpi-number" id="kpi-total-docs">4</div>
+        <span class="kpi-trend positive" id="kpi-pending-docs">3 Pendientes</span>
+      </div>
+      <div class="kpi-footer">
+        <span>Eficacia Institucional</span>
+        <span style="color: var(--secondary); font-weight: 700;" id="kpi-response-rate">25% Resuelto</span>
+      </div>
+    </a>
+
+    <!-- 2. Cuerpos Colegiados -->
+    <a href="/normas" class="kpi-card interactive" style="text-decoration: none;" title="Ir a Normativa y Cuerpos Colegiados">
+      <div class="kpi-header">
+        <span class="kpi-title">Cuerpos Colegiados</span>
+        <div class="kpi-icon-wrap" style="color: var(--primary); background: var(--primary-subtle); border-color: var(--primary-border);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+        </div>
+      </div>
+      <div class="kpi-value-row">
+        <div class="kpi-number" id="kpi-total-normas">12</div>
+        <span class="kpi-trend positive">CSU &bull; CA &bull; Rec</span>
+      </div>
+      <div class="kpi-footer">
+        <span>Actos Sistematizados</span>
+        <span style="color: var(--primary); font-weight: 700;">100% Vigentes</span>
+      </div>
+    </a>
+
+    <!-- 3. Asuntos Jurídicos y Brechas -->
+    <a href="/juridicos" class="kpi-card danger interactive" style="text-decoration: none;" title="Ir a Asuntos Jurídicos y Brechas Normativas">
+      <div class="kpi-header">
+        <span class="kpi-title">Asuntos Jurídicos</span>
+        <div class="kpi-icon-wrap" style="color: #e11d48; background: #ffe4e6; border-color: #fecdd3;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>
+        </div>
+      </div>
+      <div class="kpi-value-row">
+        <div class="kpi-number" id="kpi-total-juridicos-dash">18</div>
+        <span class="kpi-trend positive">5 Conceptos</span>
+      </div>
+      <div class="kpi-footer">
+        <span>Brechas Mitigadas</span>
+        <span style="color: #e11d48; font-weight: 700;">8 Proyectos (78%)</span>
+      </div>
+    </a>
+
+    <!-- 4. Fase de Juzgamiento -->
+    <a href="/juzgamiento" class="kpi-card purple interactive" style="text-decoration: none;" title="Ir a Fase de Juzgamiento Disciplinario">
+      <div class="kpi-header">
+        <span class="kpi-title">Juzgamiento Disciplinario</span>
+        <div class="kpi-icon-wrap" style="color: #9333ea; background: #f3e8ff; border-color: #e9d5ff;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+      </div>
+      <div class="kpi-value-row">
+        <div class="kpi-number" id="kpi-total-juzgamiento-dash">5</div>
+        <span class="kpi-trend positive" style="background: #f3e8ff; color: #7e22ce;">3 Autos / 2 Apel.</span>
+      </div>
+      <div class="kpi-footer">
+        <span>Régimen Disciplinario</span>
+        <span style="color: #9333ea; font-weight: 700;">2da Instancia Rector</span>
+      </div>
+    </a>
+
+    <!-- 5. Planeación Estratégica CSU -->
+    <a href="/planeacion" class="kpi-card teal interactive" style="text-decoration: none;" title="Ir a Planeación y Gestión CSU">
+      <div class="kpi-header">
+        <span class="kpi-title">Planeación y CSU</span>
+        <div class="kpi-icon-wrap" style="color: #0d9488; background: #ccfbf1; border-color: #99f6e4;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        </div>
+      </div>
+      <div class="kpi-value-row">
+        <div class="kpi-number" id="kpi-total-budget-dash" style="font-size: 1.85rem;">74.2%</div>
+        <span class="kpi-trend positive">$48.500M</span>
+      </div>
+      <div class="kpi-footer">
+        <span>Informes Presentados</span>
+        <span style="color: #0d9488; font-weight: 700;">8 Fin. / 3 Gestión</span>
+      </div>
+    </a>
+
+    <!-- 6. Google Calendar y Semáforo -->
+    <a href="/calendario" class="kpi-card blue interactive" style="text-decoration: none;" title="Ir a Calendario y Semáforo">
+      <div class="kpi-header">
+        <span class="kpi-title">Agenda y Semáforo</span>
+        <div class="kpi-icon-wrap" style="color: #2563eb; background: #dbeafe; border-color: #bfdbfe;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+      </div>
+      <div class="kpi-value-row">
+        <div class="kpi-number" id="kpi-total-sessions-dash">2</div>
+        <span class="kpi-trend positive" style="background: #dbeafe; color: #1d4ed8;">Sesión CSU 24 Oct</span>
+      </div>
+      <div class="kpi-footer">
+        <span>Google Calendar Sync</span>
+        <span style="color: #2563eb; font-weight: 700;">En Línea &bull; 6 Eventos</span>
+      </div>
+    </a>
+  </div>
+
+  <!-- Fila 1 de Paneles: Reparto Prioritario & SLA de Peticiones -->
+  <div class="dashboard-split-grid">
+    <!-- Columna Principal: Reparto Rectoral Prioritario -->
+    <div class="panel-box">
+      <div class="panel-header">
+        <div class="panel-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <span>Reparto Rectoral Prioritario: Expedientes y Términos</span>
+        </div>
+        <a href="/archivos" class="panel-link" style="text-decoration: none;">Ver todos los radicados &rarr;</a>
+      </div>
+
+      <div id="dashboard-critical-list" style="display: flex; flex-direction: column; gap: 14px;">
+        <!-- Dinámico desde JS -->
+      </div>
+    </div>
+
+    <!-- Columna Lateral: Eficacia en Peticiones y Distribución SLA -->
+    <div class="dashboard-side-column">
+      <!-- Widget: Eficacia en Respuestas a Peticiones -->
+      <div class="panel-box">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><polyline points="9 10 12 7 15 10"/><line x1="12" y1="7" x2="12" y2="13"/></svg>
+            <span>Eficacia en Peticiones</span>
+          </div>
+          <a href="/peticiones" class="badge-response-status responded" style="text-decoration: none;" id="widget-efficacy-badge">25% Resuelto</a>
+        </div>
+
+        <div class="efficacy-card-body">
+          <div class="efficacy-stats-row">
+            <div class="efficacy-metric-box">
+              <span class="efficacy-metric-num" id="widget-responded-count" style="color: var(--status-safe);">1</span>
+              <span class="efficacy-metric-label">Oficios Emitidos</span>
+            </div>
+            <div class="efficacy-metric-box">
+              <span class="efficacy-metric-num" id="widget-pending-count" style="color: var(--status-warn);">3</span>
+              <span class="efficacy-metric-label">Pendientes de Trámite</span>
+            </div>
+          </div>
+
+          <div class="dist-item" style="margin-top: 6px;">
+            <div class="dist-meta">
+              <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-main);">Tasa de Respuesta Institucional</span>
+              <span id="widget-response-pct" style="color: var(--primary); font-weight: 800;">25%</span>
+            </div>
+            <div class="dist-progress-bg" style="height: 10px;">
+              <div class="dist-progress-fill" id="widget-response-bar" style="width: 25%; background: linear-gradient(90deg, var(--secondary) 0%, var(--primary) 100%);"></div>
+            </div>
+          </div>
+
+          <a href="/peticiones" class="btn-manage-petitions" id="btn-quick-manage-petitions" style="text-decoration: none;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span>Atender Peticiones Pendientes</span>
+            <span class="badge-counter" id="widget-pending-badge">3</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Widget: Distribución de Términos SLA -->
+      <div class="panel-box">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0110 10H12V2z"/></svg>
+            <span>Términos de Radicación (SLA)</span>
+          </div>
+        </div>
+
+        <div class="stats-distribution-list">
+          <div class="dist-item">
+            <div class="dist-meta">
+              <span><span class="dist-dot" style="background: #10B981;"></span> En Término Óptimo (&lt;50%)</span>
+              <span id="dist-count-safe">2 docs (50%)</span>
+            </div>
+            <div class="dist-progress-bg">
+              <div class="dist-progress-fill" id="dist-bar-safe" style="width: 50%; background: #10B981;"></div>
+            </div>
+          </div>
+
+          <div class="dist-item">
+            <div class="dist-meta">
+              <span><span class="dist-dot" style="background: #F59E0B;"></span> Advertencia Media (50%-80%)</span>
+              <span id="dist-count-warn">1 doc (25%)</span>
+            </div>
+            <div class="dist-progress-bg">
+              <div class="dist-progress-fill" id="dist-bar-warn" style="width: 25%; background: #F59E0B;"></div>
+            </div>
+          </div>
+
+          <div class="dist-item">
+            <div class="dist-meta">
+              <span><span class="dist-dot" style="background: #EF4444;"></span> Alerta Crítica (&gt;80%)</span>
+              <span id="dist-count-danger">1 doc (25%)</span>
+            </div>
+            <div class="dist-progress-bg">
+              <div class="dist-progress-fill" id="dist-bar-danger" style="width: 25%; background: #EF4444;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="institutional-compliance-note">
+          <div class="note-header">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span>Seguimiento y Cumplimiento Normativo</span>
+          </div>
+          <p>
+            Semáforo de plazos automatizado conforme a la <strong>Ley 1755 de 2015</strong> y las políticas de gestión documental de Unitrópico.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fila 2 de Paneles: Cuerpos Colegiados Recientes & Agenda de la Semana -->
+  <div class="dashboard-grid-2x2">
+    <!-- Panel Colegiados Recientes -->
+    <div class="panel-box">
+      <div class="panel-header">
+        <div class="panel-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+          <span>Cuerpos Colegiados: Resoluciones y Acuerdos Recientes</span>
+        </div>
+        <a href="/normas" class="panel-link" style="text-decoration: none;">Explorar normativa (12) &rarr;</a>
+      </div>
+      <div class="dashboard-colegiados-mini-list" id="dashboard-colegiados-recent-list">
+        <!-- Dinámico desde JS -->
+      </div>
+    </div>
+
+    <!-- Panel Agenda Rectoral y Google Calendar -->
+    <div class="panel-box">
+      <div class="panel-header">
+        <div class="panel-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span>Agenda Institucional &amp; Google Calendar</span>
+        </div>
+        <a href="/calendario" class="panel-link" style="text-decoration: none;">Ver calendario &rarr;</a>
+      </div>
+      <div class="dashboard-cal-mini-list" id="dashboard-calendar-recent-list">
+        <!-- Dinámico desde JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Fila 3: Carga Operativa por Dependencias -->
+  <div class="panel-box">
+    <div class="panel-header">
+      <div class="panel-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Carga Operativa y Despachos por Dependencia Universitaria</span>
+      </div>
+      <a href="/dependencias" class="panel-link" style="text-decoration: none;">Ver las 10 dependencias y oficios &rarr;</a>
+    </div>
+    <div id="dashboard-dependencias-workload-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
+      <!-- Dinámico desde JS -->
+    </div>
+  </div>
+</AppLayout>
+
+<script>
+  import { initDashboard } from '@scripts/dashboard';
+  initDashboard();
+</script>
+

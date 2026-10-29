@@ -1,0 +1,139 @@
+---
+// src/pages/normas.astro
+import AppLayout from '@layouts/AppLayout.astro';
+---
+
+<AppLayout title="Cuerpos Colegiados y Normativa" activeNav="normas">
+  <div class="panel-box">
+    <div class="panel-header" style="flex-wrap: wrap; gap: 14px;">
+      <div>
+        <div class="panel-title">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+          <span>Sistematización de Normas y Actos de Cuerpos Colegiados</span>
+        </div>
+        <div style="font-size: 0.8rem; color: var(--secondary-light); font-weight: 600; margin-top: 4px;">
+          Compendio oficial y clasificado: Consejo Superior, Consejo Académico, Resoluciones Rectorales y Consejo Electoral
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <button class="btn btn-primary" id="btn-open-new-norma-modal">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          <span>+ Radicar Nuevo Acto / Norma</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Submódulos por Cuerpo Colegiado -->
+    <div class="module-tabs" id="normas-module-tabs">
+      <button class="module-tab-btn active" data-org="all">
+        <span>Todos los Cuerpos Colegiados</span>
+        <span class="tab-count" id="normas-count-all">12</span>
+      </button>
+      <button class="module-tab-btn" data-org="csu">
+        <span>Consejo Superior (CSU)</span>
+        <span class="tab-count" id="normas-count-csu">4</span>
+      </button>
+      <button class="module-tab-btn" data-org="ca">
+        <span>Consejo Académico (CA)</span>
+        <span class="tab-count" id="normas-count-ca">3</span>
+      </button>
+      <button class="module-tab-btn" data-org="rectoria">
+        <span>Resoluciones Rectorales</span>
+        <span class="tab-count" id="normas-count-rectoria">3</span>
+      </button>
+      <button class="module-tab-btn" data-org="electoral">
+        <span>Consejo Electoral</span>
+        <span class="tab-count" id="normas-count-electoral">2</span>
+      </button>
+    </div>
+
+    <!-- Filtros de búsqueda para normas -->
+    <div style="display: flex; gap: 12px; margin-bottom: 18px; flex-wrap: wrap;">
+      <div class="search-box" style="flex: 1; min-width: 260px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" id="normas-search-input" placeholder="Buscar por número (Ej: Acuerdo 012), palabra clave o tema...">
+      </div>
+      <select class="form-select" id="normas-filter-vigencia" style="width: 180px;">
+        <option value="all">Todas las Vigencias</option>
+        <option value="vigente" selected>Vigente</option>
+        <option value="modificado">Modificado</option>
+        <option value="derogado">Derogado</option>
+      </select>
+      <select class="form-select" id="normas-filter-year" style="width: 140px;">
+        <option value="all">Todos los Años</option>
+        <option value="2026">2026</option>
+        <option value="2025">2025</option>
+      </select>
+    </div>
+
+    <div class="colegiados-grid" id="colegiados-cards-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;">
+      <!-- Dinámico desde JS -->
+    </div>
+  </div>
+
+  <!-- Modal: Radicar Nueva Norma de Cuerpo Colegiado -->
+  <div class="modal-backdrop" id="new-norma-modal" style="display: none;">
+    <div class="modal-card" style="max-width: 640px;">
+      <div class="modal-header">
+        <h3>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+          <span>Radicar Acto / Norma de Cuerpo Colegiado</span>
+        </h3>
+        <button class="btn-close-modal" id="btn-close-new-norma-modal">&times;</button>
+      </div>
+      <form id="new-norma-form">
+        <div class="modal-body">
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Órgano Colegiado Emisor *</label>
+              <select class="form-select" id="select-norma-organo" required>
+                <option value="Consejo Superior">Consejo Superior Universitario (CSU)</option>
+                <option value="Consejo Académico">Consejo Académico (CA)</option>
+                <option value="Rectoría">Rectoría (Resolución Rectoral)</option>
+                <option value="Consejo Electoral">Consejo Electoral</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Tipo de Acto Administrativo *</label>
+              <select class="form-select" id="select-norma-tipo" required>
+                <option value="Acuerdo">Acuerdo</option>
+                <option value="Resolución">Resolución</option>
+                <option value="Circular Normativa">Circular Normativa</option>
+                <option value="Acta de Sesión">Acta de Sesión</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Número de Acto Oficial *</label>
+              <input type="text" class="form-input" id="input-norma-numero" placeholder="Ej: 015" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Fecha de Expedición *</label>
+              <input type="date" class="form-input" id="input-norma-fecha" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Título o Epígrafe del Acto *</label>
+            <input type="text" class="form-input" id="input-norma-titulo" placeholder="Ej: Por el cual se adopta la política..." required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Resumen / Objeto del Acto Administrativo</label>
+            <textarea class="form-textarea" id="input-norma-resumen" rows="3" placeholder="Detalle de las disposiciones..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" id="btn-cancel-new-norma">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar e Incorporar a Colección</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</AppLayout>
+
+<script>
+  import { initNormas } from '@scripts/normas';
+  initNormas();
+</script>
+
