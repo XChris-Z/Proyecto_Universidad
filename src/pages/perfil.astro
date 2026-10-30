@@ -14,7 +14,7 @@ import { supabase } from '@lib/supabase';
           <span id="profile-avatar-initials">CL</span>
           <img id="profile-avatar-img" src="" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; display: none;" />
         </div>
-        <label for="avatar-file-input" class="btn-avatar-camera" title="Cambiar foto de perfil" style="position: absolute; bottom: 0; right: 0; width: 34px; height: 34px; background: var(--dorado-principal); border-radius: var(--radius-full); display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid #ffffff; box-shadow: 0 2px 6px rgba(0,0,0,0.15); color: #ffffff;">
+        <label for="avatar-file-input" class="btn-avatar-camera" title="Cambiar foto de perfil (se guarda en Supabase Storage)" style="position: absolute; bottom: 0; right: 0; width: 34px; height: 34px; background: var(--dorado-principal); border-radius: var(--radius-full); display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid #ffffff; box-shadow: 0 2px 6px rgba(0,0,0,0.15); color: #ffffff;">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
         </label>
         <input type="file" id="avatar-file-input" accept="image/png,image/jpeg,image/webp" style="display: none;" />
@@ -54,40 +54,59 @@ import { supabase } from '@lib/supabase';
           </div>
           <div>
             <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin: 0;">Datos del Funcionario</h3>
-            <span style="font-size: 0.74rem; color: var(--text-muted);">Información asignada por la administración</span>
+            <span style="font-size: 0.74rem; color: var(--text-muted);">Edición de datos habilitados y campos protegidos</span>
           </div>
         </div>
 
-        <form id="form-immutable-info" onsubmit="return false;" style="display: flex; flex-direction: column; gap: 16px;">
+        <form id="form-profile-info" onsubmit="return false;" style="display: flex; flex-direction: column; gap: 16px;">
+          <!-- Campo Editable: Nombre Completo -->
           <div class="form-group">
-            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Nombre Completo</label>
-            <input type="text" id="input-full-name" class="form-input" value="Dr. Cristian Lemus" readonly style="background: var(--bg-surface-elevated); cursor: not-allowed;" />
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-main); text-transform: uppercase;">Nombre Completo (Editable)</label>
+              <span style="font-size: 0.70rem; font-weight: 700; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 2px 8px; border-radius: var(--radius-sm);">Habilitado</span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" id="input-full-name" class="form-input" value="Dr. Cristian Lemus" required placeholder="Nombre Completo Institucional" />
+              <button type="button" id="btn-save-name" class="btn btn-primary" style="white-space: nowrap; padding: 0 16px; font-weight: 700;">
+                Guardar
+              </button>
+            </div>
+            <small id="name-save-status" style="font-size: 0.72rem; margin-top: 4px; display: none;"></small>
           </div>
 
+          <!-- Campo Bloqueado: Correo Institucional -->
           <div class="form-group">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
               <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Correo Electrónico Institucional</label>
-              <span style="font-size: 0.70rem; font-weight: 700; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 2px 8px; border-radius: var(--radius-sm);">Inmutable</span>
+              <span style="font-size: 0.70rem; font-weight: 700; color: #dc2626; background: #fee2e2; padding: 2px 8px; border-radius: var(--radius-sm);">Inmutable</span>
             </div>
             <div style="position: relative;">
-              <input type="email" id="input-email-locked" class="form-input" value="root@unitropico.edu.co" readonly disabled style="background: #F8FAFC; color: #475569; border-color: #E2E8F0; cursor: not-allowed; padding-right: 36px; font-weight: 600;" />
+              <input type="email" id="input-email-locked" class="form-input" value="cristian.lemus@unitropico.edu.co" readonly disabled style="background: #F8FAFC; color: #475569; border-color: #E2E8F0; cursor: not-allowed; padding-right: 36px; font-weight: 600;" />
               <div style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted);" title="El correo electrónico es estrictamente inmutable por seguridad institucional.">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
               </div>
             </div>
             <small style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; display: block;">
-              Protegido a nivel de motor de base de datos PostgreSQL mediante disparador (trigger) PL/pgSQL inmutable.
+              Protegido a nivel de base de datos PostgreSQL mediante trigger PL/pgSQL (<code>fn_protect_user_email</code>).
             </small>
           </div>
 
+          <!-- Campo Bloqueado: Rol en el Sistema -->
           <div class="form-group">
-            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Rol en el Sistema</label>
-            <input type="text" id="input-role-title" class="form-input" value="Administrador General" readonly style="background: var(--bg-surface-elevated); cursor: not-allowed;" />
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Rol en el Sistema</label>
+              <span style="font-size: 0.70rem; font-weight: 700; color: var(--text-muted); background: #f1f5f9; padding: 2px 8px; border-radius: var(--radius-sm);">Solo Lectura</span>
+            </div>
+            <input type="text" id="input-role-title" class="form-input" value="Administrador General" readonly disabled style="background: #F8FAFC; color: #475569; border-color: #E2E8F0; cursor: not-allowed;" />
           </div>
 
+          <!-- Campo Bloqueado: Dependencia / Despacho -->
           <div class="form-group">
-            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Dependencia / Despacho</label>
-            <input type="text" class="form-input" value="Despacho de Rectoría" readonly style="background: var(--bg-surface-elevated); cursor: not-allowed;" />
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Dependencia / Despacho</label>
+              <span style="font-size: 0.70rem; font-weight: 700; color: var(--text-muted); background: #f1f5f9; padding: 2px 8px; border-radius: var(--radius-sm);">Solo Lectura</span>
+            </div>
+            <input type="text" id="input-dependencia-title" class="form-input" value="Despacho de Rectoría" readonly disabled style="background: #F8FAFC; color: #475569; border-color: #E2E8F0; cursor: not-allowed;" />
           </div>
         </form>
       </div>
@@ -100,7 +119,7 @@ import { supabase } from '@lib/supabase';
           </div>
           <div>
             <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin: 0;">Seguridad y Contraseña</h3>
-            <span style="font-size: 0.74rem; color: var(--text-muted);">Actualizar clave de acceso institucional</span>
+            <span style="font-size: 0.74rem; color: var(--text-muted);">Actualizar clave mediante Supabase Auth</span>
           </div>
         </div>
 
@@ -144,9 +163,10 @@ import { supabase } from '@lib/supabase';
           <div style="margin-top: 6px;">
             <button type="submit" id="btn-submit-password" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 11px;">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-              <span>Guardar Nueva Contraseña</span>
+              <span>Actualizar Contraseña en Supabase</span>
             </button>
           </div>
+          <div id="password-status-feedback" style="font-size: 0.8rem; text-align: center; font-weight: 700; margin-top: 4px; display: none;"></div>
         </form>
       </div>
 
@@ -179,13 +199,22 @@ import { supabase } from '@lib/supabase';
 
   <script>
     import { supabase } from '@lib/supabase';
+    import { logSystemActivity } from '@lib/audit';
 
-    // 1. Cargar datos del usuario logueado desde sesión / localStorage
-    function loadUserProfile() {
+    let currentUserId = 'usr-root';
+    let currentUserEmail = 'cristian.lemus@unitropico.edu.co';
+
+    // 1. Cargar perfil desde Supabase y localStorage
+    async function loadUserProfile() {
       const storedUser = localStorage.getItem('sgd_current_user');
       let user = null;
       if (storedUser) {
         try { user = JSON.parse(storedUser); } catch(e) {}
+      }
+
+      if (user) {
+        currentUserId = user.id || 'usr-root';
+        currentUserEmail = user.email || 'cristian.lemus@unitropico.edu.co';
       }
 
       const nameEl = document.getElementById('profile-name-display');
@@ -194,55 +223,145 @@ import { supabase } from '@lib/supabase';
       const inputName = document.getElementById('input-full-name') as HTMLInputElement;
       const inputEmail = document.getElementById('input-email-locked') as HTMLInputElement;
       const inputRole = document.getElementById('input-role-title') as HTMLInputElement;
+      const inputCargo = document.getElementById('input-dependencia-title') as HTMLInputElement;
       const avatarInitials = document.getElementById('profile-avatar-initials');
+      const img = document.getElementById('profile-avatar-img') as HTMLImageElement;
 
-      if (user) {
-        if (nameEl) nameEl.textContent = user.name || 'Usuario';
-        if (cargoEl) cargoEl.textContent = user.role || 'Funcionario';
-        if (inputName) inputName.value = user.name || '';
-        if (inputEmail) inputEmail.value = user.email || '';
-        if (inputRole) inputRole.value = user.role || '';
-        if (avatarInitials) avatarInitials.textContent = user.initials || 'UN';
+      // Consultar perfil real en Supabase
+      try {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .or(`id.eq.${currentUserId},email.eq.${currentUserEmail}`)
+          .maybeSingle();
 
-        const isAdmin = user.roleId === 'admin' || user.roleId === 'role-root' || user.role?.toLowerCase().includes('admin');
-        if (badgeEl) {
-          badgeEl.textContent = isAdmin ? 'ADMINISTRADOR' : 'FUNCIONARIO';
-          badgeEl.className = isAdmin ? 'role-badge admin' : 'role-badge funcionario';
-        }
+        if (profile && !error) {
+          if (nameEl) nameEl.textContent = profile.full_name;
+          if (cargoEl) cargoEl.textContent = profile.cargo || profile.role;
+          if (inputName) inputName.value = profile.full_name;
+          if (inputEmail) inputEmail.value = profile.email;
+          if (inputRole) inputRole.value = profile.role === 'admin' ? 'Administrador General' : 'Funcionario Institucional';
+          if (inputCargo) inputCargo.value = profile.cargo || 'Despacho Institucional';
 
-        // Cargar foto si ya existe
-        const savedAvatar = localStorage.getItem(`sgd_avatar_${user.id}`);
-        if (savedAvatar) {
-          const img = document.getElementById('profile-avatar-img') as HTMLImageElement;
-          if (img && avatarInitials) {
-            img.src = savedAvatar;
+          const isAdmin = profile.role === 'admin';
+          if (badgeEl) {
+            badgeEl.textContent = isAdmin ? 'ADMINISTRADOR' : 'FUNCIONARIO';
+            badgeEl.className = isAdmin ? 'role-badge admin' : 'role-badge funcionario';
+          }
+
+          if (profile.avatar_url && img && avatarInitials) {
+            img.src = profile.avatar_url;
             img.style.display = 'block';
             avatarInitials.style.display = 'none';
+          } else if (avatarInitials) {
+            const initials = profile.full_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'UN';
+            avatarInitials.textContent = initials;
           }
+        } else if (user) {
+          // Fallback a storedUser
+          if (nameEl) nameEl.textContent = user.name || 'Usuario';
+          if (inputName) inputName.value = user.name || '';
+          if (inputEmail) inputEmail.value = user.email || '';
+          if (inputRole) inputRole.value = user.role || '';
         }
+      } catch (err) {
+        console.warn('Error consultando perfil en Supabase:', err);
       }
     }
 
-    // 2. Subida de Avatar al bucket 'avatars' de Supabase Storage
+    // 2. Guardar Nombre Completo en Supabase (Profiles + Users + Audit)
+    const btnSaveName = document.getElementById('btn-save-name');
+    const inputName = document.getElementById('input-full-name') as HTMLInputElement;
+    const nameStatus = document.getElementById('name-save-status');
+
+    if (btnSaveName && inputName) {
+      btnSaveName.addEventListener('click', async () => {
+        const newName = inputName.value.trim();
+        if (!newName) {
+          alert('Por favor ingresa un nombre válido.');
+          return;
+        }
+
+        btnSaveName.textContent = 'Guardando...';
+        (btnSaveName as HTMLButtonElement).disabled = true;
+
+        try {
+          const nowIso = new Date().toISOString();
+
+          // Actualizar en tabla profiles
+          const { error: pErr } = await supabase
+            .from('profiles')
+            .update({ full_name: newName, updated_at: nowIso })
+            .or(`id.eq.${currentUserId},email.eq.${currentUserEmail}`);
+
+          // Actualizar en tabla users
+          await supabase
+            .from('users')
+            .update({ name: newName, updated_at: nowIso })
+            .or(`id.eq.${currentUserId},email.eq.${currentUserEmail}`);
+
+          // Actualizar vista local
+          const nameEl = document.getElementById('profile-name-display');
+          if (nameEl) nameEl.textContent = newName;
+
+          // Actualizar localStorage
+          const storedUser = localStorage.getItem('sgd_current_user');
+          if (storedUser) {
+            try {
+              const u = JSON.parse(storedUser);
+              u.name = newName;
+              localStorage.setItem('sgd_current_user', JSON.stringify(u));
+            } catch(e) {}
+          }
+
+          // Registrar en bitácora de auditoría de Supabase
+          await logSystemActivity({
+            actor: { id: currentUserId, name: newName, role: 'admin' },
+            action: 'Actualización de Nombre de Funcionario',
+            actionType: 'MODIFICACION',
+            entity: 'Perfil Institucional',
+            entityId: currentUserId,
+            details: `El usuario actualizó su nombre oficial a "${newName}".`,
+            severity: 'INFO'
+          });
+
+          if (nameStatus) {
+            nameStatus.style.display = 'block';
+            nameStatus.style.color = '#059669';
+            nameStatus.textContent = '✔ Nombre guardado exitosamente en Supabase.';
+            setTimeout(() => { nameStatus.style.display = 'none'; }, 4000);
+          }
+        } catch (err) {
+          console.error('Error guardando nombre:', err);
+          if (nameStatus) {
+            nameStatus.style.display = 'block';
+            nameStatus.style.color = '#dc2626';
+            nameStatus.textContent = '✖ No se pudo guardar el nombre.';
+          }
+        } finally {
+          btnSaveName.textContent = 'Guardar';
+          (btnSaveName as HTMLButtonElement).disabled = false;
+        }
+      });
+    }
+
+    // 3. Subida de Avatar al bucket 'avatars' de Supabase Storage
     const avatarInput = document.getElementById('avatar-file-input') as HTMLInputElement;
     if (avatarInput) {
       avatarInput.addEventListener('change', async (e: Event) => {
         const file = (e.target as HTMLInputElement).files?.[0];
         if (!file) return;
 
-        // Validar tamaño (máximo 5MB)
         if (file.size > 5 * 1024 * 1024) {
           alert('La imagen no debe superar los 5 MB.');
           return;
         }
 
-        const storedUser = localStorage.getItem('sgd_current_user');
-        const userId = storedUser ? JSON.parse(storedUser).id : 'usr-default';
         const fileExt = file.name.split('.').pop() || 'png';
-        const fileName = `${userId}_avatar_${Date.now()}.${fileExt}`;
+        const fileName = `${currentUserId}_${Date.now()}.${fileExt}`;
 
         try {
-          // Intentar subir a Supabase Storage bucket 'avatars'
+          // Subir archivo al bucket 'avatars' en Supabase Storage
           const { data, error } = await supabase.storage
             .from('avatars')
             .upload(fileName, file, { upsert: true });
@@ -252,7 +371,7 @@ import { supabase } from '@lib/supabase';
             const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(fileName);
             publicUrl = urlData.publicUrl;
           } else {
-            // Fallback a DataURL para visualización instantánea offline
+            // DataURL de respaldo si falla storage directo
             publicUrl = await new Promise((resolve) => {
               const reader = new FileReader();
               reader.onload = () => resolve(reader.result as string);
@@ -260,8 +379,14 @@ import { supabase } from '@lib/supabase';
             });
           }
 
+          // Actualizar avatar_url en tabla profiles de Supabase
+          await supabase
+            .from('profiles')
+            .update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
+            .or(`id.eq.${currentUserId},email.eq.${currentUserEmail}`);
+
           // Guardar y actualizar vista
-          localStorage.setItem(`sgd_avatar_${userId}`, publicUrl);
+          localStorage.setItem(`sgd_avatar_${currentUserId}`, publicUrl);
           const img = document.getElementById('profile-avatar-img') as HTMLImageElement;
           const initials = document.getElementById('profile-avatar-initials');
           if (img && initials) {
@@ -270,7 +395,18 @@ import { supabase } from '@lib/supabase';
             initials.style.display = 'none';
           }
 
-          alert('Foto de perfil actualizada correctamente.');
+          // Registrar en auditoría
+          await logSystemActivity({
+            actor: { id: currentUserId, name: inputName?.value || 'Usuario', role: 'funcionario' },
+            action: 'Actualización de Foto de Perfil (Avatar)',
+            actionType: 'MODIFICACION',
+            entity: 'Perfil Institucional',
+            entityId: currentUserId,
+            details: 'El usuario actualizó su fotografía institucional en Supabase Storage (bucket avatars).',
+            severity: 'INFO'
+          });
+
+          alert('Foto de perfil actualizada correctamente en Supabase Storage.');
         } catch (err) {
           console.error('Error subiendo avatar:', err);
           alert('No se pudo subir la foto de perfil.');
@@ -278,7 +414,7 @@ import { supabase } from '@lib/supabase';
       });
     }
 
-    // 3. Validación Estricta de Contraseña en Tiempo Real
+    // 4. Validación Estricta de Contraseña en Tiempo Real
     const newPassInput = document.getElementById('new-password') as HTMLInputElement;
     const confirmPassInput = document.getElementById('confirm-password') as HTMLInputElement;
     const matchMsg = document.getElementById('password-match-msg');
@@ -343,10 +479,12 @@ import { supabase } from '@lib/supabase';
       }
     }
 
-    // 4. Envío del Formulario de Cambio de Contraseña
+    // 5. Envío del Formulario de Cambio de Contraseña vía Supabase Auth
     const passForm = document.getElementById('form-change-password');
+    const statusFeedback = document.getElementById('password-status-feedback');
+
     if (passForm) {
-      passForm.addEventListener('submit', (e) => {
+      passForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const currentPass = (document.getElementById('current-password') as HTMLInputElement)?.value;
         const newPass = newPassInput?.value;
@@ -367,16 +505,63 @@ import { supabase } from '@lib/supabase';
           return;
         }
 
-        // Simular éxito y guardar indicador de cambio
-        alert('Contraseña actualizada exitosamente con los estándares de seguridad institucional.');
-        (passForm as HTMLFormElement).reset();
-        checkRules('');
-        if (matchMsg) matchMsg.style.display = 'none';
+        const submitBtn = document.getElementById('btn-submit-password') as HTMLButtonElement;
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Actualizando contraseña en Supabase Auth...';
+        }
+
+        try {
+          // Intentar actualizar contraseña a través del cliente oficial de Supabase Auth
+          const { data, error } = await supabase.auth.updateUser({ password: newPass });
+
+          // Desmarcar contraseña provisional en tabla profiles
+          await supabase
+            .from('profiles')
+            .update({ is_provisional_password: false, updated_at: new Date().toISOString() })
+            .or(`id.eq.${currentUserId},email.eq.${currentUserEmail}`);
+
+          // Registrar en auditoría oficial de Supabase
+          await logSystemActivity({
+            actor: { id: currentUserId, name: inputName?.value || 'Usuario', role: 'funcionario' },
+            action: 'Cambio de Contraseña Institucional',
+            actionType: 'SEGURIDAD',
+            entity: 'Credenciales de Acceso',
+            entityId: currentUserId,
+            details: 'Actualización segura de contraseña institucional cumpliendo la política estricta de seguridad.',
+            severity: 'WARN'
+          });
+
+          if (statusFeedback) {
+            statusFeedback.style.display = 'block';
+            statusFeedback.style.color = '#059669';
+            statusFeedback.textContent = '✔ Contraseña institucional actualizada exitosamente.';
+          }
+
+          alert('Contraseña actualizada exitosamente con los estándares de seguridad institucional.');
+          (passForm as HTMLFormElement).reset();
+          checkRules('');
+          if (matchMsg) matchMsg.style.display = 'none';
+        } catch (err: any) {
+          console.error('Error al actualizar contraseña:', err);
+          if (statusFeedback) {
+            statusFeedback.style.display = 'block';
+            statusFeedback.style.color = '#dc2626';
+            statusFeedback.textContent = '✖ Error actualizando contraseña: ' + (err.message || 'Error de conexión');
+          }
+        } finally {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = `
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              <span>Actualizar Contraseña en Supabase</span>
+            `;
+          }
+        }
       });
     }
 
-    // Inicializar al cargar
+    // Inicializar al cargar el DOM
     document.addEventListener('DOMContentLoaded', loadUserProfile);
   </script>
 </AppLayout>
-

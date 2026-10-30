@@ -1,8 +1,16 @@
 ---
 // src/pages/admin/usuarios.astro
 import AppLayout from '@layouts/AppLayout.astro';
+import { supabase } from '@lib/supabase';
 import { PERMISSIONS_CATALOG } from '@data/roles';
-import { INSTITUTIONAL_USERS } from '@data/users';
+
+// Consultar usuarios reales directamente desde Supabase PostgreSQL
+const { data: dbProfiles } = await supabase
+  .from('profiles')
+  .select('*')
+  .order('created_at', { ascending: true });
+
+const usersList = dbProfiles && dbProfiles.length > 0 ? dbProfiles : [];
 ---
 
 <AppLayout title="Gestión de Usuarios y Permisos Dinámicos" activeNav="usuarios">
@@ -16,7 +24,7 @@ import { INSTITUTIONAL_USERS } from '@data/users';
           <span class="role-badge admin">Panel Exclusivo Admin</span>
         </div>
         <p style="font-size: 0.84rem; color: var(--text-muted); margin: 4px 0 0 0;">
-          Esquema simplificado de 2 roles (Administrador y Funcionario) con asignación dinámica de permisos granulares.
+          Esquema de roles (Administrador y Funcionario) con asignación dinámica de permisos y trazabilidad en Supabase.
         </p>
       </div>
 
@@ -27,13 +35,13 @@ import { INSTITUTIONAL_USERS } from '@data/users';
     </div>
 
     <!-- Layout Dividido: Tabla de Usuarios a la izquierda, Permisos Dinámicos a la derecha -->
-    <div style="display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 24px;" class="admin-grid-layout">
+    <div style="display: grid; grid-template-columns: 1.18fr 0.82fr; gap: 24px;" class="admin-grid-layout">
       
-      <!-- Columna 1: Lista de Usuarios -->
+      <!-- Columna 1: Lista de Usuarios Reales -->
       <div class="card" style="padding: 20px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
           <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin: 0;">Usuarios Registrados</h3>
-          <span style="font-size: 0.76rem; color: var(--text-muted); font-weight: 600;" id="user-count-label">{INSTITUTIONAL_USERS.length} funcionarios</span>
+          <span style="font-size: 0.76rem; color: var(--text-muted); font-weight: 600;" id="user-count-label">{usersList.length} funcionarios</span>
         </div>
 
         <div class="table-responsive" style="overflow-x: auto;">
@@ -47,18 +55,21 @@ import { INSTITUTIONAL_USERS } from '@data/users';
               </tr>
             </thead>
             <tbody id="users-table-body">
-              {INSTITUTIONAL_USERS.map((u) => {
-                const isAdmin = u.roleId === 'admin' || u.roleId === 'role-root';
+              {usersList.map((u) => {
+                const isAdmin = u.role === 'admin';
+                const initials = u.full_name ? u.full_name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() : 'US';
+                const isProtectedRoot = u.id === 'usr-root';
+
                 return (
-                  <tr style="border-bottom: 1px solid var(--border-subtle); transition: background 0.12s ease;" class="user-row" data-user-id={u.id} data-user-email={u.email} data-user-name={u.name} data-user-role={isAdmin ? 'admin' : 'funcionario'}>
+                  <tr style="border-bottom: 1px solid var(--border-subtle); transition: background 0.12s ease;" class="user-row" data-user-id={u.id} data-user-email={u.email} data-user-name={u.full_name} data-user-role={isAdmin ? 'admin' : 'funcionario'}>
                     <td style="padding: 12px 8px;">
                       <div style="display: flex; align-items: center; gap: 10px;">
                         <div style={`width: 34px; height: 34px; border-radius: var(--radius-full); background: ${isAdmin ? 'var(--verde-suave-bg)' : 'var(--dorado-suave-bg)'}; color: ${isAdmin ? 'var(--verde-principal)' : 'var(--dorado-oscuro)'}; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; border: 1px solid ${isAdmin ? 'var(--verde-borde)' : 'var(--dorado-borde)'};`}>
-                          {u.initials}
+                          {initials}
                         </div>
                         <div>
-                          <div style="font-weight: 700; color: var(--text-main);">{u.name}</div>
-                          <div style="font-size: 0.72rem; color: var(--text-muted);">{u.role}</div>
+                          <div style="font-weight: 700; color: var(--text-main);">{u.full_name}</div>
+                          <div style="font-size: 0.72rem; color: var(--text-muted);">{u.cargo || (isAdmin ? 'Administrador General' : 'Funcionario')}</div>
                         </div>
                       </div>
                     </td>
@@ -70,10 +81,18 @@ import { INSTITUTIONAL_USERS } from '@data/users';
                         {isAdmin ? 'ADMINISTRADOR' : 'FUNCIONARIO'}
                       </span>
                     </td>
-                    <td style="padding: 12px 8px; text-align: right;">
-                      <button type="button" class="btn-select-user-perms" data-user-id={u.id} style="background: var(--verde-suave-bg); border: 1px solid var(--verde-borde); color: var(--verde-principal); padding: 4px 10px; border-radius: var(--radius-sm); font-size: 0.74rem; font-weight: 700; cursor: pointer;">
-                        {isAdmin ? 'Ver Permisos' : 'Configurar Permisos'}
-                      </button>
+                    <td style="padding: 12px 8px; text-align: right; white-space: nowrap;">
+                      <div style="display: inline-flex; gap: 6px; align-items: center;">
+                        <button type="button" class="btn-select-user-perms" data-user-id={u.id} style="background: var(--verde-suave-bg); border: 1px solid var(--verde-borde); color: var(--verde-principal); padding: 5px 10px; border-radius: var(--radius-sm); font-size: 0.74rem; font-weight: 700; cursor: pointer;">
+                          {isAdmin ? 'Ver Permisos' : 'Permisos'}
+                        </button>
+                        {!isProtectedRoot && (
+                          <button type="button" class="btn-trigger-delete-user" data-user-id={u.id} data-user-name={u.full_name} data-user-email={u.email} style="background: #fee2e2; border: 1px solid #fca5a5; color: #dc2626; padding: 5px 8px; border-radius: var(--radius-sm); font-size: 0.74rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="Dar de baja y eliminar usuario">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                            <span>Eliminar</span>
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -99,7 +118,7 @@ import { INSTITUTIONAL_USERS } from '@data/users';
           <strong>Acceso Total:</strong> El rol <code>Administrador</code> tiene habilitados por definición todos los permisos del sistema.
         </div>
 
-        <div class="permissions-list" id="permissions-toggle-list" style="display: flex; flex-direction: column; gap: 10px;">
+        <div class="permissions-list" id="permissions-toggle-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 480px; overflow-y: auto; padding-right: 4px;">
           {PERMISSIONS_CATALOG.map((p) => (
             <div class="perm-toggle-item" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 10px 12px; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); background: var(--bg-body);">
               <div>
@@ -115,10 +134,11 @@ import { INSTITUTIONAL_USERS } from '@data/users';
           ))}
         </div>
 
-        <div style="margin-top: 18px; display: flex; gap: 10px;">
-          <button type="button" class="btn btn-primary" id="btn-save-dynamic-perms" style="flex: 1; justify-content: center; padding: 10px;">
+        <div style="margin-top: 18px; display: flex; flex-direction: column; gap: 8px;">
+          <button type="button" class="btn btn-primary" id="btn-save-dynamic-perms" style="width: 100%; justify-content: center; padding: 10px; font-weight: 700;">
             Guardar Permisos Dinámicos
           </button>
+          <div id="perms-save-feedback" style="font-size: 0.74rem; text-align: center; font-weight: 700; display: none;"></div>
         </div>
       </div>
 
@@ -149,7 +169,7 @@ import { INSTITUTIONAL_USERS } from '@data/users';
             </div>
             <input type="email" id="create-user-email" required placeholder="usuario@unitropico.edu.co" class="form-input" />
             <small style="font-size: 0.70rem; color: var(--text-muted); margin-top: 2px; display: block;">
-              El correo quedará bloqueado permanentemente por trigger PL/pgSQL en base de datos.
+              Quedará protegido por trigger PL/pgSQL en base de datos.
             </small>
           </div>
 
@@ -184,12 +204,41 @@ import { INSTITUTIONAL_USERS } from '@data/users';
             <button type="button" class="btn btn-secondary" id="btn-cancel-create-user" style="flex: 1; justify-content: center;">
               Cancelar
             </button>
-            <button type="submit" class="btn btn-primary" style="flex: 1; justify-content: center;">
-              Crear Usuario
+            <button type="submit" id="btn-submit-create-user" class="btn btn-primary" style="flex: 1; justify-content: center; font-weight: 700;">
+              Crear en Supabase
             </button>
           </div>
         </form>
 
+      </div>
+    </div>
+
+    <!-- Modal: Confirmar Eliminación de Usuario -->
+    <div class="modal-backdrop" id="modal-delete-user" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 16px;">
+      <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 480px; border-radius: var(--radius-md); box-shadow: var(--shadow-md); overflow: hidden; border-top: 4px solid #dc2626;">
+        <div style="padding: 20px 24px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; gap: 12px;">
+          <div style="width: 36px; height: 36px; border-radius: 50%; background: #fee2e2; color: #dc2626; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <div>
+            <h3 style="margin: 0; font-size: 1.1rem; color: #991b1b; font-weight: 800;">Confirmar Baja y Eliminación</h3>
+            <span style="font-size: 0.74rem; color: var(--text-muted);">Esta acción es irreversible y quedará registrada en auditoría</span>
+          </div>
+        </div>
+        <div style="padding: 24px;">
+          <p style="margin: 0; font-size: 0.88rem; color: var(--text-main); line-height: 1.5;">
+            ¿Está seguro de eliminar definitivamente al funcionario <strong id="delete-user-modal-name"></strong> (<code id="delete-user-modal-email" style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px;"></code>)?
+          </p>
+          <div style="margin-top: 14px; background: #fff1f2; border: 1px solid #fecdd3; padding: 10px 14px; border-radius: var(--radius-sm); font-size: 0.78rem; color: #9f1239;">
+            ⚠️ Se revocarán todos los permisos granulares y el usuario será eliminado de la base de datos de Supabase.
+          </div>
+        </div>
+        <div style="padding: 16px 24px; background: #f8fafc; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end; gap: 10px;">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-delete-user">Cancelar</button>
+          <button type="button" class="btn" id="btn-confirm-delete-user" style="background: #dc2626; color: #ffffff; font-weight: 700; border: none; padding: 9px 18px; border-radius: var(--radius-sm); cursor: pointer;">
+            Eliminar Definitivamente
+          </button>
+        </div>
       </div>
     </div>
 
@@ -235,23 +284,28 @@ import { INSTITUTIONAL_USERS } from '@data/users';
   </style>
 
   <script>
-    let activeUserId = 'usr-1';
-    let userPermissionsMap: Record<string, string[]> = {
-      'usr-root': ['view_dashboard', 'view_files', 'upload_files', 'reassign_files', 'respond_petitions', 'manage_templates', 'manage_users', 'manage_roles', 'download_documents', 'delete_files'],
-      'usr-admin': ['view_dashboard', 'view_files', 'upload_files', 'reassign_files', 'respond_petitions', 'manage_templates', 'manage_users', 'manage_roles', 'download_documents', 'delete_files'],
-      'usr-1': ['view_dashboard', 'view_files', 'respond_petitions', 'download_documents'],
-      'usr-2': ['view_dashboard', 'view_files', 'respond_petitions', 'download_documents'],
-      'usr-3': ['view_dashboard', 'view_files', 'download_documents'],
-      'usr-oaj-1': ['view_dashboard', 'view_files', 'respond_petitions', 'download_documents'],
-      'usr-4': ['view_dashboard', 'view_files', 'download_documents'],
-    };
+    import { supabase } from '@lib/supabase';
+    import { logSystemActivity } from '@lib/audit';
 
-    // Cargar permisos guardados localmente
-    const savedPerms = localStorage.getItem('sgd_dynamic_user_permissions');
-    if (savedPerms) {
+    let activeUserId = 'usr-root';
+    let userPermissionsMap: Record<string, string[]> = {};
+
+    // Cargar permisos desde Supabase
+    async function loadAllPermissions() {
       try {
-        userPermissionsMap = { ...userPermissionsMap, ...JSON.parse(savedPerms) };
-      } catch (e) {}
+        const { data: dbPerms } = await supabase.from('user_permissions').select('*');
+        if (dbPerms) {
+          userPermissionsMap = {};
+          dbPerms.forEach((row: any) => {
+            if (!userPermissionsMap[row.user_id]) userPermissionsMap[row.user_id] = [];
+            if (row.is_granted && row.permission_id) {
+              userPermissionsMap[row.user_id].push(row.permission_id);
+            }
+          });
+        }
+      } catch (err) {
+        console.warn('Error cargando permisos de Supabase:', err);
+      }
     }
 
     function selectUser(userId: string) {
@@ -263,7 +317,6 @@ import { INSTITUTIONAL_USERS } from '@data/users';
       const userRole = row.dataset.userRole || 'funcionario';
       const label = document.getElementById('perms-selected-user-label');
       const notice = document.getElementById('perms-admin-notice');
-      const toggleList = document.getElementById('permissions-toggle-list');
       const saveBtn = document.getElementById('btn-save-dynamic-perms') as HTMLButtonElement;
 
       if (label) label.textContent = `${userName} (${userRole === 'admin' ? 'Administrador' : 'Funcionario'})`;
@@ -272,7 +325,10 @@ import { INSTITUTIONAL_USERS } from '@data/users';
       if (notice) notice.style.display = isAdmin ? 'block' : 'none';
       if (saveBtn) saveBtn.disabled = isAdmin;
 
-      const userPerms = userPermissionsMap[userId] || ['view_dashboard', 'view_files', 'respond_petitions', 'download_documents'];
+      const userPerms = userPermissionsMap[userId] || (isAdmin 
+        ? ['view_dashboard', 'view_files', 'upload_files', 'reassign_files', 'respond_petitions', 'manage_templates', 'manage_users', 'manage_roles', 'download_documents', 'delete_files']
+        : ['view_dashboard', 'view_files', 'respond_petitions', 'download_documents']);
+
       const checkboxes = document.querySelectorAll('.perm-checkbox') as NodeListOf<HTMLInputElement>;
       checkboxes.forEach((cb) => {
         const permId = cb.dataset.permId || '';
@@ -285,28 +341,84 @@ import { INSTITUTIONAL_USERS } from '@data/users';
       row.style.background = 'var(--verde-suave-bg)';
     }
 
-    // Eventos de selección de usuario
-    document.querySelectorAll('.btn-select-user-perms').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        const target = e.currentTarget as HTMLElement;
-        const uid = target.dataset.userId;
-        if (uid) selectUser(uid);
+    // Inicializar listeners de selección de usuario
+    function attachUserSelectionEvents() {
+      document.querySelectorAll('.btn-select-user-perms').forEach((btn) => {
+        btn.removeEventListener('click', onSelectUserClick);
+        btn.addEventListener('click', onSelectUserClick);
       });
-    });
+      document.querySelectorAll('.btn-trigger-delete-user').forEach((btn) => {
+        btn.removeEventListener('click', onDeleteUserTriggerClick);
+        btn.addEventListener('click', onDeleteUserTriggerClick);
+      });
+    }
 
-    // Guardar permisos dinámicos
+    function onSelectUserClick(e: Event) {
+      const target = e.currentTarget as HTMLElement;
+      const uid = target.dataset.userId;
+      if (uid) selectUser(uid);
+    }
+
+    // Guardar permisos dinámicos en Supabase
     const saveBtn = document.getElementById('btn-save-dynamic-perms');
+    const permsFeedback = document.getElementById('perms-save-feedback');
+
     if (saveBtn) {
-      saveBtn.addEventListener('click', () => {
+      saveBtn.addEventListener('click', async () => {
         const checkboxes = document.querySelectorAll('.perm-checkbox:checked') as NodeListOf<HTMLInputElement>;
         const newPerms: string[] = [];
         checkboxes.forEach((cb) => {
           if (cb.dataset.permId) newPerms.push(cb.dataset.permId);
         });
 
-        userPermissionsMap[activeUserId] = newPerms;
-        localStorage.setItem('sgd_dynamic_user_permissions', JSON.stringify(userPermissionsMap));
-        alert('Permisos dinámicos del funcionario guardados exitosamente.');
+        saveBtn.textContent = 'Guardando en Supabase...';
+        (saveBtn as HTMLButtonElement).disabled = true;
+
+        try {
+          // 1. Eliminar permisos existentes del usuario
+          await supabase.from('user_permissions').delete().eq('user_id', activeUserId);
+
+          // 2. Insertar nuevos permisos seleccionados
+          if (newPerms.length > 0) {
+            const rowsToInsert = newPerms.map((permId) => ({
+              user_id: activeUserId,
+              permission_id: permId,
+              is_granted: true,
+              created_at: new Date().toISOString(),
+            }));
+            await supabase.from('user_permissions').insert(rowsToInsert);
+          }
+
+          userPermissionsMap[activeUserId] = newPerms;
+
+          // 3. Registrar en auditoría
+          const activeRow = document.querySelector(`.user-row[data-user-id="${activeUserId}"]`) as HTMLElement;
+          const targetName = activeRow?.dataset.userName || activeUserId;
+
+          await logSystemActivity({
+            actor: { id: 'usr-root', name: 'Dr. Cristian Lemus', role: 'admin' },
+            action: 'Actualización de Permisos Dinámicos Granulares',
+            actionType: 'SEGURIDAD',
+            entity: 'Permisos Dinámicos RBAC',
+            entityId: activeUserId,
+            details: `Se actualizaron ${newPerms.length} permisos granulares para el funcionario "${targetName}".`,
+            severity: 'WARN'
+          });
+
+          if (permsFeedback) {
+            permsFeedback.style.display = 'block';
+            permsFeedback.style.color = '#059669';
+            permsFeedback.textContent = '✔ Permisos dinámicos guardados en Supabase.';
+            setTimeout(() => { permsFeedback.style.display = 'none'; }, 4000);
+          }
+          alert('Permisos dinámicos del funcionario guardados exitosamente en Supabase.');
+        } catch (err) {
+          console.error('Error guardando permisos:', err);
+          alert('Error al guardar permisos en la base de datos.');
+        } finally {
+          saveBtn.textContent = 'Guardar Permisos Dinámicos';
+          (saveBtn as HTMLButtonElement).disabled = false;
+        }
       });
     }
 
@@ -326,7 +438,7 @@ import { INSTITUTIONAL_USERS } from '@data/users';
     if (closeBtn) closeBtn.addEventListener('click', () => toggleModal(false));
     if (cancelBtn) cancelBtn.addEventListener('click', () => toggleModal(false));
 
-    // Generar contraseña provisional segura con política estricta
+    // Generar contraseña provisional segura
     if (genPassBtn && passInput) {
       genPassBtn.addEventListener('click', () => {
         const uppers = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -346,78 +458,245 @@ import { INSTITUTIONAL_USERS } from '@data/users';
       });
     }
 
-    // Enviar creación de usuario
+    // Enviar Creación de Usuario a Supabase
     const formCreate = document.getElementById('form-create-new-user');
+    const submitCreateBtn = document.getElementById('btn-submit-create-user') as HTMLButtonElement;
+
     if (formCreate) {
-      formCreate.addEventListener('submit', (e) => {
+      formCreate.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const name = (document.getElementById('create-user-name') as HTMLInputElement).value;
-        const email = (document.getElementById('create-user-email') as HTMLInputElement).value;
+        const name = (document.getElementById('create-user-name') as HTMLInputElement).value.trim();
+        const email = (document.getElementById('create-user-email') as HTMLInputElement).value.trim().toLowerCase();
         const role = (document.getElementById('create-user-role') as HTMLSelectElement).value;
-        const cargo = (document.getElementById('create-user-cargo') as HTMLInputElement).value;
-        const password = passInput.value;
+        const cargo = (document.getElementById('create-user-cargo') as HTMLInputElement).value.trim();
+        const password = passInput.value.trim();
 
         if (password.length < 8) {
           alert('La contraseña provisional debe tener mínimo 8 caracteres.');
           return;
         }
 
-        // Agregar fila a la tabla dinámicamente
-        const tbody = document.getElementById('users-table-body');
-        if (tbody) {
-          const newId = `usr-${Date.now()}`;
+        if (submitCreateBtn) {
+          submitCreateBtn.disabled = true;
+          submitCreateBtn.textContent = 'Creando en Supabase...';
+        }
+
+        try {
+          const newId = `usr-${Date.now().toString(36)}`;
+          const nowIso = new Date().toISOString();
           const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'FN';
           const isAdmin = role === 'admin';
 
-          const tr = document.createElement('tr');
-          tr.className = 'user-row';
-          tr.dataset.userId = newId;
-          tr.dataset.userName = name;
-          tr.dataset.userRole = role;
-          tr.style.borderBottom = '1px solid var(--border-subtle)';
-          tr.innerHTML = `
-            <td style="padding: 12px 8px;">
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <div style="width: 34px; height: 34px; border-radius: var(--radius-full); background: ${isAdmin ? 'var(--verde-suave-bg)' : 'var(--dorado-suave-bg)'}; color: ${isAdmin ? 'var(--verde-principal)' : 'var(--dorado-oscuro)'}; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; border: 1px solid ${isAdmin ? 'var(--verde-borde)' : 'var(--dorado-borde)'};">
-                  ${initials}
-                </div>
-                <div>
-                  <div style="font-weight: 700; color: var(--text-main);">${name}</div>
-                  <div style="font-size: 0.72rem; color: var(--text-muted);">${cargo}</div>
-                </div>
-              </div>
-            </td>
-            <td style="padding: 12px 8px; color: var(--text-muted); font-family: monospace; font-size: 0.78rem;">
-              ${email}
-            </td>
-            <td style="padding: 12px 8px;">
-              <span class="role-badge ${isAdmin ? 'admin' : 'funcionario'}">
-                ${isAdmin ? 'ADMINISTRADOR' : 'FUNCIONARIO'}
-              </span>
-            </td>
-            <td style="padding: 12px 8px; text-align: right;">
-              <button type="button" class="btn-select-user-perms" data-user-id="${newId}" style="background: var(--verde-suave-bg); border: 1px solid var(--verde-borde); color: var(--verde-principal); padding: 4px 10px; border-radius: var(--radius-sm); font-size: 0.74rem; font-weight: 700; cursor: pointer;">
-                Configurar Permisos
-              </button>
-            </td>
-          `;
+          // 1. Insertar en tabla profiles de Supabase
+          const { error: pErr } = await supabase.from('profiles').insert([{
+            id: newId,
+            email,
+            full_name: name,
+            role,
+            cargo,
+            is_provisional_password: true,
+            created_at: nowIso,
+            updated_at: nowIso
+          }]);
 
-          tbody.appendChild(tr);
-          tr.querySelector('.btn-select-user-perms')?.addEventListener('click', () => selectUser(newId));
+          if (pErr) throw pErr;
 
-          // Asignar permisos iniciales
-          userPermissionsMap[newId] = isAdmin ? ['view_dashboard', 'view_files', 'upload_files', 'reassign_files', 'respond_petitions', 'manage_templates', 'manage_users', 'manage_roles', 'download_documents', 'delete_files'] : ['view_dashboard', 'view_files', 'respond_petitions', 'download_documents'];
-          localStorage.setItem('sgd_dynamic_user_permissions', JSON.stringify(userPermissionsMap));
+          // 2. Insertar en tabla users de Supabase
+          await supabase.from('users').insert([{
+            id: newId,
+            name,
+            email,
+            role_title: cargo,
+            role_id: role,
+            initials,
+            avatar_color: isAdmin ? '#00594E' : '#D4AF37',
+            is_active: true,
+            created_at: nowIso,
+            updated_at: nowIso
+          }]);
+
+          // 3. Asignar permisos iniciales en user_permissions
+          const initialPerms = isAdmin
+            ? ['view_dashboard', 'view_files', 'upload_files', 'reassign_files', 'respond_petitions', 'manage_templates', 'manage_users', 'manage_roles', 'download_documents', 'delete_files']
+            : ['view_dashboard', 'view_files', 'respond_petitions', 'download_documents'];
+
+          await supabase.from('user_permissions').insert(initialPerms.map(p => ({
+            user_id: newId,
+            permission_id: p,
+            is_granted: true,
+            created_at: nowIso
+          })));
+
+          userPermissionsMap[newId] = initialPerms;
+
+          // 4. Registrar en Auditoría Oficial
+          await logSystemActivity({
+            actor: { id: 'usr-root', name: 'Dr. Cristian Lemus', role: 'admin' },
+            action: 'Creación de Funcionario Institucional',
+            actionType: 'SEGURIDAD',
+            entity: 'Control de Usuarios y Roles',
+            entityId: newId,
+            details: `El Administrador registró al nuevo funcionario "${name}" (${email}) con rol ${role.toUpperCase()} y cargo "${cargo}".`,
+            severity: 'INFO'
+          });
+
+          // 5. Agregar fila al DOM
+          const tbody = document.getElementById('users-table-body');
+          if (tbody) {
+            const tr = document.createElement('tr');
+            tr.className = 'user-row';
+            tr.dataset.userId = newId;
+            tr.dataset.userName = name;
+            tr.dataset.userRole = role;
+            tr.style.borderBottom = '1px solid var(--border-subtle)';
+            tr.innerHTML = `
+              <td style="padding: 12px 8px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <div style="width: 34px; height: 34px; border-radius: var(--radius-full); background: ${isAdmin ? 'var(--verde-suave-bg)' : 'var(--dorado-suave-bg)'}; color: ${isAdmin ? 'var(--verde-principal)' : 'var(--dorado-oscuro)'}; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; border: 1px solid ${isAdmin ? 'var(--verde-borde)' : 'var(--dorado-borde)'};">
+                    ${initials}
+                  </div>
+                  <div>
+                    <div style="font-weight: 700; color: var(--text-main);">${name}</div>
+                    <div style="font-size: 0.72rem; color: var(--text-muted);">${cargo}</div>
+                  </div>
+                </div>
+              </td>
+              <td style="padding: 12px 8px; color: var(--text-muted); font-family: monospace; font-size: 0.78rem;">
+                ${email}
+              </td>
+              <td style="padding: 12px 8px;">
+                <span class="role-badge ${isAdmin ? 'admin' : 'funcionario'}">
+                  ${isAdmin ? 'ADMINISTRADOR' : 'FUNCIONARIO'}
+                </span>
+              </td>
+              <td style="padding: 12px 8px; text-align: right; white-space: nowrap;">
+                <div style="display: inline-flex; gap: 6px; align-items: center;">
+                  <button type="button" class="btn-select-user-perms" data-user-id="${newId}" style="background: var(--verde-suave-bg); border: 1px solid var(--verde-borde); color: var(--verde-principal); padding: 5px 10px; border-radius: var(--radius-sm); font-size: 0.74rem; font-weight: 700; cursor: pointer;">
+                    ${isAdmin ? 'Ver Permisos' : 'Permisos'}
+                  </button>
+                  <button type="button" class="btn-trigger-delete-user" data-user-id="${newId}" data-user-name="${name}" data-user-email="${email}" style="background: #fee2e2; border: 1px solid #fca5a5; color: #dc2626; padding: 5px 8px; border-radius: var(--radius-sm); font-size: 0.74rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="Dar de baja y eliminar usuario">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                    <span>Eliminar</span>
+                  </button>
+                </div>
+              </td>
+            `;
+
+            tbody.appendChild(tr);
+            attachUserSelectionEvents();
+            selectUser(newId);
+
+            // Actualizar contador
+            const countLabel = document.getElementById('user-count-label');
+            const totalRows = tbody.querySelectorAll('.user-row').length;
+            if (countLabel) countLabel.textContent = `${totalRows} funcionarios`;
+          }
+
+          alert(`Usuario ${name} registrado exitosamente en Supabase con correo ${email}.`);
+          toggleModal(false);
+          (formCreate as HTMLFormElement).reset();
+        } catch (err: any) {
+          console.error('Error creando usuario:', err);
+          alert('Error creando usuario en Supabase: ' + (err.message || 'Error de base de datos'));
+        } finally {
+          if (submitCreateBtn) {
+            submitCreateBtn.disabled = false;
+            submitCreateBtn.textContent = 'Crear en Supabase';
+          }
         }
-
-        alert(`Usuario ${name} creado exitosamente con correo inmutable ${email} y contraseña provisional.`);
-        toggleModal(false);
-        (formCreate as HTMLFormElement).reset();
       });
     }
 
-    // Inicializar primer usuario seleccionado
-    document.addEventListener('DOMContentLoaded', () => selectUser('usr-1'));
+    // Flujo de Eliminación de Usuario
+    let userToDelete: { id: string; name: string; email: string } | null = null;
+    const deleteModal = document.getElementById('modal-delete-user');
+    const deleteModalName = document.getElementById('delete-user-modal-name');
+    const deleteModalEmail = document.getElementById('delete-user-modal-email');
+    const btnCancelDelete = document.getElementById('btn-cancel-delete-user');
+    const btnConfirmDelete = document.getElementById('btn-confirm-delete-user');
+
+    function onDeleteUserTriggerClick(e: Event) {
+      const btn = e.currentTarget as HTMLElement;
+      userToDelete = {
+        id: btn.dataset.userId || '',
+        name: btn.dataset.userName || '',
+        email: btn.dataset.userEmail || ''
+      };
+
+      if (deleteModal && deleteModalName && deleteModalEmail) {
+        deleteModalName.textContent = userToDelete.name;
+        deleteModalEmail.textContent = userToDelete.email;
+        deleteModal.style.display = 'flex';
+      }
+    }
+
+    if (btnCancelDelete && deleteModal) {
+      btnCancelDelete.addEventListener('click', () => {
+        deleteModal.style.display = 'none';
+        userToDelete = null;
+      });
+    }
+
+    if (btnConfirmDelete && deleteModal) {
+      btnConfirmDelete.addEventListener('click', async () => {
+        if (!userToDelete) return;
+
+        btnConfirmDelete.textContent = 'Eliminando...';
+        (btnConfirmDelete as HTMLButtonElement).disabled = true;
+
+        try {
+          // 1. Eliminar de Supabase user_permissions
+          await supabase.from('user_permissions').delete().eq('user_id', userToDelete.id);
+
+          // 2. Eliminar de Supabase profiles
+          const { error: pErr } = await supabase.from('profiles').delete().eq('id', userToDelete.id);
+          if (pErr) throw pErr;
+
+          // 3. Eliminar de Supabase users
+          await supabase.from('users').delete().eq('id', userToDelete.id);
+
+          // 4. Registrar en Auditoría Oficial
+          await logSystemActivity({
+            actor: { id: 'usr-root', name: 'Dr. Cristian Lemus', role: 'admin' },
+            action: 'Baja y Eliminación de Funcionario Institucional',
+            actionType: 'ELIMINACION',
+            entity: 'Control de Usuarios y Roles',
+            entityId: userToDelete.id,
+            details: `El Administrador dio de baja y eliminó definitivamente al funcionario "${userToDelete.name}" (${userToDelete.email}) del sistema.`,
+            severity: 'CRITICAL'
+          });
+
+          // 5. Eliminar fila del DOM
+          const row = document.querySelector(`.user-row[data-user-id="${userToDelete.id}"]`);
+          if (row) row.remove();
+
+          // Actualizar contador
+          const countLabel = document.getElementById('user-count-label');
+          const totalRows = document.querySelectorAll('#users-table-body .user-row').length;
+          if (countLabel) countLabel.textContent = `${totalRows} funcionarios`;
+
+          alert(`El funcionario ${userToDelete.name} fue dado de baja y eliminado de Supabase.`);
+          deleteModal.style.display = 'none';
+          userToDelete = null;
+
+          // Seleccionar primer usuario existente
+          const firstRow = document.querySelector('#users-table-body .user-row') as HTMLElement;
+          if (firstRow?.dataset.userId) selectUser(firstRow.dataset.userId);
+        } catch (err: any) {
+          console.error('Error eliminando usuario:', err);
+          alert('Error al eliminar usuario en Supabase: ' + (err.message || 'Error de base de datos'));
+        } finally {
+          btnConfirmDelete.textContent = 'Eliminar Definitivamente';
+          (btnConfirmDelete as HTMLButtonElement).disabled = false;
+        }
+      });
+    }
+
+    // Inicializar
+    document.addEventListener('DOMContentLoaded', async () => {
+      attachUserSelectionEvents();
+      await loadAllPermissions();
+      selectUser('usr-root');
+    });
   </script>
 </AppLayout>
-

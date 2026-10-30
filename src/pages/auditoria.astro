@@ -1,6 +1,16 @@
 ---
 // src/pages/auditoria.astro
 import AppLayout from '@layouts/AppLayout.astro';
+import { supabase } from '@lib/supabase';
+
+// Consultar bitácora oficial en tiempo real desde Supabase
+const { data: dbLogs } = await supabase
+  .from('audit_logs')
+  .select('*')
+  .order('raw_timestamp', { ascending: false });
+
+const totalLogs = dbLogs?.length ?? 0;
+const criticalLogs = dbLogs?.filter(l => l.severity === 'CRITICAL' || l.action_type === 'ELIMINACION').length ?? 0;
 ---
 
 <AppLayout title="Auditoría Oficial y Trazabilidad Inmutable" activeNav="auditoria">
@@ -46,12 +56,12 @@ import AppLayout from '@layouts/AppLayout.astro';
         </div>
       </div>
       <div class="kpi-value-row">
-        <div class="kpi-number" id="audit-kpi-total">18</div>
+        <div class="kpi-number" id="audit-kpi-total">{totalLogs}</div>
         <span class="kpi-trend positive">100% Inmutable</span>
       </div>
       <div class="kpi-footer">
         <span>Pista de Auditoría Activa</span>
-        <span style="color: var(--primary); font-weight: 700;">Sin Interrupciones</span>
+        <span style="color: var(--primary); font-weight: 700;">En PostgreSQL Real</span>
       </div>
     </div>
 
@@ -63,7 +73,7 @@ import AppLayout from '@layouts/AppLayout.astro';
         </div>
       </div>
       <div class="kpi-value-row">
-        <div class="kpi-number" id="audit-kpi-critical">3</div>
+        <div class="kpi-number" id="audit-kpi-critical">{criticalLogs}</div>
         <span class="kpi-trend" style="background: #fee2e2; color: #b91c1c;">Bajas / Anulaciones</span>
       </div>
       <div class="kpi-footer">
@@ -166,8 +176,8 @@ import AppLayout from '@layouts/AppLayout.astro';
     <!-- Estado Vacío -->
     <div class="audit-empty-state" id="audit-empty-state" style="display: none;">
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="8"/></svg>
-      <h4>No se encontraron eventos coincidentes</h4>
-      <p>Intenta ajustar los términos de búsqueda o los filtros de acción seleccionados.</p>
+      <h4>No hay registros de auditoría disponibles actualmente</h4>
+      <p>Cualquier acción de login, creación, modificación o baja de registros se registrará automáticamente en tiempo real en Supabase.</p>
     </div>
   </div>
 
@@ -195,4 +205,3 @@ import AppLayout from '@layouts/AppLayout.astro';
   import { initAuditoria } from '@scripts/auditoria';
   initAuditoria();
 </script>
-

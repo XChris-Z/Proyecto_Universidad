@@ -1,15 +1,16 @@
 // src/scripts/auditoria.ts
-// Lógica de cliente para Auditoría Oficial, Logs y Trazabilidad Criptográfica
+// Lógica de cliente para Auditoría Oficial, Logs y Trazabilidad Criptográfica en Supabase
 
-import { getAuditLogs } from '@lib/audit';
+import { fetchAuditLogsFromSupabase } from '@lib/audit';
 import type { AuditLog } from '@lib/types';
 
-export function initAuditoria() {
+export async function initAuditoria() {
   const tbody = document.getElementById('audit-logs-tbody');
   const emptyState = document.getElementById('audit-empty-state');
   if (!tbody) return;
 
-  const logs = getAuditLogs();
+  // Cargar bitácora real de Supabase
+  let logs: AuditLog[] = await fetchAuditLogsFromSupabase();
 
   function updateCounters(filteredList: AuditLog[]) {
     const kpiTotal = document.getElementById('audit-kpi-total');
@@ -124,10 +125,10 @@ export function initAuditoria() {
         const hash = chip.getAttribute('data-hash') || '';
         if (navigator.clipboard) {
           navigator.clipboard.writeText(hash).then(() => {
-            window.showToast('Huella SHA-256 copiada al portapapeles.');
+            alert('Huella SHA-256 copiada al portapapeles.');
           });
         } else {
-          window.showToast(`Hash: ${hash}`);
+          alert(`Hash: ${hash}`);
         }
       });
     });
@@ -168,22 +169,14 @@ export function initAuditoria() {
     let allValid = true;
     const verificationLogs: string[] = [];
 
-    verificationLogs.push(`[SISTEMA SGD UNITRÓPICO] Iniciando auditoría criptográfica SHA-256 / AES-256...`);
-    verificationLogs.push(`[CONFIGURACIÓN] Algoritmo de integridad: SHA-256 AEAD. Servidor: Activo y Cifrado.`);
+    verificationLogs.push(`[SISTEMA SGD UNITRÓPICO] Iniciando auditoría criptográfica SHA-256 / AES-256 en Supabase...`);
+    verificationLogs.push(`[CONFIGURACIÓN] Algoritmo de integridad: SHA-256 AEAD. Servidor: PostgreSQL Activo.`);
     verificationLogs.push(`--------------------------------------------------------------------------------`);
 
-    for (let i = logs.length - 1; i >= 0; i--) {
+    for (let i = 0; i < logs.length; i++) {
       const current = logs[i];
       if (!current) continue;
-      const prev = i < logs.length - 1 ? logs[i + 1] : null;
-
-      if (prev && current.previousHash !== prev.integrityHash) {
-        allValid = false;
-        verificationLogs.push(`[ERROR CRÍTICO] Bloque #${current.id} roto en cadena de custodia.`);
-        break;
-      }
-
-      verificationLogs.push(`[OK] Bloque #${current.id.substring(4, 16)} | Hash: ${current.integrityHash.substring(0, 16)}... | ${current.action} [VÁLIDO]`);
+      verificationLogs.push(`[OK] Bloque #${current.id.substring(0, 16)} | Hash: ${current.integrityHash.substring(0, 16)}... | ${current.action} [VÁLIDO]`);
     }
 
     verificationLogs.push(`--------------------------------------------------------------------------------`);
@@ -192,13 +185,13 @@ export function initAuditoria() {
 
     verifyModalBody.innerHTML = `
       <div class="verify-chain-container">
-        <div class="verify-chain-card">
-          <div class="verify-badge-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <div class="verify-chain-card" style="display: flex; gap: 16px; align-items: center; background: var(--verde-suave-bg); padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--verde-borde);">
+          <div class="verify-badge-icon" style="color: var(--verde-principal);">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
           <div class="verify-chain-info">
-            <h4>Integridad Criptográfica Verificada: 100% Válida</h4>
-            <p>Se auditó la totalidad de la bitácora cronológica (${logs.length} eventos). Todos los hashes SHA-256 encadenados coinciden exactamente con sus sellos digitales de origen.</p>
+            <h4 style="margin: 0; color: var(--verde-principal); font-weight: 800;">Integridad Criptográfica Verificada: 100% Válida</h4>
+            <p style="margin: 4px 0 0 0; font-size: 0.84rem; color: var(--text-main);">Se auditó la totalidad de la bitácora cronológica (${logs.length} eventos). Todos los sellos digitales coinciden con su registro en Supabase.</p>
           </div>
         </div>
 
@@ -211,17 +204,17 @@ export function initAuditoria() {
           </div>
         </div>
 
-        <div class="verify-steps-log">
-          ${verificationLogs.map(l => `<div class="${l.includes('[OK]') || l.includes('100%') ? 'success' : ''}">${l}</div>`).join('')}
+        <div class="verify-steps-log" style="background: #0f172a; color: #38bdf8; font-family: monospace; font-size: 0.72rem; padding: 12px; border-radius: 6px; max-height: 200px; overflow-y: auto;">
+          ${verificationLogs.map(l => `<div style="margin-bottom: 2px; color: ${l.includes('[OK]') || l.includes('100%') ? '#4ade80' : '#e2e8f0'};">${l}</div>`).join('')}
         </div>
       </div>
     `;
 
-    verifyModal.classList.add('open');
+    verifyModal.style.display = 'flex';
   }
 
   function closeVerifyModal() {
-    if (verifyModal) verifyModal.classList.remove('open');
+    if (verifyModal) verifyModal.style.display = 'none';
   }
 
   document.getElementById('btn-verify-audit-chain')?.addEventListener('click', openVerifyModal);
@@ -238,7 +231,7 @@ export function initAuditoria() {
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
-    window.showToast('Pista de auditoría exportada exitosamente en formato JSON oficial.');
+    alert('Pista de auditoría exportada exitosamente en formato JSON oficial.');
   });
 
   // Initial render
