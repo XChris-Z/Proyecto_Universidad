@@ -603,6 +603,10 @@ export type Database = {
           created_at: string | null
           email: string
           full_name: string
+          google_access_token: string | null
+          google_calendar_connected: boolean | null
+          google_calendar_id: string | null
+          google_refresh_token: string | null
           id: string
           is_provisional_password: boolean | null
           phone: string | null
@@ -615,6 +619,10 @@ export type Database = {
           created_at?: string | null
           email: string
           full_name: string
+          google_access_token?: string | null
+          google_calendar_connected?: boolean | null
+          google_calendar_id?: string | null
+          google_refresh_token?: string | null
           id: string
           is_provisional_password?: boolean | null
           phone?: string | null
@@ -627,6 +635,10 @@ export type Database = {
           created_at?: string | null
           email?: string
           full_name?: string
+          google_access_token?: string | null
+          google_calendar_connected?: boolean | null
+          google_calendar_id?: string | null
+          google_refresh_token?: string | null
           id?: string
           is_provisional_password?: boolean | null
           phone?: string | null

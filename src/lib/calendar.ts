@@ -5,24 +5,36 @@ import { supabase } from '@lib/supabase';
 import type { CalendarioEvent, CalendarioEventType, EventUrgency } from '@lib/types';
 
 /**
- * Obtiene el token de acceso de Google OAuth desde sessionStorage o sesión de Supabase
+ * Obtiene el token de acceso de Google OAuth desde sessionStorage o perfil en Supabase
  */
-export async function getGoogleAccessToken(): Promise<string | null> {
+export async function getGoogleAccessToken(userId?: string): Promise<string | null> {
   if (typeof window === 'undefined') return null;
 
   // 1. Verificar sessionStorage
   let token = sessionStorage.getItem('google_provider_token');
   if (token) return token;
 
-  // 2. Verificar sesión activa de Supabase
+  // 2. Verificar perfil del usuario en Supabase
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.provider_token) {
-      sessionStorage.setItem('google_provider_token', session.provider_token);
-      return session.provider_token;
+    const rawUser = localStorage.getItem('sgd_current_user');
+    let uid = userId;
+    if (!uid && rawUser) {
+      try { uid = JSON.parse(rawUser).id; } catch(e) {}
+    }
+    uid = uid || 'usr-root';
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('google_access_token, google_calendar_connected')
+      .eq('id', uid)
+      .maybeSingle();
+
+    if (profile?.google_calendar_connected && profile.google_access_token) {
+      sessionStorage.setItem('google_provider_token', profile.google_access_token);
+      return profile.google_access_token;
     }
   } catch (err) {
-    console.warn('No se pudo obtener sesión para token de Google:', err);
+    console.warn('No se pudo obtener token de Google del perfil:', err);
   }
 
   return null;
@@ -350,20 +362,41 @@ export async function createGoogleCalendarEvent(eventData: {
 }
 
 /**
- * Inicia el flujo de autenticación con Google solicitando permisos de Calendar
+ * Inicia el flujo controlado de conexión con Google Calendar para el usuario actual
  */
-export async function connectGoogleCalendar(): Promise<void> {
-  const redirectUrl = `${window.location.origin}/auth/callback`;
-  await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: redirectUrl,
-      queryParams: {
-        access_type: 'offline',
-        prompt: 'consent',
-        hd: 'unitropico.edu.co',
-      },
-      scopes: 'email profile https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events',
-    },
-  });
+export async function connectGoogleCalendar(userId?: string): Promise<void> {
+  const rawUser = localStorage.getItem('sgd_current_user');
+  let uid = userId;
+  if (!uid && rawUser) {
+    try { uid = JSON.parse(rawUser).id; } catch(e) {}
+  }
+  uid = uid || 'usr-root';
+
+  window.location.href = `/api/auth/google-calendar/connect?userId=${encodeURIComponent(uid)}`;
+}
+
+/**
+ * Desvincula la cuenta de Google Calendar del usuario de forma segura
+ */
+export async function disconnectGoogleCalendar(userId?: string): Promise<boolean> {
+  const rawUser = localStorage.getItem('sgd_current_user');
+  let uid = userId;
+  if (!uid && rawUser) {
+    try { uid = JSON.parse(rawUser).id; } catch(e) {}
+  }
+  uid = uid || 'usr-root';
+
+  try {
+    sessionStorage.removeItem('google_provider_token');
+    const res = await fetch('/api/auth/google-calendar/disconnect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: uid }),
+    });
+    const data = await res.json().catch(() => ({}));
+    return !!data.success;
+  } catch (err) {
+    console.error('Error al desvincular Google Calendar:', err);
+    return false;
+  }
 }
