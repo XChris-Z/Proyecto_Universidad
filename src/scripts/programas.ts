@@ -127,11 +127,17 @@ export async function initProgramas() {
   const submitBtn = document.getElementById('btn-submit-prog') as HTMLButtonElement | null;
 
   openBtn?.addEventListener('click', () => {
-    if (modal) modal.style.display = 'flex';
+    if (modal) {
+      modal.classList.add('open');
+      modal.style.display = 'flex';
+    }
   });
 
   const closeModal = () => {
-    if (modal) modal.style.display = 'none';
+    if (modal) {
+      modal.classList.remove('open');
+      modal.style.display = 'none';
+    }
   };
 
   closeBtn?.addEventListener('click', closeModal);
@@ -171,7 +177,7 @@ export async function initProgramas() {
       if (error) throw error;
 
       await logSystemActivity({
-        actor: { id: 'usr-root', name: 'Dr. Cristian Lemus', role: 'admin' },
+        actor: { id: 'usr-root', name: 'ING. Christian Lemus', role: 'admin' },
         action: 'Registro de Programa Académico / MEN',
         actionType: 'GESTION',
         entity: 'Gestión Académica',

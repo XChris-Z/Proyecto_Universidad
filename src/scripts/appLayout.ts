@@ -17,13 +17,23 @@ declare global {
 
 export function initAppLayout() {
   // 1. Resolver usuario activo desde storage o defecto
-  let activeUser: InstitutionalUser = INSTITUTIONAL_USERS[0]!; // Por defecto Rector/Root
+  let activeUser: InstitutionalUser = INSTITUTIONAL_USERS[0]!; // ING. Christian Lemus (Root)
   try {
-    const raw = localStorage.getItem(SESSION_STORAGE_KEY) || sessionStorage.getItem(SESSION_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      const found = INSTITUTIONAL_USERS.find(u => u.id === parsed.userId);
-      if (found) activeUser = found;
+    const rawUser = localStorage.getItem('sgd_current_user');
+    if (rawUser) {
+      const parsed = JSON.parse(rawUser);
+      if (parsed && parsed.name) {
+        activeUser = {
+          id: parsed.id || 'usr-root',
+          name: parsed.name,
+          email: parsed.email || 'cristian.lemus@unitropico.edu.co',
+          role: parsed.role || 'Administrador General',
+          roleId: parsed.roleId || 'admin',
+          initials: parsed.initials || 'CL',
+          avatarColor: parsed.avatarColor || '#00594E',
+          password: ''
+        };
+      }
     }
   } catch (err) {
     console.error('Error al recuperar sesión:', err);

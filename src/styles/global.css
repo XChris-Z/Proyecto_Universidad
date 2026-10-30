@@ -1885,22 +1885,23 @@ h1, h2, h3, h4, .brand-font {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(15, 23, 42, 0.48);
+  background: rgba(15, 23, 42, 0.55);
   backdrop-filter: blur(3px);
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.12s cubic-bezier(0.16, 1, 0.3, 1);
-  padding: 20px;
-  will-change: opacity;
-}
-
-.modal-backdrop.open {
   opacity: 1;
   pointer-events: auto;
+  padding: 20px;
+}
+
+.modal-backdrop.open,
+.modal-backdrop[style*="display: flex"],
+.modal-backdrop[style*="display:flex"] {
+  display: flex !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
 }
 
 .modal-card {
@@ -1913,12 +1914,14 @@ h1, h2, h3, h4, .brand-font {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transform: scale(0.985) translateY(4px) translateZ(0);
+  transform: scale(1) translateY(0) translateZ(0);
   transition: transform 0.13s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: transform;
 }
 
-.modal-backdrop.open .modal-card {
+.modal-backdrop.open .modal-card,
+.modal-backdrop[style*="display: flex"] .modal-card,
+.modal-backdrop[style*="display:flex"] .modal-card {
   transform: scale(1) translateY(0) translateZ(0);
 }
 

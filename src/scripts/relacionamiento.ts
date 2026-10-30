@@ -2,6 +2,7 @@
 // Lógica de cliente para Relacionamiento Institucional y Convenios con Supabase
 
 import { supabase } from '@lib/supabase';
+import { logSystemActivity } from '@lib/audit';
 
 export function initRelacionamiento() {
   const modal = document.getElementById('new-convenio-modal');
@@ -12,11 +13,17 @@ export function initRelacionamiento() {
   const submitBtn = document.getElementById('btn-submit-convenio') as HTMLButtonElement | null;
 
   function openModal() {
-    if (modal) modal.style.display = 'flex';
+    if (modal) {
+      modal.classList.add('open');
+      modal.style.display = 'flex';
+    }
   }
 
   function closeModal() {
-    if (modal) modal.style.display = 'none';
+    if (modal) {
+      modal.classList.remove('open');
+      modal.style.display = 'none';
+    }
     form?.reset();
   }
 
@@ -92,11 +99,19 @@ export function initRelacionamiento() {
         return;
       }
 
-      window.showToast?.(`Convenio ${numero} registrado exitosamente.`);
+      await logSystemActivity({
+        actor: { id: 'usr-root', name: 'ING. Christian Lemus', role: 'admin' },
+        action: 'Registro de Convenio Institucional',
+        actionType: 'GESTION',
+        entity: 'Convenios y Cooperación',
+        entityId: numero,
+        details: `Se registró el convenio ${numero} con ${entidad} (${tipoLabel}).`,
+        severity: 'INFO'
+      });
+
+      alert(`Convenio "${numero}" registrado exitosamente en Supabase.`);
       closeModal();
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
+      window.location.reload();
     } catch (err: any) {
       alert('Error de conexión al servidor: ' + err.message);
     } finally {

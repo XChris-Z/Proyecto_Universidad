@@ -150,6 +150,10 @@ import AuthLayout from '@layouts/AuthLayout.astro';
     }, 600);
   }
 
-  document.addEventListener('DOMContentLoaded', handleCallback);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', handleCallback);
+  } else {
+    handleCallback();
+  }
 </script>
 

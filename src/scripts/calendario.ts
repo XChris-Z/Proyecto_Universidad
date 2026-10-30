@@ -70,8 +70,12 @@ export async function initCalendario() {
   // Badge de Estado Google Calendar
   syncBadge?.addEventListener('click', async () => {
     if (!isGoogleConnected) {
-      if (confirm('¿Deseas conectar tu cuenta institucional de Google para sincronizar tus eventos en tiempo real?')) {
-        await connectGoogleCalendar();
+      if (confirm('¿Deseas conectar tu cuenta institucional de Google Workspace para sincronizar tus eventos en tiempo real?')) {
+        try {
+          await connectGoogleCalendar();
+        } catch (err: any) {
+          alert('Aviso: Para habilitar Google Calendar en tu entorno, configura las credenciales de Google OAuth en el Dashboard de Supabase. Mientras tanto, todos los vencimientos de peticiones y convenios funcionan en tiempo real con la base de datos.');
+        }
       }
     }
   });
@@ -669,7 +673,10 @@ function setupDayDetailModal() {
   const btnSwitchDay = document.getElementById('btn-cal-day-switch-to-day');
 
   function closeModal() {
-    if (modal) modal.style.display = 'none';
+    if (modal) {
+      modal.classList.remove('open');
+      modal.style.display = 'none';
+    }
   }
 
   btnClose?.addEventListener('click', closeModal);
@@ -739,7 +746,10 @@ function openDayModal(dateStr: string, dayEvents: CalendarioEvent[]) {
     }
   }
 
-  if (modal) modal.style.display = 'flex';
+  if (modal) {
+    modal.classList.add('open');
+    modal.style.display = 'flex';
+  }
 }
 
 /**
@@ -753,7 +763,10 @@ function setupCreateEventModal() {
   const form = document.getElementById('new-calendario-form') as HTMLFormElement | null;
 
   function closeModal() {
-    if (modal) modal.style.display = 'none';
+    if (modal) {
+      modal.classList.remove('open');
+      modal.style.display = 'none';
+    }
   }
 
   btnOpen?.addEventListener('click', () => {
@@ -803,7 +816,7 @@ function setupCreateEventModal() {
 
       // 2. Registrar en auditoría
       const userStr = localStorage.getItem('sgd_current_user');
-      const currentUser = userStr ? JSON.parse(userStr) : { id: 'usr-admin', name: 'Administrador', role: 'admin' };
+      const currentUser = userStr ? JSON.parse(userStr) : { id: 'usr-root', name: 'ING. Christian Lemus', role: 'admin' };
 
       await logSystemActivity({
         actor: currentUser,
@@ -851,5 +864,8 @@ function openCreateModal(defaultDate?: string) {
     }
   }
 
-  if (modal) modal.style.display = 'flex';
+  if (modal) {
+    modal.classList.add('open');
+    modal.style.display = 'flex';
+  }
 }

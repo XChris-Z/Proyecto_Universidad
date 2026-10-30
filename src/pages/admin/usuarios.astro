@@ -431,7 +431,15 @@ const usersList = dbProfiles && dbProfiles.length > 0 ? dbProfiles : [];
     const genPassBtn = document.getElementById('btn-generate-password');
 
     function toggleModal(open: boolean) {
-      if (modal) modal.style.display = open ? 'flex' : 'none';
+      if (modal) {
+        if (open) {
+          modal.classList.add('open');
+          modal.style.display = 'flex';
+        } else {
+          modal.classList.remove('open');
+          modal.style.display = 'none';
+        }
+      }
     }
 
     if (openBtn) openBtn.addEventListener('click', () => toggleModal(true));
@@ -626,12 +634,14 @@ const usersList = dbProfiles && dbProfiles.length > 0 ? dbProfiles : [];
       if (deleteModal && deleteModalName && deleteModalEmail) {
         deleteModalName.textContent = userToDelete.name;
         deleteModalEmail.textContent = userToDelete.email;
+        deleteModal.classList.add('open');
         deleteModal.style.display = 'flex';
       }
     }
 
     if (btnCancelDelete && deleteModal) {
       btnCancelDelete.addEventListener('click', () => {
+        deleteModal.classList.remove('open');
         deleteModal.style.display = 'none';
         userToDelete = null;
       });
@@ -648,16 +658,19 @@ const usersList = dbProfiles && dbProfiles.length > 0 ? dbProfiles : [];
           // 1. Eliminar de Supabase user_permissions
           await supabase.from('user_permissions').delete().eq('user_id', userToDelete.id);
 
-          // 2. Eliminar de Supabase profiles
+          // 2. Desvincular en audit_logs si existiera referencia
+          await supabase.from('audit_logs').update({ actor_id: null }).eq('actor_id', userToDelete.id);
+
+          // 3. Eliminar de Supabase profiles
           const { error: pErr } = await supabase.from('profiles').delete().eq('id', userToDelete.id);
           if (pErr) throw pErr;
 
-          // 3. Eliminar de Supabase users
+          // 4. Eliminar de Supabase users
           await supabase.from('users').delete().eq('id', userToDelete.id);
 
-          // 4. Registrar en Auditoría Oficial
+          // 5. Registrar en Auditoría Oficial
           await logSystemActivity({
-            actor: { id: 'usr-root', name: 'Dr. Cristian Lemus', role: 'admin' },
+            actor: { id: 'usr-root', name: 'ING. Christian Lemus', role: 'admin' },
             action: 'Baja y Eliminación de Funcionario Institucional',
             actionType: 'ELIMINACION',
             entity: 'Control de Usuarios y Roles',
@@ -666,7 +679,7 @@ const usersList = dbProfiles && dbProfiles.length > 0 ? dbProfiles : [];
             severity: 'CRITICAL'
           });
 
-          // 5. Eliminar fila del DOM
+          // 6. Eliminar fila del DOM
           const row = document.querySelector(`.user-row[data-user-id="${userToDelete.id}"]`);
           if (row) row.remove();
 
@@ -676,6 +689,7 @@ const usersList = dbProfiles && dbProfiles.length > 0 ? dbProfiles : [];
           if (countLabel) countLabel.textContent = `${totalRows} funcionarios`;
 
           alert(`El funcionario ${userToDelete.name} fue dado de baja y eliminado de Supabase.`);
+          deleteModal.classList.remove('open');
           deleteModal.style.display = 'none';
           userToDelete = null;
 
@@ -692,11 +706,17 @@ const usersList = dbProfiles && dbProfiles.length > 0 ? dbProfiles : [];
       });
     }
 
-    // Inicializar
-    document.addEventListener('DOMContentLoaded', async () => {
+    // Inicializar de inmediato sin depender exclusivamente de DOMContentLoaded
+    async function initUsuarios() {
       attachUserSelectionEvents();
       await loadAllPermissions();
       selectUser('usr-root');
-    });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initUsuarios);
+    } else {
+      initUsuarios();
+    }
   </script>
 </AppLayout>

@@ -103,11 +103,6 @@ export async function initAuditoria() {
             <div style="line-height: 1.45; color: var(--text-main); font-size: 0.83rem;">
               ${log.details}
             </div>
-            ${log.before || log.after ? `
-              <div style="margin-top: 5px; font-size: 0.72rem; font-family: ui-monospace, monospace; color: #475569; background: #F1F5F9; padding: 4px 8px; border-radius: 4px; display: inline-block;">
-                ${log.before ? `Previo: ${JSON.stringify(log.before)} &rarr; ` : ''}Actual: ${JSON.stringify(log.after)}
-              </div>
-            ` : ''}
           </td>
           <td>
             <span class="audit-hash-chip" data-hash="${log.integrityHash}" title="Clic para copiar hash SHA-256 completo">

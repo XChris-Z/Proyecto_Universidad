@@ -50,11 +50,17 @@ export function initNormas() {
   const submitBtn = document.getElementById('btn-submit-norma') as HTMLButtonElement | null;
 
   openBtn?.addEventListener('click', () => {
-    if (modal) modal.style.display = 'flex';
+    if (modal) {
+      modal.classList.add('open');
+      modal.style.display = 'flex';
+    }
   });
 
   const closeModal = () => {
-    if (modal) modal.style.display = 'none';
+    if (modal) {
+      modal.classList.remove('open');
+      modal.style.display = 'none';
+    }
   };
 
   closeBtn?.addEventListener('click', closeModal);
@@ -104,7 +110,7 @@ export function initNormas() {
       if (error) throw error;
 
       await logSystemActivity({
-        actor: { id: 'usr-root', name: 'Dr. Cristian Lemus', role: 'admin' },
+        actor: { id: 'usr-root', name: 'ING. Christian Lemus', role: 'admin' },
         action: 'Radicación de Acto / Norma Colegiada',
         actionType: 'SUBIDA_ARCHIVO',
         entity: 'Cuerpos Colegiados',

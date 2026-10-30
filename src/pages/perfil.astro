@@ -22,10 +22,10 @@ import { supabase } from '@lib/supabase';
 
       <div class="profile-info-main" style="flex: 1; min-width: 260px;">
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-          <h2 id="profile-name-display" style="font-size: 1.45rem; font-weight: 800; color: var(--text-main); margin: 0;">Dr. Cristian Lemus</h2>
+          <h2 id="profile-name-display" style="font-size: 1.45rem; font-weight: 800; color: var(--text-main); margin: 0;">ING. Christian Lemus</h2>
           <span class="role-badge admin" id="profile-role-badge">ADMINISTRADOR</span>
         </div>
-        <p id="profile-cargo-display" style="font-size: 0.88rem; color: var(--text-muted); margin: 4px 0 12px 0;">Rector Magnífico / Administrador del SGD</p>
+        <p id="profile-cargo-display" style="font-size: 0.88rem; color: var(--text-muted); margin: 4px 0 12px 0;">Superusuario Root / Administrador del SGD</p>
         
         <div style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.78rem; background: var(--verde-suave-bg); color: var(--verde-principal); padding: 5px 12px; border-radius: var(--radius-sm); border: 1px solid var(--verde-borde);">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -66,7 +66,7 @@ import { supabase } from '@lib/supabase';
               <span style="font-size: 0.70rem; font-weight: 700; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 2px 8px; border-radius: var(--radius-sm);">Habilitado</span>
             </div>
             <div style="display: flex; gap: 8px;">
-              <input type="text" id="input-full-name" class="form-input" value="Dr. Cristian Lemus" required placeholder="Nombre Completo Institucional" />
+              <input type="text" id="input-full-name" class="form-input" value="ING. Christian Lemus" required placeholder="Nombre Completo Institucional" />
               <button type="button" id="btn-save-name" class="btn btn-primary" style="white-space: nowrap; padding: 0 16px; font-weight: 700;">
                 Guardar
               </button>
@@ -287,18 +287,19 @@ import { supabase } from '@lib/supabase';
 
         try {
           const nowIso = new Date().toISOString();
+          const targetId = currentUserId || 'usr-root';
 
           // Actualizar en tabla profiles
           const { error: pErr } = await supabase
             .from('profiles')
             .update({ full_name: newName, updated_at: nowIso })
-            .or(`id.eq.${currentUserId},email.eq.${currentUserEmail}`);
+            .eq('id', targetId);
 
           // Actualizar en tabla users
           await supabase
             .from('users')
             .update({ name: newName, updated_at: nowIso })
-            .or(`id.eq.${currentUserId},email.eq.${currentUserEmail}`);
+            .eq('id', targetId);
 
           // Actualizar vista local
           const nameEl = document.getElementById('profile-name-display');
@@ -316,11 +317,11 @@ import { supabase } from '@lib/supabase';
 
           // Registrar en bitácora de auditoría de Supabase
           await logSystemActivity({
-            actor: { id: currentUserId, name: newName, role: 'admin' },
+            actor: { id: targetId, name: newName, role: 'admin' },
             action: 'Actualización de Nombre de Funcionario',
             actionType: 'MODIFICACION',
             entity: 'Perfil Institucional',
-            entityId: currentUserId,
+            entityId: targetId,
             details: `El usuario actualizó su nombre oficial a "${newName}".`,
             severity: 'INFO'
           });
@@ -380,10 +381,11 @@ import { supabase } from '@lib/supabase';
           }
 
           // Actualizar avatar_url en tabla profiles de Supabase
+          const targetId = currentUserId || 'usr-root';
           await supabase
             .from('profiles')
             .update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
-            .or(`id.eq.${currentUserId},email.eq.${currentUserEmail}`);
+            .eq('id', targetId);
 
           // Guardar y actualizar vista
           localStorage.setItem(`sgd_avatar_${currentUserId}`, publicUrl);
@@ -516,10 +518,11 @@ import { supabase } from '@lib/supabase';
           const { data, error } = await supabase.auth.updateUser({ password: newPass });
 
           // Desmarcar contraseña provisional en tabla profiles
+          const targetId = currentUserId || 'usr-root';
           await supabase
             .from('profiles')
             .update({ is_provisional_password: false, updated_at: new Date().toISOString() })
-            .or(`id.eq.${currentUserId},email.eq.${currentUserEmail}`);
+            .eq('id', targetId);
 
           // Registrar en auditoría oficial de Supabase
           await logSystemActivity({
@@ -561,7 +564,11 @@ import { supabase } from '@lib/supabase';
       });
     }
 
-    // Inicializar al cargar el DOM
-    document.addEventListener('DOMContentLoaded', loadUserProfile);
+    // Inicializar de inmediato sin depender exclusivamente de DOMContentLoaded
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', loadUserProfile);
+    } else {
+      loadUserProfile();
+    }
   </script>
 </AppLayout>
