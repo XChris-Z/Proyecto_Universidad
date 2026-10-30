@@ -35,6 +35,15 @@ const { title = 'Dashboard — Panel de Control' } = Astro.props;
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       <span>Subir Petición</span>
     </a>
+
+    <!-- Píldora de Perfil y Foto del Usuario en Topbar -->
+    <a href="/perfil" class="topbar-user-pill" id="topbar-user-pill" title="Mi Perfil Institucional" style="display: flex; align-items: center; gap: 8px; text-decoration: none; padding: 3px 10px 3px 4px; border: 1px solid var(--border-color); border-radius: 20px; background: #ffffff; cursor: pointer; transition: all 0.2s;">
+      <div class="topbar-user-avatar" id="topbar-avatar-container" style="width: 28px; height: 28px; border-radius: 50%; background: var(--verde-suave-bg); border: 1.5px solid var(--verde-borde); display: flex; align-items: center; justify-content: center; overflow: hidden; font-size: 0.72rem; font-weight: 700; color: var(--verde-principal); position: relative;">
+        <span id="topbar-avatar-text">CL</span>
+        <img id="topbar-avatar-img" src="" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; display: none;" />
+      </div>
+      <span id="topbar-user-name" style="font-size: 0.8rem; font-weight: 700; color: var(--text-main); max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">ING. Christian</span>
+    </a>
   </div>
 </header>
 

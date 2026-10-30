@@ -389,13 +389,31 @@ import { supabase } from '@lib/supabase';
 
           // Guardar y actualizar vista
           localStorage.setItem(`sgd_avatar_${currentUserId}`, publicUrl);
-          const img = document.getElementById('profile-avatar-img') as HTMLImageElement;
-          const initials = document.getElementById('profile-avatar-initials');
+          const rawUser = localStorage.getItem("sgd_current_user");
+          let uObj: any = {};
+          if (rawUser) {
+            try { uObj = JSON.parse(rawUser); } catch(e) {}
+          }
+          uObj.avatar_url = publicUrl;
+          uObj.avatarUrl = publicUrl;
+          localStorage.setItem("sgd_current_user", JSON.stringify(uObj));
+
+          const img = document.getElementById("profile-avatar-img") as HTMLImageElement;
+          const initials = document.getElementById("profile-avatar-initials");
           if (img && initials) {
             img.src = publicUrl;
-            img.style.display = 'block';
-            initials.style.display = 'none';
+            img.style.display = "block";
+            initials.style.display = "none";
           }
+
+          if (window.currentLoggedUser) {
+            window.currentLoggedUser.avatar_url = publicUrl;
+            (window.currentLoggedUser as any).avatarUrl = publicUrl;
+          }
+          if (window.updateUserProfileUI) {
+            window.updateUserProfileUI();
+          }
+          window.dispatchEvent(new CustomEvent("sgd-user-updated", { detail: { avatar_url: publicUrl } }));
 
           // Registrar en auditoría
           await logSystemActivity({

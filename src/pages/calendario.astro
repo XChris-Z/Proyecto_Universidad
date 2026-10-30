@@ -149,6 +149,12 @@ const errorParam = Astro.url.searchParams.get('error');
             <span>Abrir en Google ↗</span>
           </a>
 
+          <!-- Botón Activar Cookies de Google -->
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-activate-cookies" title="Habilitar cookies necesarias para ver eventos de Google" style="font-size: 0.78rem; padding: 6px 12px; display: inline-flex; align-items: center; gap: 6px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0-1.5 19.9"/><circle cx="8" cy="9" r="1" fill="currentColor"/><circle cx="15" cy="8" r="1" fill="currentColor"/><circle cx="10" cy="14" r="1" fill="currentColor"/><circle cx="14" cy="15" r="1" fill="currentColor"/></svg>
+            <span>Activar Cookies</span>
+          </button>
+
           <!-- Botón Sincronizar -->
           <button type="button" class="btn btn-secondary btn-sm" id="btn-force-sync" title="Actualizar eventos" style="font-size: 0.78rem; padding: 6px 12px; display: inline-flex; align-items: center; gap: 6px;">
             <svg id="sync-spinner-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
@@ -273,14 +279,20 @@ const errorParam = Astro.url.searchParams.get('error');
 
       <!-- Contenedor 2: Google Calendar Embebido Oficial -->
       <div id="container-google-embed" class="calendar-main-surface" style="display: none;">
-        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid #3b82f6; padding: 10px 16px; border-radius: 8px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 0.82rem; color: #1e40af;">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-            <span>Para visualizar eventos privados o modificarlos directamente en Google Workspace sin restricciones del navegador:</span>
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid #3b82f6; padding: 12px 16px; border-radius: 8px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; font-size: 0.84rem; color: #1e40af;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0-1.5 19.9"/><circle cx="8" cy="9" r="1" fill="currentColor"/><circle cx="15" cy="8" r="1" fill="currentColor"/><circle cx="10" cy="14" r="1" fill="currentColor"/><circle cx="14" cy="15" r="1" fill="currentColor"/></svg>
+            <span>¿No visualizas tus eventos privados? Activa las cookies necesarias de Google en tu navegador:</span>
           </div>
-          <a href="https://calendar.google.com/calendar/u/0/r" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="font-size: 0.74rem; text-decoration: none; white-space: nowrap;">
-            Abrir Google Calendar Web ↗
-          </a>
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-primary btn-sm" id="btn-activate-cookies-banner" style="font-size: 0.76rem; padding: 6px 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0-1.5 19.9"/><circle cx="8" cy="9" r="1" fill="currentColor"/><circle cx="15" cy="8" r="1" fill="currentColor"/><circle cx="10" cy="14" r="1" fill="currentColor"/><circle cx="14" cy="15" r="1" fill="currentColor"/></svg>
+              <span>Activar Cookies Google</span>
+            </button>
+            <a href="https://calendar.google.com/calendar/u/0/r" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="font-size: 0.76rem; text-decoration: none; white-space: nowrap;">
+              Abrir Google Calendar Web ↗
+            </a>
+          </div>
         </div>
 
         <div class="card" style="padding: 12px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); overflow: hidden;">
@@ -555,6 +567,49 @@ const errorParam = Astro.url.searchParams.get('error');
 
   tabBtnGoogle?.addEventListener('click', () => switchCalendarTab(false));
   tabBtnSemaforo?.addEventListener('click', () => switchCalendarTab(true));
+
+  // 4.1 Función para Activar Cookies de Google Calendar
+  async function activateGoogleCookies() {
+    if (typeof (document as any).requestStorageAccess === 'function') {
+      try {
+        await (document as any).requestStorageAccess();
+      } catch (err) {
+        console.warn('Storage Access API:', err);
+      }
+    }
+
+    const authUrl = 'https://calendar.google.com/calendar/u/0/embed?ctz=America/Bogota';
+    const popup = window.open(authUrl, 'gcal_cookie_auth', 'width=660,height=640,menubar=no,toolbar=no');
+
+    if ((window as any).showToast) {
+      (window as any).showToast(
+        'Ventana de Google abierta. Si tu navegador solicita permitir cookies, presiona Permitir y recarga el visor.',
+        'info',
+        'Cookies de Google'
+      );
+    }
+
+    const checkInterval = setInterval(() => {
+      if (popup && popup.closed) {
+        clearInterval(checkInterval);
+        if (iframe) {
+          const cur = iframe.src;
+          iframe.src = '';
+          setTimeout(() => { iframe.src = cur; }, 200);
+        }
+        if ((window as any).showToast) {
+          (window as any).showToast('Visor de Google Calendar recargado con tus cookies y sesión.', 'success');
+        }
+      }
+    }, 1000);
+
+    setTimeout(() => {
+      clearInterval(checkInterval);
+    }, 35000);
+  }
+
+  document.getElementById('btn-activate-cookies')?.addEventListener('click', activateGoogleCookies);
+  document.getElementById('btn-activate-cookies-banner')?.addEventListener('click', activateGoogleCookies);
 
   // 5. Inicializar la agenda interactiva inmediatamente si está conectado
   const isConnectedEl = document.getElementById('state-connected');

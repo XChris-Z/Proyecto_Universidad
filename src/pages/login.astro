@@ -687,7 +687,9 @@ import AuthLayout from '@layouts/AuthLayout.astro';
         role: isAdmin ? 'Administrador' : 'Funcionario',
         roleId: roleCode,
         initials: fullName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() || 'FN',
-        avatarColor: isAdmin ? '#00594E' : '#D4AF37'
+        avatarColor: isAdmin ? '#00594E' : '#D4AF37',
+        avatar_url: profile?.avatar_url || null,
+        avatarUrl: profile?.avatar_url || null
       };
 
       // 3. Persistir sesión en localStorage y cookies del middleware

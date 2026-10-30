@@ -40,6 +40,8 @@ export interface InstitutionalUser {
   password: string;
   initials: string;
   avatarColor: string;
+  avatar_url?: string | null;
+  avatarUrl?: string | null;
 }
 
 /** Payload guardado en localStorage / sessionStorage durante Fase 1 */
