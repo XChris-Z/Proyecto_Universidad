@@ -1,6 +1,20 @@
 ---
 // src/pages/juridicos.astro
 import AppLayout from '@layouts/AppLayout.astro';
+import { supabase } from '@lib/supabase';
+
+// Consultar casos jurídicos registrados en Supabase
+const { data: dbCasos } = await (supabase
+  .from('juridicos_casos' as any)
+  .select('*')
+  .order('created_at', { ascending: false }) as any);
+
+const casosList = dbCasos || [];
+const countBrechas = casosList.filter((c: any) => c.categoria === 'brechas').length;
+const countConceptos = casosList.filter((c: any) => c.categoria === 'conceptos').length;
+const countLitigios = casosList.filter((c: any) => c.categoria === 'litigios').length;
+const countAuditorias = casosList.filter((c: any) => c.categoria === 'auditorias').length;
+const countDirectivas = casosList.filter((c: any) => c.categoria === 'directivas').length;
 ---
 
 <AppLayout title="Asuntos Jurídicos y Normativos" activeNav="juridicos">
@@ -12,14 +26,14 @@ import AppLayout from '@layouts/AppLayout.astro';
           <span>Asuntos Jurídicos y Normativos</span>
         </div>
         <div style="font-size: 0.8rem; color: var(--secondary-light); font-weight: 600; margin-top: 4px;">
-          Oficina Asesora Jurídica: Conceptos, Litigios, Auditorías, Directivas, Circulares y Seguimiento a Obligaciones Internas
+          Oficina Asesora Jurídica: Conceptos, Litigios, Auditorías, Directivas, Circulares y Seguimiento a Obligaciones
         </div>
       </div>
 
       <div style="display: flex; gap: 10px; align-items: center;">
         <button class="btn btn-primary" id="btn-open-gap-modal">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-          <span>+ Proponer Normativa Faltante</span>
+          <span>+ Registrar Asunto Jurídico</span>
         </button>
       </div>
     </div>
@@ -28,71 +42,88 @@ import AppLayout from '@layouts/AppLayout.astro';
     <div class="module-tabs" id="juridicos-module-tabs">
       <button class="module-tab-btn active" data-jtab="brechas">
         <span>⚡ Brechas Normativas (Legal Gap)</span>
-        <span class="tab-count" id="jcount-brechas">0</span>
+        <span class="tab-count" id="jcount-brechas">{countBrechas}</span>
       </button>
       <button class="module-tab-btn" data-jtab="conceptos">
         <span>Conceptos (Internos y Externos)</span>
-        <span class="tab-count" id="jcount-conceptos">0</span>
+        <span class="tab-count" id="jcount-conceptos">{countConceptos}</span>
       </button>
       <button class="module-tab-btn" data-jtab="litigios">
         <span>Litigios y Asuntos Judiciales</span>
-        <span class="tab-count" id="jcount-litigios">0</span>
+        <span class="tab-count" id="jcount-litigios">{countLitigios}</span>
       </button>
       <button class="module-tab-btn" data-jtab="auditorias">
         <span>Auditorías de Entes de Control</span>
-        <span class="tab-count" id="jcount-auditorias">0</span>
+        <span class="tab-count" id="jcount-auditorias">{countAuditorias}</span>
       </button>
       <button class="module-tab-btn" data-jtab="directivas">
         <span>Directivas y Circulares</span>
-        <span class="tab-count" id="jcount-directivas">0</span>
+        <span class="tab-count" id="jcount-directivas">{countDirectivas}</span>
       </button>
     </div>
 
     <div id="juridicos-tab-content" style="margin-top: 18px;">
-      <!-- Dinámico desde JS según pestaña activa -->
+      <!-- Dinámico desde JS según pestaña activa con datos reales de Supabase -->
     </div>
   </div>
 
-  <!-- Modal: Proponer Normativa Faltante -->
-  <div class="modal-backdrop" id="new-gap-modal" style="display: none;">
-    <div class="modal-card" style="max-width: 620px;">
-      <div class="modal-header">
-        <h3>
+  <!-- Modal: Registrar Asunto Jurídico / Normativa Faltante -->
+  <div class="modal-backdrop" id="new-gap-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; align-items: center; justify-content: center; padding: 16px;">
+    <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 620px; border-radius: var(--radius-md); box-shadow: var(--shadow-md); overflow: hidden;">
+      <div class="modal-header" style="background: var(--verde-suave-bg); border-bottom: 1px solid var(--verde-borde); padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--verde-principal); margin: 0; display: flex; align-items: center; gap: 8px;">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-          <span>Procesar y Formular Normativa Faltante</span>
+          <span>Registrar Expediente Jurídico</span>
         </h3>
-        <button class="btn-close-modal" id="btn-close-gap-modal">&times;</button>
+        <button type="button" class="btn-close-modal" id="btn-close-gap-modal" style="background: transparent; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer;">&times;</button>
       </div>
-      <div class="modal-body">
+
+      <form id="form-new-gap" style="padding: 24px; display: flex; flex-direction: column; gap: 14px;">
         <div class="form-group">
-          <label class="form-label">Norma Requerida *</label>
-          <input type="text" class="form-input" placeholder="Ej: Política de Ciberseguridad Institucional">
+          <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Categoría del Asunto *</label>
+          <select id="new-gap-categoria" class="form-input" style="cursor: pointer;" required>
+            <option value="brechas" selected>⚡ Brecha Normativa (Vacío Legal)</option>
+            <option value="conceptos">Concepto Jurídico (Interno / Externo)</option>
+            <option value="litigios">Litigio o Proceso Judicial</option>
+            <option value="auditorias">Auditoría de Entes de Control</option>
+            <option value="directivas">Directiva o Circular Institucional</option>
+          </select>
         </div>
-        <div class="form-row-2">
+
+        <div class="form-group">
+          <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Título del Asunto / Norma Requerida *</label>
+          <input type="text" id="new-gap-titulo" class="form-input" placeholder="Ej: Política Institucional de Protección de Datos Personales" required />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
           <div class="form-group">
-            <label class="form-label">Mandato Nacional / Ley</label>
-            <input type="text" class="form-input" placeholder="Ej: Ley 1581 de 2012">
+            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Mandato Legal / Radicado</label>
+            <input type="text" id="new-gap-mandato" class="form-input" placeholder="Ej: Ley 1581 de 2012 / Radicado 092" />
           </div>
           <div class="form-group">
-            <label class="form-label">Órgano Competente</label>
-            <select class="form-select">
-              <option>Consejo Superior Universitario</option>
-              <option>Consejo Académico</option>
-              <option>Rectoría</option>
+            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Órgano / Ente Competente</label>
+            <select id="new-gap-organo" class="form-input" style="cursor: pointer;">
+              <option value="Consejo Superior Universitario">Consejo Superior Universitario (CSU)</option>
+              <option value="Consejo Académico">Consejo Académico (CA)</option>
+              <option value="Rectoría">Rectoría</option>
+              <option value="Juzgados / Tribunales Administrativos">Juzgados / Tribunales Administrativos</option>
+              <option value="Contraloría / Procuraduría">Contraloría / Procuraduría</option>
             </select>
           </div>
         </div>
+
         <div class="form-group">
-          <label class="form-label">Justificación Jurídica</label>
-          <textarea class="form-textarea" rows="3" placeholder="Sustento del vacío legal o normativo..."></textarea>
+          <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Justificación / Sustento Jurídico *</label>
+          <textarea id="new-gap-justificacion" class="form-input" rows="3" placeholder="Detalle la fundamentación jurídica, hechos relevantes o necesidad normativa..." required></textarea>
         </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-ghost" id="btn-cancel-gap">Cancelar</button>
-        <button type="button" class="btn btn-primary" onclick="window.showToast('Propuesta de brecha normativa registrada'); document.getElementById('new-gap-modal').style.display='none';">
-          Registrar Formulación
-        </button>
-      </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px;">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-gap">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-gap" style="font-weight: 700;">
+            Guardar en Supabase
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 </AppLayout>
@@ -101,4 +132,3 @@ import AppLayout from '@layouts/AppLayout.astro';
   import { initJuridicos } from '@scripts/juridicos';
   initJuridicos();
 </script>
-

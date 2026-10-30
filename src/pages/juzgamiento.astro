@@ -1,6 +1,18 @@
 ---
 // src/pages/juzgamiento.astro
 import AppLayout from '@layouts/AppLayout.astro';
+import { supabase } from '@lib/supabase';
+
+// Consultar procesos disciplinarios registrados en Supabase
+const { data: dbProcesos } = await (supabase
+  .from('juzgamiento_procesos' as any)
+  .select('*')
+  .order('created_at', { ascending: false }) as any);
+
+const procesosList = dbProcesos || [];
+const total = procesosList.length;
+const autosCount = procesosList.filter((p: any) => p.tipo_acto && p.tipo_acto.toLowerCase().includes('auto')).length;
+const apelCount = procesosList.filter((p: any) => p.tipo_acto && (p.tipo_acto.toLowerCase().includes('apelación') || p.etapa_procesal.toLowerCase().includes('segunda'))).length;
 ---
 
 <AppLayout title="Fase de Juzgamiento Disciplinario" activeNav="juzgamiento">
@@ -59,15 +71,15 @@ import AppLayout from '@layouts/AppLayout.astro';
     <div class="module-tabs" id="juzgamiento-module-tabs">
       <button class="module-tab-btn active" data-jstage="all">
         <span>Todos los Procesos</span>
-        <span class="tab-count" id="juzg-count-all">0</span>
+        <span class="tab-count" id="juzg-count-all">{total}</span>
       </button>
       <button class="module-tab-btn" data-jstage="autos">
         <span>Autos Procesales</span>
-        <span class="tab-count" id="juzg-count-autos">0</span>
+        <span class="tab-count" id="juzg-count-autos">{autosCount}</span>
       </button>
       <button class="module-tab-btn" data-jstage="apelaciones">
         <span>Apelaciones en Segunda Instancia</span>
-        <span class="tab-count" id="juzg-count-apelaciones">0</span>
+        <span class="tab-count" id="juzg-count-apelaciones">{apelCount}</span>
       </button>
     </div>
 
@@ -86,54 +98,82 @@ import AppLayout from '@layouts/AppLayout.astro';
           </tr>
         </thead>
         <tbody id="juzgamiento-table-body">
-          <!-- Dinámico desde JS -->
+          <!-- Renderizado dinámico desde JS con datos reales de Supabase -->
         </tbody>
       </table>
     </div>
   </div>
 
-  <!-- Modal: Radicar Auto / Apelación -->
-  <div class="modal-backdrop" id="new-juzgamiento-modal" style="display: none;">
-    <div class="modal-card" style="max-width: 640px;">
-      <div class="modal-header">
-        <h3>
+  <!-- Modal: Radicar Auto / Apelación en Supabase -->
+  <div class="modal-backdrop" id="new-juzgamiento-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; align-items: center; justify-content: center; padding: 16px;">
+    <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 640px; border-radius: var(--radius-md); box-shadow: var(--shadow-md); overflow: hidden;">
+      <div class="modal-header" style="background: var(--verde-suave-bg); border-bottom: 1px solid var(--verde-borde); padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--verde-principal); margin: 0; display: flex; align-items: center; gap: 8px;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
           <span>Radicar Auto / Pieza Procesal Disciplinaria</span>
         </h3>
-        <button class="btn-close-modal" id="btn-close-new-juzg-modal">&times;</button>
+        <button type="button" class="btn-close-modal" id="btn-close-new-juzg-modal" style="background: transparent; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer;">&times;</button>
       </div>
-      <div class="modal-body">
-        <div class="form-row-2">
+
+      <form id="form-new-juzgamiento" style="padding: 24px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
           <div class="form-group">
-            <label class="form-label">Radicado del Expediente *</label>
-            <input type="text" class="form-input" placeholder="Ej: EXP-DISC-2026-005">
+            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Radicado del Expediente *</label>
+            <input type="text" id="new-juzg-radicado" class="form-input" placeholder="Ej: EXP-DISC-2026-005" required />
           </div>
           <div class="form-group">
-            <label class="form-label">Funcionario / Implicado *</label>
-            <input type="text" class="form-input" placeholder="Nombre completo">
+            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Funcionario / Implicado *</label>
+            <input type="text" id="new-juzg-implicado" class="form-input" placeholder="Nombre completo del investigado" required />
           </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Tipo de Acto / Auto *</label>
-          <select class="form-select">
-            <option>Auto de Formulación de Cargos</option>
-            <option>Auto de Apertura de Indagación Previa</option>
-            <option>Recurso de Apelación 2da Instancia</option>
-            <option>Auto de Decreto de Pruebas Periciales</option>
-            <option>Auto de Archivo Definitivo</option>
-          </select>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Cargo o Dependencia</label>
+            <input type="text" id="new-juzg-cargo" class="form-input" placeholder="Ej: Docente Ocasional / Auxiliar" />
+          </div>
+          <div class="form-group">
+            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Tipo de Acto / Auto *</label>
+            <select id="new-juzg-tipo" class="form-input" style="cursor: pointer;" required>
+              <option value="Auto de Apertura de Indagación Previa">Auto de Apertura de Indagación Previa</option>
+              <option value="Auto de Formulación de Cargos">Auto de Formulación de Cargos</option>
+              <option value="Auto de Decreto de Pruebas Periciales">Auto de Decreto de Pruebas Periciales</option>
+              <option value="Fallo de Primera Instancia">Fallo de Primera Instancia</option>
+              <option value="Recurso de Apelación 2da Instancia">Recurso de Apelación 2da Instancia</option>
+              <option value="Auto de Archivo Definitivo">Auto de Archivo Definitivo</option>
+            </select>
+          </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Conducta o Causal Investigada</label>
-          <textarea class="form-textarea" rows="2" placeholder="Descripción sucinta de los hechos..."></textarea>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Etapa Procesal *</label>
+            <select id="new-juzg-etapa" class="form-input" style="cursor: pointer;" required>
+              <option value="Indagación Previa">1. Indagación Previa</option>
+              <option value="Pliego de Cargos">2. Pliego de Cargos</option>
+              <option value="Etapa Probatoria">3. Etapa Probatoria</option>
+              <option value="Fallo 1ra Instancia">4. Fallo 1ra Instancia</option>
+              <option value="Segunda Instancia (CSU / Rectoría)">5. Segunda Instancia (CSU / Rectoría)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Fecha de Notificación</label>
+            <input type="date" id="new-juzg-fecha" class="form-input" required />
+          </div>
         </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-ghost" onclick="document.getElementById('new-juzgamiento-modal').style.display='none';">Cancelar</button>
-        <button type="button" class="btn btn-primary" onclick="window.showToast('Auto procesal radicado en libro disciplinario'); document.getElementById('new-juzgamiento-modal').style.display='none';">
-          Incorporar al Expediente
-        </button>
-      </div>
+
+        <div class="form-group">
+          <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Conducta o Causal Investigada</label>
+          <textarea id="new-juzg-conducta" class="form-input" rows="2" placeholder="Descripción sucinta de los hechos materia de indagación..."></textarea>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px;">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-new-juzg">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-juzg" style="font-weight: 700;">
+            Incorporar a Supabase
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 </AppLayout>
@@ -142,4 +182,3 @@ import AppLayout from '@layouts/AppLayout.astro';
   import { initJuzgamiento } from '@scripts/juzgamiento';
   initJuzgamiento();
 </script>
-
