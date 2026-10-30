@@ -1,6 +1,20 @@
 ---
 // src/pages/relacionamiento.astro
 import AppLayout from '@layouts/AppLayout.astro';
+import { supabase } from '@lib/supabase';
+import { formatNiceDate } from '@lib/utils';
+
+// Consultar convenios institucionales reales en Supabase
+const { data: dbConvenios } = await (supabase
+  .from('convenios' as any)
+  .select('*')
+  .order('created_at', { ascending: false }) as any);
+
+const conveniosList = dbConvenios || [];
+const totalCount = conveniosList.length;
+const gobCount = conveniosList.filter((c: any) => c.tipo === 'gubernamental').length;
+const intCount = conveniosList.filter((c: any) => c.tipo === 'internacional').length;
+const nalCount = conveniosList.filter((c: any) => c.tipo === 'nacional').length;
 ---
 
 <AppLayout title="Relacionamiento Institucional y Convenios" activeNav="relacionamiento">
@@ -27,29 +41,67 @@ import AppLayout from '@layouts/AppLayout.astro';
     <div class="module-tabs" id="convenios-module-tabs">
       <button class="module-tab-btn active" data-ctab="all">
         <span>Todos los Convenios</span>
-        <span class="tab-count" id="conv-count-all">11</span>
+        <span class="tab-count" id="conv-count-all">{totalCount}</span>
       </button>
       <button class="module-tab-btn" data-ctab="gubernamental">
         <span>Entes Gubernamentales</span>
-        <span class="tab-count" id="conv-count-gob">4</span>
+        <span class="tab-count" id="conv-count-gob">{gobCount}</span>
       </button>
       <button class="module-tab-btn" data-ctab="internacional">
         <span>Cooperación Internacional</span>
-        <span class="tab-count" id="conv-count-int">3</span>
+        <span class="tab-count" id="conv-count-int">{intCount}</span>
       </button>
       <button class="module-tab-btn" data-ctab="nacional">
         <span>Cooperación Nacional</span>
-        <span class="tab-count" id="conv-count-nal">4</span>
+        <span class="tab-count" id="conv-count-nal">{nalCount}</span>
       </button>
     </div>
 
     <div class="convenios-grid" id="convenios-cards-grid">
-      <!-- Dinámico desde JS -->
+      {conveniosList.length > 0 ? (
+        conveniosList.map((c: any) => (
+          <div class="convenio-card" data-tipo={c.tipo}>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span class={`convenio-type-badge ${c.tipo}`}>{c.tipo_label || c.tipo}</span>
+              <span class="norma-num-badge">{c.numero}</span>
+            </div>
+            <div class="convenio-entity">{c.entidad}</div>
+            <div class="convenio-objeto">{c.objeto}</div>
+            
+            <div class="convenio-meta-row">
+              <span>Vigencia:</span>
+              <strong>{formatNiceDate(c.inicio)} &rarr; {formatNiceDate(c.fin)}</strong>
+            </div>
+            <div class="convenio-meta-row">
+              <span>Aporte / Cuantía:</span>
+              <strong style="color: var(--primary);">{c.cuantia}</strong>
+            </div>
+            <div class="convenio-meta-row">
+              <span>Supervisor Institucional:</span>
+              <span>{c.supervisor}</span>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-color);">
+              <span class="vigencia-pill vigente">{c.estado}</span>
+              <button class="btn btn-secondary btn-sm" onclick={`window.showToast('Descargando expediente ${c.numero}...')`} title="Descargar minuta y constancia formal">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span>Minuta Oficial</span>
+              </button>
+            </div>
+          </div>
+        ))
+      ) : (
+        <div style="grid-column: 1 / -1; text-align: center; padding: 48px 16px; color: var(--text-muted); background: var(--bg-surface-elevated); border-radius: var(--radius-md); border: 1px dashed var(--border-color);">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--verde-principal); margin-bottom: 8px;"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
+          <div style="font-weight: 700; color: var(--text-main); font-size: 1rem;">No hay convenios registrados actualmente</div>
+          <p style="font-size: 0.85rem; margin-top: 4px;">Utilice el botón superior para registrar y formalizar un nuevo convenio institucional.</p>
+        </div>
+      )}
     </div>
   </div>
 
   <!-- Modal: Registrar Nuevo Convenio Institucional -->
-  <div class="modal-backdrop" id="new-convenio-modal">
+  <div class="modal-backdrop" id="new-convenio-modal" style="display: none;">
     <div class="modal-card" style="max-width: 640px;">
       <div class="modal-header">
         <h3>
@@ -98,14 +150,14 @@ import AppLayout from '@layouts/AppLayout.astro';
               <input type="text" class="form-input" id="input-conv-supervisor" placeholder="Ej: Vicerrectoría de Investigación">
             </div>
             <div class="form-group">
-              <label class="form-label">Aporte / Cuantía</label>
-              <input type="text" class="form-input" id="input-conv-cuantia" placeholder="Ej: $2.400.000.000 COP o Sin cuantía pecuniaria">
+              <label class="form-label">Aporte / Cuantía Estimada</label>
+              <input type="text" class="form-input" id="input-conv-cuantia" placeholder="Ej: $2.400.000.000 COP o Sin cuantía">
             </div>
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-ghost" id="btn-cancel-new-conv">Cancelar</button>
-          <button type="submit" class="btn btn-primary">Registrar Convenio</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-convenio">Guardar Convenio</button>
         </div>
       </form>
     </div>
@@ -116,4 +168,3 @@ import AppLayout from '@layouts/AppLayout.astro';
   import { initRelacionamiento } from '@scripts/relacionamiento';
   initRelacionamiento();
 </script>
-

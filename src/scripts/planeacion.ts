@@ -14,6 +14,17 @@ export function initPlaneacion() {
     container.innerHTML = '';
 
     if (currentPlanTab === 'financieros') {
+      if (PLANEACION_DATA.informesFinancieros.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 48px 16px; color: var(--text-muted); background: var(--bg-surface-elevated); border-radius: var(--radius-md); border: 1px dashed var(--border-color);">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--verde-principal); margin-bottom: 8px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+            <div style="font-weight: 700; color: var(--text-main); font-size: 1rem;">No hay informes financieros disponibles actualmente</div>
+            <p style="font-size: 0.85rem; margin-top: 4px;">Los informes financieros mensuales radicados ante el Consejo Superior (CSU) se listarán en esta sección.</p>
+          </div>
+        `;
+        return;
+      }
+
       const tableWrap = document.createElement('div');
       tableWrap.className = 'table-responsive';
       tableWrap.innerHTML = `
@@ -59,6 +70,17 @@ export function initPlaneacion() {
       `;
       container.appendChild(tableWrap);
     } else if (currentPlanTab === 'rectorales') {
+      if (PLANEACION_DATA.informesRectorales.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 48px 16px; color: var(--text-muted); background: var(--bg-surface-elevated); border-radius: var(--radius-md); border: 1px dashed var(--border-color);">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--verde-principal); margin-bottom: 8px;"><path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+            <div style="font-weight: 700; color: var(--text-main); font-size: 1rem;">No hay informes de gestión rectoral disponibles actualmente</div>
+            <p style="font-size: 0.85rem; margin-top: 4px;">Los informes periódicos presentados por la Rectoría se visualizarán aquí una vez formalizados.</p>
+          </div>
+        `;
+        return;
+      }
+
       const grid = document.createElement('div');
       grid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;';
       PLANEACION_DATA.informesRectorales.forEach(inf => {
@@ -86,6 +108,17 @@ export function initPlaneacion() {
       });
       container.appendChild(grid);
     } else if (currentPlanTab === 'metas') {
+      if (PLANEACION_DATA.metasPDI.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 48px 16px; color: var(--text-muted); background: var(--bg-surface-elevated); border-radius: var(--radius-md); border: 1px dashed var(--border-color);">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--verde-principal); margin-bottom: 8px;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            <div style="font-weight: 700; color: var(--text-main); font-size: 1rem;">No hay metas del PDI configuradas actualmente</div>
+            <p style="font-size: 0.85rem; margin-top: 4px;">Las metas y ejes estratégicos institucionales se sincronizarán con el Plan de Desarrollo de Unitrópico.</p>
+          </div>
+        `;
+        return;
+      }
+
       const list = document.createElement('div');
       list.style.cssText = 'display: flex; flex-direction: column; gap: 14px;';
       PLANEACION_DATA.metasPDI.forEach(m => {
@@ -117,4 +150,3 @@ export function initPlaneacion() {
 
   renderContent();
 }
-

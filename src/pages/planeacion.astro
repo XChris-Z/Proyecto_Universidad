@@ -1,6 +1,11 @@
 ---
 // src/pages/planeacion.astro
 import AppLayout from '@layouts/AppLayout.astro';
+import { PLANEACION_DATA } from '@data/planeacion';
+
+const countFin = PLANEACION_DATA.informesFinancieros.length;
+const countRec = PLANEACION_DATA.informesRectorales.length;
+const countMetas = PLANEACION_DATA.metasPDI.length;
 ---
 
 <AppLayout title="Planeación y Gestión CSU" activeNav="planeacion">
@@ -17,42 +22,42 @@ import AppLayout from '@layouts/AppLayout.astro';
       </div>
     </div>
 
-    <!-- KPIs Financieros Globales -->
+    <!-- KPIs Financieros Globales (Valores Reales / Sin Datos Ficticios) -->
     <div class="financial-kpi-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px;">
       <div class="financial-stat-card" style="padding: 16px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-surface);">
-        <div class="label" style="font-size: 0.78rem; color: var(--text-muted);">Presupuesto Aprobado 2026</div>
-        <div class="value" style="font-size: 1.4rem; font-weight: 800; color: var(--text-main);">$48.650 M</div>
-        <div class="subtext" style="font-size: 0.72rem; color: var(--status-safe);">100% Asignado por CSU</div>
+        <div class="label" style="font-size: 0.78rem; color: var(--text-muted);">Presupuesto Oficial 2026</div>
+        <div class="value" style="font-size: 1.4rem; font-weight: 800; color: var(--text-main);">$0 COP</div>
+        <div class="subtext" style="font-size: 0.72rem; color: var(--text-muted);">Pendiente de certificación CSU</div>
       </div>
       <div class="financial-stat-card" style="padding: 16px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-surface);">
-        <div class="label" style="font-size: 0.78rem; color: var(--text-muted);">Ejecución Presupuestal Q3</div>
-        <div class="value" style="font-size: 1.4rem; font-weight: 800; color: var(--primary);">74.2%</div>
-        <div class="subtext" style="font-size: 0.72rem; color: var(--primary);">+8.4% vs año anterior</div>
+        <div class="label" style="font-size: 0.78rem; color: var(--text-muted);">Ejecución Presupuestal</div>
+        <div class="value" style="font-size: 1.4rem; font-weight: 800; color: var(--primary);">0%</div>
+        <div class="subtext" style="font-size: 0.72rem; color: var(--text-muted);">Sin informes mensuales radicados</div>
       </div>
       <div class="financial-stat-card" style="padding: 16px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-surface);">
         <div class="label" style="font-size: 0.78rem; color: var(--text-muted);">Aportes Casanare / Nación</div>
-        <div class="value" style="font-size: 1.4rem; font-weight: 800; color: var(--text-main);">$36.200 M</div>
-        <div class="subtext" style="font-size: 0.72rem; color: var(--status-safe);">Gobernación y MEN al día</div>
+        <div class="value" style="font-size: 1.4rem; font-weight: 800; color: var(--text-main);">$0 COP</div>
+        <div class="subtext" style="font-size: 0.72rem; color: var(--text-muted);">En trámite de conciliación contable</div>
       </div>
       <div class="financial-stat-card" style="padding: 16px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-surface);">
         <div class="label" style="font-size: 0.78rem; color: var(--text-muted);">Avance Metas PDI Rectoral</div>
-        <div class="value" style="font-size: 1.4rem; font-weight: 800; color: var(--secondary);">86.5%</div>
-        <div class="subtext" style="font-size: 0.72rem; color: var(--secondary);">42 Metas Cumplidas</div>
+        <div class="value" style="font-size: 1.4rem; font-weight: 800; color: var(--secondary);">0%</div>
+        <div class="subtext" style="font-size: 0.72rem; color: var(--text-muted);">0 Metas evaluadas</div>
       </div>
     </div>
 
     <div class="module-tabs" id="planeacion-module-tabs">
       <button class="module-tab-btn active" data-ptab="financieros">
         <span>Informes Financieros Mensuales CSU</span>
-        <span class="tab-count" id="plan-count-fin">5</span>
+        <span class="tab-count" id="plan-count-fin">{countFin}</span>
       </button>
       <button class="module-tab-btn" data-ptab="rectorales">
         <span>Informes de Gestión Rectoral CSU</span>
-        <span class="tab-count" id="plan-count-rec">3</span>
+        <span class="tab-count" id="plan-count-rec">{countRec}</span>
       </button>
       <button class="module-tab-btn" data-ptab="metas">
         <span>Ejes Estratégicos PDI 2020-2030</span>
-        <span class="tab-count">5</span>
+        <span class="tab-count">{countMetas}</span>
       </button>
     </div>
 
@@ -66,4 +71,3 @@ import AppLayout from '@layouts/AppLayout.astro';
   import { initPlaneacion } from '@scripts/planeacion';
   initPlaneacion();
 </script>
-

@@ -29,113 +29,41 @@ export function initProgramas() {
     setEl('prog-count-cna', PROGRAMAS_ACADEMICOS.acreditacion.length);
 
     if (tabName === 'historial') {
-      container.innerHTML = `
-        <div class="programas-cards-grid">
-          ${PROGRAMAS_ACADEMICOS.historial.map(p => `
-            <div class="programa-card">
-              <div class="programa-top-meta">
-                <span class="snies-badge">SNIES: ${p.snies}</span>
-                ${p.acreditacionAltaCalidad ? `
-                  <span class="acreditacion-badge alta-calidad">★ Alta Calidad CNA</span>
-                ` : (p.estadoRegistro.includes('Negación') ? `
-                  <span class="acreditacion-badge negado">✕ Negado / Recurso</span>
-                ` : `
-                  <span class="acreditacion-badge registro-calificado">✓ Registro Calificado</span>
-                `)}
-              </div>
-              <div class="programa-title">${p.nombre}</div>
-              <div class="programa-facultad">${p.facultad} &bull; ${p.nivel}</div>
-              
-              <div class="programa-details-grid">
-                <div>
-                  <label>Acto MEN:</label>
-                  <strong>${p.actoNumero}</strong>
-                </div>
-                <div>
-                  <label>Vigencia:</label>
-                  <strong>${p.vigenciaAnios}</strong>
-                </div>
-                <div>
-                  <label>Modalidad / Créditos:</label>
-                  <strong>${p.modalidad} (${p.creditos} cr.)</strong>
-                </div>
-                <div>
-                  <label>Estado Trámite:</label>
-                  <strong style="color: ${p.estadoRegistro.includes('Negación') ? '#dc2626' : 'var(--primary)'};">${p.estadoRegistro}</strong>
-                </div>
-              </div>
-
-              <p style="font-size: 0.76rem; color: var(--text-muted); line-height: 1.5; flex: 1; margin: 0 0 14px 0;">
-                ${p.observaciones}
-              </p>
-
-              <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 12px;">
-                <span style="font-size: 0.72rem; color: var(--text-muted);">Fecha Acto: ${formatNiceDate(p.fechaActo)}</span>
-                <button class="btn btn-secondary btn-sm" onclick="window.downloadUniversalOfficialDoc('programa', '${p.id}')">
-                  <span>Ver Resolución MEN</span>
-                </button>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      `;
+      if (PROGRAMAS_ACADEMICOS.historial.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 48px 16px; color: var(--text-muted); background: var(--bg-surface-elevated); border-radius: var(--radius-md); border: 1px dashed var(--border-color);">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--verde-principal); margin-bottom: 8px;"><path d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 0 1 .665 6.479A11.952 11.952 0 0 0 12 20.055a11.952 11.952 0 0 0-6.824-2.998 12.078 12.078 0 0 1 .665-6.479L12 14zm-4 6v-7.5l4-2.222"/></svg>
+            <div style="font-weight: 700; color: var(--text-main); font-size: 1rem;">No hay programas académicos registrados actualmente</div>
+            <p style="font-size: 0.85rem; margin-top: 4px;">Utilice el botón superior para registrar un nuevo programa o trámite ante el MEN.</p>
+          </div>
+        `;
+        return;
+      }
     } else if (tabName === 'saces') {
-      container.innerHTML = `
-        <div class="table-responsive">
-          <table class="doc-table">
-            <thead>
-              <tr>
-                <th>Programa Académico</th>
-                <th>Tipo de Trámite Radicado</th>
-                <th>Radicado SACES</th>
-                <th>Fecha de Radicación</th>
-                <th>Sala CONACES Asignada</th>
-                <th>Etapa Actual / Visita de Pares</th>
-                <th>Pares Evaluadores</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${PROGRAMAS_ACADEMICOS.saces.map(s => `
-                <tr>
-                  <td><strong style="color: var(--text-main); font-size: 0.9rem;">${s.programa}</strong></td>
-                  <td><span class="colegiado-badge superior">${s.tramite}</span></td>
-                  <td><span class="norma-num-badge">${s.radicadoSACES}</span></td>
-                  <td><span style="font-size: 0.78rem;">${formatNiceDate(s.fechaRadicacion)}</span></td>
-                  <td><span style="font-size: 0.78rem; font-weight: 600;">${s.salaCONACES}</span></td>
-                  <td><span style="font-weight: 700; color: var(--primary); font-size: 0.8rem;">${s.etapaActual}</span></td>
-                  <td><div style="font-size: 0.74rem; color: var(--text-muted);">${s.paresAsignados}</div></td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      `;
+      if (PROGRAMAS_ACADEMICOS.saces.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 48px 16px; color: var(--text-muted); background: var(--bg-surface-elevated); border-radius: var(--radius-md); border: 1px dashed var(--border-color);">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--verde-principal); margin-bottom: 8px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+            <div style="font-weight: 700; color: var(--text-main); font-size: 1rem;">No hay procesos radicados ante SACES / MEN actualmente</div>
+            <p style="font-size: 0.85rem; margin-top: 4px;">Los trámites de registro calificado y renovaciones se listarán aquí.</p>
+          </div>
+        `;
+        return;
+      }
     } else if (tabName === 'acreditacion') {
-      container.innerHTML = `
-        <div class="colegiados-grid">
-          ${PROGRAMAS_ACADEMICOS.acreditacion.map(a => `
-            <div class="colegiado-card academico">
-              <div class="colegiado-header">
-                <span class="acreditacion-badge alta-calidad">★ Consejo Nacional de Acreditación (CNA)</span>
-                <span class="norma-num-badge">${a.vigencia}</span>
-              </div>
-              <div class="colegiado-title">${a.programa}</div>
-              <div style="font-size: 0.78rem; color: var(--primary); font-weight: 700; margin-bottom: 8px;">
-                ${a.resolucionMEN}
-              </div>
-              <div class="colegiado-desc">${a.aspectosDestacados}</div>
-              <div class="colegiado-footer">
-                <span class="vigencia-pill vigente">${a.estado}</span>
-                <span style="font-size: 0.78rem; font-weight: 800; color: var(--secondary);">Puntaje: ${a.puntajePares}</span>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      `;
+      if (PROGRAMAS_ACADEMICOS.acreditacion.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 48px 16px; color: var(--text-muted); background: var(--bg-surface-elevated); border-radius: var(--radius-md); border: 1px dashed var(--border-color);">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--verde-principal); margin-bottom: 8px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <div style="font-weight: 700; color: var(--text-main); font-size: 1rem;">No hay procesos de acreditación CNA registrados actualmente</div>
+            <p style="font-size: 0.85rem; margin-top: 4px;">Los programas en autoevaluación o con acreditación de alta calidad se listarán aquí.</p>
+          </div>
+        `;
+        return;
+      }
     }
   }
 
-  // Event listeners for tabs
   document.querySelectorAll('#programas-module-tabs .module-tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const ptab = btn.getAttribute('data-ptab') || 'historial';
@@ -143,11 +71,5 @@ export function initProgramas() {
     });
   });
 
-  // Action button
-  document.getElementById('btn-open-programa-modal')?.addEventListener('click', () => {
-    window.showToast('Módulo de radicación de trámites MEN / SACES');
-  });
-
-  // Render initial
   renderProgramasTab('historial');
 }

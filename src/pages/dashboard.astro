@@ -4,7 +4,7 @@ import AppLayout from '@layouts/AppLayout.astro';
 import { supabase } from '@lib/supabase';
 import { calculateDeadlineProgress } from '@lib/utils';
 
-// Consultar peticiones reales en base de datos PostgreSQL
+// 1. Consultar peticiones reales en base de datos PostgreSQL
 const { data: dbPeticiones } = await (supabase
   .from('peticiones' as any)
   .select(`
@@ -26,8 +26,26 @@ const { data: dbPeticiones } = await (supabase
   `)
   .order('created_at', { ascending: false }) as any);
 
+// 2. Consultar normas de cuerpos colegiados reales
+const { data: dbNormas } = await (supabase
+  .from('colegiados_normas' as any)
+  .select('id, organo, tipo, numero, year, fecha, titulo, descriptor, vigencia')
+  .order('created_at', { ascending: false }) as any);
+
+// 3. Consultar convenios institucionales reales
+const { data: dbConvenios } = await (supabase
+  .from('convenios' as any)
+  .select('id, tipo, numero, entidad, estado')
+  .order('created_at', { ascending: false }) as any);
+
 const peticiones = dbPeticiones || [];
+const normas = dbNormas || [];
+const convenios = dbConvenios || [];
+
 const totalPeticiones = peticiones.length;
+const totalNormas = normas.length;
+const totalConvenios = convenios.length;
+
 const totalPendientes = peticiones.filter((p: any) => p.estado !== 'respondida' && p.estado !== 'completada').length;
 const totalRespondidas = peticiones.filter((p: any) => p.estado === 'respondida' || p.estado === 'completada').length;
 const responseRate = totalPeticiones > 0 ? Math.round((totalRespondidas / totalPeticiones) * 100) : 0;
@@ -43,36 +61,37 @@ peticiones.forEach((p: any) => {
   else slaDanger++;
 });
 
-const slaSafePct = totalPeticiones > 0 ? Math.round((slaSafe / totalPeticiones) * 100) : 0;
+const slaSafePct = totalPeticiones > 0 ? Math.round((slaSafe / totalPeticiones) * 100) : 100;
 const slaWarnPct = totalPeticiones > 0 ? Math.round((slaWarn / totalPeticiones) * 100) : 0;
 const slaDangerPct = totalPeticiones > 0 ? Math.round((slaDanger / totalPeticiones) * 100) : 0;
 
 const urgentPeticiones = peticiones.filter((p: any) => p.estado !== 'respondida' && p.estado !== 'completada').slice(0, 4);
+const recentNormas = normas.slice(0, 3);
 ---
 
 <AppLayout title="Dashboard — Panel de Control" activeNav="dashboard">
-  <!-- Hero Banner Despacho Rectoral (Paleta Sobria Institucional) -->
+  <!-- Hero Banner Despacho Rectoral (Paleta Sobria Institucional y Datos 100% Reales) -->
   <div class="hero-banner">
     <div class="hero-content">
       <h2>Despacho Rectoral — <span>Centro de Mando Institucional</span></h2>
-      <p>Monitoreo integral de gobierno universitario: cuerpos colegiados, asuntos jurídicos, fase de juzgamiento, planeación financiera CSU y calendario institucional de Unitrópico.</p>
+      <p>Monitoreo integral de gobierno universitario: cuerpos colegiados, convenios interinstitucionales, radicación oficial de peticiones y control de términos de la Universidad Internacional del Trópico Americano.</p>
     </div>
     <div class="hero-stats-quick">
-      <a href="/dependencias" class="hero-pill" style="cursor: pointer; text-decoration: none;" title="Ver dependencias universitarias">
-        <div class="number" id="quick-total-dependencias">10</div>
-        <div class="label">Dependencias</div>
+      <a href="/peticiones" class="hero-pill" style="cursor: pointer; text-decoration: none;" title="Ver peticiones y radicados oficiales">
+        <div class="number" id="quick-total-peticiones" style="color: var(--dorado-principal);">{totalPeticiones}</div>
+        <div class="label">Peticiones Oficiales</div>
       </a>
       <a href="/normas" class="hero-pill" style="cursor: pointer; text-decoration: none;" title="Ver cuerpos colegiados y normas">
-        <div class="number" id="quick-total-normas" style="color: var(--secondary);">12</div>
+        <div class="number" id="quick-total-normas" style="color: var(--secondary);">{totalNormas}</div>
         <div class="label">Actos Colegiados</div>
       </a>
-      <a href="/planeacion" class="hero-pill" style="cursor: pointer; text-decoration: none;" title="Ver ejecución presupuestal CSU">
-        <div class="number" id="quick-budget-csu" style="color: var(--verde-principal);">$48.5B</div>
-        <div class="label">Presupuesto CSU</div>
+      <a href="/relacionamiento" class="hero-pill" style="cursor: pointer; text-decoration: none;" title="Ver convenios y cooperación">
+        <div class="number" id="quick-total-convenios" style="color: var(--verde-principal);">{totalConvenios}</div>
+        <div class="label">Convenios Vigentes</div>
       </a>
-      <a href="/juridicos" class="hero-pill" style="cursor: pointer; text-decoration: none;" title="Ver brechas normativas">
-        <div class="number" id="quick-normative-coverage" style="color: var(--verde-oscuro);">78%</div>
-        <div class="label">Cobertura Normativa</div>
+      <a href="/calendario" class="hero-pill" style="cursor: pointer; text-decoration: none;" title="Ver cumplimiento de términos SLA">
+        <div class="number" id="quick-sla-compliance" style="color: var(--verde-oscuro);">{slaSafePct}%</div>
+        <div class="label">Términos en Plazo</div>
       </a>
     </div>
   </div>
@@ -106,7 +125,7 @@ const urgentPeticiones = peticiones.filter((p: any) => p.estado !== 'respondida'
         </div>
       </div>
       <div class="kpi-value-row">
-        <div class="kpi-number" id="kpi-total-normas">12</div>
+        <div class="kpi-number" id="kpi-total-normas">{totalNormas}</div>
         <span class="kpi-trend positive">CSU &bull; CA &bull; Rec</span>
       </div>
       <div class="kpi-footer">
@@ -115,25 +134,43 @@ const urgentPeticiones = peticiones.filter((p: any) => p.estado !== 'respondida'
       </div>
     </a>
 
-    <!-- 3. Asuntos Jurídicos y Brechas -->
+    <!-- 3. Relacionamiento y Convenios -->
+    <a href="/relacionamiento" class="kpi-card interactive" style="text-decoration: none;" title="Ir a Relacionamiento Institucional y Convenios">
+      <div class="kpi-header">
+        <span class="kpi-title">Convenios y Cooperación</span>
+        <div class="kpi-icon-wrap" style="color: var(--verde-oscuro); background: var(--verde-suave-bg); border-color: var(--verde-borde);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
+        </div>
+      </div>
+      <div class="kpi-value-row">
+        <div class="kpi-number" id="kpi-total-convenios">{totalConvenios}</div>
+        <span class="kpi-trend positive">Gubernamental &bull; Nal &bull; Int</span>
+      </div>
+      <div class="kpi-footer">
+        <span>Cooperación Oficial</span>
+        <span style="color: var(--verde-principal); font-weight: 700;">100% En Ejecución</span>
+      </div>
+    </a>
+
+    <!-- 4. Asuntos Jurídicos -->
     <a href="/juridicos" class="kpi-card interactive" style="text-decoration: none;" title="Ir a Asuntos Jurídicos y Brechas Normativas">
       <div class="kpi-header">
         <span class="kpi-title">Asuntos Jurídicos</span>
-        <div class="kpi-icon-wrap" style="color: var(--verde-oscuro); background: var(--verde-suave-bg); border-color: var(--verde-borde);">
+        <div class="kpi-icon-wrap" style="color: var(--verde-principal); background: var(--verde-suave-bg); border-color: var(--verde-borde);">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>
         </div>
       </div>
       <div class="kpi-value-row">
-        <div class="kpi-number" id="kpi-total-juridicos-dash">18</div>
-        <span class="kpi-trend positive">5 Conceptos</span>
+        <div class="kpi-number" id="kpi-total-juridicos-dash">0</div>
+        <span class="kpi-trend positive" style="background: var(--verde-suave-bg); color: var(--verde-principal);">0 Conceptos</span>
       </div>
       <div class="kpi-footer">
-        <span>Brechas Mitigadas</span>
-        <span style="color: var(--verde-principal); font-weight: 700;">8 Proyectos (78%)</span>
+        <span>Oficina Jurídica</span>
+        <span style="color: var(--verde-principal); font-weight: 700;">Sin expedientes</span>
       </div>
     </a>
 
-    <!-- 4. Fase de Juzgamiento -->
+    <!-- 5. Juzgamiento Disciplinario -->
     <a href="/juzgamiento" class="kpi-card interactive" style="text-decoration: none;" title="Ir a Fase de Juzgamiento Disciplinario">
       <div class="kpi-header">
         <span class="kpi-title">Juzgamiento Disciplinario</span>
@@ -142,16 +179,16 @@ const urgentPeticiones = peticiones.filter((p: any) => p.estado !== 'respondida'
         </div>
       </div>
       <div class="kpi-value-row">
-        <div class="kpi-number" id="kpi-total-juzgamiento-dash">5</div>
-        <span class="kpi-trend positive" style="background: var(--dorado-suave-bg); color: var(--dorado-oscuro);">3 Autos / 2 Apel.</span>
+        <div class="kpi-number" id="kpi-total-juzgamiento-dash">0</div>
+        <span class="kpi-trend positive" style="background: var(--dorado-suave-bg); color: var(--dorado-oscuro);">0 Procesos</span>
       </div>
       <div class="kpi-footer">
         <span>Régimen Disciplinario</span>
-        <span style="color: var(--dorado-oscuro); font-weight: 700;">2da Instancia Rector</span>
+        <span style="color: var(--dorado-oscuro); font-weight: 700;">Al Día</span>
       </div>
     </a>
 
-    <!-- 5. Planeación Estratégica CSU -->
+    <!-- 6. Planeación y CSU -->
     <a href="/planeacion" class="kpi-card interactive" style="text-decoration: none;" title="Ir a Planeación y Gestión CSU">
       <div class="kpi-header">
         <span class="kpi-title">Planeación y CSU</span>
@@ -160,30 +197,12 @@ const urgentPeticiones = peticiones.filter((p: any) => p.estado !== 'respondida'
         </div>
       </div>
       <div class="kpi-value-row">
-        <div class="kpi-number" id="kpi-total-budget-dash" style="font-size: 1.85rem;">74.2%</div>
-        <span class="kpi-trend positive">$48.500M</span>
+        <div class="kpi-number" id="kpi-total-budget-dash" style="font-size: 1.85rem;">0</div>
+        <span class="kpi-trend positive">0 Informes</span>
       </div>
       <div class="kpi-footer">
-        <span>Informes Presentados</span>
-        <span style="color: var(--verde-claro); font-weight: 700;">8 Fin. / 3 Gestión</span>
-      </div>
-    </a>
-
-    <!-- 6. Google Calendar y Semáforo -->
-    <a href="/calendario" class="kpi-card interactive" style="text-decoration: none;" title="Ir a Calendario y Semáforo">
-      <div class="kpi-header">
-        <span class="kpi-title">Agenda y Semáforo</span>
-        <div class="kpi-icon-wrap" style="color: var(--dorado-principal); background: var(--dorado-suave-bg); border-color: var(--dorado-borde);">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        </div>
-      </div>
-      <div class="kpi-value-row">
-        <div class="kpi-number" id="kpi-total-sessions-dash">2</div>
-        <span class="kpi-trend positive" style="background: var(--dorado-suave-bg); color: var(--dorado-oscuro);">Sesión CSU 24 Oct</span>
-      </div>
-      <div class="kpi-footer">
-        <span>Google Calendar Sync</span>
-        <span style="color: var(--dorado-oscuro); font-weight: 700;">En Línea &bull; 6 Eventos</span>
+        <span>Seguimiento CSU</span>
+        <span style="color: var(--verde-claro); font-weight: 700;">En Programación</span>
       </div>
     </a>
   </div>
@@ -343,10 +362,31 @@ const urgentPeticiones = peticiones.filter((p: any) => p.estado !== 'respondida'
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
           <span>Cuerpos Colegiados: Resoluciones y Acuerdos Recientes</span>
         </div>
-        <a href="/normas" class="panel-link" style="text-decoration: none;">Explorar normativa (12) &rarr;</a>
+        <a href="/normas" class="panel-link" style="text-decoration: none;">Explorar normativa ({totalNormas}) &rarr;</a>
       </div>
       <div class="dashboard-colegiados-mini-list" id="dashboard-colegiados-recent-list">
-        <!-- Dinámico desde JS -->
+        {recentNormas.length > 0 ? (
+          recentNormas.map((norma: any) => (
+            <div class="colegiado-mini-item" style="padding: 10px 0; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px;">
+                  <span class="badge" style="background: var(--verde-suave-bg); color: var(--verde-principal); font-size: 0.7rem; padding: 2px 6px; border: 1px solid var(--verde-borde);">
+                    {norma.tipo} {norma.numero}
+                  </span>
+                  <span style="font-size: 0.75rem; color: var(--text-muted);">{norma.fecha}</span>
+                </div>
+                <div style="font-weight: 600; font-size: 0.85rem; color: var(--text-main); line-height: 1.3;">
+                  {norma.titulo}
+                </div>
+              </div>
+              <a href="/normas" class="btn btn-ghost btn-sm" style="text-decoration: none; font-size: 0.75rem;">Ver</a>
+            </div>
+          ))
+        ) : (
+          <div style="text-align: center; padding: 24px; color: var(--text-muted); font-size: 0.82rem;">
+            No hay actos colegiados registrados actualmente.
+          </div>
+        )}
       </div>
     </div>
 
@@ -360,22 +400,8 @@ const urgentPeticiones = peticiones.filter((p: any) => p.estado !== 'respondida'
         <a href="/calendario" class="panel-link" style="text-decoration: none;">Ver calendario &rarr;</a>
       </div>
       <div class="dashboard-cal-mini-list" id="dashboard-calendar-recent-list">
-        <!-- Dinámico desde JS -->
+        <!-- Eventos institucionales -->
       </div>
-    </div>
-  </div>
-
-  <!-- Fila 3: Carga Operativa por Dependencias -->
-  <div class="panel-box">
-    <div class="panel-header">
-      <div class="panel-title">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        <span>Carga Operativa y Despachos por Dependencia Universitaria</span>
-      </div>
-      <a href="/dependencias" class="panel-link" style="text-decoration: none;">Ver las 10 dependencias y oficios &rarr;</a>
-    </div>
-    <div id="dashboard-dependencias-workload-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
-      <!-- Dinámico desde JS -->
     </div>
   </div>
 </AppLayout>

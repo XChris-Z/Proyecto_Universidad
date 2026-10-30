@@ -1,6 +1,20 @@
 ---
 // src/pages/normas.astro
 import AppLayout from '@layouts/AppLayout.astro';
+import { supabase } from '@lib/supabase';
+
+// Consultar normas oficiales reales desde Supabase
+const { data: dbNormas } = await (supabase
+  .from('colegiados_normas' as any)
+  .select('*')
+  .order('created_at', { ascending: false }) as any);
+
+const normasList = dbNormas || [];
+const total = normasList.length;
+const csuCount = normasList.filter((n: any) => n.organo_code === 'csu').length;
+const caCount = normasList.filter((n: any) => n.organo_code === 'ca').length;
+const recCount = normasList.filter((n: any) => n.organo_code === 'rectoria').length;
+const eleCount = normasList.filter((n: any) => n.organo_code === 'electoral').length;
 ---
 
 <AppLayout title="Cuerpos Colegiados y Normativa" activeNav="normas">
@@ -24,27 +38,27 @@ import AppLayout from '@layouts/AppLayout.astro';
       </div>
     </div>
 
-    <!-- Submódulos por Cuerpo Colegiado -->
+    <!-- Submódulos por Cuerpo Colegiado con Contadores Reales -->
     <div class="module-tabs" id="normas-module-tabs">
       <button class="module-tab-btn active" data-org="all">
         <span>Todos los Cuerpos Colegiados</span>
-        <span class="tab-count" id="normas-count-all">12</span>
+        <span class="tab-count" id="normas-count-all">{total}</span>
       </button>
       <button class="module-tab-btn" data-org="csu">
         <span>Consejo Superior (CSU)</span>
-        <span class="tab-count" id="normas-count-csu">4</span>
+        <span class="tab-count" id="normas-count-csu">{csuCount}</span>
       </button>
       <button class="module-tab-btn" data-org="ca">
         <span>Consejo Académico (CA)</span>
-        <span class="tab-count" id="normas-count-ca">3</span>
+        <span class="tab-count" id="normas-count-ca">{caCount}</span>
       </button>
       <button class="module-tab-btn" data-org="rectoria">
         <span>Resoluciones Rectorales</span>
-        <span class="tab-count" id="normas-count-rectoria">3</span>
+        <span class="tab-count" id="normas-count-rectoria">{recCount}</span>
       </button>
       <button class="module-tab-btn" data-org="electoral">
         <span>Consejo Electoral</span>
-        <span class="tab-count" id="normas-count-electoral">2</span>
+        <span class="tab-count" id="normas-count-electoral">{eleCount}</span>
       </button>
     </div>
 
@@ -52,7 +66,7 @@ import AppLayout from '@layouts/AppLayout.astro';
     <div style="display: flex; gap: 12px; margin-bottom: 18px; flex-wrap: wrap;">
       <div class="search-box" style="flex: 1; min-width: 260px;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-        <input type="text" id="normas-search-input" placeholder="Buscar por número (Ej: Acuerdo 012), palabra clave o tema...">
+        <input type="text" id="normas-search-input" placeholder="Buscar por número (Ej: Acuerdo 014), palabra clave o tema...">
       </div>
       <select class="form-select" id="normas-filter-vigencia" style="width: 180px;">
         <option value="all">Todas las Vigencias</option>
@@ -60,74 +74,102 @@ import AppLayout from '@layouts/AppLayout.astro';
         <option value="modificado">Modificado</option>
         <option value="derogado">Derogado</option>
       </select>
-      <select class="form-select" id="normas-filter-year" style="width: 140px;">
-        <option value="all">Todos los Años</option>
-        <option value="2026">2026</option>
-        <option value="2025">2025</option>
-      </select>
     </div>
 
     <div class="colegiados-grid" id="colegiados-cards-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;">
-      <!-- Dinámico desde JS -->
+      {normasList.length > 0 ? (
+        normasList.map((norma: any) => (
+          <div class="colegiado-card" data-org={norma.organo_code} data-vigencia={norma.vigencia} style="border: 1px solid var(--border-color); border-radius: 10px; padding: 18px; background: var(--bg-surface); display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                <span class="badge" style="background: var(--verde-suave-bg); color: var(--verde-principal); border: 1px solid var(--verde-borde); font-size: 0.72rem;">
+                  {norma.organo}
+                </span>
+                <span class="vigencia-pill vigente" style="font-size: 0.68rem; text-transform: uppercase;">
+                  {norma.vigencia}
+                </span>
+              </div>
+              <h4 style="font-size: 0.98rem; font-weight: 700; color: var(--text-main); margin-bottom: 4px;">
+                {norma.tipo} {norma.numero}
+              </h4>
+              <div style="font-size: 0.76rem; color: var(--text-muted); margin-bottom: 8px;">
+                Fecha: {norma.fecha} &bull; Descriptor: <strong>{norma.descriptor}</strong>
+              </div>
+              <p style="font-size: 0.82rem; color: var(--text-main); line-height: 1.4; margin-bottom: 12px;">
+                {norma.titulo}
+              </p>
+              {norma.resumen && (
+                <p style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.35; margin-bottom: 12px; font-style: italic;">
+                  {norma.resumen}
+                </p>
+              )}
+            </div>
+            <div style="border-top: 1px solid var(--border-subtle); padding-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 0.72rem; color: var(--text-muted);">{norma.signatarios}</span>
+              <button class="btn btn-secondary btn-sm" onclick={`window.showToast('Descargando ${norma.numero}...')`} style="font-size: 0.74rem;">
+                Descargar PDF
+              </button>
+            </div>
+          </div>
+        ))
+      ) : (
+        <div style="grid-column: 1 / -1; text-align: center; padding: 48px 16px; color: var(--text-muted); background: var(--bg-surface-elevated); border-radius: var(--radius-md); border: 1px dashed var(--border-color);">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--verde-principal); margin-bottom: 8px;"><path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+          <div style="font-weight: 700; color: var(--text-main); font-size: 1rem;">No hay actos ni normas sistematizadas actualmente</div>
+          <p style="font-size: 0.85rem; margin-top: 4px;">Utilice el botón superior para radicar el primer acto administrativo oficial.</p>
+        </div>
+      )}
     </div>
   </div>
 
-  <!-- Modal: Radicar Nueva Norma de Cuerpo Colegiado -->
+  <!-- Modal para nueva norma (preparado para Fase 3) -->
   <div class="modal-backdrop" id="new-norma-modal" style="display: none;">
-    <div class="modal-card" style="max-width: 640px;">
+    <div class="modal-card" style="max-width: 600px;">
       <div class="modal-header">
-        <h3>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-          <span>Radicar Acto / Norma de Cuerpo Colegiado</span>
-        </h3>
+        <h3>Radicar Nuevo Acto / Norma</h3>
         <button class="btn-close-modal" id="btn-close-new-norma-modal">&times;</button>
       </div>
-      <form id="new-norma-form">
-        <div class="modal-body">
-          <div class="form-row-2">
-            <div class="form-group">
-              <label class="form-label">Órgano Colegiado Emisor *</label>
-              <select class="form-select" id="select-norma-organo" required>
-                <option value="Consejo Superior">Consejo Superior Universitario (CSU)</option>
-                <option value="Consejo Académico">Consejo Académico (CA)</option>
-                <option value="Rectoría">Rectoría (Resolución Rectoral)</option>
-                <option value="Consejo Electoral">Consejo Electoral</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Tipo de Acto Administrativo *</label>
-              <select class="form-select" id="select-norma-tipo" required>
-                <option value="Acuerdo">Acuerdo</option>
-                <option value="Resolución">Resolución</option>
-                <option value="Circular Normativa">Circular Normativa</option>
-                <option value="Acta de Sesión">Acta de Sesión</option>
-              </select>
-            </div>
+      <div class="modal-body">
+        <form id="form-new-norma">
+          <div class="form-group">
+            <label class="form-label">Cuerpo Colegiado *</label>
+            <select class="form-select" id="new-norma-organo" required>
+              <option value="csu">Consejo Superior Universitario (CSU)</option>
+              <option value="ca">Consejo Académico (CA)</option>
+              <option value="rectoria">Rectoría (Resolución Rectoral)</option>
+              <option value="electoral">Consejo Electoral</option>
+            </select>
           </div>
           <div class="form-row-2">
             <div class="form-group">
-              <label class="form-label">Número de Acto Oficial *</label>
-              <input type="text" class="form-input" id="input-norma-numero" placeholder="Ej: 015" required>
+              <label class="form-label">Tipo de Acto *</label>
+              <input type="text" class="form-input" id="new-norma-tipo" placeholder="Ej: Acuerdo o Resolución" required />
             </div>
+            <div class="form-group">
+              <label class="form-label">Número / Consecutivo *</label>
+              <input type="text" class="form-input" id="new-norma-numero" placeholder="Ej: Acuerdo 015" required />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Título Oficial *</label>
+            <textarea class="form-textarea" id="new-norma-titulo" rows="2" placeholder="Por el cual se adopta..." required></textarea>
+          </div>
+          <div class="form-row-2">
             <div class="form-group">
               <label class="form-label">Fecha de Expedición *</label>
-              <input type="date" class="form-input" id="input-norma-fecha" required>
+              <input type="date" class="form-input" id="new-norma-fecha" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Descriptor Temático</label>
+              <input type="text" class="form-input" id="new-norma-descriptor" placeholder="Ej: Régimen Docente" />
             </div>
           </div>
-          <div class="form-group">
-            <label class="form-label">Título o Epígrafe del Acto *</label>
-            <input type="text" class="form-input" id="input-norma-titulo" placeholder="Ej: Por el cual se adopta la política..." required>
+          <div class="modal-footer" style="padding: 12px 0 0 0;">
+            <button type="button" class="btn btn-ghost" id="btn-cancel-norma">Cancelar</button>
+            <button type="submit" class="btn btn-primary" id="btn-submit-norma">Guardar Acto</button>
           </div>
-          <div class="form-group">
-            <label class="form-label">Resumen / Objeto del Acto Administrativo</label>
-            <textarea class="form-textarea" id="input-norma-resumen" rows="3" placeholder="Detalle de las disposiciones..."></textarea>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-ghost" id="btn-cancel-new-norma">Cancelar</button>
-          <button type="submit" class="btn btn-primary">Guardar e Incorporar a Colección</button>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   </div>
 </AppLayout>
@@ -136,4 +178,3 @@ import AppLayout from '@layouts/AppLayout.astro';
   import { initNormas } from '@scripts/normas';
   initNormas();
 </script>
-
