@@ -1,11 +1,17 @@
 ---
 // src/pages/planeacion.astro
 import AppLayout from '@layouts/AppLayout.astro';
-import { PLANEACION_DATA } from '@data/planeacion';
+import { supabase } from '@lib/supabase';
 
-const countFin = PLANEACION_DATA.informesFinancieros.length;
-const countRec = PLANEACION_DATA.informesRectorales.length;
-const countMetas = PLANEACION_DATA.metasPDI.length;
+// Consultar informes de planeación reales desde Supabase
+const { data: dbInformes } = await (supabase
+  .from('planeacion_informes' as any)
+  .select('*')
+  .order('created_at', { ascending: false }) as any);
+
+const informesList = dbInformes || [];
+const countFin = informesList.filter((i: any) => i.tipo === 'financiero').length;
+const countRec = informesList.filter((i: any) => i.tipo === 'rectoral').length;
 ---
 
 <AppLayout title="Planeación y Gestión CSU" activeNav="planeacion">
@@ -20,19 +26,26 @@ const countMetas = PLANEACION_DATA.metasPDI.length;
           Informes Financieros Mensuales e Informes de Gestión Rectoral del Plan de Desarrollo Institucional (PDI Unitrópico)
         </div>
       </div>
+
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <button class="btn btn-primary" id="btn-open-planeacion-modal">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          <span>+ Radicar Informe ante CSU</span>
+        </button>
+      </div>
     </div>
 
-    <!-- KPIs Financieros Globales (Valores Reales / Sin Datos Ficticios) -->
+    <!-- KPIs Financieros Globales Dinámicos -->
     <div class="financial-kpi-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px;">
       <div class="financial-stat-card" style="padding: 16px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-surface);">
-        <div class="label" style="font-size: 0.78rem; color: var(--text-muted);">Presupuesto Oficial 2026</div>
-        <div class="value" style="font-size: 1.4rem; font-weight: 800; color: var(--text-main);">$0 COP</div>
-        <div class="subtext" style="font-size: 0.72rem; color: var(--text-muted);">Pendiente de certificación CSU</div>
+        <div class="label" style="font-size: 0.78rem; color: var(--text-muted);">Informes Financieros Radicados</div>
+        <div class="value" style="font-size: 1.4rem; font-weight: 800; color: var(--text-main);" id="plan-kpi-count-fin">{countFin}</div>
+        <div class="subtext" style="font-size: 0.72rem; color: var(--text-muted);">Verificados por Revisoría/CSU</div>
       </div>
       <div class="financial-stat-card" style="padding: 16px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-surface);">
-        <div class="label" style="font-size: 0.78rem; color: var(--text-muted);">Ejecución Presupuestal</div>
-        <div class="value" style="font-size: 1.4rem; font-weight: 800; color: var(--primary);">0%</div>
-        <div class="subtext" style="font-size: 0.72rem; color: var(--text-muted);">Sin informes mensuales radicados</div>
+        <div class="label" style="font-size: 0.78rem; color: var(--text-muted);">Informes de Gestión Rectoral</div>
+        <div class="value" style="font-size: 1.4rem; font-weight: 800; color: var(--primary);" id="plan-kpi-count-rec">{countRec}</div>
+        <div class="subtext" style="font-size: 0.72rem; color: var(--text-muted);">Rendición oficial de cuentas</div>
       </div>
       <div class="financial-stat-card" style="padding: 16px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-surface);">
         <div class="label" style="font-size: 0.78rem; color: var(--text-muted);">Aportes Casanare / Nación</div>
@@ -40,9 +53,9 @@ const countMetas = PLANEACION_DATA.metasPDI.length;
         <div class="subtext" style="font-size: 0.72rem; color: var(--text-muted);">En trámite de conciliación contable</div>
       </div>
       <div class="financial-stat-card" style="padding: 16px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-surface);">
-        <div class="label" style="font-size: 0.78rem; color: var(--text-muted);">Avance Metas PDI Rectoral</div>
-        <div class="value" style="font-size: 1.4rem; font-weight: 800; color: var(--secondary);">0%</div>
-        <div class="subtext" style="font-size: 0.72rem; color: var(--text-muted);">0 Metas evaluadas</div>
+        <div class="label" style="font-size: 0.78rem; color: var(--text-muted);">Ejes Estratégicos PDI</div>
+        <div class="value" style="font-size: 1.4rem; font-weight: 800; color: var(--secondary);">6 Ejes</div>
+        <div class="subtext" style="font-size: 0.72rem; color: var(--text-muted);">Vigencia 2020-2030</div>
       </div>
     </div>
 
@@ -57,12 +70,75 @@ const countMetas = PLANEACION_DATA.metasPDI.length;
       </button>
       <button class="module-tab-btn" data-ptab="metas">
         <span>Ejes Estratégicos PDI 2020-2030</span>
-        <span class="tab-count">{countMetas}</span>
+        <span class="tab-count">6</span>
       </button>
     </div>
 
     <div id="planeacion-tab-content" style="margin-top: 18px;">
-      <!-- Dinámico desde JS -->
+      <!-- Dinámico desde JS con datos de Supabase -->
+    </div>
+  </div>
+
+  <!-- Modal: Radicar Informe de Planeación ante CSU -->
+  <div class="modal-backdrop" id="new-planeacion-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; align-items: center; justify-content: center; padding: 16px;">
+    <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 600px; border-radius: var(--radius-md); box-shadow: var(--shadow-md); overflow: hidden;">
+      <div class="modal-header" style="background: var(--verde-suave-bg); border-bottom: 1px solid var(--verde-borde); padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--verde-principal); margin: 0; display: flex; align-items: center; gap: 8px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          <span>Radicar Informe ante el Consejo Superior (CSU)</span>
+        </h3>
+        <button type="button" class="btn-close-modal" id="btn-close-plan-modal" style="background: transparent; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer;">&times;</button>
+      </div>
+
+      <form id="form-new-planeacion" style="padding: 24px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Tipo de Informe *</label>
+            <select id="new-plan-tipo" class="form-input" style="cursor: pointer;" required>
+              <option value="financiero" selected>Informe Financiero Mensual CSU</option>
+              <option value="rectoral">Informe de Gestión Rectoral PDI</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Período / Vigencia *</label>
+            <input type="text" id="new-plan-periodo" class="form-input" placeholder="Ej: Octubre 2026 / Vigencia 2026" required />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Radicado ante CSU</label>
+            <input type="text" id="new-plan-radicado" class="form-input" placeholder="Ej: CSU-INF-2026-012" />
+          </div>
+          <div class="form-group">
+            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">% Ejecución Presupuestal</label>
+            <input type="number" id="new-plan-ejecucion" class="form-input" min="0" max="100" value="0" />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Ingresos Totales (COP)</label>
+            <input type="text" id="new-plan-ingresos" class="form-input" placeholder="Ej: $4.250.000.000" />
+          </div>
+          <div class="form-group">
+            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Gastos Ejecutados (COP)</label>
+            <input type="text" id="new-plan-gastos" class="form-input" placeholder="Ej: $3.890.000.000" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Resumen Ejecutivo / Observaciones</label>
+          <textarea id="new-plan-observaciones" class="form-input" rows="3" placeholder="Síntesis de los logros alcanzados y ejecución reportada al Consejo Superior..."></textarea>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px;">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-plan">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-plan" style="font-weight: 700;">
+            Radicar en Supabase
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 </AppLayout>
