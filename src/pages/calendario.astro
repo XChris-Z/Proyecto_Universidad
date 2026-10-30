@@ -30,7 +30,18 @@ import AppLayout from '@layouts/AppLayout.astro';
         </div>
 
         <div class="gcal-topbar-right">
-          <div class="search-box" style="width: 220px;">
+          <!-- Estado de Sincronización Google Calendar -->
+          <div id="gcal-sync-indicator" style="display: flex; align-items: center; gap: 8px;">
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-gcal-sync" title="Sincronizar eventos de Google Calendar" style="padding: 6px 12px; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 6px;">
+              <svg id="sync-icon-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+              <span>Sincronizar</span>
+            </button>
+            <span class="badge" id="gcal-sync-badge" style="font-size: 0.72rem; padding: 4px 8px; cursor: pointer;" title="Haz clic para conectar o reconectar tu cuenta institucional">
+              Detectando...
+            </span>
+          </div>
+
+          <div class="search-box" style="width: 200px;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
             <input type="text" id="gcal-search-input" placeholder="Buscar en calendario...">
           </div>
@@ -81,19 +92,19 @@ import AppLayout from '@layouts/AppLayout.astro';
               <span style="color: #dc2626; display: flex; align-items: center; gap: 6px;">
                 <span class="gcal-cat-dot" style="background: #dc2626;"></span> Críticos / &lt;5 días
               </span>
-              <span class="badge-counter" id="gcal-crit-count" style="background: #dc2626; color: #fff;">2</span>
+              <span class="badge-counter" id="gcal-crit-count" style="background: #dc2626; color: #fff;">0</span>
             </div>
             <div class="gcal-semaforo-row">
               <span style="color: #d97706; display: flex; align-items: center; gap: 6px;">
                 <span class="gcal-cat-dot" style="background: #f59e0b;"></span> Advertencia Media
               </span>
-              <span class="badge-counter" id="gcal-warn-count" style="background: #f59e0b; color: #fff;">3</span>
+              <span class="badge-counter" id="gcal-warn-count" style="background: #f59e0b; color: #fff;">0</span>
             </div>
             <div class="gcal-semaforo-row">
               <span style="color: #059669; display: flex; align-items: center; gap: 6px;">
                 <span class="gcal-cat-dot" style="background: #10b981;"></span> En Término Seguro
               </span>
-              <span class="badge-counter" id="gcal-safe-count" style="background: #10b981; color: #fff;">6</span>
+              <span class="badge-counter" id="gcal-safe-count" style="background: #10b981; color: #fff;">0</span>
             </div>
           </div>
 

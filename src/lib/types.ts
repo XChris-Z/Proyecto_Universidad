@@ -259,7 +259,7 @@ export interface PlaneacionData {
 // Calendario
 // ──────────────────────────────────────────────
 
-export type CalendarioEventType = 'colegiado' | 'reporte' | 'financiero' | 'academica';
+export type CalendarioEventType = 'colegiado' | 'reporte' | 'financiero' | 'academica' | 'peticion';
 export type EventUrgency = 'danger' | 'warning' | 'safe';
 
 export interface CalendarioEvent {
@@ -272,6 +272,8 @@ export interface CalendarioEvent {
   urgencia: EventUrgency;
   diasRestantes: number;
   descripcion: string;
+  link?: string;
+  hora?: string;
 }
 
 // ──────────────────────────────────────────────
