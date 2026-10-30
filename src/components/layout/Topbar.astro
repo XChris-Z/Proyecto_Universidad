@@ -12,7 +12,11 @@ const { title = 'Dashboard — Panel de Control' } = Astro.props;
     <button class="btn-hamburger" id="btn-mobile-menu-toggle" aria-label="Abrir menú de navegación" title="Abrir menú de navegación">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
-    <div class="page-header-title">
+    <div class="page-header-title" style="display: flex; align-items: center; gap: 12px;">
+      <a href="/dashboard" class="topbar-logo-link" style="display: inline-flex; align-items: center; text-decoration: none;" title="Inicio Dashboard">
+        <img src="/logo.png" alt="Unitrópico" class="topbar-logo-img" style="height: 32px; width: auto; object-fit: contain;" />
+      </a>
+      <div style="height: 22px; width: 1px; background: var(--border-color); display: inline-block;"></div>
       <h1 class="page-title" id="view-title">
         {title}
         <span class="accent-dot"></span>

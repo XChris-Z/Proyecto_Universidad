@@ -26,7 +26,7 @@ export function initAppLayout() {
         activeUser = {
           id: parsed.id || 'usr-root',
           name: parsed.name,
-          email: parsed.email || 'cristian.lemus@unitropico.edu.co',
+          email: parsed.email || 'christianlemus.es@unitropico.edu.co',
           role: parsed.role || 'Administrador General',
           roleId: parsed.roleId || 'admin',
           initials: parsed.initials || 'CL',
@@ -114,6 +114,7 @@ export function initAppLayout() {
   // 6. Cierre de sesión
   document.getElementById('btn-logout')?.addEventListener('click', () => {
     localStorage.removeItem(SESSION_STORAGE_KEY);
+    localStorage.removeItem('sgd_current_user');
     sessionStorage.removeItem(SESSION_STORAGE_KEY);
     document.cookie = `${SESSION_COOKIE_KEY}=; path=/; max-age=0;`;
     window.showToast('Sesión finalizada. Redirigiendo...');

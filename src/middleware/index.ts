@@ -16,6 +16,15 @@ export const onRequest = defineMiddleware(({ url, cookies, redirect }, next) => 
     return redirect('/login');
   }
 
+  // Si ya tiene sesión activa e intenta acceder a /login, redirigir al dashboard
+  if (pathname === '/login') {
+    const session = cookies.get(SESSION_COOKIE_KEY);
+    if (session?.value) {
+      return redirect('/dashboard');
+    }
+    return next();
+  }
+
   // Comprobar si la ruta solicitada es pública
   const isPublic = PUBLIC_ROUTES.some((route) => pathname.startsWith(route));
   if (isPublic) {

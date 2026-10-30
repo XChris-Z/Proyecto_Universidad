@@ -490,61 +490,36 @@ const usersList = dbProfiles && dbProfiles.length > 0 ? dbProfiles : [];
         }
 
         try {
-          const newId = `usr-${Date.now().toString(36)}`;
-          const nowIso = new Date().toISOString();
+          // Crear usuario mediante RPC atómico en Supabase (Auth + Profiles + Users + Permisos)
+          const { data: createData, error: rpcErr } = await (supabase.rpc as any)('admin_create_user', {
+            p_name: name,
+            p_email: email,
+            p_password: password,
+            p_role: role,
+            p_cargo: cargo || (role === 'admin' ? 'Administrador' : 'Funcionario')
+          });
+
+          if (rpcErr) throw rpcErr;
+
+          const newId = createData?.id || `usr-${Date.now().toString(36)}`;
           const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'FN';
           const isAdmin = role === 'admin';
 
-          // 1. Insertar en tabla profiles de Supabase
-          const { error: pErr } = await supabase.from('profiles').insert([{
-            id: newId,
-            email,
-            full_name: name,
-            role,
-            cargo,
-            is_provisional_password: true,
-            created_at: nowIso,
-            updated_at: nowIso
-          }]);
-
-          if (pErr) throw pErr;
-
-          // 2. Insertar en tabla users de Supabase
-          await supabase.from('users').insert([{
-            id: newId,
-            name,
-            email,
-            role_title: cargo,
-            role_id: role,
-            initials,
-            avatar_color: isAdmin ? '#00594E' : '#D4AF37',
-            is_active: true,
-            created_at: nowIso,
-            updated_at: nowIso
-          }]);
-
-          // 3. Asignar permisos iniciales en user_permissions
+          // Permisos iniciales
           const initialPerms = isAdmin
-            ? ['view_dashboard', 'view_files', 'upload_files', 'reassign_files', 'respond_petitions', 'manage_templates', 'manage_users', 'manage_roles', 'download_documents', 'delete_files']
-            : ['view_dashboard', 'view_files', 'respond_petitions', 'download_documents'];
-
-          await supabase.from('user_permissions').insert(initialPerms.map(p => ({
-            user_id: newId,
-            permission_id: p,
-            is_granted: true,
-            created_at: nowIso
-          })));
+            ? ['view_dashboard', 'view_files', 'upload_files', 'download_files', 'manage_users', 'manage_roles', 'view_audit_log']
+            : ['view_dashboard', 'view_files', 'download_files'];
 
           userPermissionsMap[newId] = initialPerms;
 
-          // 4. Registrar en Auditoría Oficial
+          // Registrar en Auditoría Oficial
           await logSystemActivity({
-            actor: { id: 'usr-root', name: 'Dr. Cristian Lemus', role: 'admin' },
+            actor: { id: 'usr-root', name: 'ING. Christian Lemus', role: 'admin' },
             action: 'Creación de Funcionario Institucional',
             actionType: 'SEGURIDAD',
             entity: 'Control de Usuarios y Roles',
             entityId: newId,
-            details: `El Administrador registró al nuevo funcionario "${name}" (${email}) con rol ${role.toUpperCase()} y cargo "${cargo}".`,
+            details: `El Administrador registró al nuevo funcionario "${name}" (${email}) con rol ${role.toUpperCase()} y cargo "${cargo}". Cuenta aprovisionada en Supabase Auth.`,
             severity: 'INFO'
           });
 
@@ -655,27 +630,20 @@ const usersList = dbProfiles && dbProfiles.length > 0 ? dbProfiles : [];
         (btnConfirmDelete as HTMLButtonElement).disabled = true;
 
         try {
-          // 1. Eliminar de Supabase user_permissions
-          await supabase.from('user_permissions').delete().eq('user_id', userToDelete.id);
+          // Eliminar mediante RPC atómico en Supabase (Auth + Profiles + Users + Permisos)
+          const { error: delRpcErr } = await (supabase.rpc as any)('admin_delete_user', {
+            p_user_id: userToDelete.id
+          });
+          if (delRpcErr) throw delRpcErr;
 
-          // 2. Desvincular en audit_logs si existiera referencia
-          await supabase.from('audit_logs').update({ actor_id: null }).eq('actor_id', userToDelete.id);
-
-          // 3. Eliminar de Supabase profiles
-          const { error: pErr } = await supabase.from('profiles').delete().eq('id', userToDelete.id);
-          if (pErr) throw pErr;
-
-          // 4. Eliminar de Supabase users
-          await supabase.from('users').delete().eq('id', userToDelete.id);
-
-          // 5. Registrar en Auditoría Oficial
+          // Registrar en Auditoría Oficial
           await logSystemActivity({
             actor: { id: 'usr-root', name: 'ING. Christian Lemus', role: 'admin' },
             action: 'Baja y Eliminación de Funcionario Institucional',
             actionType: 'ELIMINACION',
             entity: 'Control de Usuarios y Roles',
             entityId: userToDelete.id,
-            details: `El Administrador dio de baja y eliminó definitivamente al funcionario "${userToDelete.name}" (${userToDelete.email}) del sistema.`,
+            details: `El Administrador dio de baja y eliminó definitivamente al funcionario "${userToDelete.name}" (${userToDelete.email}) de Supabase Auth y de la base de datos.`,
             severity: 'CRITICAL'
           });
 
