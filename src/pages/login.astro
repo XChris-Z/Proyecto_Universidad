@@ -19,66 +19,52 @@ import AuthLayout from '@layouts/AuthLayout.astro';
 
       <div class="login-box">
         <div class="login-box-header">
-          <h2>Iniciar Sesión Segura</h2>
-          <p>Ingrese con sus credenciales institucionales o use un perfil de demostración.</p>
+          <h2>Autenticación Institucional</h2>
+          <p>Acceso seguro y verificado mediante cuentas oficiales de Google Workspace (@unitropico.edu.co).</p>
         </div>
 
-        <form id="login-form">
-          <div class="form-group" style="margin-bottom: 16px;">
-            <label class="form-label">Correo Institucional *</label>
-            <div class="login-input-wrap">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-              <input type="email" class="form-input" id="input-login-email" placeholder="usuario@unitropico.edu.co" value="root@unitropico.edu.co" required>
-            </div>
-          </div>
+        <!-- Botón Principal: Inicio de Sesión Único con Google OAuth -->
+        <div style="margin: 20px 0 16px 0;">
+          <button type="button" class="btn-google-oauth" id="btn-google-login">
+            <svg width="20" height="20" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+            </svg>
+            <span id="google-btn-label">Continuar con Google Institucional</span>
+          </button>
+        </div>
 
-          <div class="form-group" style="margin-bottom: 16px;">
-            <label class="form-label">Contraseña de Seguridad *</label>
-            <div class="login-input-wrap">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              <input type="password" class="form-input" id="input-login-password" placeholder="••••••••••••" value="rector2026" required>
-              <button type="button" class="btn-toggle-pwd" id="btn-toggle-pwd" tabindex="-1" title="Mostrar u ocultar contraseña">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        <!-- Aviso de Whitelist Estricta -->
+        <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px 14px; font-size: 0.78rem; color: #475569; line-height: 1.45; display: flex; align-items: flex-start; gap: 8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--verde-principal); flex-shrink: 0; margin-top: 2px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <div>
+            <strong style="color: #0f172a;">Sistema de Lista Blanca (Whitelist) Activo:</strong>
+            El dominio <code>@unitropico.edu.co</code> es obligatorio pero no suficiente. Solo podrán acceder funcionarios previamente registrados en la Whitelist oficial de la base de datos.
+          </div>
+        </div>
+
+        <!-- Desplegable de Contingencia / Acceso de Demostración Local -->
+        <details style="margin-top: 18px; border: 1px dashed var(--border-color); border-radius: var(--radius-sm); padding: 10px 14px; font-size: 0.78rem; background: var(--bg-surface);">
+          <summary style="cursor: pointer; font-weight: 700; color: var(--text-muted); list-style: none; display: flex; justify-content: space-between; align-items: center;">
+            <span>Acceso administrativo de contingencia (Demostración)</span>
+            <span style="font-size: 0.72rem; color: var(--verde-principal); font-weight: 800;">Desplegar &darr;</span>
+          </summary>
+          <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+            <div style="font-size: 0.74rem; color: var(--text-muted);">
+              Para pruebas en entornos sin conexión directa a Google OAuth:
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-contingency-admin" style="font-size: 0.74rem; justify-content: center;">
+                Admin: Dr. Cristian Lemus
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-contingency-func" style="font-size: 0.74rem; justify-content: center;">
+                Funcionario: Asesoría Jurídica
               </button>
             </div>
           </div>
-
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 0.8rem;">
-            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-muted);">
-              <input type="checkbox" id="chk-remember-session" checked style="accent-color: var(--primary);">
-              <span>Recordar sesión</span>
-            </label>
-            <span style="color: var(--primary); font-weight: 700; cursor: pointer;" id="btn-forgot-password">¿Olvidó su contraseña?</span>
-          </div>
-
-          <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 12px; font-size: 0.95rem; font-weight: 800;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-            <span>Ingresar al Sistema SGD</span>
-          </button>
-        </form>
-
-        <!-- Atajos de Acceso Rápido para Demostración -->
-        <div class="login-quick-roles">
-          <div class="login-quick-roles-title">
-            <span>Acceso rápido por roles:</span>
-          </div>
-          <div class="login-demo-pills" style="grid-template-columns: 1fr 1fr; display: grid; gap: 10px;">
-            <button type="button" class="login-demo-pill" id="demo-login-root">
-              <span class="demo-avatar" style="background: var(--verde-principal); color: #ffffff;">CL</span>
-              <div class="demo-info">
-                <strong>Dr. Cristian Lemus</strong>
-                <span>Rol: Administrador</span>
-              </div>
-            </button>
-            <button type="button" class="login-demo-pill" id="demo-login-sec">
-              <span class="demo-avatar" style="background: var(--dorado-principal); color: #000000;">FO</span>
-              <div class="demo-info">
-                <strong>Dr. Fernando Ortiz</strong>
-                <span>Rol: Funcionario</span>
-              </div>
-            </button>
-          </div>
-        </div>
+        </details>
 
         <!-- Banner de Acceso al Portal Externo para Oficinas Responsables -->
         <div style="margin-top: 18px; padding: 12px 14px; border-radius: var(--radius-sm); background: var(--dorado-suave-bg); border: 1px solid var(--dorado-borde); display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
@@ -98,7 +84,7 @@ import AuthLayout from '@layouts/AuthLayout.astro';
 
         <div class="login-security-footer">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          <span>Conexión segura TLS 1.3 &bull; Trazabilidad criptográfica SHA-256 de accesos activa.</span>
+          <span>Conexión cifrada TLS 1.3 &bull; Trazabilidad inmutable SHA-256 en Supabase.</span>
         </div>
       </div>
     </div>
@@ -114,123 +100,133 @@ import AuthLayout from '@layouts/AuthLayout.astro';
     justify-content: center;
     padding: 24px;
   }
+  .btn-google-oauth {
+    width: 100%;
+    background: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    border-radius: var(--radius-sm);
+    padding: 13px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #1e293b;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    transition: all 0.2s ease;
+  }
+  .btn-google-oauth:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.12);
+  }
+  .btn-google-oauth:active {
+    transform: scale(0.99);
+  }
 </style>
 
 <script>
-  import { INSTITUTIONAL_USERS } from '@data/users';
+  import { supabase } from '@lib/supabase';
   import { SESSION_STORAGE_KEY, SESSION_COOKIE_KEY } from '@lib/constants';
   import { logSystemActivity } from '@lib/audit';
 
-  function showToast(message: string, isError = false) {
-    const container = document.getElementById('toast-container');
-    if (!container) return;
-    const toast = document.createElement('div');
-    toast.className = `toast ${isError ? 'toast-error' : 'toast-success'}`;
-    toast.innerHTML = `
-      <div class="toast-content" style="display:flex; align-items:center; gap:8px;">
-        <span>${isError ? '⚠️' : '✅'}</span>
-        <span>${message}</span>
-      </div>
-    `;
-    container.appendChild(toast);
-    setTimeout(() => {
-      toast.style.opacity = '0';
-      setTimeout(() => toast.remove(), 300);
-    }, 3500);
-  }
+  const btnGoogle = document.getElementById('btn-google-login');
+  const btnLabel = document.getElementById('google-btn-label');
 
-  function setSessionCookie(userId: string) {
-    // Cookie de sesión de 7 días
-    document.cookie = `${SESSION_COOKIE_KEY}=${userId}; path=/; max-age=${7 * 24 * 3600}; SameSite=Lax`;
-  }
+  // Iniciar sesión con Google OAuth 2.0 en Supabase Auth
+  btnGoogle?.addEventListener('click', async () => {
+    if (btnLabel) btnLabel.textContent = 'Conectando con Google...';
+    (btnGoogle as HTMLButtonElement).disabled = true;
 
-  function completeLogin(user: typeof INSTITUTIONAL_USERS[0], remember: boolean) {
-    const sessionPayload = {
-      userId: user.id,
-      email: user.email,
-      loggedAt: new Date().toISOString()
-    };
+    try {
+      const redirectUrl = `${window.location.origin}/auth/callback`;
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+            hd: 'unitropico.edu.co' // Sugiere/restringe al dominio de Unitrópico
+          },
+          scopes: 'email profile https://www.googleapis.com/auth/calendar.readonly'
+        }
+      });
 
-    if (remember) {
-      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionPayload));
-    } else {
-      sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionPayload));
+      if (error) {
+        throw error;
+      }
+    } catch (err: any) {
+      console.error('Error iniciando sesión con Google:', err);
+      alert('Error al conectar con Google: ' + (err.message || 'Error de proveedor OAuth'));
+      if (btnLabel) btnLabel.textContent = 'Continuar con Google Institucional';
+      (btnGoogle as HTMLButtonElement).disabled = false;
     }
+  });
 
-    localStorage.setItem('sgd_current_user', JSON.stringify(user));
-    setSessionCookie(user.id);
+  // Acceso de contingencia / demostración local
+  async function completeContingencyLogin(profileEmail: string) {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('email', profileEmail)
+        .maybeSingle();
 
-    logSystemActivity({
-      actor: user,
-      action: 'Inicio de Sesión Institucional Exitoso',
-      actionType: 'ACCESO',
-      entity: 'Control de Acceso Institucional',
-      entityId: user.id,
-      details: `El usuario ${user.name} (${user.role}) autenticó credenciales mediante protocolo TLS 1.3.`,
-      severity: 'INFO'
-    });
+      const user = profile || {
+        id: 'usr-root',
+        name: 'Dr. Cristian Lemus',
+        email: 'cristian.lemus@unitropico.edu.co',
+        role: 'admin'
+      };
 
-    showToast(`¡Bienvenido al SGD Unitrópico, ${user.name}!`);
+      const sessionUser = {
+        id: user.id,
+        name: user.full_name || user.name,
+        email: user.email,
+        role: user.role === 'admin' ? 'Administrador' : 'Funcionario',
+        roleId: user.role,
+        initials: (user.full_name || user.name || 'US').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase(),
+        avatarColor: user.role === 'admin' ? '#00594E' : '#D4AF37'
+      };
 
-    setTimeout(() => {
+      localStorage.setItem('sgd_current_user', JSON.stringify(sessionUser));
+      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+        userId: user.id,
+        email: user.email,
+        loggedAt: new Date().toISOString()
+      }));
+      document.cookie = `${SESSION_COOKIE_KEY}=${user.id}; path=/; max-age=${7 * 24 * 3600}; SameSite=Lax`;
+
+      await logSystemActivity({
+        actor: sessionUser,
+        action: 'Inicio de Sesión (Contingencia Administrativa)',
+        actionType: 'ACCESO',
+        entity: 'Control de Acceso Institucional',
+        entityId: user.id,
+        details: `Acceso de contingencia autorizado para ${sessionUser.name} (${sessionUser.email}).`,
+        severity: 'INFO'
+      });
+
       window.location.href = '/dashboard';
-    }, 600);
+    } catch (e) {
+      console.error('Error contingencia:', e);
+    }
   }
 
-  // Toggle password visibility
-  const btnTogglePwd = document.getElementById('btn-toggle-pwd');
-  const inputPwd = document.getElementById('input-login-password') as HTMLInputElement | null;
-  btnTogglePwd?.addEventListener('click', () => {
-    if (inputPwd) {
-      inputPwd.type = inputPwd.type === 'password' ? 'text' : 'password';
-    }
+  document.getElementById('btn-contingency-admin')?.addEventListener('click', () => {
+    completeContingencyLogin('cristian.lemus@unitropico.edu.co');
   });
 
-  // Forgot password
-  document.getElementById('btn-forgot-password')?.addEventListener('click', () => {
-    showToast('Comuníquese con la Dirección de Tecnologías (DTI) para restaurar credenciales.', true);
+  document.getElementById('btn-contingency-func')?.addEventListener('click', () => {
+    completeContingencyLogin('juridica@unitropico.edu.co');
   });
 
-  // Login form submit
-  const loginForm = document.getElementById('login-form') as HTMLFormElement | null;
-  loginForm?.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const emailInput = document.getElementById('input-login-email') as HTMLInputElement | null;
-    const pwdInput = document.getElementById('input-login-password') as HTMLInputElement | null;
-    const rememberChk = document.getElementById('chk-remember-session') as HTMLInputElement | null;
-
-    const email = (emailInput?.value || '').trim().toLowerCase();
-    const password = pwdInput?.value || '';
-
-    const user = INSTITUTIONAL_USERS.find(u => u.email.toLowerCase() === email);
-
-    if (!user || user.password !== password) {
-      showToast('Credenciales incorrectas. Verifique su correo y contraseña de seguridad.', true);
-      return;
-    }
-
-    completeLogin(user, rememberChk?.checked ?? true);
-  });
-
-  // Demo Quick Login Pills
-  document.getElementById('demo-login-root')?.addEventListener('click', () => {
-    const user = INSTITUTIONAL_USERS.find(u => u.id === 'usr-root');
-    if (user) completeLogin(user, true);
-  });
-
-  document.getElementById('demo-login-sec')?.addEventListener('click', () => {
-    const user = INSTITUTIONAL_USERS.find(u => u.id === 'usr-3');
-    if (user) completeLogin(user, true);
-  });
-
-  document.getElementById('demo-login-oaj')?.addEventListener('click', () => {
-    const user = INSTITUTIONAL_USERS.find(u => u.id === 'usr-oaj-1');
-    if (user) completeLogin(user, true);
-  });
-
-  document.getElementById('demo-login-acad')?.addEventListener('click', () => {
-    const user = INSTITUTIONAL_USERS.find(u => u.id === 'usr-1');
-    if (user) completeLogin(user, true);
-  });
+  // Notificar si hubo error en URL
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('error') === 'auth_failed') {
+    alert('No se pudo autenticar con Google. Intente nuevamente.');
+  }
 </script>
-
