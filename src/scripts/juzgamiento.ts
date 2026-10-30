@@ -98,7 +98,7 @@ export async function initJuzgamiento() {
           </span>
         </td>
         <td style="text-align: right;">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="alert('Expediente confidencial radicado: ${c.radicado}')">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="(window as any).showToast('Expediente confidencial radicado: ${c.radicado}')">
             Ver Piezas
           </button>
         </td>
@@ -185,13 +185,13 @@ export async function initJuzgamiento() {
         severity: 'WARN'
       });
 
-      alert(`Expediente procesal "${radicado}" incorporado exitosamente a Supabase.`);
+      (window as any).showToast(`Expediente procesal "${radicado}" incorporado exitosamente a Supabase.`);
       closeModal();
       form.reset();
       await loadProcesos();
     } catch (err: any) {
       console.error('Error guardando proceso disciplinario:', err);
-      alert('Error guardando en Supabase: ' + (err.message || 'Error de base de datos'));
+      (window as any).showToast('Error guardando en Supabase: ' + (err.message || 'Error de base de datos'));
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;

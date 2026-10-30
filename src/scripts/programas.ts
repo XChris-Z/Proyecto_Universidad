@@ -186,13 +186,13 @@ export async function initProgramas() {
         severity: 'INFO'
       });
 
-      alert(`Programa "${nombre}" registrado exitosamente en Supabase.`);
+      (window as any).showToast(`Programa "${nombre}" registrado exitosamente en Supabase.`);
       closeModal();
       form.reset();
       await loadProgramas();
     } catch (err: any) {
       console.error('Error guardando programa académico:', err);
-      alert('Error guardando en Supabase: ' + (err.message || 'Error de base de datos'));
+      (window as any).showToast('Error guardando en Supabase: ' + (err.message || 'Error de base de datos'));
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;

@@ -1,6 +1,6 @@
 ---
 // src/pages/calendario.astro
-// Módulo de Calendario Institucional con Soporte para Google Calendar por Usuario
+// Módulo de Calendario Institucional y Conexión con Google Calendar
 import AppLayout from '@layouts/AppLayout.astro';
 import { supabase } from '@lib/supabase';
 import { SESSION_COOKIE_KEY } from '@lib/constants';
@@ -30,12 +30,12 @@ const errorParam = Astro.url.searchParams.get('error');
 <AppLayout title="Calendario Institucional y Semáforo" activeNav="calendario">
   <div class="calendar-module-container" style="display: flex; flex-direction: column; gap: 20px;">
 
-    <!-- Notificaciones visuales de estado sin romper la pantalla -->
+    <!-- Notificaciones visuales de estado -->
     {isJustConnected && (
       <div class="alert-banner-success" id="alert-connect-success" style="background: #ecfdf5; border: 1px solid #a7f3d0; border-left: 4px solid #059669; padding: 12px 16px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #065f46; font-size: 0.86rem; font-weight: 600;">
         <div style="display: flex; align-items: center; gap: 10px;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-          <span>Google Calendar conectado exitosamente para <strong>{userEmail}</strong>. Tu agenda y vencimientos ya están sincronizados.</span>
+          <span style="word-break: break-all;">Google Calendar conectado para <strong>{userEmail}</strong>.</span>
         </div>
         <button type="button" onclick="this.parentElement.style.display='none'" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer; color: #065f46;">&times;</button>
       </div>
@@ -47,8 +47,8 @@ const errorParam = Astro.url.searchParams.get('error');
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           <span>
             {errorParam === 'cancelled' 
-              ? 'Se canceló la autorización de Google Calendar. Puedes intentar conectarla en cualquier momento.' 
-              : 'Aviso: La sincronización no se pudo completar. Puedes usar el modo de conexión directa o revisar tus credenciales.'}
+              ? 'Se canceló la autorización de Google Calendar.' 
+              : 'No se pudo completar la sincronización. Intenta nuevamente.'}
           </span>
         </div>
         <button type="button" onclick="this.parentElement.style.display='none'" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer; color: #92400e;">&times;</button>
@@ -56,14 +56,14 @@ const errorParam = Astro.url.searchParams.get('error');
     )}
 
     <!-- ================================================================= -->
-    <!-- ESTADO 1: NO CONECTADO (Tarjeta sobria institucional verde/dorada) -->
+    <!-- ESTADO 1: NO CONECTADO (Tarjeta institucional sobria y limpia)    -->
     <!-- ================================================================= -->
     <div id="state-disconnected" style={`display: ${isConnected ? 'none' : 'block'};`}>
-      <div class="card" style="padding: 44px 32px; background: #ffffff; border: 1px solid var(--border-color); border-radius: 16px; box-shadow: var(--shadow-sm); max-width: 820px; margin: 20px auto; text-align: center; border-top: 5px solid var(--verde-principal);">
+      <div class="card" style="padding: 38px 28px; background: #ffffff; border: 1px solid var(--border-color); border-radius: 16px; box-shadow: var(--shadow-sm); max-width: 620px; margin: 24px auto; text-align: center; border-top: 5px solid var(--verde-principal);">
         
         <!-- Icono Google Calendar Institucional -->
-        <div style="width: 76px; height: 76px; background: var(--verde-suave-bg); border: 2px solid var(--verde-borde); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; box-shadow: 0 4px 14px rgba(0, 89, 78, 0.12);">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="color: var(--verde-principal);">
+        <div style="width: 68px; height: 68px; background: var(--verde-suave-bg); border: 2px solid var(--verde-borde); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto;">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="color: var(--verde-principal);">
             <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
             <line x1="16" y1="2" x2="16" y2="6"/>
             <line x1="8" y1="2" x2="8" y2="6"/>
@@ -72,71 +72,37 @@ const errorParam = Astro.url.searchParams.get('error');
           </svg>
         </div>
 
-        <div style="display: inline-block; padding: 4px 12px; background: var(--dorado-suave-bg); color: var(--dorado-oscuro); border: 1px solid var(--dorado-borde); border-radius: 20px; font-size: 0.74rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;">
-          Sincronización Personal de Agenda
-        </div>
-
-        <h2 style="font-size: 1.55rem; font-weight: 800; color: var(--text-main); margin: 0 0 10px 0; letter-spacing: -0.01em;">
+        <h2 style="font-size: 1.45rem; font-weight: 800; color: var(--text-main); margin: 0 0 8px 0;">
           Google Calendar Institucional
         </h2>
 
-        <p style="font-size: 0.95rem; color: var(--text-muted); line-height: 1.55; max-width: 580px; margin: 0 auto 28px auto;">
-          Sincroniza tu cuenta de Google institucional para visualizar tus reuniones, compromisos y vencimientos personales en este espacio.
+        <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; margin: 0 auto 18px auto; max-width: 460px;">
+          Conecta tu cuenta institucional para sincronizar tus compromisos oficiales, peticiones y términos legales.
         </p>
 
-        <!-- Bloque de Garantías de Privacidad y Aislamiento -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 32px; text-align: left;">
-          <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px 16px;">
-            <div style="font-size: 0.84rem; font-weight: 700; color: var(--verde-principal); display: flex; align-items: center; gap: 8px;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              <span>Privacidad Total</span>
-            </div>
-            <p style="font-size: 0.74rem; color: var(--text-muted); margin: 4px 0 0 0; line-height: 1.4;">
-              Tus reuniones y eventos solo son visibles para ti. Ningún otro funcionario puede ver tu calendario personal.
-            </p>
-          </div>
-
-          <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px 16px;">
-            <div style="font-size: 0.84rem; font-weight: 700; color: var(--verde-principal); display: flex; align-items: center; gap: 8px;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-              <span>Cuenta Verificada</span>
-            </div>
-            <p style="font-size: 0.74rem; color: var(--text-muted); margin: 4px 0 0 0; line-height: 1.4;">
-              Vinculación estricta con tu cuenta oficial: <strong style="color: var(--text-main);">{userEmail}</strong>.
-            </p>
-          </div>
-
-          <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px 16px;">
-            <div style="font-size: 0.84rem; font-weight: 700; color: var(--verde-principal); display: flex; align-items: center; gap: 8px;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-              <span>Semáforo Institucional</span>
-            </div>
-            <p style="font-size: 0.74rem; color: var(--text-muted); margin: 4px 0 0 0; line-height: 1.4;">
-              Control automático de términos legales (SLA) para peticiones, tutelas y compromisos CSU.
-            </p>
-          </div>
+        <!-- Indicador de cuenta -->
+        <div style="display: inline-block; background: #F8FAFC; border: 1px solid var(--border-color); padding: 6px 14px; border-radius: 20px; font-size: 0.82rem; color: var(--text-main); font-weight: 600; margin-bottom: 24px; max-width: 100%; word-break: break-all;">
+          {userEmail}
         </div>
 
-        <!-- Botón de Conexión Estilizado -->
-        <button 
-          type="button" 
-          id="btn-connect-google" 
-          class="btn-connect-google-calendar"
-          data-user-id={userId}
-        >
-          <!-- Icono Oficial Google en Colores -->
-          <svg width="22" height="22" viewBox="0 0 24 24">
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-          </svg>
-          <span id="btn-connect-label">Conectar con Google Calendar</span>
-        </button>
-
-        <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 14px;">
-          Solo se solicitarán permisos de lectura y agenda de eventos para tu cuenta personal.
+        <div>
+          <!-- Botón de Conexión Oficial -->
+          <button 
+            type="button" 
+            id="btn-connect-google" 
+            class="btn-connect-google-calendar"
+            data-user-id={userId}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+            </svg>
+            <span id="btn-connect-label">Conectar con Google Calendar</span>
+          </button>
         </div>
+
       </div>
     </div>
 
@@ -145,40 +111,52 @@ const errorParam = Astro.url.searchParams.get('error');
     <!-- ================================================================= -->
     <div id="state-connected" style={`display: ${isConnected ? 'block' : 'none'};`}>
       
-      <!-- Barra Superior de Control de Sincronización y Vistas -->
-      <div class="card" style="padding: 14px 20px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; margin-bottom: 16px;">
+      <!-- Barra Superior de Control de Sincronización, Vistas y Nuevo Evento -->
+      <div class="card" style="padding: 12px 18px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
         
-        <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
           <div style="display: flex; align-items: center; gap: 8px;">
             <span style="width: 10px; height: 10px; border-radius: 50%; background: #10b981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);"></span>
             <div style="font-size: 0.88rem; font-weight: 800; color: var(--text-main);">
               Google Calendar Activo
             </div>
           </div>
-          <div style="font-size: 0.78rem; color: var(--text-muted); background: #F8FAFC; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border-subtle); font-family: monospace;">
+          <div style="font-size: 0.78rem; color: var(--text-muted); background: #F8FAFC; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border-subtle); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; word-break: break-all;" title={userEmail}>
             {userEmail}
           </div>
 
-          <!-- Selector de Pestaña: Embebido vs Semáforo Local -->
+          <!-- Selector de Pestaña: Agenda y Semáforo (Principal) vs Visor Embebido -->
           <div class="cal-tab-switcher" style="display: inline-flex; background: #f1f5f9; padding: 3px; border-radius: 8px;">
-            <button type="button" class="cal-tab-btn active" id="tab-btn-google-embed" style="padding: 6px 14px; border: none; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer; background: #ffffff; color: var(--verde-principal); box-shadow: var(--shadow-sm);">
-              Mi Google Calendar
+            <button type="button" class="cal-tab-btn active" id="tab-btn-semaforo" style="padding: 6px 14px; border: none; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer; background: #ffffff; color: var(--verde-principal); box-shadow: var(--shadow-sm);">
+              Agenda y Semáforo (SLA)
             </button>
-            <button type="button" class="cal-tab-btn" id="tab-btn-semaforo" style="padding: 6px 14px; border: none; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer; background: transparent; color: var(--text-muted);">
-              Semáforo Institucional (SLA)
+            <button type="button" class="cal-tab-btn" id="tab-btn-google-embed" style="padding: 6px 14px; border: none; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer; background: transparent; color: var(--text-muted);">
+              Visor Google Calendar
             </button>
           </div>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <!-- Botón Forzar Sincronización -->
-          <button type="button" class="btn btn-secondary btn-sm" id="btn-force-sync" title="Actualizar eventos del calendario" style="font-size: 0.78rem; padding: 6px 12px; display: inline-flex; align-items: center; gap: 6px;">
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <!-- Botón Principal: + Agendar Evento en Google Calendar -->
+          <button type="button" class="btn btn-primary btn-sm" id="btn-open-new-event-modal" style="font-size: 0.8rem; padding: 7px 14px; display: inline-flex; align-items: center; gap: 6px; font-weight: 700;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>+ Agendar Evento</span>
+          </button>
+
+          <!-- Botón Abrir Directo en Google Calendar Web -->
+          <a href="https://calendar.google.com/calendar/u/0/r" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" title="Abrir Google Calendar en pestaña nueva" style="font-size: 0.78rem; padding: 6px 12px; display: inline-flex; align-items: center; gap: 6px; text-decoration: none;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            <span>Abrir en Google ↗</span>
+          </a>
+
+          <!-- Botón Sincronizar -->
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-force-sync" title="Actualizar eventos" style="font-size: 0.78rem; padding: 6px 12px; display: inline-flex; align-items: center; gap: 6px;">
             <svg id="sync-spinner-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
             <span>Sincronizar</span>
           </button>
 
-          <!-- Botón Discreto Desvincular Cuenta -->
-          <button type="button" class="btn btn-ghost btn-sm" id="btn-disconnect-calendar" data-user-id={userId} title="Desconectar cuenta de Google Calendar" style="color: #dc2626; font-size: 0.76rem; padding: 6px 10px; border: 1px solid #fecaca; background: #fff5f5; border-radius: var(--radius-sm); font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+          <!-- Botón Desvincular Cuenta -->
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-disconnect-calendar" data-user-id={userId} title="Desconectar cuenta" style="color: #dc2626; font-size: 0.76rem; padding: 6px 10px; border: 1px solid #fecaca; background: #fff5f5; border-radius: var(--radius-sm); font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
             <span>Desvincular</span>
           </button>
@@ -186,23 +164,8 @@ const errorParam = Astro.url.searchParams.get('error');
 
       </div>
 
-      <!-- Contenedor 1: Google Calendar Embebido Seguro Parametrizado -->
-      <div id="container-google-embed" class="calendar-main-surface" style="display: block;">
-        <div class="card" style="padding: 12px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); overflow: hidden;">
-          <iframe 
-            id="google-calendar-iframe"
-            src={calendarEmbedUrl} 
-            style="border: 0; width: 100%; height: 780px; border-radius: 8px; background: #ffffff;" 
-            frameborder="0" 
-            scrolling="no"
-            loading="lazy"
-            title="Google Calendar Oficial Unitrópico"
-          ></iframe>
-        </div>
-      </div>
-
-      <!-- Contenedor 2: Semáforo y Vencimientos Institucionales -->
-      <div id="container-semaforo-view" class="calendar-main-surface" style="display: none;">
+      <!-- Contenedor 1: Semáforo y Vencimientos Institucionales (Activo por defecto) -->
+      <div id="container-semaforo-view" class="calendar-main-surface" style="display: block;">
         <div class="gcal-container">
           <!-- Topbar del Semáforo -->
           <div class="gcal-topbar">
@@ -215,6 +178,9 @@ const errorParam = Astro.url.searchParams.get('error');
               <h3 class="gcal-current-date-title" id="gcal-current-label">Mes Actual</h3>
             </div>
             <div class="gcal-topbar-right">
+              <button type="button" class="btn btn-primary btn-sm" id="btn-gcal-create-event" style="font-size: 0.76rem; padding: 5px 12px; margin-right: 8px;">
+                + Evento
+              </button>
               <div class="gcal-view-selector" id="gcal-view-switcher">
                 <button type="button" class="gcal-view-btn active" data-gview="month">Mes</button>
                 <button type="button" class="gcal-view-btn" data-gview="week">Semana</button>
@@ -305,9 +271,120 @@ const errorParam = Astro.url.searchParams.get('error');
         </div>
       </div>
 
+      <!-- Contenedor 2: Google Calendar Embebido Oficial -->
+      <div id="container-google-embed" class="calendar-main-surface" style="display: none;">
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid #3b82f6; padding: 10px 16px; border-radius: 8px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 0.82rem; color: #1e40af;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <span>Para visualizar eventos privados o modificarlos directamente en Google Workspace sin restricciones del navegador:</span>
+          </div>
+          <a href="https://calendar.google.com/calendar/u/0/r" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="font-size: 0.74rem; text-decoration: none; white-space: nowrap;">
+            Abrir Google Calendar Web ↗
+          </a>
+        </div>
+
+        <div class="card" style="padding: 12px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); overflow: hidden;">
+          <iframe 
+            id="google-calendar-iframe"
+            src={calendarEmbedUrl} 
+            style="border: 0; width: 100%; height: 780px; border-radius: 8px; background: #ffffff;" 
+            frameborder="0" 
+            scrolling="no"
+            loading="lazy"
+            title="Google Calendar Oficial Unitrópico"
+          ></iframe>
+        </div>
+      </div>
+
     </div>
 
   </div>
+
+  <!-- ================================================================= -->
+  <!-- MODAL 1: AGENDAR EVENTO EN GOOGLE CALENDAR Y PLATAFORMA           -->
+  <!-- ================================================================= -->
+  <div class="modal-backdrop" id="new-calendario-modal" style="display: none; z-index: 9999;">
+    <div class="modal-card" style="max-width: 580px; border-top: 5px solid var(--verde-principal); border-radius: 14px; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
+      <div class="modal-header">
+        <h3 style="display: flex; align-items: center; gap: 10px; font-size: 1.15rem; font-weight: 800; color: var(--text-main);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--verde-principal);"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="10" y1="16" x2="14" y2="16"/></svg>
+          <span>Agendar Evento en Google Calendar</span>
+        </h3>
+        <button type="button" class="btn-close-modal" id="btn-close-new-cal-modal">&times;</button>
+      </div>
+
+      <form id="new-calendario-form" class="modal-body" style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="form-group">
+          <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-main); display: block; margin-bottom: 4px;">Título del Evento o Compromiso *</label>
+          <input type="text" id="input-cal-titulo" required placeholder="Ej: Sustentación CSU / Sesión de Trabajo" class="form-control" style="width: 100%; padding: 9px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.88rem;" />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-main); display: block; margin-bottom: 4px;">Tipo de Compromiso *</label>
+            <select id="select-cal-tipo" class="form-control" style="width: 100%; padding: 9px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.88rem;">
+              <option value="peticion">Petición / PQRS (Término Legal)</option>
+              <option value="colegiado">Sesión Cuerpos Colegiados</option>
+              <option value="reporte">Reporte a Entes de Control</option>
+              <option value="academica">Actividad Académica</option>
+              <option value="financiero">Gestión Financiera</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-main); display: block; margin-bottom: 4px;">Fecha *</label>
+            <input type="date" id="input-cal-fecha" required class="form-control" style="width: 100%; padding: 9px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.88rem;" />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-main); display: block; margin-bottom: 4px;">Dependencia o Destino</label>
+            <input type="text" id="input-cal-destino" placeholder="Ej: Rectoría / Secretaría General" class="form-control" style="width: 100%; padding: 9px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.88rem;" />
+          </div>
+
+          <div class="form-group">
+            <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-main); display: block; margin-bottom: 4px;">Funcionario Responsable</label>
+            <input type="text" id="input-cal-responsable" placeholder="Ej: ING. Christian Lemus" class="form-control" style="width: 100%; padding: 9px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.88rem;" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-main); display: block; margin-bottom: 4px;">Descripción o Notas Adicionales</label>
+          <textarea id="input-cal-descripcion" rows="2" placeholder="Detalles del compromiso o radicado..." class="form-control" style="width: 100%; padding: 9px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.88rem; resize: vertical;"></textarea>
+        </div>
+
+        <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; padding-top: 10px; border-top: 1px solid var(--border-color);">
+          <button type="button" class="btn btn-ghost" id="btn-cancel-new-cal">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-new-cal" style="font-weight: 700;">
+            Agendar en Google Calendar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- MODAL 2: DETALLE DE COMPROMISOS DEL DÍA                           -->
+  <!-- ================================================================= -->
+  <div class="modal-backdrop" id="cal-day-events-modal" style="display: none; z-index: 9999;">
+    <div class="modal-card" style="max-width: 600px; border-top: 4px solid var(--verde-principal); border-radius: 14px; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
+      <div class="modal-header">
+        <h3 id="cal-day-modal-title" style="font-size: 1.1rem; font-weight: 800; color: var(--text-main);">
+          Compromisos del Día
+        </h3>
+        <button type="button" class="btn-close-modal" id="btn-close-cal-day-modal">&times;</button>
+      </div>
+      <div class="modal-body" id="cal-day-modal-body" style="max-height: 420px; overflow-y: auto;">
+        <!-- Lista de compromisos del día -->
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-cal-day-switch-to-day">Ver en Vista Día</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-close-cal-day-modal-footer">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
 </AppLayout>
 
 <style>
@@ -319,7 +396,7 @@ const errorParam = Astro.url.searchParams.get('error');
     background: #ffffff;
     border: 1.5px solid #cbd5e1;
     color: #1e293b;
-    padding: 14px 28px;
+    padding: 13px 26px;
     border-radius: 10px;
     font-size: 0.95rem;
     font-weight: 700;
@@ -363,7 +440,9 @@ const errorParam = Astro.url.searchParams.get('error');
         await connectGoogleCalendar(userId);
       } catch (err: any) {
         console.error('Error conectando Google Calendar:', err);
-        alert('No se pudo conectar con Google Calendar: ' + (err.message || 'Error de red'));
+        if ((window as any).showToast) {
+          (window as any).showToast('No se pudo conectar: ' + (err.message || 'Error de red'), 'error');
+        }
         if (btnLabel) btnLabel.textContent = 'Conectar con Google Calendar';
         (btnConnect as HTMLButtonElement).disabled = false;
       }
@@ -374,9 +453,14 @@ const errorParam = Astro.url.searchParams.get('error');
   const btnDisconnect = document.getElementById('btn-disconnect-calendar');
   if (btnDisconnect) {
     btnDisconnect.addEventListener('click', async () => {
-      if (!confirm('¿Estás seguro de que deseas desvincular tu cuenta de Google Calendar del sistema?')) {
-        return;
+      let confirmed = false;
+      if ((window as any).showConfirm) {
+        confirmed = await (window as any).showConfirm('¿Estás seguro de que deseas desvincular tu cuenta de Google Calendar del sistema?');
+      } else {
+        confirmed = confirm('¿Estás seguro de que deseas desvincular tu cuenta de Google Calendar del sistema?');
       }
+
+      if (!confirmed) return;
 
       btnDisconnect.textContent = 'Desvinculando...';
       (btnDisconnect as HTMLButtonElement).disabled = true;
@@ -386,22 +470,23 @@ const errorParam = Astro.url.searchParams.get('error');
         const ok = await disconnectGoogleCalendar(userId);
 
         if (ok) {
-          // Cambiar vista a Desconectado inmediatamente
           const stateConnected = document.getElementById('state-connected');
           const stateDisconnected = document.getElementById('state-disconnected');
           if (stateConnected) stateConnected.style.display = 'none';
           if (stateDisconnected) stateDisconnected.style.display = 'block';
 
           if ((window as any).showToast) {
-            (window as any).showToast('Cuenta de Google Calendar desvinculada correctamente.');
-          } else {
-            alert('Cuenta de Google Calendar desvinculada.');
+            (window as any).showToast('Cuenta de Google Calendar desvinculada correctamente.', 'success');
           }
         } else {
-          alert('No se pudo desvincular la cuenta.');
+          if ((window as any).showToast) {
+            (window as any).showToast('No se pudo desvincular la cuenta.', 'error');
+          }
         }
       } catch (err: any) {
-        alert('Error al desvincular: ' + err.message);
+        if ((window as any).showToast) {
+          (window as any).showToast('Error al desvincular: ' + err.message, 'error');
+        }
       } finally {
         btnDisconnect.textContent = 'Desvincular';
         (btnDisconnect as HTMLButtonElement).disabled = false;
@@ -409,7 +494,7 @@ const errorParam = Astro.url.searchParams.get('error');
     });
   }
 
-  // 3. Forzar Sincronización / Refrescar Iframe
+  // 3. Forzar Sincronización / Refrescar
   const btnForceSync = document.getElementById('btn-force-sync');
   const syncIcon = document.getElementById('sync-spinner-icon');
   const iframe = document.getElementById('google-calendar-iframe') as HTMLIFrameElement;
@@ -426,19 +511,17 @@ const errorParam = Astro.url.searchParams.get('error');
       setTimeout(() => {
         if (syncIcon) syncIcon.style.animation = 'none';
         if ((window as any).showToast) {
-          (window as any).showToast('Google Calendar sincronizado.');
+          (window as any).showToast('Google Calendar sincronizado correctamente.', 'success');
         }
-      }, 900);
+      }, 800);
     });
   }
 
-  // 4. Alternador de Pestañas: Google Embed vs Semáforo Local
+  // 4. Alternador de Pestañas: Agenda y Semáforo vs Google Embed
   const tabBtnGoogle = document.getElementById('tab-btn-google-embed');
   const tabBtnSemaforo = document.getElementById('tab-btn-semaforo');
   const containerGoogle = document.getElementById('container-google-embed');
   const containerSemaforo = document.getElementById('container-semaforo-view');
-
-  let isSemaforoInit = false;
 
   function switchCalendarTab(showSemaforo: boolean) {
     if (showSemaforo) {
@@ -454,11 +537,6 @@ const errorParam = Astro.url.searchParams.get('error');
       }
       if (containerGoogle) containerGoogle.style.display = 'none';
       if (containerSemaforo) containerSemaforo.style.display = 'block';
-
-      if (!isSemaforoInit) {
-        initCalendario();
-        isSemaforoInit = true;
-      }
     } else {
       if (tabBtnGoogle) {
         tabBtnGoogle.style.background = '#ffffff';
@@ -477,4 +555,10 @@ const errorParam = Astro.url.searchParams.get('error');
 
   tabBtnGoogle?.addEventListener('click', () => switchCalendarTab(false));
   tabBtnSemaforo?.addEventListener('click', () => switchCalendarTab(true));
+
+  // 5. Inicializar la agenda interactiva inmediatamente si está conectado
+  const isConnectedEl = document.getElementById('state-connected');
+  if (isConnectedEl && isConnectedEl.style.display !== 'none') {
+    initCalendario();
+  }
 </script>

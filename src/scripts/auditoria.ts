@@ -120,10 +120,10 @@ export async function initAuditoria() {
         const hash = chip.getAttribute('data-hash') || '';
         if (navigator.clipboard) {
           navigator.clipboard.writeText(hash).then(() => {
-            alert('Huella SHA-256 copiada al portapapeles.');
+            (window as any).showToast('Huella SHA-256 copiada al portapapeles.');
           });
         } else {
-          alert(`Hash: ${hash}`);
+          (window as any).showToast(`Hash: ${hash}`);
         }
       });
     });
@@ -226,7 +226,7 @@ export async function initAuditoria() {
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
-    alert('Pista de auditoría exportada exitosamente en formato JSON oficial.');
+    (window as any).showToast('Pista de auditoría exportada exitosamente en formato JSON oficial.');
   });
 
   // Initial render

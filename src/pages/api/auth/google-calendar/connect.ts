@@ -48,3 +48,4 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
     return redirect('/calendario?error=connection_failed');
   }
 };
+

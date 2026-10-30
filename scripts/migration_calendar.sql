@@ -95,3 +95,4 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.set_user_calendar_connection TO anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.disconnect_user_calendar TO anon, authenticated, service_role;
+

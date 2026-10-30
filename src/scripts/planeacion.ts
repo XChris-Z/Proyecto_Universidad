@@ -93,7 +93,7 @@ export async function initPlaneacion() {
                   </td>
                   <td><span class="badge status-safe">${inf.estado || 'Aprobado CSU'}</span></td>
                   <td style="text-align: right;">
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="alert('Informe radicado: ${inf.radicado_csu || inf.periodo}')">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="(window as any).showToast('Informe radicado: ${inf.radicado_csu || inf.periodo}')">
                       Ver Detalle
                     </button>
                   </td>
@@ -243,13 +243,13 @@ export async function initPlaneacion() {
         severity: 'INFO'
       });
 
-      alert(`Informe de ${tipo} (${periodo}) radicado exitosamente ante el CSU.`);
+      (window as any).showToast(`Informe de ${tipo} (${periodo}) radicado exitosamente ante el CSU.`);
       closeModal();
       form.reset();
       await loadInformes();
     } catch (err: any) {
       console.error('Error guardando informe:', err);
-      alert('Error al radicar en Supabase: ' + (err.message || 'Error de base de datos'));
+      (window as any).showToast('Error al radicar en Supabase: ' + (err.message || 'Error de base de datos'));
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;

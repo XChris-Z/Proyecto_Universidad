@@ -95,7 +95,7 @@ export function initRelacionamiento() {
         } as any);
 
       if (error) {
-        alert('Error al guardar convenio: ' + error.message);
+        (window as any).showToast('Error al guardar convenio: ' + error.message);
         return;
       }
 
@@ -109,11 +109,11 @@ export function initRelacionamiento() {
         severity: 'INFO'
       });
 
-      alert(`Convenio "${numero}" registrado exitosamente en Supabase.`);
+      (window as any).showToast(`Convenio "${numero}" registrado exitosamente en Supabase.`);
       closeModal();
       window.location.reload();
     } catch (err: any) {
-      alert('Error de conexión al servidor: ' + err.message);
+      (window as any).showToast('Error de conexión al servidor: ' + err.message);
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;

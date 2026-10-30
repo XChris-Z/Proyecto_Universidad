@@ -180,13 +180,13 @@ export async function initJuridicos() {
         severity: 'INFO'
       });
 
-      alert(`Asunto jurídico "${titulo}" registrado exitosamente en Supabase.`);
+      (window as any).showToast(`Asunto jurídico "${titulo}" registrado exitosamente en Supabase.`);
       closeModal();
       form.reset();
       await loadCasos();
     } catch (err: any) {
       console.error('Error guardando caso jurídico:', err);
-      alert('Error guardando en Supabase: ' + (err.message || 'Error de base de datos'));
+      (window as any).showToast('Error guardando en Supabase: ' + (err.message || 'Error de base de datos'));
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;

@@ -278,7 +278,7 @@ import { supabase } from '@lib/supabase';
       btnSaveName.addEventListener('click', async () => {
         const newName = inputName.value.trim();
         if (!newName) {
-          alert('Por favor ingresa un nombre válido.');
+          window.showToast('Por favor ingresa un nombre válido.');
           return;
         }
 
@@ -354,7 +354,7 @@ import { supabase } from '@lib/supabase';
         if (!file) return;
 
         if (file.size > 5 * 1024 * 1024) {
-          alert('La imagen no debe superar los 5 MB.');
+          window.showToast('La imagen no debe superar los 5 MB.');
           return;
         }
 
@@ -408,10 +408,10 @@ import { supabase } from '@lib/supabase';
             severity: 'INFO'
           });
 
-          alert('Foto de perfil actualizada correctamente en Supabase Storage.');
+          window.showToast('Foto de perfil actualizada correctamente en Supabase Storage.');
         } catch (err) {
           console.error('Error subiendo avatar:', err);
-          alert('No se pudo subir la foto de perfil.');
+          window.showToast('No se pudo subir la foto de perfil.');
         }
       });
     }
@@ -493,17 +493,17 @@ import { supabase } from '@lib/supabase';
         const confirmPass = confirmPassInput?.value;
 
         if (!currentPass) {
-          alert('Por favor ingresa tu contraseña actual.');
+          window.showToast('Por favor ingresa tu contraseña actual.');
           return;
         }
 
         if (!checkRules(newPass)) {
-          alert('La nueva contraseña no cumple con todos los criterios de seguridad institucional.');
+          window.showToast('La nueva contraseña no cumple con todos los criterios de seguridad institucional.');
           return;
         }
 
         if (newPass !== confirmPass) {
-          alert('La confirmación de la contraseña no coincide.');
+          window.showToast('La confirmación de la contraseña no coincide.');
           return;
         }
 
@@ -541,7 +541,7 @@ import { supabase } from '@lib/supabase';
             statusFeedback.textContent = '✔ Contraseña institucional actualizada exitosamente.';
           }
 
-          alert('Contraseña actualizada exitosamente con los estándares de seguridad institucional.');
+          window.showToast('Contraseña actualizada exitosamente con los estándares de seguridad institucional.');
           (passForm as HTMLFormElement).reset();
           checkRules('');
           if (matchMsg) matchMsg.style.display = 'none';

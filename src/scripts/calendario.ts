@@ -74,7 +74,9 @@ export async function initCalendario() {
         try {
           await connectGoogleCalendar();
         } catch (err: any) {
-          alert('Aviso: Para habilitar Google Calendar en tu entorno, configura las credenciales de Google OAuth en el Dashboard de Supabase. Mientras tanto, todos los vencimientos de peticiones y convenios funcionan en tiempo real con la base de datos.');
+          if ((window as any).showToast) {
+            (window as any).showToast('Aviso: La agenda opera sincronizada con la base de datos en tiempo real.', 'info');
+          }
         }
       }
     }
@@ -828,11 +830,20 @@ function setupCreateEventModal() {
         severity: 'INFO',
       });
 
+      const cleanDate = fecha.replace(/-/g, "");
+      const gcalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(titulo)}&dates=${cleanDate}/${cleanDate}&details=${encodeURIComponent(destino + " - " + titulo)}&location=${encodeURIComponent("Unitrópico")}`;
+      
+      // Si no hubo token API directo, abrir la ventana oficial de Google Calendar para confirmar guardado con 1 clic
+      if (!result.success) {
+        window.open(gcalUrl, "_blank");
+      }
+
       if ((window as any).showToast) {
         (window as any).showToast(
           result.success
-            ? '¡Evento agendado y sincronizado con Google Calendar!'
-            : 'Compromiso registrado en la agenda del sistema.'
+            ? "¡Evento agendado y sincronizado con Google Calendar!"
+            : "Compromiso agendado en el sistema y abierto en Google Calendar.",
+          "success"
         );
       }
 
@@ -840,8 +851,10 @@ function setupCreateEventModal() {
       closeModal();
       await loadEvents();
     } catch (err: any) {
-      console.error('Error al agendar evento:', err);
-      alert('Error al agendar: ' + err.message);
+      console.error("Error al agendar evento:", err);
+      if ((window as any).showToast) {
+        (window as any).showToast("Error al agendar: " + (err.message || "Error desconocido"), "error");
+      }
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;

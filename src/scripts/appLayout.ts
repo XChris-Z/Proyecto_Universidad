@@ -9,7 +9,9 @@ import type { InstitutionalUser } from '@lib/types';
 // Extender Window para tipado de utilidades globales
 declare global {
   interface Window {
-    showToast: (message: string, isError?: boolean) => void;
+    showToast: (message: string, typeOrIsError?: boolean | "success" | "error" | "warning" | "info", customTitle?: string) => void;
+    showAlert: (message: string, type?: "success" | "error" | "warning" | "info", title?: string) => Promise<void>;
+    showConfirm: (message: string, title?: string) => Promise<boolean>;
     currentLoggedUser: InstitutionalUser;
     updateUserProfileUI: () => void;
   }

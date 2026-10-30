@@ -89,3 +89,4 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
     return redirect('/calendario?error=unexpected_error');
   }
 };
+

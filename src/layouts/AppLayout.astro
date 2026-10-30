@@ -33,6 +33,30 @@ const { title = 'Dashboard — Panel de Control', activeNav = 'dashboard' } = As
   <!-- Contenedor Toast -->
   <div class="toast-container" id="toast-container"></div>
 
+  <!-- Modal: Alerta / Diálogo Institucional del Sistema (Sustituye window.alert del navegador) -->
+  <div class="modal-backdrop" id="sgd-system-dialog" style="display: none; z-index: 100000;">
+    <div class="modal-card" style="max-width: 440px; border-radius: 16px; border-top: 5px solid var(--verde-principal); box-shadow: 0 20px 40px rgba(0,0,0,0.2); text-align: center; padding: 28px 24px;">
+      <div id="sgd-dialog-icon-wrap" style="width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; background: var(--verde-suave-bg); color: var(--verde-principal);">
+        <svg id="sgd-dialog-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>
+      <h3 id="sgd-dialog-title" style="font-size: 1.2rem; font-weight: 800; color: var(--text-main); margin: 0 0 8px 0;">
+        Notificación Institucional
+      </h3>
+      <p id="sgd-dialog-message" style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; margin: 0 0 22px 0; word-break: break-word;">
+      </p>
+      <div id="sgd-dialog-actions" style="display: flex; gap: 10px; justify-content: center;">
+        <button type="button" class="btn btn-primary" id="sgd-dialog-btn-ok" style="min-width: 120px; font-weight: 700;">
+          Aceptar
+        </button>
+        <button type="button" class="btn btn-ghost" id="sgd-dialog-btn-cancel" style="display: none; min-width: 100px;">
+          Cancelar
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: Conmutador de Perfiles y Simulación RBAC -->
   <div class="modal-backdrop" id="switch-user-modal" style="display: none;">
     <div class="modal-card" style="max-width: 680px;">

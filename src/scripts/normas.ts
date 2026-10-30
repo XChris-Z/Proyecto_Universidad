@@ -119,11 +119,11 @@ export function initNormas() {
         severity: 'INFO'
       });
 
-      alert(`Acto "${tipo} ${numero}" radicado exitosamente en Supabase.`);
+      (window as any).showToast(`Acto "${tipo} ${numero}" radicado exitosamente en Supabase.`);
       window.location.reload();
     } catch (err: any) {
       console.error('Error guardando norma:', err);
-      alert('Error al guardar en Supabase: ' + (err.message || 'Error de base de datos'));
+      (window as any).showToast('Error al guardar en Supabase: ' + (err.message || 'Error de base de datos'));
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;
