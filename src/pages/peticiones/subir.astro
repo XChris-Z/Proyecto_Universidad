@@ -528,6 +528,10 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
         
         selectedOfficeIds.forEach(id => formData.append('oficina_ids', id));
 
+        if (!primaryFile && fileInput?.files && fileInput.files.length > 0) {
+          primaryFile = fileInput.files[0]!;
+        }
+
         if (primaryFile) {
           formData.append('archivo_peticion', primaryFile);
         }

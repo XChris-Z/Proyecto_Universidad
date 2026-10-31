@@ -31,6 +31,7 @@ Desktop.ini
 
 # Supabase CLI temp
 supabase/.temp/
+scratch/
 
 # Documentos y configuraciones privadas
 Documentos/

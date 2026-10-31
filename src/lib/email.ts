@@ -1,6 +1,12 @@
 // src/lib/email.ts
 import nodemailer from 'nodemailer';
 
+export interface EmailAttachment {
+  filename: string;
+  content: Buffer | string;
+  contentType?: string;
+}
+
 export interface EmailPeticionNotificationParams {
   toEmail: string;
   oficinaNombre: string;
@@ -13,11 +19,13 @@ export interface EmailPeticionNotificationParams {
   fechaLimiteResponsable: string;
   codigoAcceso: string;
   portalUrl: string;
+  attachments?: EmailAttachment[];
 }
 
 /**
  * Obtiene el transporte SMTP configurado vía variables de entorno
  * Soporta SMTP_USER / SMTP_PASS o GOOGLE_SMTP_USER / GOOGLE_SMTP_PASS
+ * Limpia automáticamente los espacios en blanco de contraseñas de aplicación de Google
  */
 function getSmtpTransporter() {
   const user = process.env.SMTP_USER || process.env.GOOGLE_SMTP_USER;
@@ -27,6 +35,9 @@ function getSmtpTransporter() {
     return null;
   }
 
+  const cleanUser = user.trim();
+  const cleanPass = pass.replace(/\s+/g, '');
+
   const host = process.env.SMTP_HOST || process.env.GOOGLE_SMTP_HOST || 'smtp.gmail.com';
   const port = Number(process.env.SMTP_PORT || process.env.GOOGLE_SMTP_PORT) || 465;
 
@@ -35,8 +46,8 @@ function getSmtpTransporter() {
     port,
     secure: port === 465,
     auth: {
-      user,
-      pass,
+      user: cleanUser,
+      pass: cleanPass,
     },
     connectionTimeout: 4000,
     greetingTimeout: 4000,
@@ -51,7 +62,8 @@ export async function sendPeticionAssignmentEmail(
   params: EmailPeticionNotificationParams
 ): Promise<{ success: boolean; simulated?: boolean; messageId?: string; error?: string }> {
   const transporter = getSmtpTransporter();
-  const smtpUser = process.env.SMTP_USER || process.env.GOOGLE_SMTP_USER || 'sgd@unitropico.edu.co';
+  const rawSender = process.env.SMTP_USER || process.env.GOOGLE_SMTP_USER || 'sgd@unitropico.edu.co';
+  const cleanSender = rawSender.trim();
 
   const formattedFechaEntrega = new Date(params.fechaLimiteEntrega + 'T12:00:00').toLocaleDateString('es-CO', {
     weekday: 'long',
@@ -99,6 +111,7 @@ export async function sendPeticionAssignmentEmail(
         .instrucciones-box { background: #FAF9F5; border-left: 4px solid #B5A160; border-top: 1px solid #EAE5D5; border-right: 1px solid #EAE5D5; border-bottom: 1px solid #EAE5D5; border-radius: 6px; padding: 16px 18px; margin: 22px 0; }
         .instrucciones-title { font-size: 12px; font-weight: 800; text-transform: uppercase; color: #7a6a35; letter-spacing: 0.5px; margin-bottom: 8px; display: flex; align-items: center; }
         .instrucciones-text { font-size: 13.5px; color: #334155; line-height: 1.6; font-style: italic; white-space: pre-wrap; }
+        .attachment-banner { background: #F0FDF4; border: 1px solid #BBF7D0; border-left: 4px solid #10B981; border-radius: 6px; padding: 12px 16px; margin: 18px 0; font-size: 13px; }
         .credentials-card { background: #f8fafc; border: 1px dashed #00594E; border-radius: 8px; padding: 18px; margin: 22px 0; text-align: center; }
         .cred-email { font-size: 13px; color: #475569; margin-bottom: 6px; }
         .cred-code-title { font-size: 11px; text-transform: uppercase; font-weight: 800; color: #64748b; letter-spacing: 1px; margin-top: 8px; }
@@ -149,6 +162,19 @@ export async function sendPeticionAssignmentEmail(
             </tr>
           </table>
 
+          <!-- REGLA OBLIGATORIA: ARCHIVO ADJUNTO DE LA RADICACIÓN -->
+          ${params.attachments && params.attachments.length > 0 ? `
+            <div class="attachment-banner">
+              <strong style="color: #166534; font-size: 13px;">📎 Documento Radicado Adjunto:</strong>
+              <div style="color: #15803D; font-size: 12.5px; font-weight: 700; margin-top: 2px;">
+                ${params.attachments.map(a => a.filename).join(', ')}
+              </div>
+              <div style="font-size: 11.5px; color: #4B5563; margin-top: 4px;">
+                Se ha adjuntado físicamente a este correo el documento original de la petición para su descarga e inspección inmediata.
+              </div>
+            </div>
+          ` : ''}
+
           <!-- SECCIÓN DESTACADA: REQUERIMIENTO Y ANEXOS SOLICITADOS -->
           <div class="instrucciones-box">
             <div class="instrucciones-title">📋 Requerimiento y anexos solicitados:</div>
@@ -160,7 +186,7 @@ export async function sendPeticionAssignmentEmail(
             <div class="cred-email">Correo Electrónico Autorizado: <strong>${params.toEmail}</strong></div>
             <div class="cred-code-title">Código Único Temporal de Acceso</div>
             <div class="cred-code-val">${params.codigoAcceso}</div>
-            <div style="font-size: 11px; color: #64748b;">Este código es intransferible y de un solo uso para esta petición específica.</div>
+            <div style="font-size: 11px; color: #64748b;">Este código es intransferible y de uso temporal para cargar anexos en esta carpeta oficial.</div>
           </div>
 
           <!-- ADVERTENCIA DE VENCIMIENTO PERENTORIO (-5 DÍAS) -->
@@ -171,7 +197,7 @@ export async function sendPeticionAssignmentEmail(
 
           <!-- BOTÓN DIRECTO AL PORTAL DE CARGA -->
           <a href="${params.portalUrl}" class="btn-access">
-            Ingresar al Portal de Entrega de Anexos &rarr;
+            Ingresar a la Carpeta y Cargar Anexos &rarr;
           </a>
 
           <p style="font-size: 12px; color: #64748b; text-align: center; margin-top: 18px;">
@@ -197,7 +223,7 @@ export async function sendPeticionAssignmentEmail(
 
   if (!transporter) {
     console.log(
-      `[SMTP SIMULADO] Se generó notificación para ${params.toEmail} (${params.oficinaNombre}) - Radicado ${params.numeroRadicado} - Código: ${params.codigoAcceso}`
+      `[SMTP SIMULADO] Se generó notificación para ${params.toEmail} (${params.oficinaNombre}) - Radicado ${params.numeroRadicado} - Código: ${params.codigoAcceso} - Adjuntos: ${params.attachments?.length || 0}`
     );
     return {
       success: true,
@@ -208,10 +234,11 @@ export async function sendPeticionAssignmentEmail(
 
   try {
     const sendPromise = transporter.sendMail({
-      from: `"SGD Unitrópico" <${smtpUser}>`,
+      from: `"SGD Unitrópico" <${cleanSender}>`,
       to: params.toEmail,
       subject,
       html: htmlContent,
+      attachments: params.attachments,
     });
 
     const timeoutPromise = new Promise<never>((_, reject) =>

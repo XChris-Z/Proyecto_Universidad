@@ -1,10 +1,12 @@
 ---
 // src/pages/archivos.astro
+export const prerender = false;
+
 import AppLayout from '@layouts/AppLayout.astro';
 import { supabase } from '@lib/supabase';
 import { calculateDeadlineProgress } from '@lib/utils';
 
-// Consultar peticiones y anexos reales en base de datos PostgreSQL
+// Consultar peticiones, archivo principal y anexos reales en PostgreSQL
 const { data: dbPeticiones } = await (supabase
   .from('peticiones' as any)
   .select(`
@@ -12,21 +14,25 @@ const { data: dbPeticiones } = await (supabase
     numero_radicado,
     asunto,
     descripcion,
+    instrucciones_anexos,
     solicitante_nombre,
     solicitante_tipo,
+    solicitante_email,
     fecha_radicacion,
     fecha_limite_entrega,
     fecha_limite_responsable,
     storage_folder_path,
     estado,
     prioridad,
+    created_at,
     peticion_anexos (
       id,
       nombre_archivo,
-      storage_file_path,
+      storage_path,
       tamano_bytes,
       mime_type,
       es_anexo_oficina,
+      peticion_responsable_id,
       created_at
     ),
     peticion_responsables (
@@ -34,7 +40,10 @@ const { data: dbPeticiones } = await (supabase
       codigo_acceso,
       estado_entrega,
       fecha_entrega,
+      storage_subfolder_path,
       oficinas (
+        id,
+        codigo,
         nombre,
         email_institucional
       )
@@ -57,13 +66,73 @@ peticiones.forEach((p: any) => {
   else if (prog.percentage <= 80) warnCount++;
   else criticalCount++;
 });
+
+// Función para obtener URL pública de descarga en Supabase Storage
+function getDownloadUrl(storagePath: string | null | undefined): string {
+  if (!storagePath) return '#';
+  const clean = storagePath.replace(/^peticiones\//, '');
+  return `https://irjjpjtvhxoakiazfswn.supabase.co/storage/v1/object/public/peticiones/${clean}`;
+}
+
+function formatBytes(bytes?: number | null) {
+  if (!bytes || bytes === 0) return '0 KB';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
 ---
 
-<AppLayout title="Módulo de Archivos y Gestión Documental" activeNav="archivos">
-  <div class="section-toolbar">
-    <div class="filter-tabs" id="archivos-filter-tabs">
+<AppLayout title="Gestor de Archivos y Carpetas de Radicados" activeNav="archivos">
+  <div class="archivos-wrapper" style="display: flex; flex-direction: column; gap: 20px;">
+
+    <!-- Barra de Navegación Estilo Google Drive (Breadcrumbs y Herramientas) -->
+    <div class="card" style="padding: 16px 20px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+      
+      <!-- Breadcrumb Interactivo -->
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 0.92rem; font-weight: 700;">
+        <div style="width: 32px; height: 32px; border-radius: 8px; background: var(--verde-suave-bg); color: var(--verde-principal); display: flex; align-items: center; justify-content: center;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <button type="button" id="bc-root" class="breadcrumb-btn active" style="background: none; border: none; cursor: pointer; color: var(--text-main); font-weight: 800; font-size: 0.95rem; padding: 0;">
+          Gestor de Archivos (Raíz)
+        </button>
+        <span id="bc-separator" style="display: none; color: var(--text-muted);">&rsaquo;</span>
+        <span id="bc-folder-name" style="display: none; color: var(--verde-principal); font-family: monospace; font-size: 0.9rem;">--</span>
+      </div>
+
+      <!-- Acciones de Cabecera: Buscador y Alternador de Vistas -->
+      <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <!-- Buscador en Vivo -->
+        <div style="position: relative; width: 260px;">
+          <input type="text" id="drive-search-input" placeholder="Buscar carpeta o archivo..." class="form-input" style="padding-left: 32px; height: 38px; font-size: 0.82rem;" />
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position: absolute; left: 10px; top: 12px; color: var(--text-muted);"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </div>
+
+        <!-- Alternador Vista Drive / Vista Lista -->
+        <div style="display: flex; background: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 2px;">
+          <button type="button" id="btn-view-grid" class="view-toggle-btn active" title="Vista de Carpetas estilo Drive">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            <span>Carpetas</span>
+          </button>
+          <button type="button" id="btn-view-table" class="view-toggle-btn" title="Vista de Tabla Detallada">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            <span>Lista</span>
+          </button>
+        </div>
+
+        <a href="/peticiones/subir" class="btn btn-primary btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 800;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          <span>Subir Petición</span>
+        </a>
+      </div>
+
+    </div>
+
+    <!-- Pestañas de Filtro Rápido -->
+    <div class="filter-tabs" id="archivos-filter-tabs" style="margin: 0;">
       <button class="filter-tab active" data-filter="all">
-        <span>Todos</span>
+        <span>Todas las Carpetas</span>
         <span class="filter-count" id="count-all">{totalCount}</span>
       </button>
       <button class="filter-tab" data-filter="pending">
@@ -93,157 +162,615 @@ peticiones.forEach((p: any) => {
       </button>
     </div>
 
-    <div>
-      <a href="/peticiones/subir" class="btn btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-        <span>+ Subir Petición / Archivo</span>
-      </a>
-    </div>
-  </div>
+    <!-- SECCIÓN A: VISTA GOOGLE DRIVE DE CARPETAS (GRID) -->
+    <div id="drive-grid-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;">
+      {peticiones.length > 0 ? (
+        peticiones.map((doc: any) => {
+          const isResponded = doc.estado === 'respondida' || doc.estado === 'completada';
+          const anexos = doc.peticion_anexos || [];
+          const anexoPrincipal = anexos.find((a: any) => !a.es_anexo_oficina) || anexos[0];
+          const responsables = doc.peticion_responsables || [];
+          const prog = calculateDeadlineProgress(doc.fecha_radicacion, doc.fecha_limite_entrega);
+          const filterSla = prog.percentage > 80 ? 'critical' : prog.percentage >= 50 ? 'warn' : 'safe';
 
-  <div class="table-responsive">
-    <table class="doc-table">
-      <thead>
-        <tr>
-          <th>Archivo / Petición</th>
-          <th>Radicado</th>
-          <th>Fechas (Radicación - Plazo)</th>
-          <th>Plazo de Vencimiento (SLA)</th>
-          <th>Responsables Asignados</th>
-          <th>Estado Trámite</th>
-          <th style="text-align: right;">Acciones</th>
-        </tr>
-      </thead>
-      <tbody id="documents-table-body">
-        {peticiones.length > 0 ? (
-          peticiones.map((doc: any) => {
-            const prog = calculateDeadlineProgress(doc.fecha_radicacion, doc.fecha_limite_entrega);
-            const isResponded = doc.estado === 'respondida' || doc.estado === 'completada';
-            const anexoPrincipal = doc.peticion_anexos?.find((a: any) => !a.es_anexo_oficina) || doc.peticion_anexos?.[0];
-            const responsables = doc.peticion_responsables || [];
-            const filterSla = prog.percentage > 80 ? 'critical' : prog.percentage >= 50 ? 'warn' : 'safe';
-
-            return (
-              <tr class="doc-row" data-status={isResponded ? 'responded' : 'pending'} data-sla={filterSla}>
-                <td>
-                  <div style="display: flex; align-items: center; gap: 10px;">
-                    <div class="doc-icon-badge pdf" style="width: 34px; height: 34px; font-size: 0.68rem; background: var(--verde-suave-bg); color: var(--verde-principal); border: 1px solid var(--verde-borde); display: flex; align-items: center; justify-content: center; border-radius: 6px;">
-                      <span style="font-weight: 800;">DOC</span>
+          return (
+            <div 
+              class="drive-folder-card" 
+              data-id={doc.id}
+              data-radicado={doc.numero_radicado}
+              data-asunto={doc.asunto}
+              data-solicitante={doc.solicitante_nombre}
+              data-status={isResponded ? 'responded' : 'pending'} 
+              data-sla={filterSla}
+            >
+              <!-- Cabecera de Carpeta -->
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <div class="folder-svg-icon" style="width: 44px; height: 44px; border-radius: 10px; background: rgba(0, 89, 78, 0.08); color: var(--verde-principal); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0, 89, 78, 0.2);">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg>
+                  </div>
+                  <div>
+                    <span class="radicado-chip">{doc.numero_radicado}</span>
+                    <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 3px;">
+                      Radicado: {doc.fecha_radicacion || 'Reciente'}
                     </div>
-                    <div>
-                      <div style="font-weight: 700; font-size: 0.88rem; color: var(--text-main);">{doc.asunto}</div>
-                      <div style="font-size: 0.74rem; color: var(--text-muted);">
-                        {doc.solicitante_tipo || 'Peticionario'} &bull; {doc.solicitante_nombre}
-                        {anexoPrincipal && (
-                          <span style="color: var(--verde-principal); font-weight: 600; margin-left: 6px;">
-                            📎 {anexoPrincipal.nombre_archivo}
-                          </span>
-                        )}
+                  </div>
+                </div>
+
+                <span class={`badge ${prog.statusClass}`} style="font-size: 0.65rem; padding: 2px 6px;">
+                  {prog.statusBadge}
+                </span>
+              </div>
+
+              <!-- Título de la Carpeta (Asunto) -->
+              <h4 class="folder-title" title={doc.asunto}>{doc.asunto}</h4>
+
+              <!-- Solicitante -->
+              <div style="font-size: 0.76rem; color: var(--text-muted); margin-bottom: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                <span style="font-weight: 700; color: var(--text-main);">{doc.solicitante_nombre}</span> ({doc.solicitante_tipo || 'Ciudadano'})
+              </div>
+
+              <!-- Contenido de la Carpeta (Archivos & Responsables) -->
+              <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 0.75rem; margin-bottom: 14px; display: flex; flex-direction: column; gap: 6px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    <span>Documento Raíz:</span>
+                  </span>
+                  <span style="font-weight: 700; color: var(--verde-principal); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    {anexoPrincipal?.nombre_archivo || 'Documento Inicial'}
+                  </span>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                    <span>Subcarpetas Responsables:</span>
+                  </span>
+                  <span style="font-weight: 800; color: var(--text-main);">
+                    {responsables.length} oficina{responsables.length === 1 ? '' : 's'}
+                  </span>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="color: var(--text-muted);">Plazo Límite de Oficinas:</span>
+                  <span style="font-weight: 700; color: var(--dorado-oscuro); font-family: monospace;">
+                    {doc.fecha_limite_responsable}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Barra de Acciones de la Carpeta -->
+              <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-subtle); padding-top: 10px;">
+                <button type="button" class="btn-open-folder btn btn-primary btn-sm" style="flex: 1; justify-content: center; gap: 6px; font-weight: 800; font-size: 0.8rem;" data-folder-id={doc.id}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                  <span>Abrir Carpeta</span>
+                </button>
+
+                {anexoPrincipal && (
+                  <a href={getDownloadUrl(anexoPrincipal.storage_path)} target="_blank" rel="noopener noreferrer" class="btn btn-ghost btn-sm" title="Descargar documento principal" style="margin-left: 8px; text-decoration: none;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  </a>
+                )}
+              </div>
+            </div>
+          );
+        })
+      ) : (
+        <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+          <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--verde-suave-bg); color: var(--verde-principal); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px auto;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--text-main); margin: 0 0 6px 0;">No hay carpetas de expedientes creadas</h3>
+          <p style="font-size: 0.85rem; color: var(--text-muted); max-width: 480px; margin: 0 auto 16px auto;">
+            Al radicar una nueva petición se creará automáticamente su carpeta virtual en Supabase Storage con su documento inicial y las subcarpetas de las dependencias asignadas.
+          </p>
+          <a href="/peticiones/subir" class="btn btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+            <span>+ Radicar Primera Petición</span>
+          </a>
+        </div>
+      )}
+    </div>
+
+    <!-- SECCIÓN B: VISTA DE DETALLE DE CARPETA ABIERTA (EXPLORADOR TIPO GOOGLE DRIVE) -->
+    <div id="drive-folder-detail-container" style="display: none; flex-direction: column; gap: 20px;">
+      <!-- Se inyecta dinámicamente vía JavaScript con los datos completos del expediente -->
+    </div>
+
+    <!-- SECCIÓN C: VISTA TABULAR CLÁSICA CON SLAs -->
+    <div id="drive-table-container" style="display: none;">
+      <div class="table-responsive">
+        <table class="doc-table">
+          <thead>
+            <tr>
+              <th>Carpeta / Expediente</th>
+              <th>Radicado</th>
+              <th>Fechas (Radicado - Límite)</th>
+              <th>Plazo General (SLA)</th>
+              <th>Oficinas Responsables</th>
+              <th>Estado</th>
+              <th style="text-align: right;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="documents-table-body">
+            {peticiones.map((doc: any) => {
+              const prog = calculateDeadlineProgress(doc.fecha_radicacion, doc.fecha_limite_entrega);
+              const isResponded = doc.estado === 'respondida' || doc.estado === 'completada';
+              const anexos = doc.peticion_anexos || [];
+              const anexoPrincipal = anexos.find((a: any) => !a.es_anexo_oficina) || anexos[0];
+              const responsables = doc.peticion_responsables || [];
+              const filterSla = prog.percentage > 80 ? 'critical' : prog.percentage >= 50 ? 'warn' : 'safe';
+
+              return (
+                <tr class="doc-row" data-id={doc.id} data-radicado={doc.numero_radicado} data-asunto={doc.asunto} data-solicitante={doc.solicitante_nombre} data-status={isResponded ? 'responded' : 'pending'} data-sla={filterSla}>
+                  <td>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                      <div class="doc-icon-badge pdf" style="width: 34px; height: 34px; font-size: 0.68rem; background: var(--verde-suave-bg); color: var(--verde-principal); border: 1px solid var(--verde-borde); display: flex; align-items: center; justify-content: center; border-radius: 6px;">
+                        <span>DOC</span>
+                      </div>
+                      <div>
+                        <div style="font-weight: 700; font-size: 0.88rem; color: var(--text-main);">{doc.asunto}</div>
+                        <div style="font-size: 0.74rem; color: var(--text-muted);">
+                          {doc.solicitante_tipo || 'Peticionario'} &bull; {doc.solicitante_nombre}
+                          {anexoPrincipal && (
+                            <span style="color: var(--verde-principal); font-weight: 600; margin-left: 6px;">
+                              📎 {anexoPrincipal.nombre_archivo}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </td>
-                <td>
-                  <span style="font-family: monospace; font-size: 0.82rem; font-weight: 700; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--verde-borde);">
-                    {doc.numero_radicado}
-                  </span>
-                </td>
-                <td>
-                  <div style="font-size: 0.78rem;">
-                    <div>Rad: <strong>{doc.fecha_radicacion}</strong></div>
-                    <div style="color: var(--text-muted);">Vence: {doc.fecha_limite_entrega}</div>
-                  </div>
-                </td>
-                <td>
-                  <div style="min-width: 140px;">
-                    <div style="display: flex; justify-content: space-between; font-size: 0.74rem; margin-bottom: 3px;">
-                      <span class={`badge ${prog.statusClass}`} style="font-size: 0.68rem; padding: 1px 6px; border-radius: 4px;">
-                        {prog.statusBadge}
-                      </span>
-                      <span>{prog.percentage}%</span>
+                  </td>
+                  <td>
+                    <span style="font-family: monospace; font-size: 0.82rem; font-weight: 700; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--verde-borde);">
+                      {doc.numero_radicado}
+                    </span>
+                  </td>
+                  <td>
+                    <div style="font-size: 0.78rem;">
+                      <div>Rad: <strong>{doc.fecha_radicacion}</strong></div>
+                      <div style="color: var(--text-muted);">Límite: {doc.fecha_limite_entrega}</div>
                     </div>
-                    <div class="dist-progress-bg" style="height: 6px;">
-                      <div class="dist-progress-fill" style={`width: ${prog.percentage}%; background: ${prog.percentage > 80 ? 'var(--status-critical)' : prog.percentage > 50 ? 'var(--status-warn)' : 'var(--status-safe)'};`}></div>
+                  </td>
+                  <td>
+                    <div style="min-width: 140px;">
+                      <div style="display: flex; justify-content: space-between; font-size: 0.74rem; margin-bottom: 3px;">
+                        <span class={`badge ${prog.statusClass}`} style="font-size: 0.68rem; padding: 1px 6px; border-radius: 4px;">
+                          {prog.statusBadge}
+                        </span>
+                        <span>{prog.percentage}%</span>
+                      </div>
+                      <div class="dist-progress-bg" style="height: 6px;">
+                        <div class="dist-progress-fill" style={`width: ${prog.percentage}%; background: ${prog.percentage > 80 ? 'var(--status-critical)' : prog.percentage > 50 ? 'var(--status-warn)' : 'var(--status-safe)'};`}></div>
+                      </div>
                     </div>
-                  </div>
-                </td>
-                <td>
-                  {responsables.length > 0 ? (
-                    <div style="display: flex; flex-direction: column; gap: 3px;">
-                      {responsables.map((r: any) => (
-                        <div style="font-size: 0.78rem; color: var(--text-main); display: flex; align-items: center; gap: 4px;">
-                          <span style={`width: 6px; height: 6px; border-radius: 50%; background: ${r.estado_entrega === 'entregado' ? 'var(--verde-principal)' : 'var(--dorado-principal)'};`}></span>
-                          <span>{r.oficinas?.nombre || 'Oficina'}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <span style="font-size: 0.75rem; color: var(--text-muted);">Sin oficina asignada</span>
-                  )}
-                </td>
-                <td>
-                  <span class={`badge-response-status ${isResponded ? 'responded' : 'pending'}`} style="font-size: 0.72rem; padding: 4px 8px; border-radius: 4px;">
-                    {isResponded ? '✓ Respondida' : '⏳ En Trámite'}
-                  </span>
-                </td>
-                <td style="text-align: right;">
-                  <div style="display: inline-flex; gap: 6px;">
-                    <a href="/peticiones" class="btn btn-ghost btn-sm" title="Ver detalle de petición en Radicados" style="text-decoration: none;">
-                      Ver Radicado
-                    </a>
-                    {anexoPrincipal?.storage_file_path && (
-                      <a href={`https://irjjpjtvhxoakiazfswn.supabase.co/storage/v1/object/public/peticiones/${anexoPrincipal.storage_file_path}`} target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" title="Descargar anexo principal" style="text-decoration: none;">
-                        Descargar
-                      </a>
+                  </td>
+                  <td>
+                    {responsables.length > 0 ? (
+                      <div style="display: flex; flex-direction: column; gap: 3px;">
+                        {responsables.map((r: any) => (
+                          <div style="font-size: 0.76rem; color: var(--text-main); display: flex; align-items: center; gap: 4px;">
+                            <span style={`width: 6px; height: 6px; border-radius: 50%; background: ${r.estado_entrega === 'Entregado' ? 'var(--verde-principal)' : 'var(--dorado-principal)'};`}></span>
+                            <span>{r.oficinas?.nombre || 'Oficina'}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <span style="font-size: 0.75rem; color: var(--text-muted);">Sin oficinas asignadas</span>
                     )}
-                  </div>
-                </td>
-              </tr>
-            );
-          })
-        ) : (
-          <tr>
-            <td colspan="7" style="text-align: center; padding: 48px 16px; color: var(--text-muted);">
-              <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--verde-principal);"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                <strong style="font-size: 1rem; color: var(--text-main);">No hay expedientes ni archivos radicados</strong>
-                <p style="font-size: 0.85rem; max-width: 450px; margin: 0 auto;">El archivo central se encuentra limpio. Puede radicar una nueva petición con su soporte documental para iniciar un expediente oficial.</p>
-                <a href="/peticiones/subir" class="btn btn-primary btn-sm" style="margin-top: 8px; text-decoration: none;">+ Radicar Primer Archivo</a>
-              </div>
-            </td>
-          </tr>
-        )}
-      </tbody>
-    </table>
+                  </td>
+                  <td>
+                    <span class={`badge-response-status ${isResponded ? 'responded' : 'pending'}`} style="font-size: 0.72rem; padding: 4px 8px; border-radius: 4px;">
+                      {isResponded ? '✓ Respondida' : '⏳ En Trámite'}
+                    </span>
+                  </td>
+                  <td style="text-align: right;">
+                    <div style="display: inline-flex; gap: 6px;">
+                      <button type="button" class="btn btn-primary btn-sm btn-open-folder" data-folder-id={doc.id} style="font-size: 0.75rem; font-weight: 700;">
+                        Abrir Carpeta
+                      </button>
+                      {anexoPrincipal && (
+                        <a href={getDownloadUrl(anexoPrincipal.storage_path)} target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" title="Descargar anexo principal" style="text-decoration: none;">
+                          Descargar
+                        </a>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
-</AppLayout>
 
-<script>
-  // Filtrado de pestañas en la vista de archivos
-  const filterTabs = document.querySelectorAll('#archivos-filter-tabs .filter-tab');
-  const rows = document.querySelectorAll('.doc-row') as NodeListOf<HTMLTableRowElement>;
+  <style>
+    .drive-folder-card {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 18px;
+      transition: all 0.15s ease;
+      display: flex;
+      flex-direction: column;
+      box-shadow: var(--shadow-sm);
+    }
+    .drive-folder-card:hover {
+      border-color: var(--verde-principal);
+      box-shadow: 0 4px 14px rgba(0, 89, 78, 0.12);
+      transform: translateY(-2px);
+    }
+    .folder-title {
+      font-size: 0.96rem;
+      font-weight: 800;
+      color: var(--text-main);
+      margin: 0 0 4px 0;
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .radicado-chip {
+      font-family: monospace;
+      font-size: 0.82rem;
+      font-weight: 800;
+      color: var(--verde-principal);
+      background: var(--verde-suave-bg);
+      border: 1px solid var(--verde-borde);
+      padding: 2px 7px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+    .view-toggle-btn {
+      background: none;
+      border: none;
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.12s ease;
+    }
+    .view-toggle-btn.active {
+      background: #ffffff;
+      color: var(--verde-principal);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+  </style>
 
-  filterTabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      filterTabs.forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
+  <!-- Script del Explorador Google Drive y Filtrado -->
+  <script define:vars={{ peticionesData: peticiones }}>
+    const allPeticiones = peticionesData;
 
-      const filter = tab.getAttribute('data-filter') || 'all';
+    const gridContainer = document.getElementById('drive-grid-container');
+    const tableContainer = document.getElementById('drive-table-container');
+    const detailContainer = document.getElementById('drive-folder-detail-container');
+    const filterTabsContainer = document.getElementById('archivos-filter-tabs');
+
+    const btnViewGrid = document.getElementById('btn-view-grid');
+    const btnViewTable = document.getElementById('btn-view-table');
+
+    const bcRoot = document.getElementById('bc-root');
+    const bcSep = document.getElementById('bc-separator');
+    const bcFolder = document.getElementById('bc-folder-name');
+
+    const searchInput = document.getElementById('drive-search-input');
+
+    let currentView = 'grid'; // 'grid' | 'table' | 'detail'
+    let currentActiveFolderId = null;
+
+    // Helper URL descarga
+    function getPublicStorageUrl(storagePath) {
+      if (!storagePath) return '#';
+      const clean = storagePath.replace(/^peticiones\//, '');
+      return `https://irjjpjtvhxoakiazfswn.supabase.co/storage/v1/object/public/peticiones/${clean}`;
+    }
+
+    function formatFileSize(bytes) {
+      if (!bytes || bytes === 0) return '0 KB';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    // 1. Alternar entre Vista de Carpetas (Drive) y Vista de Tabla
+    btnViewGrid?.addEventListener('click', () => {
+      btnViewGrid.classList.add('active');
+      btnViewTable.classList.remove('active');
+      currentView = 'grid';
+      closeFolderDetail();
+    });
+
+    btnViewTable?.addEventListener('click', () => {
+      btnViewTable.classList.add('active');
+      btnViewGrid.classList.remove('active');
+      currentView = 'table';
+      closeFolderDetail();
+    });
+
+    // 2. Abrir Detalle de Carpeta estilo Google Drive
+    function openFolderDetail(folderId) {
+      const peticion = allPeticiones.find(p => p.id === folderId);
+      if (!peticion || !detailContainer) return;
+
+      currentActiveFolderId = folderId;
+      gridContainer.style.display = 'none';
+      tableContainer.style.display = 'none';
+      if (filterTabsContainer) filterTabsContainer.style.display = 'none';
+      detailContainer.style.display = 'flex';
+
+      // Actualizar Breadcrumbs
+      if (bcSep) bcSep.style.display = 'inline';
+      if (bcFolder) {
+        bcFolder.textContent = `${peticion.numero_radicado} — ${peticion.asunto.slice(0, 30)}...`;
+        bcFolder.style.display = 'inline';
+      }
+
+      const anexos = peticion.peticion_anexos || [];
+      const anexoPrincipal = anexos.find(a => !a.es_anexo_oficina) || anexos[0];
+      const anexosOficinas = anexos.filter(a => a.es_anexo_oficina);
+      const responsables = peticion.peticion_responsables || [];
+
+      detailContainer.innerHTML = `
+        <!-- Banner del Expediente / Carpeta -->
+        <div class="card" style="padding: 24px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); border-left: 5px solid var(--verde-principal); display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+              <span class="radicado-chip" style="font-size: 1rem; padding: 4px 10px;">${peticion.numero_radicado}</span>
+              <span class="badge ${peticion.estado === 'respondida' ? 'safe' : 'warn'}" style="font-size: 0.72rem; padding: 4px 8px;">
+                ${peticion.estado === 'respondida' ? '✓ Respondida' : '⏳ En Trámite'}
+              </span>
+              <span style="font-size: 0.74rem; font-weight: 700; color: var(--dorado-oscuro); background: var(--dorado-suave-bg); border: 1px solid var(--dorado-borde); padding: 3px 8px; border-radius: 4px;">
+                Prioridad: ${peticion.prioridad || 'Media'}
+              </span>
+            </div>
+            <h2 style="font-size: 1.25rem; font-weight: 800; color: var(--text-main); margin: 6px 0;">${peticion.asunto}</h2>
+            <div style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.5;">
+              <strong>Peticionario:</strong> ${peticion.solicitante_nombre} (${peticion.solicitante_tipo || 'Ciudadano'}) &bull; 
+              <strong>Correo:</strong> ${peticion.solicitante_email || 'Sin correo registrado'} &bull;
+              <strong>Categoría:</strong> ${peticion.categoria || 'Petición General'}
+            </div>
+            ${peticion.instrucciones_anexos ? `
+              <div style="margin-top: 10px; background: #FAF9F5; border-left: 3px solid var(--dorado-principal); padding: 8px 12px; border-radius: 4px; font-size: 0.78rem; color: #475569;">
+                <strong>Instrucciones enviadas a las oficinas:</strong> "${peticion.instrucciones_anexos}"
+              </div>
+            ` : ''}
+          </div>
+
+          <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+            <button type="button" id="btn-back-root" class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 700;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+              <span>Volver al Gestor</span>
+            </button>
+            <div style="text-align: right; font-size: 0.74rem; color: var(--text-muted);">
+              <div>Plazo Oficinas: <strong style="color: var(--dorado-oscuro); font-family: monospace;">${peticion.fecha_limite_responsable}</strong></div>
+              <div>Cierre General: <strong style="color: var(--text-main); font-family: monospace;">${peticion.fecha_limite_entrega}</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECCIÓN 1: ARCHIVO ORIGINAL RADICADO (RAÍZ DE LA CARPETA) -->
+        <div class="card" style="padding: 22px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border-subtle);">
+            <div style="width: 32px; height: 32px; border-radius: 6px; background: var(--verde-suave-bg); color: var(--verde-principal); display: flex; align-items: center; justify-content: center;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            <div>
+              <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin: 0;">Documento Original Radicado</h3>
+              <span style="font-size: 0.72rem; color: var(--text-muted);">Archivo oficial cargado al momento de la radicación en Supabase Storage</span>
+            </div>
+          </div>
+
+          ${anexoPrincipal ? `
+            <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 42px; height: 42px; border-radius: 8px; background: #ffffff; border: 1px solid var(--verde-borde); color: var(--verde-principal); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem;">
+                  PDF
+                </div>
+                <div>
+                  <strong style="color: var(--text-main); font-size: 0.92rem;">${anexoPrincipal.nombre_archivo}</strong>
+                  <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">
+                    Tamaño: <strong>${formatFileSize(anexoPrincipal.tamano_bytes)}</strong> &bull; Subido: ${new Date(anexoPrincipal.created_at).toLocaleDateString('es-CO')}
+                  </div>
+                  <code style="font-size: 0.68rem; color: var(--verde-principal);">${anexoPrincipal.storage_path}</code>
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 8px;">
+                <a href="${getPublicStorageUrl(anexoPrincipal.storage_path)}" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 800;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  <span>Descargar Archivo</span>
+                </a>
+              </div>
+            </div>
+          ` : `
+            <div style="text-align: center; padding: 24px; color: var(--text-muted); font-size: 0.82rem; background: var(--bg-surface-elevated); border-radius: var(--radius-sm);">
+              No se adjuntó un archivo físico al radicar esta petición.
+            </div>
+          `}
+        </div>
+
+        <!-- SECCIÓN 2: SUBCARPETAS DE OFICINAS RESPONSABLES Y ANEXOS -->
+        <div class="card" style="padding: 22px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border-subtle); flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="width: 32px; height: 32px; border-radius: 6px; background: var(--dorado-suave-bg); color: var(--dorado-oscuro); display: flex; align-items: center; justify-content: center;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              </div>
+              <div>
+                <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin: 0;">Subcarpetas de Oficinas Responsables</h3>
+                <span style="font-size: 0.72rem; color: var(--text-muted);">Espacio asignado para la entrega de anexos de cada dependencia</span>
+              </div>
+            </div>
+
+            <span style="font-size: 0.76rem; font-weight: 800; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 4px 10px; border-radius: 4px;">
+              ${responsables.length} dependencias requeridas
+            </span>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            ${responsables.length > 0 ? responsables.map(r => {
+              const ofiAnexos = anexosOficinas.filter(a => a.peticion_responsable_id === r.id);
+              const isDelivered = r.estado_entrega === 'Entregado' || ofiAnexos.length > 0;
+
+              return `
+                <div style="border: 1px solid var(--border-color); border-radius: var(--radius-sm); overflow: hidden; background: #ffffff;">
+                  <div style="background: var(--bg-surface-elevated); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--border-subtle);">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="color: ${isDelivered ? 'var(--verde-principal)' : 'var(--dorado-oscuro)'};"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg>
+                      <div>
+                        <strong style="font-size: 0.88rem; color: var(--text-main);">${r.oficinas?.nombre || 'Oficina Responsable'}</strong>
+                        <div style="font-size: 0.70rem; color: var(--text-muted); font-family: monospace;">${r.oficinas?.email_institucional || ''}</div>
+                      </div>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <span style="font-family: monospace; font-size: 0.74rem; font-weight: 800; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 3px 8px; border-radius: 4px; border: 1px solid var(--verde-borde);" title="Código Único de Acceso">${r.codigo_acceso}</span>
+                      <span style="font-size: 0.70rem; font-weight: 800; padding: 3px 8px; border-radius: 4px; background: ${isDelivered ? '#DCFCE7' : '#FEF3C7'}; color: ${isDelivered ? '#15803D' : '#92400E'};">
+                        ${isDelivered ? '✓ Anexos Aportados' : '⏳ Pendiente de Respuesta'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- Contenido de la Subcarpeta de la Oficina -->
+                  <div style="padding: 14px 16px;">
+                    ${ofiAnexos.length > 0 ? `
+                      <div style="display: flex; flex-direction: column; gap: 8px;">
+                        ${ofiAnexos.map(oa => `
+                          <div style="background: #ffffff; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--verde-principal)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                              <div>
+                                <strong style="color: var(--text-main);">${oa.nombre_archivo}</strong>
+                                <span style="font-size: 0.70rem; color: var(--text-muted); margin-left: 6px;">(${formatFileSize(oa.tamano_bytes)})</span>
+                              </div>
+                            </div>
+                            <a href="${getPublicStorageUrl(oa.storage_path)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="text-decoration: none; font-size: 0.72rem; padding: 4px 10px;">
+                              Descargar
+                            </a>
+                          </div>
+                        `).join('')}
+                      </div>
+                    ` : `
+                      <div style="color: var(--text-muted); font-size: 0.76rem; font-style: italic;">
+                        Esta dependencia aún no ha cargado documentos de soporte en su subcarpeta virtual. Plazo máximo de entrega: ${peticion.fecha_limite_responsable}.
+                      </div>
+                    `}
+                  </div>
+                </div>
+              `;
+            }).join('') : `
+              <div style="text-align: center; padding: 16px; color: var(--text-muted); font-size: 0.8rem;">
+                No se asignaron dependencias para esta petición.
+              </div>
+            `}
+          </div>
+        </div>
+      `;
+
+      // Listener para botón volver
+      document.getElementById('btn-back-root')?.addEventListener('click', closeFolderDetail);
+    }
+
+    // 3. Cerrar Detalle de Carpeta y volver a la raíz
+    function closeFolderDetail() {
+      currentActiveFolderId = null;
+      if (detailContainer) detailContainer.style.display = 'none';
+      if (filterTabsContainer) filterTabsContainer.style.display = 'flex';
+
+      if (currentView === 'grid') {
+        if (gridContainer) gridContainer.style.display = 'grid';
+        if (tableContainer) tableContainer.style.display = 'none';
+      } else {
+        if (gridContainer) gridContainer.style.display = 'none';
+        if (tableContainer) tableContainer.style.display = 'block';
+      }
+
+      if (bcSep) bcSep.style.display = 'none';
+      if (bcFolder) bcFolder.style.display = 'none';
+    }
+
+    bcRoot?.addEventListener('click', closeFolderDetail);
+
+    // 4. Delegar clic en los botones "Abrir Carpeta"
+    document.addEventListener('click', (e) => {
+      const target = e.target.closest('.btn-open-folder');
+      if (target) {
+        const id = target.getAttribute('data-folder-id');
+        if (id) openFolderDetail(id);
+      }
+    });
+
+    // 5. Filtrado por Pestañas (En Trámite, Respondidas, SLA)
+    const filterTabs = document.querySelectorAll('#archivos-filter-tabs .filter-tab');
+    filterTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        filterTabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+
+        const filter = tab.getAttribute('data-filter') || 'all';
+        applyFilters(filter, searchInput ? searchInput.value : '');
+      });
+    });
+
+    // 6. Buscador interactivo en vivo
+    searchInput?.addEventListener('input', () => {
+      const activeTab = document.querySelector('#archivos-filter-tabs .filter-tab.active');
+      const filter = activeTab ? activeTab.getAttribute('data-filter') || 'all' : 'all';
+      applyFilters(filter, searchInput.value.toLowerCase().trim());
+    });
+
+    function applyFilters(filterStatus, searchText) {
+      const cards = document.querySelectorAll('.drive-folder-card');
+      const rows = document.querySelectorAll('.doc-row');
+
+      cards.forEach(card => {
+        const status = card.getAttribute('data-status');
+        const sla = card.getAttribute('data-sla');
+        const radicado = (card.getAttribute('data-radicado') || '').toLowerCase();
+        const asunto = (card.getAttribute('data-asunto') || '').toLowerCase();
+        const solicitante = (card.getAttribute('data-solicitante') || '').toLowerCase();
+
+        let matchesStatus = true;
+        if (filterStatus === 'pending') matchesStatus = status === 'pending';
+        else if (filterStatus === 'responded') matchesStatus = status === 'responded';
+        else if (filterStatus === 'safe' || filterStatus === 'warn' || filterStatus === 'critical') matchesStatus = sla === filterStatus;
+
+        let matchesSearch = true;
+        if (searchText) {
+          matchesSearch = radicado.includes(searchText) || asunto.includes(searchText) || solicitante.includes(searchText);
+        }
+
+        card.style.display = (matchesStatus && matchesSearch) ? 'flex' : 'none';
+      });
 
       rows.forEach(row => {
         const status = row.getAttribute('data-status');
         const sla = row.getAttribute('data-sla');
+        const radicado = (row.getAttribute('data-radicado') || '').toLowerCase();
+        const asunto = (row.getAttribute('data-asunto') || '').toLowerCase();
+        const solicitante = (row.getAttribute('data-solicitante') || '').toLowerCase();
 
-        if (filter === 'all') {
-          row.style.display = '';
-        } else if (filter === 'pending') {
-          row.style.display = status === 'pending' ? '' : 'none';
-        } else if (filter === 'responded') {
-          row.style.display = status === 'responded' ? '' : 'none';
-        } else if (filter === 'safe' || filter === 'warn' || filter === 'critical') {
-          row.style.display = sla === filter ? '' : 'none';
+        let matchesStatus = true;
+        if (filterStatus === 'pending') matchesStatus = status === 'pending';
+        else if (filterStatus === 'responded') matchesStatus = status === 'responded';
+        else if (filterStatus === 'safe' || filterStatus === 'warn' || filterStatus === 'critical') matchesStatus = sla === filterStatus;
+
+        let matchesSearch = true;
+        if (searchText) {
+          matchesSearch = radicado.includes(searchText) || asunto.includes(searchText) || solicitante.includes(searchText);
         }
+
+        row.style.display = (matchesStatus && matchesSearch) ? '' : 'none';
       });
-    });
-  });
-</script>
+    }
+  </script>
+</AppLayout>

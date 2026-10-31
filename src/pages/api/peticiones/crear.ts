@@ -1,4 +1,6 @@
 // src/pages/api/peticiones/crear.ts
+export const prerender = false;
+
 import type { APIRoute } from 'astro';
 import { supabase } from '@lib/supabase';
 import { sendPeticionAssignmentEmail } from '@lib/email';
@@ -79,7 +81,18 @@ export const POST: APIRoute = async ({ request, url }) => {
       );
     }
 
-    // 1. Insertar Petición en Base de Datos (Disparador PL/pgSQL calcula Radicado y Margen de 5 Días)
+    // Convertir archivo a Buffer para storage y adjunto en correo
+    let fileBuffer: Buffer | null = null;
+    let fileName = '';
+    let fileMime = 'application/pdf';
+    if (primaryFile && typeof primaryFile !== 'string' && typeof primaryFile.arrayBuffer === 'function' && primaryFile.size > 0) {
+      const arrayBuf = await primaryFile.arrayBuffer();
+      fileBuffer = Buffer.from(arrayBuf);
+      fileName = primaryFile.name || 'documento_radicado.pdf';
+      fileMime = primaryFile.type || 'application/pdf';
+    }
+
+    // 1. Insertar Petición en Base de Datos (Disparador PL/pgSQL calcula Radicado, margen de 5 días y carpeta)
     const finalInstrucciones = instrucciones_anexos || descripcion || null;
     const { data: peticionData, error: peticionError } = await (supabase
       .from('peticiones' as any)
@@ -93,7 +106,6 @@ export const POST: APIRoute = async ({ request, url }) => {
         categoria,
         prioridad,
         fecha_limite_entrega,
-        // fecha_limite_responsable y storage_folder_path son calculados automáticamente por trigger
       } as any)
       .select()
       .single() as any);
@@ -101,54 +113,55 @@ export const POST: APIRoute = async ({ request, url }) => {
     if (peticionError || !peticionData) {
       console.error('Error insertando petición:', peticionError);
       return new Response(
-        JSON.stringify({ success: false, error: peticionError?.message || 'Error guardando petición' }),
+        JSON.stringify({ success: false, error: peticionError?.message || 'Error guardando petición en base de datos.' }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    // 2. Subir Archivo Principal de la Petición al Storage si fue proporcionado
+    // 2. Subir Archivo Principal al Storage y registrar en peticion_anexos (Carpeta del Radicado)
     let savedPrimaryFile = null;
-    if (primaryFile && typeof primaryFile !== 'string' && typeof primaryFile.arrayBuffer === 'function' && primaryFile.size > 0) {
-      const cleanFileName = (primaryFile.name || 'documento.pdf').replace(/[^a-zA-Z0-9._-]/g, '_');
-      const storageRelativePath = `${peticionData.numero_radicado}/documento_principal_${Date.now()}_${cleanFileName}`;
-      const fullStoragePath = `peticiones/${storageRelativePath}`;
+    if (fileBuffer && fileName) {
+      const cleanFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const storageRelativePath = `${peticionData.numero_radicado}/${cleanFileName}`;
 
       try {
-        const arrayBuf = await primaryFile.arrayBuffer();
-        const buffer = Buffer.from(arrayBuf);
-
         const { error: uploadErr } = await supabase.storage
           .from('peticiones')
-          .upload(storageRelativePath, buffer, {
-            contentType: primaryFile.type || 'application/pdf',
+          .upload(storageRelativePath, bufferOrFallback(fileBuffer), {
+            contentType: fileMime,
             upsert: true,
           });
 
         if (uploadErr) {
-          console.warn('Error subiendo archivo principal al storage:', uploadErr.message);
+          console.warn('Advertencia subiendo archivo principal al storage:', uploadErr.message);
         }
 
-        // Registrar en peticion_anexos como documento raíz de entrada
-        const { data: anexoPrincipal } = await (supabase
+        // Registrar en peticion_anexos como documento raíz inicial del radicado
+        const { data: anexoPrincipal, error: anexoErr } = await (supabase
           .from('peticion_anexos' as any)
           .insert({
             peticion_id: peticionData.id,
-            nombre_archivo: primaryFile.name,
-            storage_path: fullStoragePath,
-            tamano_bytes: primaryFile.size,
-            mime_type: primaryFile.type,
+            nombre_archivo: fileName,
+            storage_path: storageRelativePath,
+            tamano_bytes: fileBuffer.length,
+            mime_type: fileMime,
             subido_por_email: solicitante_email || 'radicacion@unitropico.edu.co',
-            es_anexo_oficina: false, // Archivo original de radicación
+            es_anexo_oficina: false,
           } as any)
           .select()
           .single() as any);
 
+        if (anexoErr) {
+          console.warn('Advertencia registrando anexo principal:', anexoErr.message);
+        }
+
         savedPrimaryFile = anexoPrincipal || {
-          nombre_archivo: primaryFile.name,
-          storage_path: fullStoragePath,
+          nombre_archivo: fileName,
+          storage_path: storageRelativePath,
+          tamano_bytes: fileBuffer.length,
         };
-      } catch (uploadException) {
-        console.error('Excepción al subir archivo principal:', uploadException);
+      } catch (uploadException: any) {
+        console.error('Excepción al procesar archivo principal:', uploadException.message);
       }
     }
 
@@ -160,12 +173,12 @@ export const POST: APIRoute = async ({ request, url }) => {
 
     if (oficinasError || !oficinasData || oficinasData.length === 0) {
       return new Response(
-        JSON.stringify({ success: false, error: 'No se encontraron las oficinas seleccionadas.' }),
+        JSON.stringify({ success: false, error: 'No se encontraron las oficinas seleccionadas en el catálogo oficial.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    // 4. Crear asignaciones en peticion_responsables (Trigger genera código único y subcarpeta)
+    // 4. Crear asignaciones en peticion_responsables (Trigger genera código único y subcarpeta Drive)
     const asignacionesToInsert = oficinasData.map((ofi: any) => ({
       peticion_id: peticionData.id,
       oficina_id: ofi.id,
@@ -185,7 +198,16 @@ export const POST: APIRoute = async ({ request, url }) => {
       );
     }
 
-    // 5. Enviar correos automáticos institucionales a cada oficina con su código y enlace
+    // 5. Preparar adjunto físico de Nodemailer con el archivo original subido
+    const emailAttachments = (fileBuffer && fileName) ? [
+      {
+        filename: fileName,
+        content: fileBuffer,
+        contentType: fileMime,
+      }
+    ] : undefined;
+
+    // 6. Enviar correos automáticos institucionales a cada oficina con código, enlace y archivo adjunto
     const baseUrl = url.origin;
 
     const emailNotifications = [];
@@ -206,16 +228,18 @@ export const POST: APIRoute = async ({ request, url }) => {
           fechaLimiteResponsable: peticionData.fecha_limite_responsable,
           codigoAcceso: resp.codigo_acceso,
           portalUrl,
+          attachments: emailAttachments,
         }).catch((err: any) => {
           console.warn(`[EMAIL ERROR NO FATAL] Fallo correo a ${oficina.email_institucional}:`, err.message);
           return { success: false, error: err.message };
         });
+
         emailNotifications.push(emailPromise);
       }
     }
 
-    const emailResults = await Promise.allSettled(emailNotifications);
-    console.log(`[PETICIÓN CREADA] Radicado: ${peticionData.numero_radicado} - ${emailResults.length} correos disparados.`);
+    await Promise.allSettled(emailNotifications);
+    console.log(`[PETICIÓN CREADA] Radicado: ${peticionData.numero_radicado} - Carpeta: ${peticionData.storage_folder_path} - Correos con adjunto disparados: ${emailNotifications.length}`);
 
     return new Response(
       JSON.stringify({
@@ -246,8 +270,12 @@ export const POST: APIRoute = async ({ request, url }) => {
   } catch (err: any) {
     console.error('Error procesando creación de petición:', err);
     return new Response(
-      JSON.stringify({ success: false, error: err.message || 'Error interno del servidor' }),
+      JSON.stringify({ success: false, error: err.message || 'Error interno del servidor al procesar radicación.' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
 };
+
+function bufferOrFallback(buf: Buffer) {
+  return buf;
+}

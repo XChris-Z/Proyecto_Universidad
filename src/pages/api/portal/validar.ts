@@ -1,4 +1,6 @@
 // src/pages/api/portal/validar.ts
+export const prerender = false;
+
 import type { APIRoute } from 'astro';
 import { supabase } from '@lib/supabase';
 
@@ -44,6 +46,15 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
+    // Consultar el archivo original de radicación de la petición
+    const { data: docOriginal } = await (supabase
+      .from('peticion_anexos' as any)
+      .select('id, nombre_archivo, storage_path, tamano_bytes, created_at')
+      .eq('peticion_id', resultado.peticion_id)
+      .eq('es_anexo_oficina', false)
+      .limit(1)
+      .maybeSingle() as any);
+
     // Consultar anexos ya subidos por esta oficina para esta petición
     const { data: anexosData } = await (supabase
       .from('peticion_anexos' as any)
@@ -56,6 +67,7 @@ export const POST: APIRoute = async ({ request }) => {
         success: true,
         data: {
           ...resultado,
+          documento_original: docOriginal || null,
           anexos: anexosData || [],
         },
       }),
@@ -69,4 +81,3 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 };
-

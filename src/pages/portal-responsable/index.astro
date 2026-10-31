@@ -120,6 +120,24 @@ import Layout from '@layouts/Layout.astro';
           </div>
         </div>
 
+        <!-- Tarjeta del Documento Original de la Petición -->
+        <div id="portal-doc-original-card" class="card" style="display: none; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 18px 24px; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; border-left: 5px solid var(--dorado-oscuro);">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="width: 42px; height: 42px; border-radius: 8px; background: var(--verde-suave-bg); color: var(--verde-principal); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; border: 1px solid var(--verde-borde);">
+              DOC
+            </div>
+            <div>
+              <div style="font-size: 0.70rem; text-transform: uppercase; font-weight: 800; color: var(--dorado-oscuro); letter-spacing: 0.5px;">Documento Original Radicado</div>
+              <strong id="portal-doc-original-name" style="font-size: 0.95rem; color: var(--text-main);">documento_radicado.pdf</strong>
+              <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 2px;">Descargue y revise la solicitud oficial para dar respuesta y suministrar los anexos requeridos.</div>
+            </div>
+          </div>
+          <a id="portal-doc-original-btn" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 800;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span>Descargar Documento Original</span>
+          </a>
+        </div>
+
         <!-- Zona de Drag and Drop para Subir Archivos -->
         <div class="card" style="background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 24px;">
           <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin: 0 0 4px 0;">Cargar Anexos y Documentos de Soporte</h3>
@@ -266,6 +284,22 @@ import Layout from '@layouts/Layout.astro';
       if (descEl) descEl.textContent = activeSessionData.descripcion || 'Sin descripción adicional.';
       if (fechaRespEl) fechaRespEl.textContent = `${activeSessionData.fecha_limite_responsable} (Cierre)`;
       if (fechaEntEl) fechaEntEl.textContent = activeSessionData.fecha_limite_entrega;
+
+      // Renderizar Documento Original si está disponible
+      const docOrigCard = document.getElementById('portal-doc-original-card');
+      const docOrigName = document.getElementById('portal-doc-original-name');
+      const docOrigBtn = document.getElementById('portal-doc-original-btn') as HTMLAnchorElement;
+
+      if (activeSessionData.documento_original) {
+        if (docOrigCard) docOrigCard.style.display = 'flex';
+        if (docOrigName) docOrigName.textContent = activeSessionData.documento_original.nombre_archivo;
+        const cleanPath = (activeSessionData.documento_original.storage_path || '').replace(/^peticiones\//, '');
+        if (docOrigBtn) {
+          docOrigBtn.href = `https://irjjpjtvhxoakiazfswn.supabase.co/storage/v1/object/public/peticiones/${cleanPath}`;
+        }
+      } else {
+        if (docOrigCard) docOrigCard.style.display = 'none';
+      }
 
       renderAnexosList(activeSessionData.anexos || []);
     }
