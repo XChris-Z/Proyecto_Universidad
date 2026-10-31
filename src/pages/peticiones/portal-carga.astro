@@ -1,0 +1,6 @@
+---
+// src/pages/peticiones/portal-carga.astro
+// Redirección inteligente al portal de entrega de anexos
+const url = new URL(Astro.request.url);
+return Astro.redirect(`/portal-responsable${url.search}`);
+---

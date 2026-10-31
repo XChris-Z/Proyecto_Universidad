@@ -198,6 +198,16 @@ import Layout from '@layouts/Layout.astro';
     const fileInput = document.getElementById('portal-file-input') as HTMLInputElement;
     const uploadBtn = document.getElementById('btn-upload-files') as HTMLButtonElement;
 
+    // Auto-completar campos si vienen en URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramEmail = urlParams.get('email');
+    const paramCodigo = urlParams.get('codigo');
+    const inputEmail = document.getElementById('portal-input-email') as HTMLInputElement;
+    const inputCodigo = document.getElementById('portal-input-codigo') as HTMLInputElement;
+
+    if (paramEmail && inputEmail) inputEmail.value = paramEmail;
+    if (paramCodigo && inputCodigo) inputCodigo.value = paramCodigo;
+
     // 1. Manejo del Login de Responsables
     if (loginForm) {
       loginForm.addEventListener('submit', async (e) => {

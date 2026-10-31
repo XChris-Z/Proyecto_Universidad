@@ -535,6 +535,7 @@ export type Database = {
           creado_por: string | null
           created_at: string | null
           descripcion: string | null
+          instrucciones_anexos: string | null
           estado: string | null
           fecha_limite_entrega: string
           fecha_limite_responsable: string
@@ -554,6 +555,7 @@ export type Database = {
           creado_por?: string | null
           created_at?: string | null
           descripcion?: string | null
+          instrucciones_anexos?: string | null
           estado?: string | null
           fecha_limite_entrega: string
           fecha_limite_responsable: string
@@ -573,6 +575,7 @@ export type Database = {
           creado_por?: string | null
           created_at?: string | null
           descripcion?: string | null
+          instrucciones_anexos?: string | null
           estado?: string | null
           fecha_limite_entrega?: string
           fecha_limite_responsable?: string

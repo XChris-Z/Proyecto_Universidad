@@ -9,6 +9,7 @@ export const POST: APIRoute = async ({ request, url }) => {
     
     let asunto = '';
     let descripcion = '';
+    let instrucciones_anexos = '';
     let solicitante_nombre = '';
     let solicitante_email = '';
     let solicitante_tipo = 'Ciudadano';
@@ -22,6 +23,7 @@ export const POST: APIRoute = async ({ request, url }) => {
       const formData = await request.formData();
       asunto = (formData.get('asunto') as string) || '';
       descripcion = (formData.get('descripcion') as string) || '';
+      instrucciones_anexos = (formData.get('instrucciones_anexos') as string) || '';
       solicitante_nombre = (formData.get('solicitante_nombre') as string) || '';
       solicitante_email = (formData.get('solicitante_email') as string) || '';
       solicitante_tipo = (formData.get('solicitante_tipo') as string) || 'Ciudadano';
@@ -46,7 +48,8 @@ export const POST: APIRoute = async ({ request, url }) => {
     } else {
       const body = await request.json();
       asunto = body.asunto;
-      descripcion = body.descripcion;
+      descripcion = body.descripcion || '';
+      instrucciones_anexos = body.instrucciones_anexos || body.descripcion || '';
       solicitante_nombre = body.solicitante_nombre;
       solicitante_email = body.solicitante_email;
       solicitante_tipo = body.solicitante_tipo || 'Ciudadano';
@@ -77,18 +80,20 @@ export const POST: APIRoute = async ({ request, url }) => {
     }
 
     // 1. Insertar Petición en Base de Datos (Disparador PL/pgSQL calcula Radicado y Margen de 5 Días)
+    const finalInstrucciones = instrucciones_anexos || descripcion || null;
     const { data: peticionData, error: peticionError } = await (supabase
       .from('peticiones' as any)
       .insert({
         asunto,
-        descripcion,
+        descripcion: finalInstrucciones,
+        instrucciones_anexos: finalInstrucciones,
         solicitante_nombre,
         solicitante_email,
         solicitante_tipo,
         categoria,
         prioridad,
         fecha_limite_entrega,
-        // fecha_limite_responsable y storage_folder_path son calculados por trigger
+        // fecha_limite_responsable y storage_folder_path son calculados automáticamente por trigger
       } as any)
       .select()
       .single() as any);
@@ -182,18 +187,21 @@ export const POST: APIRoute = async ({ request, url }) => {
 
     // 5. Enviar correos automáticos institucionales a cada oficina con su código y enlace
     const baseUrl = url.origin;
-    const portalUrl = `${baseUrl}/portal-responsable`;
 
     const emailNotifications = [];
     for (const resp of responsablesData) {
       const oficina = oficinasData.find((o: any) => o.id === resp.oficina_id);
       if (oficina && oficina.email_institucional) {
+        const portalUrl = `${baseUrl}/portal-responsable?codigo=${encodeURIComponent(resp.codigo_acceso)}&email=${encodeURIComponent(oficina.email_institucional)}`;
+        
         const emailPromise = sendPeticionAssignmentEmail({
           toEmail: oficina.email_institucional,
           oficinaNombre: oficina.nombre,
           numeroRadicado: peticionData.numero_radicado,
           asunto: peticionData.asunto,
-          descripcion: peticionData.descripcion,
+          categoria: peticionData.categoria,
+          prioridad: peticionData.prioridad,
+          instruccionesAnexos: peticionData.instrucciones_anexos || peticionData.descripcion,
           fechaLimiteEntrega: peticionData.fecha_limite_entrega,
           fechaLimiteResponsable: peticionData.fecha_limite_responsable,
           codigoAcceso: resp.codigo_acceso,
@@ -203,7 +211,8 @@ export const POST: APIRoute = async ({ request, url }) => {
       }
     }
 
-    await Promise.allSettled(emailNotifications);
+    const emailResults = await Promise.allSettled(emailNotifications);
+    console.log(`[PETICIÓN CREADA] Radicado: ${peticionData.numero_radicado} - ${emailResults.length} correos disparados.`);
 
     return new Response(
       JSON.stringify({
@@ -212,6 +221,7 @@ export const POST: APIRoute = async ({ request, url }) => {
           id: peticionData.id,
           numero_radicado: peticionData.numero_radicado,
           asunto: peticionData.asunto,
+          instrucciones_anexos: peticionData.instrucciones_anexos,
           fecha_limite_entrega: peticionData.fecha_limite_entrega,
           fecha_limite_responsable: peticionData.fecha_limite_responsable,
           storage_folder_path: peticionData.storage_folder_path,

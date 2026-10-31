@@ -10,7 +10,9 @@ const { data: oficinasData } = await (supabase
   .eq('activo', true)
   .order('nombre') as any);
 
-const oficinas = oficinasData || [
+const fallbackOficinas = [
+  { id: 'a05d4e8e-3545-44b0-a184-1daf1b07556f', codigo: 'PRUEBA-1', nombre: 'Prueba 1', email_institucional: 'taxxgameryt@gmail.com' },
+  { id: 'b8a96d4e-69bc-4eb5-a4de-8d43589af91b', codigo: 'PRUEBA-2', nombre: 'Prueba 2', email_institucional: 'oscargalindo.es@unitropico.edu.co' },
   { id: '1', codigo: 'REC', nombre: 'Despacho de Rectoría', email_institucional: 'rectoria@unitropico.edu.co' },
   { id: '2', codigo: 'SEC-GEN', nombre: 'Secretaría General', email_institucional: 'secretaria.general@unitropico.edu.co' },
   { id: '3', codigo: 'OFI-JUR', nombre: 'Oficina Asesora Jurídica', email_institucional: 'juridica@unitropico.edu.co' },
@@ -20,6 +22,17 @@ const oficinas = oficinasData || [
   { id: '7', codigo: 'ADM-REG', nombre: 'Admisiones, Registro y Control', email_institucional: 'admisiones@unitropico.edu.co' },
   { id: '8', codigo: 'CORRESP', nombre: 'Gestión Documental y Correspondencia', email_institucional: 'correspondencia@unitropico.edu.co' },
 ];
+
+const rawList = (oficinasData && oficinasData.length > 0) ? oficinasData : fallbackOficinas;
+
+// Ordenar para posicionar "Prueba 1" y "Prueba 2" en los primeros lugares del selector
+const oficinas = [...rawList].sort((a: any, b: any) => {
+  const isA = a.codigo?.toUpperCase().includes('PRUEBA') || a.nombre?.toLowerCase().includes('prueba');
+  const isB = b.codigo?.toUpperCase().includes('PRUEBA') || b.nombre?.toLowerCase().includes('prueba');
+  if (isA && !isB) return -1;
+  if (!isA && isB) return 1;
+  return (a.nombre || '').localeCompare(b.nombre || '');
+});
 ---
 
 <AppLayout title="Subir Petición Institucional" activeNav="subir-peticion">
@@ -33,7 +46,7 @@ const oficinas = oficinasData || [
           <span class="role-badge admin">Radicación Oficial</span>
         </div>
         <p style="font-size: 0.84rem; color: var(--text-muted); margin: 4px 0 0 0;">
-          Carga del documento oficial de petición, generación automática de radicado consecutivo, cálculo estricto de margen de 5 días para oficinas y envío automatizado de credenciales de acceso.
+          Carga de memorial oficial, generación de radicado consecutivo, asignación a oficinas responsables con cálculo estricto de margen (-5 días) y envío automático del requerimiento vía correo electrónico.
         </p>
       </div>
 
@@ -54,7 +67,7 @@ const oficinas = oficinasData || [
           </div>
           <div>
             <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin: 0;">Documento Original de la Petición</h3>
-            <span style="font-size: 0.74rem; color: var(--text-muted);">Suba el oficio o memorial recibido (PDF, Word o imagen escaneada). Al subirlo se sugerirá el asunto automáticamente.</span>
+            <span style="font-size: 0.74rem; color: var(--text-muted);">Suba el oficio o memorial recibido (PDF, Word o imagen escaneada).</span>
           </div>
         </div>
 
@@ -91,7 +104,7 @@ const oficinas = oficinasData || [
           </div>
           <div>
             <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin: 0;">1. Información General del Radicado</h3>
-            <span style="font-size: 0.74rem; color: var(--text-muted);">Asunto, datos del peticionario y alcance de la solicitud</span>
+            <span style="font-size: 0.74rem; color: var(--text-muted);">Asunto, datos de contacto del peticionario y clasificación jurídica</span>
           </div>
         </div>
 
@@ -141,11 +154,6 @@ const oficinas = oficinasData || [
               </select>
             </div>
           </div>
-
-          <div class="form-group">
-            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Descripción o Alcance de la Solicitud</label>
-            <textarea id="peticion-descripcion" rows="3" placeholder="Detalle qué documentos o soportes deben remitir las oficinas asignadas..." class="form-input" style="resize: vertical;"></textarea>
-          </div>
         </div>
       </div>
 
@@ -184,7 +192,7 @@ const oficinas = oficinasData || [
         </div>
       </div>
 
-      <!-- SECCIÓN 3: SELECTOR MÚLTIPLE DE OFICINAS RESPONSABLES -->
+      <!-- SECCIÓN 3: ASIGNACIÓN DE OFICINAS RESPONSABLES Y REQUERIMIENTO -->
       <div class="card" style="padding: 24px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle); flex-wrap: wrap; gap: 10px;">
           <div style="display: flex; align-items: center; gap: 10px;">
@@ -193,7 +201,7 @@ const oficinas = oficinasData || [
             </div>
             <div>
               <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin: 0;">3. Asignación de Oficinas Responsables</h3>
-              <span style="font-size: 0.74rem; color: var(--text-muted);">Seleccione una o varias dependencias que deben remitir anexos</span>
+              <span style="font-size: 0.74rem; color: var(--text-muted);">Seleccione las dependencias que deben remitir anexos oficiales</span>
             </div>
           </div>
 
@@ -202,17 +210,58 @@ const oficinas = oficinasData || [
           </span>
         </div>
 
+        <!-- Selector de oficinas con Prueba 1 y Prueba 2 destacadas al inicio -->
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;" id="oficinas-checkbox-grid">
-          {oficinas.map((ofi: any) => (
-            <label class="oficina-card-label" style="display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.12s ease; background: #ffffff;">
-              <input type="checkbox" name="oficinas_selected" value={ofi.id} data-email={ofi.email_institucional} data-nombre={ofi.nombre} style="margin-top: 3px; accent-color: var(--verde-principal); width: 17px; height: 17px;" />
-              <div style="flex: 1;">
-                <div style="font-size: 0.84rem; font-weight: 700; color: var(--text-main); line-height: 1.3;">{ofi.nombre}</div>
-                <div style="font-size: 0.72rem; color: var(--text-muted); font-family: monospace; margin-top: 2px;">{ofi.email_institucional}</div>
-              </div>
-            </label>
-          ))}
+          {oficinas.map((ofi: any) => {
+            const isTestOffice = ofi.codigo?.toUpperCase().includes('PRUEBA') || ofi.nombre?.toLowerCase().includes('prueba');
+            return (
+              <label 
+                class={`oficina-card-label ${isTestOffice ? 'is-test-office' : ''}`} 
+                style={`display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border: 1px solid ${isTestOffice ? 'var(--dorado-borde, #dcd4b8)' : 'var(--border-color)'}; border-radius: var(--radius-sm); cursor: pointer; transition: all 0.12s ease; background: ${isTestOffice ? '#FCFBF7' : '#ffffff'}; position: relative;`}
+              >
+                <input 
+                  type="checkbox" 
+                  name="oficinas_selected" 
+                  value={ofi.id} 
+                  data-email={ofi.email_institucional} 
+                  data-nombre={ofi.nombre} 
+                  style="margin-top: 3px; accent-color: var(--verde-principal); width: 17px; height: 17px;" 
+                />
+                <div style="flex: 1;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+                    <div style="font-size: 0.84rem; font-weight: 700; color: var(--text-main); line-height: 1.3;">{ofi.nombre}</div>
+                    {isTestOffice && (
+                      <span style="background: rgba(181, 161, 96, 0.15); color: #7a6a35; border: 1px solid rgba(181, 161, 96, 0.4); font-size: 0.62rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; text-transform: uppercase;">
+                        Prueba
+                      </span>
+                    )}
+                  </div>
+                  <div style="font-size: 0.72rem; color: var(--text-muted); font-family: monospace; margin-top: 2px;">{ofi.email_institucional}</div>
+                </div>
+              </label>
+            );
+          })}
         </div>
+
+        <!-- NUEVO CAMPO: INSTRUCCIONES O ANEXOS REQUERIDOS PARA EL CORREO -->
+        <div class="form-group" style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-subtle);">
+          <label for="instrucciones-anexos" style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; margin-bottom: 6px;">
+            <span style="color: var(--text-main);">Instrucciones o anexos requeridos para el correo *</span>
+            <span style="font-size: 0.72rem; font-weight: 600; color: var(--dorado-oscuro);">Se incrustará en el correo institucional enviado a cada responsable</span>
+          </label>
+          <textarea 
+            id="instrucciones-anexos" 
+            name="instrucciones_anexos" 
+            rows="3" 
+            placeholder="Escriba aquí lo que se le solicita específicamente al responsable y los anexos que debe adjuntar..." 
+            class="form-input" 
+            style="resize: vertical; font-size: 0.85rem;"
+          ></textarea>
+          <small style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; display: block;">
+            Detalle los certificados, memorandos, actas o soportes puntuales que la oficina debe aportar antes de vencer su plazo.
+          </small>
+        </div>
+
       </div>
 
       <!-- BOTÓN DE ENVÍO Y GUARDADO -->
@@ -260,7 +309,7 @@ const oficinas = oficinasData || [
 
           <div>
             <div style="font-size: 0.82rem; font-weight: 800; color: var(--text-main); margin-bottom: 8px;">
-              Oficinas Notificadas con Código Único Temporal:
+              Oficinas Notificadas vía Correo Formal con Código Único Temporal:
             </div>
             <div id="modal-responsables-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 180px; overflow-y: auto;">
               <!-- Se inyecta dinámicamente -->
@@ -306,6 +355,10 @@ const oficinas = oficinasData || [
       border-color: var(--verde-principal) !important;
       background: var(--verde-suave-bg) !important;
     }
+    .oficina-card-label.is-test-office.selected {
+      border-color: var(--dorado-oscuro) !important;
+      background: rgba(181, 161, 96, 0.12) !important;
+    }
   </style>
 
   <script>
@@ -318,7 +371,6 @@ const oficinas = oficinasData || [
     const selectedFileSize = document.getElementById('selected-file-size');
     const btnRemoveFile = document.getElementById('btn-remove-selected-file');
     const asuntoInput = document.getElementById('peticion-asunto') as HTMLInputElement;
-    const solicitanteInput = document.getElementById('solicitante-nombre') as HTMLInputElement;
 
     function setPrimaryFile(file: File) {
       primaryFile = file;
@@ -460,7 +512,12 @@ const oficinas = oficinasData || [
 
         const formData = new FormData();
         formData.append('asunto', (document.getElementById('peticion-asunto') as HTMLInputElement).value);
-        formData.append('descripcion', (document.getElementById('peticion-descripcion') as HTMLTextAreaElement).value);
+        
+        const instruccionesEl = document.getElementById('instrucciones-anexos') as HTMLTextAreaElement;
+        const instruccionesVal = instruccionesEl ? instruccionesEl.value : '';
+        formData.append('instrucciones_anexos', instruccionesVal);
+        formData.append('descripcion', instruccionesVal);
+
         formData.append('solicitante_nombre', (document.getElementById('solicitante-nombre') as HTMLInputElement).value);
         formData.append('solicitante_email', (document.getElementById('solicitante-email') as HTMLInputElement).value);
         formData.append('solicitante_tipo', (document.getElementById('solicitante-tipo') as HTMLSelectElement).value);
@@ -477,7 +534,7 @@ const oficinas = oficinasData || [
 
         if (submitBtn) {
           submitBtn.disabled = true;
-          submitBtn.innerHTML = `<span>Subiendo archivo y radicando en Supabase...</span>`;
+          submitBtn.innerHTML = `<span>Radicando y enviando notificaciones por correo...</span>`;
         }
 
         try {
@@ -518,7 +575,7 @@ const oficinas = oficinasData || [
                 </div>
                 <div style="text-align: right;">
                   <span style="font-family: monospace; font-weight: 900; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 3px 8px; border-radius: 4px; border: 1px solid var(--verde-borde);">${r.codigo_acceso}</span>
-                  <div style="font-size: 0.65rem; color: #059669; margin-top: 2px;">✔ Código Asignado</div>
+                  <div style="font-size: 0.65rem; color: #059669; margin-top: 2px;">✔ Notificado vía Correo</div>
                 </div>
               </div>
             `).join('');
