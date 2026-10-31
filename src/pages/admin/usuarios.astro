@@ -411,10 +411,10 @@ const usersList = dbProfiles && dbProfiles.length > 0 ? dbProfiles : [];
             permsFeedback.textContent = 'Permisos dinámicos guardados en Supabase.';
             setTimeout(() => { permsFeedback.style.display = 'none'; }, 4000);
           }
-          alert('Permisos dinámicos del funcionario guardados exitosamente en Supabase.');
+          (window as any).showToast('Permisos dinámicos guardados exitosamente en Supabase.', 'success');
         } catch (err) {
           console.error('Error guardando permisos:', err);
-          alert('Error al guardar permisos en la base de datos.');
+          (window as any).showToast('Error al guardar permisos en la base de datos.', 'error');
         } finally {
           saveBtn.textContent = 'Guardar Permisos Dinámicos';
           (saveBtn as HTMLButtonElement).disabled = false;
@@ -480,7 +480,7 @@ const usersList = dbProfiles && dbProfiles.length > 0 ? dbProfiles : [];
         const password = passInput.value.trim();
 
         if (password.length < 8) {
-          alert('La contraseña provisional debe tener mínimo 8 caracteres.');
+          (window as any).showToast('La contraseña provisional debe tener mínimo 8 caracteres.', 'warning');
           return;
         }
 
@@ -575,12 +575,12 @@ const usersList = dbProfiles && dbProfiles.length > 0 ? dbProfiles : [];
             if (countLabel) countLabel.textContent = `${totalRows} funcionarios`;
           }
 
-          alert(`Usuario ${name} registrado exitosamente en Supabase con correo ${email}.`);
+          (window as any).showToast(`Usuario ${name} registrado exitosamente con correo ${email}.`, 'success');
           toggleModal(false);
           (formCreate as HTMLFormElement).reset();
         } catch (err: any) {
           console.error('Error creando usuario:', err);
-          alert('Error creando usuario en Supabase: ' + (err.message || 'Error de base de datos'));
+          (window as any).showToast('Error creando usuario en Supabase: ' + (err.message || 'Error de base de datos'), 'error');
         } finally {
           if (submitCreateBtn) {
             submitCreateBtn.disabled = false;
@@ -656,7 +656,7 @@ const usersList = dbProfiles && dbProfiles.length > 0 ? dbProfiles : [];
           const totalRows = document.querySelectorAll('#users-table-body .user-row').length;
           if (countLabel) countLabel.textContent = `${totalRows} funcionarios`;
 
-          alert(`El funcionario ${userToDelete.name} fue dado de baja y eliminado de Supabase.`);
+          (window as any).showToast(`El funcionario ${userToDelete.name} fue dado de baja y eliminado de Supabase.`, 'success');
           deleteModal.classList.remove('open');
           deleteModal.style.display = 'none';
           userToDelete = null;
@@ -666,7 +666,7 @@ const usersList = dbProfiles && dbProfiles.length > 0 ? dbProfiles : [];
           if (firstRow?.dataset.userId) selectUser(firstRow.dataset.userId);
         } catch (err: any) {
           console.error('Error eliminando usuario:', err);
-          alert('Error al eliminar usuario en Supabase: ' + (err.message || 'Error de base de datos'));
+          (window as any).showToast('Error al eliminar usuario en Supabase: ' + (err.message || 'Error de base de datos'), 'error');
         } finally {
           btnConfirmDelete.textContent = 'Eliminar Definitivamente';
           (btnConfirmDelete as HTMLButtonElement).disabled = false;

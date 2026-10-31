@@ -72,7 +72,7 @@ export const POST: APIRoute = async ({ request }) => {
       action: `Eliminación de radicado ${peticion.numero_radicado}`,
       actionType: 'ELIMINACION',
       entity: 'Peticiones Radicadas',
-      entityId: id,
+      entityId: peticion.numero_radicado,
       details: `Se eliminó definitivamente el radicado ${peticion.numero_radicado} (${peticion.asunto}) y sus archivos asociados`,
       before: peticion,
       severity: 'CRITICAL',
@@ -93,3 +93,4 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 };
+

@@ -396,14 +396,14 @@ const pendientesCount = peticionesList.filter((p: any) => p.estado !== 'respondi
 
         const data = await res.json();
         if (!res.ok || !data.success) {
-          alert('Error al actualizar: ' + (data.error || 'No se pudo guardar la modificación'));
+          (window as any).showToast('Error al actualizar: ' + (data.error || 'No se pudo guardar la modificación'), 'error');
           return;
         }
 
-        alert('Petición actualizada con éxito. El evento ha quedado registrado en la bitácora de auditoría.');
-        window.location.reload();
+        (window as any).showToast('Petición actualizada con éxito.', 'success');
+        setTimeout(() => window.location.reload(), 600);
       } catch (err: any) {
-        alert('Error de conexión al actualizar la petición.');
+        (window as any).showToast('Error de conexión al actualizar la petición.', 'error');
       } finally {
         if (saveBtn) {
           saveBtn.disabled = false;
@@ -412,7 +412,7 @@ const pendientesCount = peticionesList.filter((p: any) => p.estado !== 'respondi
       }
     });
 
-    // 3. ELIMINACIÓN DE PETICIONES CON CONFIRMACIÓN Y AUDITORÍA
+    // 3. ELIMINACIÓN DE PETICIONES CON CONFIRMACIÓN INSTITUCIONAL Y AUDITORÍA
     document.querySelectorAll('.btn-delete-pet').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         const target = e.currentTarget as HTMLElement;
@@ -421,7 +421,15 @@ const pendientesCount = peticionesList.filter((p: any) => p.estado !== 'respondi
 
         if (!id) return;
 
-        const confirmed = window.confirm(`¿Está seguro de que desea eliminar definitivamente el radicado ${radicado}?\n\nEsta acción purgará los registros de oficinas asignadas, archivos en storage y registrará el evento de eliminación en la Auditoría institucional.`);
+        let confirmed = false;
+        if ((window as any).showConfirm) {
+          confirmed = await (window as any).showConfirm(
+            `¿Está seguro de que desea eliminar definitivamente el radicado ${radicado}?\n\nEsta acción purgará los registros de oficinas asignadas, archivos en storage y registrará el evento de eliminación en la Auditoría institucional.`,
+            'Confirmar Eliminación'
+          );
+        } else {
+          confirmed = confirm(`¿Está seguro de que desea eliminar el radicado ${radicado}?`);
+        }
         if (!confirmed) return;
 
         target.setAttribute('disabled', 'true');
@@ -435,7 +443,7 @@ const pendientesCount = peticionesList.filter((p: any) => p.estado !== 'respondi
 
           const data = await res.json();
           if (!res.ok || !data.success) {
-            alert('Error al eliminar: ' + (data.error || 'No se pudo procesar la eliminación'));
+            (window as any).showToast('Error al eliminar: ' + (data.error || 'No se pudo procesar la eliminación'), 'error');
             target.removeAttribute('disabled');
             return;
           }
@@ -448,9 +456,9 @@ const pendientesCount = peticionesList.filter((p: any) => p.estado !== 'respondi
             setTimeout(() => row.remove(), 300);
           }
 
-          alert(`El radicado ${radicado} ha sido eliminado satisfactoriamente.`);
+          (window as any).showToast(`El radicado ${radicado} ha sido eliminado satisfactoriamente.`, 'success');
         } catch (err: any) {
-          alert('Error al comunicarse con el servidor para la eliminación.');
+          (window as any).showToast('Error al comunicarse con el servidor para la eliminación.', 'error');
           target.removeAttribute('disabled');
         }
       });
@@ -478,15 +486,20 @@ const pendientesCount = peticionesList.filter((p: any) => p.estado !== 'respondi
 
           const data = await res.json();
           if (!res.ok || !data.success) {
-            alert(`Fallo en el envío SMTP para ${radicado}:\n\n${data.error || 'No se pudo conectar con el servidor de correo'}`);
+            (window as any).showToast(
+              `Fallo en el envío SMTP para ${radicado}: ${data.error || 'No se pudo conectar con el servidor de correo'}`,
+              'error',
+              'Diagnóstico SMTP'
+            );
           } else {
-            const detalles = Array.isArray(data.resultados) 
-              ? data.resultados.map((r: any) => `• ${r.oficina}: ${r.status === 'sent' ? 'Enviado con éxito' : (r.error || r.motivo)}`).join('\n')
-              : '';
-            alert(`Resultado del envío de correo para ${radicado}:\n\n${data.message}\n\n${detalles}`);
+            (window as any).showToast(
+              `Notificación enviada exitosamente para ${radicado}.`,
+              'success',
+              'Despacho de Correo'
+            );
           }
         } catch (err: any) {
-          alert(`Error de red al intentar conectar con el servicio de correo.`);
+          (window as any).showToast('Error de red al intentar conectar con el servicio de correo.', 'error');
         } finally {
           target.disabled = false;
           target.innerHTML = originalContent;

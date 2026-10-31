@@ -28,31 +28,37 @@ export interface EmailPeticionNotificationParams {
  * Limpia automáticamente los espacios en blanco de contraseñas de aplicación de Google
  */
 function getSmtpTransporter() {
-  const env = (import.meta as any).env || {};
-  const user = process.env.SMTP_USER || process.env.GOOGLE_SMTP_USER || env.SMTP_USER || env.GOOGLE_SMTP_USER;
-  const pass = process.env.SMTP_PASS || process.env.GOOGLE_SMTP_PASS || env.SMTP_PASS || env.GOOGLE_SMTP_PASS;
+  const metaEnv = typeof import.meta !== 'undefined' ? (import.meta as any).env || {} : {};
+  const rawUser = process.env.GOOGLE_SMTP_USER || process.env.SMTP_USER || metaEnv.GOOGLE_SMTP_USER || metaEnv.SMTP_USER;
+  const rawPass = process.env.GOOGLE_SMTP_PASS || process.env.SMTP_PASS || metaEnv.GOOGLE_SMTP_PASS || metaEnv.SMTP_PASS;
 
-  if (!user || !pass) {
+  if (!rawUser || !rawPass) {
     return null;
   }
 
-  const cleanUser = user.trim();
-  const cleanPass = pass.replace(/\s+/g, '');
+  const cleanUser = String(rawUser).replace(/['"]+/g, '').trim();
+  const cleanPass = String(rawPass).replace(/['"]+/g, '').replace(/\s+/g, '');
 
-  const host = process.env.SMTP_HOST || process.env.GOOGLE_SMTP_HOST || env.SMTP_HOST || env.GOOGLE_SMTP_HOST || 'smtp.gmail.com';
-  const port = Number(process.env.SMTP_PORT || process.env.GOOGLE_SMTP_PORT || env.SMTP_PORT || env.GOOGLE_SMTP_PORT) || 465;
+  const rawHost = process.env.GOOGLE_SMTP_HOST || process.env.SMTP_HOST || metaEnv.GOOGLE_SMTP_HOST || metaEnv.SMTP_HOST || 'smtp.gmail.com';
+  const host = String(rawHost).replace(/['"]+/g, '').trim();
+
+  const rawPort = process.env.GOOGLE_SMTP_PORT || process.env.SMTP_PORT || metaEnv.GOOGLE_SMTP_PORT || metaEnv.SMTP_PORT || 587;
+  const port = Number(rawPort) || 587;
 
   return nodemailer.createTransport({
     host,
     port,
-    secure: port === 465,
+    secure: port === 465, // true para 465, false para 587 (STARTTLS)
     auth: {
       user: cleanUser,
       pass: cleanPass,
     },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000,
+    tls: {
+      rejectUnauthorized: false,
+    },
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 20000,
   });
 }
 
@@ -63,9 +69,9 @@ export async function sendPeticionAssignmentEmail(
   params: EmailPeticionNotificationParams
 ): Promise<{ success: boolean; simulated?: boolean; messageId?: string; error?: string }> {
   const transporter = getSmtpTransporter();
-  const env = (import.meta as any).env || {};
-  const rawSender = process.env.SMTP_USER || process.env.GOOGLE_SMTP_USER || env.SMTP_USER || env.GOOGLE_SMTP_USER || 'correspondencia@unitropico.edu.co';
-  const cleanSender = rawSender.trim();
+  const metaEnv = typeof import.meta !== 'undefined' ? (import.meta as any).env || {} : {};
+  const rawSender = process.env.GOOGLE_SMTP_USER || process.env.SMTP_USER || metaEnv.GOOGLE_SMTP_USER || metaEnv.SMTP_USER || 'correspondencia@unitropico.edu.co';
+  const cleanSender = String(rawSender).replace(/['"]+/g, '').trim();
 
   const formattedFechaEntrega = new Date(params.fechaLimiteEntrega + 'T12:00:00').toLocaleDateString('es-CO', {
     weekday: 'long',
@@ -233,8 +239,14 @@ export async function sendPeticionAssignmentEmail(
   }
 
   try {
+    try {
+      await transporter.verify();
+    } catch (verifyErr: any) {
+      console.warn('[SMTP VERIFY AVISO]:', verifyErr.message);
+    }
+
     const info = await transporter.sendMail({
-      from: `"SGD Unitrópico" <${cleanSender}>`,
+      from: `"Sistema de Radicación Unitrópico" <${cleanSender}>`,
       to: params.toEmail,
       subject,
       html: htmlContent,

@@ -441,7 +441,7 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
     const defaultEntrega = new Date(today);
     defaultEntrega.setDate(today.getDate() + 15);
     if (inputFechaEntrega) {
-      inputFechaEntrega.value = defaultEntrega.toISOString().split('T')[0];
+      inputFechaEntrega.value = String(defaultEntrega.toISOString().split('T')[0] ?? '');
       calculateFiveDaysRule();
       inputFechaEntrega.addEventListener('change', calculateFiveDaysRule);
       inputFechaEntrega.addEventListener('input', calculateFiveDaysRule);
@@ -511,7 +511,11 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
         });
 
         if (selectedOfficeIds.length === 0) {
-          alert('Por favor seleccione al menos una oficina responsable para esta petición.');
+          if ((window as any).showToast) {
+            (window as any).showToast('Por favor seleccione al menos una oficina responsable para esta petición.', 'warning');
+          } else {
+            alert('Por favor seleccione al menos una oficina responsable para esta petición.');
+          }
           return;
         }
 
@@ -558,12 +562,22 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
             data = JSON.parse(rawText);
           } catch (jsonErr) {
             console.error('El servidor no retornó JSON válido:', rawText);
-            alert(`Error del servidor (${res.status}): ${rawText.slice(0, 150) || res.statusText || 'Error inesperado'}`);
+            const errMsg = `Error del servidor (${res.status}): ${rawText.slice(0, 150) || res.statusText || 'Error inesperado'}`;
+            if ((window as any).showToast) {
+              (window as any).showToast(errMsg, 'error');
+            } else {
+              alert(errMsg);
+            }
             return;
           }
 
           if (!res.ok || !data.success) {
-            alert('Error al radicar petición: ' + (data.error || 'Ocurrió un error en el servidor.'));
+            const errMsg = 'Error al radicar petición: ' + (data.error || 'Ocurrió un error en el servidor.');
+            if ((window as any).showToast) {
+              (window as any).showToast(errMsg, 'error');
+            } else {
+              alert(errMsg);
+            }
             return;
           }
 
@@ -614,7 +628,12 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
           updateOficinasCount();
         } catch (err: any) {
           console.error('Error de red al conectar con el servidor:', err);
-          alert('Error de conexión al servidor: ' + (err.message || 'Verifique su conexión de red.'));
+          const errMsg = 'Error de conexión al servidor: ' + (err.message || 'Verifique su conexión de red.');
+          if ((window as any).showToast) {
+            (window as any).showToast(errMsg, 'error');
+          } else {
+            alert(errMsg);
+          }
         } finally {
           if (submitBtn) {
             submitBtn.disabled = false;

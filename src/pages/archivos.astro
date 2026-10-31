@@ -974,7 +974,15 @@ function formatBytes(bytes?: number | null) {
           const radicado = target.dataset.radicado;
           if (!id) return;
 
-          const confirmed = window.confirm(`¿Está seguro de que desea eliminar definitivamente la carpeta del radicado ${radicado}?\n\nEsta acción purgará los archivos almacenados en Storage y registrará el evento en la Auditoría institucional.`);
+          let confirmed = false;
+          if ((window as any).showConfirm) {
+            confirmed = await (window as any).showConfirm(
+              `¿Está seguro de que desea eliminar definitivamente la carpeta del radicado ${radicado}?\n\nEsta acción purgará los archivos almacenados en Storage y registrará el evento en la Auditoría institucional.`,
+              'Confirmar Eliminación'
+            );
+          } else {
+            confirmed = confirm(`¿Está seguro de que desea eliminar la carpeta del radicado ${radicado}?`);
+          }
           if (!confirmed) return;
 
           target.setAttribute('disabled', 'true');
@@ -986,7 +994,7 @@ function formatBytes(bytes?: number | null) {
             });
             const data = await res.json();
             if (!res.ok || !data.success) {
-              alert('Error al eliminar: ' + (data.error || 'No se pudo eliminar'));
+              (window as any).showToast('Error al eliminar: ' + (data.error || 'No se pudo eliminar'), 'error');
               target.removeAttribute('disabled');
               return;
             }
@@ -1001,9 +1009,9 @@ function formatBytes(bytes?: number | null) {
               closeFolderDetail();
             }
 
-            alert(`Carpeta y radicado ${radicado} eliminados exitosamente.`);
+            (window as any).showToast(`Carpeta y radicado ${radicado} eliminados exitosamente.`, 'success');
           } catch (err) {
-            alert('Error de conexión al eliminar.');
+            (window as any).showToast('Error de conexión al eliminar.', 'error');
             target.removeAttribute('disabled');
           }
         };
@@ -1043,14 +1051,14 @@ function formatBytes(bytes?: number | null) {
 
         const data = await res.json();
         if (!res.ok || !data.success) {
-          alert('Error: ' + (data.error || 'No se pudo actualizar'));
+          (window as any).showToast('Error al actualizar: ' + (data.error || 'No se pudo actualizar'), 'error');
           return;
         }
 
-        alert('Expediente actualizado con éxito. El evento ha quedado registrado en Auditoría.');
-        window.location.reload();
+        (window as any).showToast('Expediente actualizado con éxito.', 'success');
+        setTimeout(() => window.location.reload(), 600);
       } catch (err) {
-        alert('Error de conexión al actualizar.');
+        (window as any).showToast('Error de conexión al actualizar.', 'error');
       } finally {
         if (saveBtn) {
           saveBtn.disabled = false;

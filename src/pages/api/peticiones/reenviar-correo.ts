@@ -157,7 +157,7 @@ export const POST: APIRoute = async ({ request, url }) => {
       action: `Reenvío de notificación por correo para radicado ${peticion.numero_radicado}`,
       actionType: 'GESTION',
       entity: 'Peticiones Radicadas',
-      entityId: peticion.id,
+      entityId: peticion.numero_radicado,
       details: `Reenvío manual de correo para ${peticion.numero_radicado}. Exitosos: ${exitosos}, Fallidos: ${fallidos}`,
       severity: fallidos > 0 ? 'WARN' : 'INFO',
     }).catch(() => {});

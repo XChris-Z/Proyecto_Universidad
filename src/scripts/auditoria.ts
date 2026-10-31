@@ -70,6 +70,35 @@ export async function initAuditoria() {
 
       const shortHash = log.integrityHash.substring(0, 10) + '...' + log.integrityHash.substring(log.integrityHash.length - 8);
 
+      // Formateo limpio de la entidad/radicado sin IDs crudos
+      const entityIdStr = String(log.entityId || '').trim();
+      const entityStr = String(log.entity || 'Sistema').trim();
+      const radicadoMatch = entityIdStr.match(/RAD-\d{4}-\d+/i) || 
+                            String(log.action || '').match(/RAD-\d{4}-\d+/i) || 
+                            String(log.details || '').match(/RAD-\d{4}-\d+/i);
+
+      let entityHtml = '';
+      if (radicadoMatch) {
+        entityHtml = `
+          <div style="font-weight: 800; font-family: monospace; color: var(--verde-principal); font-size: 0.88rem;">${radicadoMatch[0].toUpperCase()}</div>
+          <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 2px;">${entityStr}</div>
+        `;
+      } else {
+        const isInternalId = !entityIdStr || 
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entityIdStr) || 
+          entityIdStr.startsWith('usr-') ||
+          entityIdStr.startsWith('cal-');
+
+        if (isInternalId) {
+          entityHtml = `<div style="font-weight: 700; color: var(--text-main); font-size: 0.85rem;">${entityStr}</div>`;
+        } else {
+          entityHtml = `
+            <div style="font-weight: 700; color: var(--text-main); font-size: 0.85rem;">${entityIdStr}</div>
+            <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 2px;">${entityStr}</div>
+          `;
+        }
+      }
+
       return `
         <tr>
           <td style="white-space: nowrap;">
@@ -96,8 +125,7 @@ export async function initAuditoria() {
             </span>
           </td>
           <td>
-            <div style="font-weight: 700; color: var(--text-main);">${log.entityId}</div>
-            <div style="font-size: 0.74rem; color: var(--text-muted);">${log.entity}</div>
+            ${entityHtml}
           </td>
           <td>
             <div style="line-height: 1.45; color: var(--text-main); font-size: 0.83rem;">

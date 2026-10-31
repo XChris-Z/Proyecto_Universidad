@@ -179,17 +179,39 @@ export function initAppLayout() {
       const titleEl = document.getElementById('sgd-dialog-title');
       const msgEl = document.getElementById('sgd-dialog-message');
       const iconWrap = document.getElementById('sgd-dialog-icon-wrap');
-      const btnOk = document.getElementById('sgd-dialog-btn-ok');
-      const btnCancel = document.getElementById('sgd-dialog-btn-cancel');
+      const btnOk = document.getElementById('sgd-dialog-btn-ok') as HTMLButtonElement | null;
+      const btnCancel = document.getElementById('sgd-dialog-btn-cancel') as HTMLButtonElement | null;
 
-      if (titleEl) titleEl.textContent = title || 'Confirmación Requerida';
+      const isDelete = (title || '').toLowerCase().includes('eliminar') || message.toLowerCase().includes('eliminar');
+
+      if (titleEl) titleEl.textContent = title || (isDelete ? 'Confirmar Eliminación' : 'Confirmación Requerida');
       if (msgEl) msgEl.textContent = message;
       if (btnCancel) btnCancel.style.display = 'inline-flex';
 
       if (iconWrap) {
-        iconWrap.style.background = 'var(--dorado-suave-bg)';
-        iconWrap.style.color = 'var(--dorado-oscuro)';
-        iconWrap.innerHTML = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`;
+        if (isDelete) {
+          iconWrap.style.background = '#FEE2E2';
+          iconWrap.style.color = '#DC2626';
+          iconWrap.innerHTML = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>`;
+        } else {
+          iconWrap.style.background = 'var(--dorado-suave-bg)';
+          iconWrap.style.color = 'var(--dorado-oscuro)';
+          iconWrap.innerHTML = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`;
+        }
+      }
+
+      if (btnOk) {
+        if (isDelete) {
+          btnOk.style.background = '#DC2626';
+          btnOk.style.color = '#ffffff';
+          btnOk.style.borderColor = '#DC2626';
+          btnOk.textContent = 'Eliminar';
+        } else {
+          btnOk.style.background = 'var(--verde-principal)';
+          btnOk.style.color = '#ffffff';
+          btnOk.style.borderColor = 'var(--verde-principal)';
+          btnOk.textContent = 'Aceptar';
+        }
       }
 
       modal.style.display = 'flex';
@@ -204,6 +226,12 @@ export function initAppLayout() {
       };
       function cleanup() {
         modal!.style.display = 'none';
+        if (btnOk) {
+          btnOk.style.background = '';
+          btnOk.style.color = '';
+          btnOk.style.borderColor = '';
+          btnOk.textContent = 'Aceptar';
+        }
         btnOk?.removeEventListener('click', handleOk);
         btnCancel?.removeEventListener('click', handleCancel);
       }

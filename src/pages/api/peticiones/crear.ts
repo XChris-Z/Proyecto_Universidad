@@ -4,6 +4,7 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { supabase } from '@lib/supabase';
 import { sendPeticionAssignmentEmail } from '@lib/email';
+import { logSystemActivity } from '@lib/audit';
 
 export const POST: APIRoute = async ({ request, url }) => {
   try {
@@ -243,6 +244,17 @@ export const POST: APIRoute = async ({ request, url }) => {
 
     await Promise.allSettled(emailNotifications);
     console.log(`[PETICIÓN CREADA] Radicado: ${peticionData.numero_radicado} - Carpeta: ${peticionData.storage_folder_path} - Correos con adjunto disparados: ${emailNotifications.length}`);
+
+    // Registrar en auditoría con el número de radicado visible
+    await logSystemActivity({
+      actor: { id: 'usr-root', name: solicitante_nombre || 'Funcionario Radicador', role: 'funcionario' },
+      action: `Radicación de petición ${peticionData.numero_radicado}`,
+      actionType: 'SUBIDA_ARCHIVO',
+      entity: 'Peticiones Radicadas',
+      entityId: peticionData.numero_radicado,
+      details: `Radicación oficial de la solicitud "${asunto}". Solicitante: ${solicitante_nombre}. Vencimiento: ${fecha_limite_entrega}.`,
+      severity: 'INFO',
+    }).catch((auditErr) => console.warn('Aviso registrando auditoría de radicación:', auditErr));
 
     return new Response(
       JSON.stringify({
