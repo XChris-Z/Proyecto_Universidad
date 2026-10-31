@@ -1,4 +1,6 @@
 // src/pages/api/portal/subir-anexo.ts
+export const prerender = false;
+
 import type { APIRoute } from 'astro';
 import { supabase } from '@lib/supabase';
 

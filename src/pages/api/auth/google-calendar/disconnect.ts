@@ -1,4 +1,5 @@
 // src/pages/api/auth/google-calendar/disconnect.ts
+export const prerender = false;
 // Desvincula de forma segura la cuenta de Google Calendar del usuario
 import type { APIRoute } from 'astro';
 import { supabase } from '@lib/supabase';

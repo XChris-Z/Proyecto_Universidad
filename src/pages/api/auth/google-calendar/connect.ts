@@ -1,4 +1,5 @@
 // src/pages/api/auth/google-calendar/connect.ts
+export const prerender = false;
 // Inicia el flujo seguro de conexión con Google Calendar
 import type { APIRoute } from 'astro';
 import { supabase } from '@lib/supabase';

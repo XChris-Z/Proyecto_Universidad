@@ -1,4 +1,5 @@
 // src/pages/api/auth/google-calendar/callback.ts
+export const prerender = false;
 // Callback de OAuth2 de Google Calendar — Gestiona el código, intercambia tokens y persiste de forma aislada
 import type { APIRoute } from 'astro';
 import { supabase } from '@lib/supabase';
