@@ -974,15 +974,12 @@ function formatBytes(bytes?: number | null) {
           const radicado = target.dataset.radicado;
           if (!id) return;
 
-          let confirmed = false;
-          if ((window as any).showConfirm) {
-            confirmed = await (window as any).showConfirm(
-              `¿Está seguro de que desea eliminar definitivamente la carpeta del radicado ${radicado}?\n\nEsta acción purgará los archivos almacenados en Storage y registrará el evento en la Auditoría institucional.`,
-              'Confirmar Eliminación'
-            );
-          } else {
-            confirmed = confirm(`¿Está seguro de que desea eliminar la carpeta del radicado ${radicado}?`);
-          }
+          const confirmed = typeof (window as any).showConfirm === 'function'
+            ? await (window as any).showConfirm(
+                `¿Está seguro de que desea eliminar definitivamente la carpeta del radicado ${radicado}?\n\nEsta acción purgará los archivos almacenados en Storage y registrará el evento en la Auditoría institucional.`,
+                'Confirmar Eliminación'
+              )
+            : true;
           if (!confirmed) return;
 
           target.setAttribute('disabled', 'true');

@@ -1,5 +1,6 @@
 // src/lib/email.ts
 import nodemailer from 'nodemailer';
+import { supabase } from './supabase';
 
 export interface EmailAttachment {
   filename: string;
@@ -23,14 +24,34 @@ export interface EmailPeticionNotificationParams {
 }
 
 /**
- * Obtiene el transporte SMTP configurado vía variables de entorno
- * Soporta SMTP_USER / SMTP_PASS o GOOGLE_SMTP_USER / GOOGLE_SMTP_PASS
- * Limpia automáticamente los espacios en blanco de contraseñas de aplicación de Google
+ * Obtiene las credenciales SMTP desde variables de entorno o desde Supabase (configuracion_sistema)
  */
-function getSmtpTransporter() {
+async function getSmtpCredentials() {
   const metaEnv = typeof import.meta !== 'undefined' ? (import.meta as any).env || {} : {};
-  const rawUser = process.env.GOOGLE_SMTP_USER || process.env.SMTP_USER || metaEnv.GOOGLE_SMTP_USER || metaEnv.SMTP_USER;
-  const rawPass = process.env.GOOGLE_SMTP_PASS || process.env.SMTP_PASS || metaEnv.GOOGLE_SMTP_PASS || metaEnv.SMTP_PASS;
+  let rawUser = process.env.GOOGLE_SMTP_USER || process.env.SMTP_USER || metaEnv.GOOGLE_SMTP_USER || metaEnv.SMTP_USER;
+  let rawPass = process.env.GOOGLE_SMTP_PASS || process.env.SMTP_PASS || metaEnv.GOOGLE_SMTP_PASS || metaEnv.SMTP_PASS;
+  let host = process.env.GOOGLE_SMTP_HOST || process.env.SMTP_HOST || metaEnv.GOOGLE_SMTP_HOST || metaEnv.SMTP_HOST || 'smtp.gmail.com';
+  let port = Number(process.env.GOOGLE_SMTP_PORT || process.env.SMTP_PORT || metaEnv.GOOGLE_SMTP_PORT || metaEnv.SMTP_PORT || 587);
+
+  // Si no está en variables de entorno, consultar Supabase configuracion_sistema
+  if (!rawUser || !rawPass) {
+    try {
+      const { data } = await (supabase
+        .from('configuracion_sistema' as any)
+        .select('*')
+        .eq('id', 'config_smtp')
+        .maybeSingle() as any);
+
+      if (data && data.smtp_user && data.smtp_pass) {
+        rawUser = data.smtp_user;
+        rawPass = data.smtp_pass;
+        if (data.smtp_host) host = data.smtp_host;
+        if (data.smtp_port) port = data.smtp_port;
+      }
+    } catch (err: any) {
+      console.warn('[SMTP] Aviso consultando configuracion_sistema en base de datos:', err.message);
+    }
+  }
 
   if (!rawUser || !rawPass) {
     return null;
@@ -39,19 +60,30 @@ function getSmtpTransporter() {
   const cleanUser = String(rawUser).replace(/['"]+/g, '').trim();
   const cleanPass = String(rawPass).replace(/['"]+/g, '').replace(/\s+/g, '');
 
-  const rawHost = process.env.GOOGLE_SMTP_HOST || process.env.SMTP_HOST || metaEnv.GOOGLE_SMTP_HOST || metaEnv.SMTP_HOST || 'smtp.gmail.com';
-  const host = String(rawHost).replace(/['"]+/g, '').trim();
+  return {
+    user: cleanUser,
+    pass: cleanPass,
+    host: String(host).replace(/['"]+/g, '').trim(),
+    port: Number(port) || 587,
+  };
+}
 
-  const rawPort = process.env.GOOGLE_SMTP_PORT || process.env.SMTP_PORT || metaEnv.GOOGLE_SMTP_PORT || metaEnv.SMTP_PORT || 587;
-  const port = Number(rawPort) || 587;
+/**
+ * Obtiene el transporte SMTP configurado vía variables de entorno o base de datos Supabase
+ */
+async function getSmtpTransporter() {
+  const creds = await getSmtpCredentials();
+  if (!creds) {
+    return null;
+  }
 
-  return nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465, // true para 465, false para 587 (STARTTLS)
+  const transporter = nodemailer.createTransport({
+    host: creds.host,
+    port: creds.port,
+    secure: creds.port === 465, // true para 465, false para 587 (STARTTLS)
     auth: {
-      user: cleanUser,
-      pass: cleanPass,
+      user: creds.user,
+      pass: creds.pass,
     },
     tls: {
       rejectUnauthorized: false,
@@ -60,6 +92,11 @@ function getSmtpTransporter() {
     greetingTimeout: 15000,
     socketTimeout: 20000,
   });
+
+  return {
+    transporter,
+    sender: creds.user,
+  };
 }
 
 /**
@@ -67,8 +104,8 @@ function getSmtpTransporter() {
  */
 export async function sendPeticionAssignmentEmail(
   params: EmailPeticionNotificationParams
-): Promise<{ success: boolean; simulated?: boolean; messageId?: string; error?: string }> {
-  const transporter = getSmtpTransporter();
+): Promise<{ success: boolean; simulated?: boolean; messageId?: string; error?: string; needsSmtpConfig?: boolean }> {
+  const smtpInfo = await getSmtpTransporter();
   const metaEnv = typeof import.meta !== 'undefined' ? (import.meta as any).env || {} : {};
   const rawSender = process.env.GOOGLE_SMTP_USER || process.env.SMTP_USER || metaEnv.GOOGLE_SMTP_USER || metaEnv.SMTP_USER || 'correspondencia@unitropico.edu.co';
   const cleanSender = String(rawSender).replace(/['"]+/g, '').trim();
@@ -229,14 +266,17 @@ export async function sendPeticionAssignmentEmail(
     </html>
   `;
 
-  if (!transporter) {
-    const errorMsg = 'Configuración SMTP no encontrada en el servidor. Por favor configure las variables de entorno GOOGLE_SMTP_USER y GOOGLE_SMTP_PASS (o SMTP_USER y SMTP_PASS) en Vercel para permitir el despacho de correos reales.';
+  if (!smtpInfo) {
+    const errorMsg = 'Configuración SMTP no encontrada en el servidor. Puede vincular la cuenta institucional de Google desde el botón "Conectar Correo Institucional" en la interfaz o configurar GOOGLE_SMTP_USER y GOOGLE_SMTP_PASS en Vercel.';
     console.error(`[SMTP NO CONFIGURADO] ${errorMsg}`);
     return {
       success: false,
       error: errorMsg,
+      needsSmtpConfig: true,
     };
   }
+
+  const { transporter, sender } = smtpInfo;
 
   try {
     try {
@@ -246,7 +286,7 @@ export async function sendPeticionAssignmentEmail(
     }
 
     const info = await transporter.sendMail({
-      from: `"Sistema de Radicación Unitrópico" <${cleanSender}>`,
+      from: `"Sistema de Radicación Unitrópico" <${sender}>`,
       to: params.toEmail,
       subject,
       html: htmlContent,

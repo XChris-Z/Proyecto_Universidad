@@ -137,24 +137,6 @@ const errorParam = Astro.url.searchParams.get('error');
         </div>
 
         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-          <!-- Botón Principal: + Agendar Evento en Google Calendar -->
-          <button type="button" class="btn btn-primary btn-sm" id="btn-open-new-event-modal" style="font-size: 0.8rem; padding: 7px 14px; display: inline-flex; align-items: center; gap: 6px; font-weight: 700;">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            <span>+ Agendar Evento</span>
-          </button>
-
-          <!-- Botón Abrir Directo en Google Calendar Web -->
-          <a href="https://calendar.google.com/calendar/u/0/r" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" title="Abrir Google Calendar en pestaña nueva" style="font-size: 0.78rem; padding: 6px 12px; display: inline-flex; align-items: center; gap: 6px; text-decoration: none;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-            <span>Abrir en Google ↗</span>
-          </a>
-
-          <!-- Botón Activar Cookies de Google -->
-          <button type="button" class="btn btn-secondary btn-sm" id="btn-activate-cookies" title="Habilitar cookies necesarias para ver eventos de Google" style="font-size: 0.78rem; padding: 6px 12px; display: inline-flex; align-items: center; gap: 6px;">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0-1.5 19.9"/><circle cx="8" cy="9" r="1" fill="currentColor"/><circle cx="15" cy="8" r="1" fill="currentColor"/><circle cx="10" cy="14" r="1" fill="currentColor"/><circle cx="14" cy="15" r="1" fill="currentColor"/></svg>
-            <span>Activar Cookies</span>
-          </button>
-
           <!-- Botón Sincronizar -->
           <button type="button" class="btn btn-secondary btn-sm" id="btn-force-sync" title="Actualizar eventos" style="font-size: 0.78rem; padding: 6px 12px; display: inline-flex; align-items: center; gap: 6px;">
             <svg id="sync-spinner-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
@@ -279,22 +261,6 @@ const errorParam = Astro.url.searchParams.get('error');
 
       <!-- Contenedor 2: Google Calendar Embebido Oficial -->
       <div id="container-google-embed" class="calendar-main-surface" style="display: none;">
-        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid #3b82f6; padding: 12px 16px; border-radius: 8px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; font-size: 0.84rem; color: #1e40af;">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0-1.5 19.9"/><circle cx="8" cy="9" r="1" fill="currentColor"/><circle cx="15" cy="8" r="1" fill="currentColor"/><circle cx="10" cy="14" r="1" fill="currentColor"/><circle cx="14" cy="15" r="1" fill="currentColor"/></svg>
-            <span>¿No visualizas tus eventos privados? Activa las cookies necesarias de Google en tu navegador:</span>
-          </div>
-          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-            <button type="button" class="btn btn-primary btn-sm" id="btn-activate-cookies-banner" style="font-size: 0.76rem; padding: 6px 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0-1.5 19.9"/><circle cx="8" cy="9" r="1" fill="currentColor"/><circle cx="15" cy="8" r="1" fill="currentColor"/><circle cx="10" cy="14" r="1" fill="currentColor"/><circle cx="14" cy="15" r="1" fill="currentColor"/></svg>
-              <span>Activar Cookies Google</span>
-            </button>
-            <a href="https://calendar.google.com/calendar/u/0/r" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="font-size: 0.76rem; text-decoration: none; white-space: nowrap;">
-              Abrir Google Calendar Web ↗
-            </a>
-          </div>
-        </div>
-
         <div class="card" style="padding: 12px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); overflow: hidden;">
           <iframe 
             id="google-calendar-iframe"
@@ -465,12 +431,9 @@ const errorParam = Astro.url.searchParams.get('error');
   const btnDisconnect = document.getElementById('btn-disconnect-calendar');
   if (btnDisconnect) {
     btnDisconnect.addEventListener('click', async () => {
-      let confirmed = false;
-      if ((window as any).showConfirm) {
-        confirmed = await (window as any).showConfirm('¿Estás seguro de que deseas desvincular tu cuenta de Google Calendar del sistema?');
-      } else {
-        confirmed = confirm('¿Estás seguro de que deseas desvincular tu cuenta de Google Calendar del sistema?');
-      }
+      const confirmed = typeof (window as any).showConfirm === 'function'
+        ? await (window as any).showConfirm('¿Estás seguro de que deseas desvincular tu cuenta de Google Calendar del sistema?', 'Desvincular Google Calendar')
+        : true;
 
       if (!confirmed) return;
 

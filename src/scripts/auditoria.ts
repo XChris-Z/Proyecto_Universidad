@@ -73,7 +73,10 @@ export async function initAuditoria() {
       // Formateo limpio de la entidad/radicado sin IDs crudos
       const entityIdStr = String(log.entityId || '').trim();
       const entityStr = String(log.entity || 'Sistema').trim();
-      const radicadoMatch = entityIdStr.match(/RAD-\d{4}-\d+/i) || 
+      
+      const radicadoFromObj = (log.after as any)?.numero_radicado || (log.before as any)?.numero_radicado;
+      const radicadoMatch = (radicadoFromObj ? [radicadoFromObj] : null) ||
+                            entityIdStr.match(/RAD-\d{4}-\d+/i) || 
                             String(log.action || '').match(/RAD-\d{4}-\d+/i) || 
                             String(log.details || '').match(/RAD-\d{4}-\d+/i);
 
@@ -87,7 +90,10 @@ export async function initAuditoria() {
         const isInternalId = !entityIdStr || 
           /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entityIdStr) || 
           entityIdStr.startsWith('usr-') ||
-          entityIdStr.startsWith('cal-');
+          entityIdStr.startsWith('cal-') ||
+          entityIdStr.startsWith('alog-') ||
+          entityIdStr.startsWith('doc-') ||
+          entityIdStr.length > 25;
 
         if (isInternalId) {
           entityHtml = `<div style="font-weight: 700; color: var(--text-main); font-size: 0.85rem;">${entityStr}</div>`;

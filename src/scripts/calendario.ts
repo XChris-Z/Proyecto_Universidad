@@ -70,15 +70,12 @@ export async function initCalendario() {
   // Badge de Estado Google Calendar
   syncBadge?.addEventListener('click', async () => {
     if (!isGoogleConnected) {
-      let confirmed = false;
-      if ((window as any).showConfirm) {
-        confirmed = await (window as any).showConfirm(
-          '¿Deseas conectar tu cuenta institucional de Google Workspace para sincronizar tus eventos en tiempo real?',
-          'Google Calendar Institucional'
-        );
-      } else {
-        confirmed = confirm('¿Deseas conectar tu cuenta institucional de Google Workspace?');
-      }
+      const confirmed = typeof (window as any).showConfirm === 'function'
+        ? await (window as any).showConfirm(
+            '¿Deseas conectar tu cuenta institucional de Google Workspace para sincronizar tus eventos en tiempo real?',
+            'Google Calendar Institucional'
+          )
+        : true;
 
       if (confirmed) {
         try {

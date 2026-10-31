@@ -13,6 +13,7 @@ declare global {
     showToast: (message: string, typeOrIsError?: boolean | 'success' | 'error' | 'warning' | 'info', customTitle?: string) => void;
     showAlert: (message: string, type?: 'success' | 'error' | 'warning' | 'info', title?: string) => Promise<void>;
     showConfirm: (message: string, title?: string) => Promise<boolean>;
+    openSmtpConfigModal: () => void;
     currentLoggedUser: InstitutionalUser;
     updateUserProfileUI: () => void;
   }
@@ -170,10 +171,36 @@ export function initAppLayout() {
 
   window.showConfirm = function (message: string, title?: string): Promise<boolean> {
     return new Promise((resolve) => {
-      const modal = document.getElementById('sgd-system-dialog');
+      let modal = document.getElementById('sgd-system-dialog');
       if (!modal) {
-        resolve(window.confirm(message));
-        return;
+        const div = document.createElement('div');
+        div.id = 'sgd-system-dialog';
+        div.className = 'modal-backdrop';
+        div.style.cssText = 'display: none; z-index: 100000;';
+        div.innerHTML = `
+          <div class="modal-card" style="max-width: 440px; border-radius: 16px; border-top: 5px solid var(--verde-principal); box-shadow: 0 20px 40px rgba(0,0,0,0.2); text-align: center; padding: 28px 24px; background: #ffffff;">
+            <div id="sgd-dialog-icon-wrap" style="width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; background: var(--verde-suave-bg); color: var(--verde-principal);">
+              <svg id="sgd-dialog-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+              </svg>
+            </div>
+            <h3 id="sgd-dialog-title" style="font-size: 1.2rem; font-weight: 800; color: var(--text-main); margin: 0 0 8px 0;">
+              Confirmación Requerida
+            </h3>
+            <p id="sgd-dialog-message" style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; margin: 0 0 22px 0; word-break: break-word;">
+            </p>
+            <div id="sgd-dialog-actions" style="display: flex; gap: 10px; justify-content: center;">
+              <button type="button" class="btn btn-primary" id="sgd-dialog-btn-ok" style="min-width: 120px; font-weight: 700;">
+                Aceptar
+              </button>
+              <button type="button" class="btn btn-ghost" id="sgd-dialog-btn-cancel" style="min-width: 100px;">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(div);
+        modal = div;
       }
 
       const titleEl = document.getElementById('sgd-dialog-title');
@@ -325,6 +352,17 @@ export function initAppLayout() {
         <span>${roleName}</span>
       `;
     }
+
+    // Visibilidad exclusiva de funciones administrativas (Usuarios y Permisos, Configuración SMTP)
+    const isAdmin = u.roleId === 'admin' || (u.role && u.role.toLowerCase().includes('admin'));
+    const navUsuarios = document.getElementById('nav-usuarios');
+    if (navUsuarios) {
+      navUsuarios.style.display = isAdmin ? 'flex' : 'none';
+    }
+    const btnTopbarSmtp = document.getElementById('btn-topbar-smtp');
+    if (btnTopbarSmtp) {
+      btnTopbarSmtp.style.display = isAdmin ? 'inline-flex' : 'none';
+    }
   };
 
   window.updateUserProfileUI();
@@ -400,16 +438,171 @@ export function initAppLayout() {
   btnMenuClose?.addEventListener('click', closeSidebar);
   sidebarBackdrop?.addEventListener('click', closeSidebar);
 
-  // 8. Cierre de sesión
-  document.getElementById('btn-logout')?.addEventListener('click', () => {
+  // 7.1 Barra lateral plegable (Collapsible Sidebar)
+  const btnToggleCollapse = document.getElementById('btn-toggle-sidebar-collapse');
+  const isInitiallyCollapsed = localStorage.getItem('sgd_sidebar_collapsed') === 'true';
+  if (isInitiallyCollapsed) {
+    document.body.classList.add('sidebar-collapsed');
+  }
+
+  btnToggleCollapse?.addEventListener('click', () => {
+    const isCollapsed = document.body.classList.toggle('sidebar-collapsed');
+    localStorage.setItem('sgd_sidebar_collapsed', isCollapsed ? 'true' : 'false');
+    btnToggleCollapse.setAttribute('title', isCollapsed ? 'Desplegar barra lateral' : 'Plegar barra lateral');
+  });
+
+  // 8. Cierre de sesión definitivo y purga integral de almacenamiento y cookies
+  document.getElementById('btn-logout')?.addEventListener('click', async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.warn('Aviso cerrando sesión en Supabase:', e);
+    }
+
     localStorage.removeItem(SESSION_STORAGE_KEY);
     localStorage.removeItem('sgd_current_user');
-    sessionStorage.removeItem(SESSION_STORAGE_KEY);
-    document.cookie = `${SESSION_COOKIE_KEY}=; path=/; max-age=0;`;
+    localStorage.removeItem('sgd_user_avatar');
+    sessionStorage.clear();
+
+    const cookiesToPurge = [
+      SESSION_COOKIE_KEY,
+      'sb-access-token',
+      'sb-refresh-token',
+      'sgd_session_user'
+    ];
+    cookiesToPurge.forEach(name => {
+      document.cookie = `${name}=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
+    });
+
     window.showToast('Sesión finalizada. Redirigiendo...', 'info');
     setTimeout(() => {
-      window.location.href = '/login';
-    }, 500);
+      window.location.replace('/login');
+    }, 300);
+  });
+
+  // Prevenir que el botón "Atrás" del navegador muestre vistas protegidas en caché (bfcache)
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+      const hasLocalUser = localStorage.getItem('sgd_current_user') || localStorage.getItem(SESSION_STORAGE_KEY);
+      const hasCookie = document.cookie.includes(SESSION_COOKIE_KEY);
+      if (!hasLocalUser && !hasCookie) {
+        window.location.replace('/login');
+      }
+    }
+  });
+
+  // 8.1 Modal de Configuración y Conexión de Correo Institucional (Google SMTP)
+  const smtpModal = document.getElementById('modal-smtp-config');
+  const btnCloseSmtp = document.getElementById('btn-close-smtp-modal');
+  const btnCancelSmtp = document.getElementById('btn-cancel-smtp-modal');
+  const formSmtp = document.getElementById('form-smtp-config') as HTMLFormElement | null;
+  const btnToggleSmtpPass = document.getElementById('btn-toggle-smtp-pass');
+  const inputSmtpUser = document.getElementById('input-smtp-user') as HTMLInputElement | null;
+  const inputSmtpPass = document.getElementById('input-smtp-pass') as HTMLInputElement | null;
+  const feedbackSmtp = document.getElementById('smtp-status-feedback');
+  const btnSubmitSmtp = document.getElementById('btn-submit-smtp-config') as HTMLButtonElement | null;
+  const btnSubmitSmtpText = document.getElementById('btn-submit-smtp-text');
+
+  window.openSmtpConfigModal = async function () {
+    if (!smtpModal) return;
+    smtpModal.style.display = 'flex';
+    if (feedbackSmtp) feedbackSmtp.style.display = 'none';
+
+    try {
+      const res = await fetch('/api/configuracion/smtp');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.configured && data.user && inputSmtpUser) {
+          inputSmtpUser.value = data.user;
+          if (feedbackSmtp) {
+            feedbackSmtp.style.display = 'block';
+            feedbackSmtp.style.background = '#ecfdf5';
+            feedbackSmtp.style.color = '#065f46';
+            feedbackSmtp.style.border = '1px solid #a7f3d0';
+            feedbackSmtp.innerHTML = `<strong>Correo vinculado actualmente:</strong> ${data.user} (${data.source === 'env' ? 'Variable de entorno Vercel' : 'Base de datos Supabase'}). Puedes actualizarlo ingresando nuevas credenciales.`;
+          }
+        }
+      }
+    } catch {
+      // Ignorar error inicial de consulta
+    }
+  };
+
+  document.getElementById('btn-topbar-smtp')?.addEventListener('click', () => {
+    window.openSmtpConfigModal();
+  });
+
+  btnCloseSmtp?.addEventListener('click', () => {
+    if (smtpModal) smtpModal.style.display = 'none';
+  });
+  btnCancelSmtp?.addEventListener('click', () => {
+    if (smtpModal) smtpModal.style.display = 'none';
+  });
+
+  btnToggleSmtpPass?.addEventListener('click', () => {
+    if (!inputSmtpPass) return;
+    inputSmtpPass.type = inputSmtpPass.type === 'password' ? 'text' : 'password';
+  });
+
+  formSmtp?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!inputSmtpUser || !inputSmtpPass) return;
+
+    const user = inputSmtpUser.value.trim();
+    const pass = inputSmtpPass.value.trim();
+
+    if (btnSubmitSmtp) btnSubmitSmtp.disabled = true;
+    if (btnSubmitSmtpText) btnSubmitSmtpText.textContent = 'Verificando con Google...';
+    if (feedbackSmtp) {
+      feedbackSmtp.style.display = 'block';
+      feedbackSmtp.style.background = '#eff6ff';
+      feedbackSmtp.style.color = '#1e40af';
+      feedbackSmtp.style.border = '1px solid #bfdbfe';
+      feedbackSmtp.textContent = 'Estableciendo comunicación segura con smtp.gmail.com...';
+    }
+
+    try {
+      const res = await fetch('/api/configuracion/smtp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user, pass }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        if (feedbackSmtp) {
+          feedbackSmtp.style.background = '#fff1f2';
+          feedbackSmtp.style.color = '#9f1239';
+          feedbackSmtp.style.border = '1px solid #fecdd3';
+          feedbackSmtp.textContent = data.error || 'Error verificando las credenciales SMTP.';
+        }
+        window.showToast(data.error || 'Fallo de verificación SMTP.', 'error', 'Diagnóstico SMTP');
+        return;
+      }
+
+      if (feedbackSmtp) {
+        feedbackSmtp.style.background = '#ecfdf5';
+        feedbackSmtp.style.color = '#065f46';
+        feedbackSmtp.style.border = '1px solid #a7f3d0';
+        feedbackSmtp.textContent = data.message || 'Correo institucional configurado y verificado exitosamente.';
+      }
+
+      window.showToast('¡Correo Google vinculado exitosamente! Ahora los radicados enviarán notificaciones reales.', 'success', 'Conexión SMTP');
+      setTimeout(() => {
+        if (smtpModal) smtpModal.style.display = 'none';
+      }, 1500);
+    } catch (err: any) {
+      if (feedbackSmtp) {
+        feedbackSmtp.style.background = '#fff1f2';
+        feedbackSmtp.style.color = '#9f1239';
+        feedbackSmtp.style.border = '1px solid #fecdd3';
+        feedbackSmtp.textContent = 'Error de conexión: ' + (err.message || 'No se pudo contactar el servidor');
+      }
+      window.showToast('Error de conexión al guardar configuración SMTP.', 'error');
+    } finally {
+      if (btnSubmitSmtp) btnSubmitSmtp.disabled = false;
+      if (btnSubmitSmtpText) btnSubmitSmtpText.textContent = 'Verificar y Guardar Conexión';
+    }
   });
 
   // 9. Conmutador de Perfiles (Simulador RBAC)

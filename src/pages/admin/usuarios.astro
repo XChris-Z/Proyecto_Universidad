@@ -1,8 +1,33 @@
 ---
 // src/pages/admin/usuarios.astro
+export const prerender = false;
+
 import AppLayout from '@layouts/AppLayout.astro';
 import { supabase } from '@lib/supabase';
 import { PERMISSIONS_CATALOG } from '@data/roles';
+import { SESSION_COOKIE_KEY } from '@lib/constants';
+
+// Validación estricta de rol: únicamente Administrador puede acceder
+const sessionUserId = Astro.cookies.get(SESSION_COOKIE_KEY)?.value;
+if (!sessionUserId) {
+  return Astro.redirect('/login');
+}
+
+let isAdmin = false;
+if (sessionUserId === 'usr-root') {
+  isAdmin = true;
+} else {
+  const { data: currentProfile } = await supabase
+    .from('profiles')
+    .select('role')
+    .or(`id.eq.${sessionUserId},email.eq.${sessionUserId}`)
+    .maybeSingle();
+  isAdmin = currentProfile?.role === 'admin';
+}
+
+if (!isAdmin) {
+  return Astro.redirect('/dashboard');
+}
 
 // Consultar usuarios reales directamente desde Supabase PostgreSQL
 const { data: dbProfiles } = await supabase
@@ -676,6 +701,11 @@ const usersList = dbProfiles && dbProfiles.length > 0 ? dbProfiles : [];
 
     // Inicializar de inmediato sin depender exclusivamente de DOMContentLoaded
     async function initUsuarios() {
+      const u = (window as any).currentLoggedUser;
+      if (u && u.roleId !== 'admin' && !u.role?.toLowerCase().includes('admin')) {
+        window.location.replace('/dashboard');
+        return;
+      }
       attachUserSelectionEvents();
       await loadAllPermissions();
       selectUser('usr-root');
