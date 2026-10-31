@@ -38,6 +38,9 @@ function getSmtpTransporter() {
       user,
       pass,
     },
+    connectionTimeout: 4000,
+    greetingTimeout: 4000,
+    socketTimeout: 5000,
   });
 }
 
@@ -204,12 +207,18 @@ export async function sendPeticionAssignmentEmail(
   }
 
   try {
-    const info = await transporter.sendMail({
+    const sendPromise = transporter.sendMail({
       from: `"SGD Unitrópico" <${smtpUser}>`,
       to: params.toEmail,
       subject,
       html: htmlContent,
     });
+
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Tiempo de espera SMTP excedido (5s)')), 5000)
+    );
+
+    const info = await (Promise.race([sendPromise, timeoutPromise]) as Promise<any>);
 
     console.log(`[SMTP ENVIADO] Correo entregado exitosamente a ${params.toEmail} (MessageId: ${info.messageId})`);
 
@@ -218,7 +227,7 @@ export async function sendPeticionAssignmentEmail(
       messageId: info.messageId,
     };
   } catch (error: any) {
-    console.error('Error enviando correo SMTP a ' + params.toEmail + ':', error);
+    console.error('Error enviando correo SMTP a ' + params.toEmail + ':', error.message);
     return {
       success: false,
       error: error.message || 'Error desconocido al enviar correo SMTP',

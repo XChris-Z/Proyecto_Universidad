@@ -42,7 +42,7 @@ export const POST: APIRoute = async ({ request, url }) => {
       }
 
       primaryFile = formData.get('archivo_peticion') as File | null;
-      if (primaryFile && primaryFile.size === 0) {
+      if (primaryFile && (typeof primaryFile === 'string' || !primaryFile.size || primaryFile.size === 0)) {
         primaryFile = null;
       }
     } else {
@@ -108,8 +108,8 @@ export const POST: APIRoute = async ({ request, url }) => {
 
     // 2. Subir Archivo Principal de la Petición al Storage si fue proporcionado
     let savedPrimaryFile = null;
-    if (primaryFile) {
-      const cleanFileName = primaryFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    if (primaryFile && typeof primaryFile !== 'string' && typeof primaryFile.arrayBuffer === 'function' && primaryFile.size > 0) {
+      const cleanFileName = (primaryFile.name || 'documento.pdf').replace(/[^a-zA-Z0-9._-]/g, '_');
       const storageRelativePath = `${peticionData.numero_radicado}/documento_principal_${Date.now()}_${cleanFileName}`;
       const fullStoragePath = `peticiones/${storageRelativePath}`;
 
@@ -206,6 +206,9 @@ export const POST: APIRoute = async ({ request, url }) => {
           fechaLimiteResponsable: peticionData.fecha_limite_responsable,
           codigoAcceso: resp.codigo_acceso,
           portalUrl,
+        }).catch((err: any) => {
+          console.warn(`[EMAIL ERROR NO FATAL] Fallo correo a ${oficina.email_institucional}:`, err.message);
+          return { success: false, error: err.message };
         });
         emailNotifications.push(emailPromise);
       }
