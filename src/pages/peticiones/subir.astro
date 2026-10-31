@@ -13,14 +13,14 @@ const { data: oficinasData } = await (supabase
 const fallbackOficinas = [
   { id: 'a05d4e8e-3545-44b0-a184-1daf1b07556f', codigo: 'PRUEBA-1', nombre: 'Prueba 1', email_institucional: 'taxxgameryt@gmail.com' },
   { id: 'b8a96d4e-69bc-4eb5-a4de-8d43589af91b', codigo: 'PRUEBA-2', nombre: 'Prueba 2', email_institucional: 'oscargalindo.es@unitropico.edu.co' },
-  { id: '6c717727-996b-46dc-9ea4-cc55ff000e13', codigo: 'REC', nombre: 'Despacho de Rectoría', email_institucional: 'rectoria@unitropico.edu.co' },
-  { id: 'e288247f-ac9d-434c-8006-8218780da725', codigo: 'SEC-GEN', nombre: 'Secretaría General', email_institucional: 'secretaria.general@unitropico.edu.co' },
-  { id: '92cbd906-e694-4d3a-be26-598c2681aebf', codigo: 'OFI-JUR', nombre: 'Oficina Asesora Jurídica', email_institucional: 'juridica@unitropico.edu.co' },
-  { id: 'd5e2b1ed-4f18-4208-8d9a-64ebb5ede6ae', codigo: 'VIC-ACAD', nombre: 'Vicerrectoría Académica', email_institucional: 'viceacademica@unitropico.edu.co' },
-  { id: '18ce2c98-dde5-44f9-a517-2761b539c874', codigo: 'VIC-ADMIN', nombre: 'Vicerrectoría Administrativa y Financiera', email_institucional: 'vicefinanciera@unitropico.edu.co' },
-  { id: '1bcd5449-e637-4c9c-bdb2-e63cb7416a7c', codigo: 'PLA-INST', nombre: 'Dirección de Planeación', email_institucional: 'planeacion@unitropico.edu.co' },
-  { id: '63ab865f-ad5f-42c0-88e6-6269c267d0db', codigo: 'ADM-REG', nombre: 'Admisiones, Registro y Control', email_institucional: 'admisiones@unitropico.edu.co' },
-  { id: '2e2995a4-c553-470b-850e-f688f3bf9eea', codigo: 'CORRESP', nombre: 'Gestión Documental y Correspondencia', email_institucional: 'correspondencia@unitropico.edu.co' },
+  { id: '6c717727-996b-46dc-9ea4-cc55ff000e13', codigo: 'REC', nombre: 'Despacho de Rectoría', email_institucional: null },
+  { id: 'e288247f-ac9d-434c-8006-8218780da725', codigo: 'SEC-GEN', nombre: 'Secretaría General', email_institucional: null },
+  { id: '92cbd906-e694-4d3a-be26-598c2681aebf', codigo: 'OFI-JUR', nombre: 'Oficina Asesora Jurídica', email_institucional: null },
+  { id: 'd5e2b1ed-4f18-4208-8d9a-64ebb5ede6ae', codigo: 'VIC-ACAD', nombre: 'Vicerrectoría Académica', email_institucional: null },
+  { id: '18ce2c98-dde5-44f9-a517-2761b539c874', codigo: 'VIC-ADMIN', nombre: 'Vicerrectoría Administrativa y Financiera', email_institucional: null },
+  { id: '1bcd5449-e637-4c9c-bdb2-e63cb7416a7c', codigo: 'PLA-INST', nombre: 'Dirección de Planeación', email_institucional: null },
+  { id: '63ab865f-ad5f-42c0-88e6-6269c267d0db', codigo: 'ADM-REG', nombre: 'Admisiones, Registro y Control', email_institucional: null },
+  { id: '2e2995a4-c553-470b-850e-f688f3bf9eea', codigo: 'CORRESP', nombre: 'Gestión Documental y Correspondencia', email_institucional: null },
 ];
 
 const rawList = (oficinasData && oficinasData.length > 0) ? oficinasData : fallbackOficinas;
@@ -214,6 +214,7 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;" id="oficinas-checkbox-grid">
           {oficinas.map((ofi: any) => {
             const isTestOffice = ofi.codigo?.toUpperCase().includes('PRUEBA') || ofi.nombre?.toLowerCase().includes('prueba');
+            const displayEmail = isTestOffice ? (ofi.email_institucional || '') : '';
             return (
               <label 
                 class={`oficina-card-label ${isTestOffice ? 'is-test-office' : ''}`} 
@@ -223,7 +224,7 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
                   type="checkbox" 
                   name="oficinas_selected" 
                   value={ofi.id} 
-                  data-email={ofi.email_institucional} 
+                  data-email={displayEmail} 
                   data-nombre={ofi.nombre} 
                   style="margin-top: 3px; accent-color: var(--verde-principal); width: 17px; height: 17px;" 
                 />
@@ -236,7 +237,11 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
                       </span>
                     )}
                   </div>
-                  <div style="font-size: 0.72rem; color: var(--text-muted); font-family: monospace; margin-top: 2px;">{ofi.email_institucional}</div>
+                  {displayEmail ? (
+                    <div style="font-size: 0.72rem; color: var(--text-muted); font-family: monospace; margin-top: 2px;">{displayEmail}</div>
+                  ) : (
+                    <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px; font-style: italic;">Oficina institucional</div>
+                  )}
                 </div>
               </label>
             );
@@ -579,18 +584,28 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
           if (modalPath) modalPath.textContent = data.peticion.storage_folder_path;
 
           if (listContainer && Array.isArray(data.responsables)) {
-            listContainer.innerHTML = data.responsables.map((r: any) => `
-              <div style="background: var(--bg-body); border: 1px solid var(--border-subtle); padding: 8px 12px; border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem;">
-                <div>
-                  <strong style="color: var(--text-main);">${r.oficina_nombre}</strong>
-                  <div style="color: var(--text-muted); font-size: 0.70rem;">${r.email_institucional}</div>
+            listContainer.innerHTML = data.responsables.map((r: any) => {
+              const isTest = (r.oficina_nombre || '').toLowerCase().includes('prueba');
+              const emailHtml = (isTest && r.email_institucional) 
+                ? `<div style="color: var(--text-muted); font-size: 0.70rem;">${r.email_institucional}</div>`
+                : '';
+              const notifyStatus = (isTest && r.email_institucional)
+                ? `<div style="font-size: 0.65rem; color: #059669; margin-top: 2px;">✔ Notificado vía Correo</div>`
+                : `<div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 2px;">ℹ Código Asignado</div>`;
+
+              return `
+                <div style="background: var(--bg-body); border: 1px solid var(--border-subtle); padding: 8px 12px; border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem;">
+                  <div>
+                    <strong style="color: var(--text-main);">${r.oficina_nombre}</strong>
+                    ${emailHtml}
+                  </div>
+                  <div style="text-align: right;">
+                    <span style="font-family: monospace; font-weight: 900; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 3px 8px; border-radius: 4px; border: 1px solid var(--verde-borde);">${r.codigo_acceso}</span>
+                    ${notifyStatus}
+                  </div>
                 </div>
-                <div style="text-align: right;">
-                  <span style="font-family: monospace; font-weight: 900; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 3px 8px; border-radius: 4px; border: 1px solid var(--verde-borde);">${r.codigo_acceso}</span>
-                  <div style="font-size: 0.65rem; color: #059669; margin-top: 2px;">✔ Notificado vía Correo</div>
-                </div>
-              </div>
-            `).join('');
+              `;
+            }).join('');
           }
 
           if (modalSuccess) modalSuccess.style.display = 'flex';

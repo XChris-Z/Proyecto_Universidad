@@ -207,17 +207,20 @@ export const POST: APIRoute = async ({ request, url }) => {
       }
     ] : undefined;
 
-    // 6. Enviar correos automáticos institucionales a cada oficina con código, enlace y archivo adjunto
+    // 6. Enviar correos automáticos institucionales solo a oficinas de prueba (o que tengan correo válido asignado)
     const baseUrl = url.origin;
 
     const emailNotifications = [];
     for (const resp of responsablesData) {
       const oficina = oficinasData.find((o: any) => o.id === resp.oficina_id);
-      if (oficina && oficina.email_institucional) {
-        const portalUrl = `${baseUrl}/portal-responsable?codigo=${encodeURIComponent(resp.codigo_acceso)}&email=${encodeURIComponent(oficina.email_institucional)}`;
+      const isTestOffice = oficina?.codigo?.toUpperCase().includes('PRUEBA') || oficina?.nombre?.toLowerCase().includes('prueba');
+      const targetEmail = isTestOffice ? (oficina?.email_institucional || null) : null;
+
+      if (oficina && targetEmail) {
+        const portalUrl = `${baseUrl}/portal-responsable?codigo=${encodeURIComponent(resp.codigo_acceso)}&email=${encodeURIComponent(targetEmail)}`;
         
         const emailPromise = sendPeticionAssignmentEmail({
-          toEmail: oficina.email_institucional,
+          toEmail: targetEmail,
           oficinaNombre: oficina.nombre,
           numeroRadicado: peticionData.numero_radicado,
           asunto: peticionData.asunto,
@@ -230,7 +233,7 @@ export const POST: APIRoute = async ({ request, url }) => {
           portalUrl,
           attachments: emailAttachments,
         }).catch((err: any) => {
-          console.warn(`[EMAIL ERROR NO FATAL] Fallo correo a ${oficina.email_institucional}:`, err.message);
+          console.warn(`[EMAIL ERROR NO FATAL] Fallo correo a ${targetEmail}:`, err.message);
           return { success: false, error: err.message };
         });
 
@@ -256,10 +259,11 @@ export const POST: APIRoute = async ({ request, url }) => {
         },
         responsables: responsablesData.map((r: any) => {
           const ofi = oficinasData.find((o: any) => o.id === r.oficina_id);
+          const isTestOffice = ofi?.codigo?.toUpperCase().includes('PRUEBA') || ofi?.nombre?.toLowerCase().includes('prueba');
           return {
             id: r.id,
             oficina_nombre: ofi?.nombre,
-            email_institucional: ofi?.email_institucional,
+            email_institucional: isTestOffice ? (ofi?.email_institucional || null) : null,
             codigo_acceso: r.codigo_acceso,
             storage_subfolder_path: r.storage_subfolder_path,
           };
