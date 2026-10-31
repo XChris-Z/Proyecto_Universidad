@@ -136,14 +136,14 @@ export function initArchivos() {
         <td style="text-align: right;">
           <div style="display: inline-flex; gap: 6px;">
             <button type="button" class="btn btn-ghost btn-sm btn-action-preview" data-doc-id="${doc.id}" title="Ver expediente">
-              👁️
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             </button>
             <button type="button" class="btn btn-secondary btn-sm btn-action-reassign" data-doc-id="${doc.id}" title="Reasignar">
-              👤
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </button>
             ${!isResponded ? `
               <button type="button" class="btn btn-primary btn-sm btn-action-respond" data-doc-id="${doc.id}" title="Responder">
-                ✍️
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
               </button>
             ` : ''}
           </div>
@@ -343,7 +343,10 @@ export function initArchivos() {
                 <strong>${doc.response.signedName}</strong><br>
                 <span style="font-size: 0.78rem; color: var(--text-muted);">${doc.response.signedRole}</span>
               </div>
-              <span style="color: var(--status-safe); font-size: 0.75rem; font-weight: 700;">✓ Firma Electrónica Verificada</span>
+              <span style="color: var(--status-safe); font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                Firma Electrónica Verificada
+              </span>
             </div>
           </div>
         `;

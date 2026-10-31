@@ -32,47 +32,62 @@ export function addDays(baseDate: Date, days: number): Date {
 }
 
 /**
- * Calcula el progreso de un plazo documental y su clase de urgencia
+ * Calcula el progreso de un plazo documental y su clase de urgencia (Semáforo SLA)
  */
 export function calculateDeadlineProgress(
-  uploadDateStr: string,
-  dueDateStr: string
+  uploadDateStr: string | null | undefined,
+  dueDateStr: string | null | undefined
 ): DeadlineProgress {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const uploadDate = new Date(uploadDateStr + 'T00:00:00');
-  const dueDate = new Date(dueDateStr + 'T00:00:00');
+  const ahora = Date.now();
+  const parseDate = (d?: string | null, fallback = ahora) => {
+    if (!d) return fallback;
+    const clean = d.includes('T') ? d : `${d}T12:00:00`;
+    const t = new Date(clean).getTime();
+    return isNaN(t) ? fallback : t;
+  };
 
-  const totalDays = Math.max(
-    1,
-    Math.round((dueDate.getTime() - uploadDate.getTime()) / 86_400_000)
-  );
-  const daysRemaining = Math.round(
-    (dueDate.getTime() - today.getTime()) / 86_400_000
-  );
-  const percentage = Math.min(
-    100,
-    Math.max(0, Math.round(((totalDays - daysRemaining) / totalDays) * 100))
-  );
+  const inicio = parseDate(uploadDateStr, ahora - 86_400_000);
+  const fin = parseDate(dueDateStr, ahora + 15 * 86_400_000);
+
+  const totalTiempo = fin - inicio;
+  const transcurrido = ahora - inicio;
+  const diasRestantes = Math.ceil((fin - ahora) / (1000 * 60 * 60 * 24));
+
+  let porcentaje = 100;
+  if (diasRestantes <= 0) {
+    porcentaje = 100;
+  } else if (totalTiempo > 0) {
+    porcentaje = Math.min(100, Math.max(5, Math.round((transcurrido / totalTiempo) * 100)));
+  }
 
   let statusClass: string;
   let statusBadge: string;
+  let color: string;
+  let bgLight: string;
 
-  if (daysRemaining < 0) {
+  if (diasRestantes <= 0) {
     statusClass = 'status-vencido';
-    statusBadge = `VENCIDO (${Math.abs(daysRemaining)}d)`;
-  } else if (daysRemaining <= 3) {
+    statusBadge = diasRestantes === 0 ? 'Vence Hoy' : `Vencido (${Math.abs(diasRestantes)}d)`;
+    color = '#dc2626'; // Rojo
+    bgLight = '#FEF2F2';
+  } else if (diasRestantes <= 2) {
     statusClass = 'status-critico';
-    statusBadge = `CRÍTICO: ${daysRemaining}d`;
-  } else if (daysRemaining <= 7) {
+    statusBadge = `${diasRestantes}d (Crítico)`;
+    color = '#dc2626'; // Rojo
+    bgLight = '#FEF2F2';
+  } else if (diasRestantes <= 7) {
     statusClass = 'status-alerta';
-    statusBadge = `${daysRemaining} días`;
+    statusBadge = `${diasRestantes} días`;
+    color = '#d97706'; // Amarillo / Ámbar
+    bgLight = '#FFFBEB';
   } else {
     statusClass = 'status-normal';
-    statusBadge = `${daysRemaining} días`;
+    statusBadge = `${diasRestantes} días`;
+    color = '#16a34a'; // Verde saludable
+    bgLight = '#ECFDF5';
   }
 
-  return { percentage, daysRemaining, statusClass, statusBadge };
+  return { percentage: porcentaje, daysRemaining: diasRestantes, statusClass, statusBadge, color, bgLight };
 }
 
 /**

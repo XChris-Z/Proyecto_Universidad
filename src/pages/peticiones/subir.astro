@@ -590,8 +590,8 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
                 ? `<div style="color: var(--text-muted); font-size: 0.70rem;">${r.email_institucional}</div>`
                 : '';
               const notifyStatus = (isTest && r.email_institucional)
-                ? `<div style="font-size: 0.65rem; color: #059669; margin-top: 2px;">✔ Notificado vía Correo</div>`
-                : `<div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 2px;">ℹ Código Asignado</div>`;
+                ? `<div style="font-size: 0.65rem; color: #059669; margin-top: 2px; font-weight: 700;">Notificado vía Correo</div>`
+                : `<div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 2px;">Código Asignado</div>`;
 
               return `
                 <div style="background: var(--bg-body); border: 1px solid var(--border-subtle); padding: 8px 12px; border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem;">

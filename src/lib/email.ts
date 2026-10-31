@@ -28,8 +28,9 @@ export interface EmailPeticionNotificationParams {
  * Limpia automáticamente los espacios en blanco de contraseñas de aplicación de Google
  */
 function getSmtpTransporter() {
-  const user = process.env.SMTP_USER || process.env.GOOGLE_SMTP_USER;
-  const pass = process.env.SMTP_PASS || process.env.GOOGLE_SMTP_PASS;
+  const env = (import.meta as any).env || {};
+  const user = process.env.SMTP_USER || process.env.GOOGLE_SMTP_USER || env.SMTP_USER || env.GOOGLE_SMTP_USER;
+  const pass = process.env.SMTP_PASS || process.env.GOOGLE_SMTP_PASS || env.SMTP_PASS || env.GOOGLE_SMTP_PASS;
 
   if (!user || !pass) {
     return null;
@@ -38,8 +39,8 @@ function getSmtpTransporter() {
   const cleanUser = user.trim();
   const cleanPass = pass.replace(/\s+/g, '');
 
-  const host = process.env.SMTP_HOST || process.env.GOOGLE_SMTP_HOST || 'smtp.gmail.com';
-  const port = Number(process.env.SMTP_PORT || process.env.GOOGLE_SMTP_PORT) || 465;
+  const host = process.env.SMTP_HOST || process.env.GOOGLE_SMTP_HOST || env.SMTP_HOST || env.GOOGLE_SMTP_HOST || 'smtp.gmail.com';
+  const port = Number(process.env.SMTP_PORT || process.env.GOOGLE_SMTP_PORT || env.SMTP_PORT || env.GOOGLE_SMTP_PORT) || 465;
 
   return nodemailer.createTransport({
     host,
@@ -49,9 +50,9 @@ function getSmtpTransporter() {
       user: cleanUser,
       pass: cleanPass,
     },
-    connectionTimeout: 4000,
-    greetingTimeout: 4000,
-    socketTimeout: 5000,
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
   });
 }
 
@@ -62,7 +63,8 @@ export async function sendPeticionAssignmentEmail(
   params: EmailPeticionNotificationParams
 ): Promise<{ success: boolean; simulated?: boolean; messageId?: string; error?: string }> {
   const transporter = getSmtpTransporter();
-  const rawSender = process.env.SMTP_USER || process.env.GOOGLE_SMTP_USER || 'sgd@unitropico.edu.co';
+  const env = (import.meta as any).env || {};
+  const rawSender = process.env.SMTP_USER || process.env.GOOGLE_SMTP_USER || env.SMTP_USER || env.GOOGLE_SMTP_USER || 'correspondencia@unitropico.edu.co';
   const cleanSender = rawSender.trim();
 
   const formattedFechaEntrega = new Date(params.fechaLimiteEntrega + 'T12:00:00').toLocaleDateString('es-CO', {
@@ -109,7 +111,7 @@ export async function sendPeticionAssignmentEmail(
         .info-label { font-weight: 700; color: #64748b; width: 32%; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
         .info-val { color: #0f172a; font-weight: 600; }
         .instrucciones-box { background: #FAF9F5; border-left: 4px solid #B5A160; border-top: 1px solid #EAE5D5; border-right: 1px solid #EAE5D5; border-bottom: 1px solid #EAE5D5; border-radius: 6px; padding: 16px 18px; margin: 22px 0; }
-        .instrucciones-title { font-size: 12px; font-weight: 800; text-transform: uppercase; color: #7a6a35; letter-spacing: 0.5px; margin-bottom: 8px; display: flex; align-items: center; }
+        .instrucciones-title { font-size: 12px; font-weight: 800; text-transform: uppercase; color: #7a6a35; letter-spacing: 0.5px; margin-bottom: 8px; }
         .instrucciones-text { font-size: 13.5px; color: #334155; line-height: 1.6; font-style: italic; white-space: pre-wrap; }
         .attachment-banner { background: #F0FDF4; border: 1px solid #BBF7D0; border-left: 4px solid #10B981; border-radius: 6px; padding: 12px 16px; margin: 18px 0; font-size: 13px; }
         .credentials-card { background: #f8fafc; border: 1px dashed #00594E; border-radius: 8px; padding: 18px; margin: 22px 0; text-align: center; }
@@ -165,7 +167,7 @@ export async function sendPeticionAssignmentEmail(
           <!-- REGLA OBLIGATORIA: ARCHIVO ADJUNTO DE LA RADICACIÓN -->
           ${params.attachments && params.attachments.length > 0 ? `
             <div class="attachment-banner">
-              <strong style="color: #166534; font-size: 13px;">📎 Documento Radicado Adjunto:</strong>
+              <strong style="color: #166534; font-size: 13px;">Documento Radicado Adjunto:</strong>
               <div style="color: #15803D; font-size: 12.5px; font-weight: 700; margin-top: 2px;">
                 ${params.attachments.map(a => a.filename).join(', ')}
               </div>
@@ -177,7 +179,7 @@ export async function sendPeticionAssignmentEmail(
 
           <!-- SECCIÓN DESTACADA: REQUERIMIENTO Y ANEXOS SOLICITADOS -->
           <div class="instrucciones-box">
-            <div class="instrucciones-title">📋 Requerimiento y anexos solicitados:</div>
+            <div class="instrucciones-title">Requerimiento y anexos solicitados:</div>
             <div class="instrucciones-text">"${instrucciones}"</div>
           </div>
 
@@ -191,7 +193,7 @@ export async function sendPeticionAssignmentEmail(
 
           <!-- ADVERTENCIA DE VENCIMIENTO PERENTORIO (-5 DÍAS) -->
           <div class="deadline-warning">
-            <strong>⚠️ ADVERTENCIA DE VENCIMIENTO PERENTORIO:</strong><br>
+            <strong>ADVERTENCIA DE VENCIMIENTO PERENTORIO:</strong><br>
             Habilitado únicamente hasta el <strong>${formattedFechaResponsable} (23:59:59)</strong> (5 días calendario antes del cierre definitivo del radicado: <strong>${formattedFechaEntrega}</strong>). Cumplido este plazo, el acceso quedará inhabilitado automáticamente en el sistema para permitir la consolidación jurídica e institucional de la respuesta.
           </div>
 
@@ -222,30 +224,22 @@ export async function sendPeticionAssignmentEmail(
   `;
 
   if (!transporter) {
-    console.log(
-      `[SMTP SIMULADO] Se generó notificación para ${params.toEmail} (${params.oficinaNombre}) - Radicado ${params.numeroRadicado} - Código: ${params.codigoAcceso} - Adjuntos: ${params.attachments?.length || 0}`
-    );
+    const errorMsg = 'Configuración SMTP no encontrada en el servidor. Por favor configure las variables de entorno GOOGLE_SMTP_USER y GOOGLE_SMTP_PASS (o SMTP_USER y SMTP_PASS) en Vercel para permitir el despacho de correos reales.';
+    console.error(`[SMTP NO CONFIGURADO] ${errorMsg}`);
     return {
-      success: true,
-      simulated: true,
-      messageId: `sim-${Date.now()}`,
+      success: false,
+      error: errorMsg,
     };
   }
 
   try {
-    const sendPromise = transporter.sendMail({
+    const info = await transporter.sendMail({
       from: `"SGD Unitrópico" <${cleanSender}>`,
       to: params.toEmail,
       subject,
       html: htmlContent,
       attachments: params.attachments,
     });
-
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Tiempo de espera SMTP excedido (5s)')), 5000)
-    );
-
-    const info = await (Promise.race([sendPromise, timeoutPromise]) as Promise<any>);
 
     console.log(`[SMTP ENVIADO] Correo entregado exitosamente a ${params.toEmail} (MessageId: ${info.messageId})`);
 

@@ -432,6 +432,8 @@ export interface DeadlineProgress {
   daysRemaining: number;
   statusClass: string;
   statusBadge: string;
+  color?: string;
+  bgLight?: string;
 }
 
 // ──────────────────────────────────────────────

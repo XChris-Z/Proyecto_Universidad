@@ -41,7 +41,7 @@ const countDirectivas = casosList.filter((c: any) => c.categoria === 'directivas
     <!-- Pestañas del Módulo Jurídico -->
     <div class="module-tabs" id="juridicos-module-tabs">
       <button class="module-tab-btn active" data-jtab="brechas">
-        <span>⚡ Brechas Normativas (Legal Gap)</span>
+        <span>Brechas Normativas (Legal Gap)</span>
         <span class="tab-count" id="jcount-brechas">{countBrechas}</span>
       </button>
       <button class="module-tab-btn" data-jtab="conceptos">
@@ -82,7 +82,7 @@ const countDirectivas = casosList.filter((c: any) => c.categoria === 'directivas
         <div class="form-group">
           <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Categoría del Asunto *</label>
           <select id="new-gap-categoria" class="form-input" style="cursor: pointer;" required>
-            <option value="brechas" selected>⚡ Brecha Normativa (Vacío Legal)</option>
+            <option value="brechas" selected>Brecha Normativa (Vacío Legal)</option>
             <option value="conceptos">Concepto Jurídico (Interno / Externo)</option>
             <option value="litigios">Litigio o Proceso Judicial</option>
             <option value="auditorias">Auditoría de Entes de Control</option>

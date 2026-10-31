@@ -241,7 +241,11 @@ export function initAppLayout() {
     const topbarAvatarImg = document.getElementById('topbar-avatar-img') as HTMLImageElement;
     const topbarUserName = document.getElementById('topbar-user-name');
 
-    const avatarUrl = u.avatar_url || (u as any).avatarUrl || localStorage.getItem(`sgd_avatar_${u.id}`);
+    const avatarUrl = u.avatar_url || 
+      (u as any).avatarUrl || 
+      localStorage.getItem('sgd_user_avatar') || 
+      localStorage.getItem(`sgd_avatar_${u.id}`) || 
+      (u.email ? localStorage.getItem(`sgd_avatar_${u.email}`) : null);
 
     // Renderizado en el Sidebar
     if (avatarUrl) {
@@ -300,10 +304,12 @@ export function initAppLayout() {
   // 4. Sincronizar fotografía institucional desde Supabase en background
   (async () => {
     try {
+      const userEmail = activeUser.email || 'christianlemus.es@unitropico.edu.co';
+      const userFilter = `id.eq.${activeUser.id},email.eq.${userEmail}`;
       const { data: profile } = await supabase
         .from('profiles')
         .select('avatar_url, full_name, role')
-        .eq('id', activeUser.id)
+        .or(userFilter)
         .maybeSingle();
 
       if (profile?.avatar_url && profile.avatar_url !== activeUser.avatar_url) {
@@ -316,7 +322,11 @@ export function initAppLayout() {
         obj.avatar_url = profile.avatar_url;
         obj.avatarUrl = profile.avatar_url;
         localStorage.setItem('sgd_current_user', JSON.stringify(obj));
+        localStorage.setItem('sgd_user_avatar', profile.avatar_url);
         localStorage.setItem(`sgd_avatar_${activeUser.id}`, profile.avatar_url);
+        if (activeUser.email) {
+          localStorage.setItem(`sgd_avatar_${activeUser.email}`, profile.avatar_url);
+        }
 
         window.updateUserProfileUI();
       }

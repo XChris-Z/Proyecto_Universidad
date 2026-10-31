@@ -11,17 +11,22 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const body = await request.json().catch(() => ({}));
     const targetUserId = body.userId || sessionUserId || 'usr-root';
 
-    // Desconectar y limpiar credenciales en Supabase
-    const { data, error } = await (supabase.rpc as any)('disconnect_user_calendar', {
-      p_user_id: targetUserId,
-    });
+    // Desconectar y limpiar credenciales directamente en tabla profiles
+    const { error: updateErr } = await supabase
+      .from('profiles')
+      .update({
+        google_calendar_connected: false,
+        google_access_token: null,
+        google_refresh_token: null,
+        updated_at: new Date().toISOString(),
+      })
+      .or(`id.eq.${targetUserId},email.eq.${targetUserId}`);
 
-    if (error) {
-      console.error('Error desconectando calendario:', error);
-      return new Response(JSON.stringify({ success: false, error: error.message }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
+    if (updateErr) {
+      console.warn('Advertencia actualizando desvinculación en profiles:', updateErr.message);
+      await (supabase.rpc as any)('disconnect_user_calendar', {
+        p_user_id: targetUserId,
+      }).catch(() => {});
     }
 
     return new Response(JSON.stringify({ success: true, user_id: targetUserId }), {

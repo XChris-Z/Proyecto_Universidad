@@ -138,19 +138,19 @@ import { supabase } from '@lib/supabase';
           <div class="password-policy-box" style="background: var(--bg-surface-elevated); padding: 12px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); font-size: 0.74rem; display: flex; flex-direction: column; gap: 6px;">
             <div style="font-weight: 700; color: var(--text-muted); margin-bottom: 2px;">Criterios de Seguridad Requeridos:</div>
             <div id="rule-length" style="color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
-              <span class="policy-icon">⚪</span> Mínimo 8 caracteres
+              <span class="policy-dot" style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted);"></span> Mínimo 8 caracteres
             </div>
             <div id="rule-upper" style="color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
-              <span class="policy-icon">⚪</span> Al menos una letra mayúscula (A-Z)
+              <span class="policy-dot" style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted);"></span> Al menos una letra mayúscula (A-Z)
             </div>
             <div id="rule-lower" style="color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
-              <span class="policy-icon">⚪</span> Al menos una letra minúscula (a-z)
+              <span class="policy-dot" style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted);"></span> Al menos una letra minúscula (a-z)
             </div>
             <div id="rule-number" style="color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
-              <span class="policy-icon">⚪</span> Al menos un número (0-9)
+              <span class="policy-dot" style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted);"></span> Al menos un número (0-9)
             </div>
             <div id="rule-special" style="color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
-              <span class="policy-icon">⚪</span> Al menos un carácter especial (!@#$%^&*...)
+              <span class="policy-dot" style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted);"></span> Al menos un carácter especial (!@#$%^&*...)
             </div>
           </div>
 
@@ -329,7 +329,7 @@ import { supabase } from '@lib/supabase';
           if (nameStatus) {
             nameStatus.style.display = 'block';
             nameStatus.style.color = '#059669';
-            nameStatus.textContent = '✔ Nombre guardado exitosamente en Supabase.';
+            nameStatus.textContent = 'Nombre guardado exitosamente en Supabase.';
             setTimeout(() => { nameStatus.style.display = 'none'; }, 4000);
           }
         } catch (err) {
@@ -337,7 +337,7 @@ import { supabase } from '@lib/supabase';
           if (nameStatus) {
             nameStatus.style.display = 'block';
             nameStatus.style.color = '#dc2626';
-            nameStatus.textContent = '✖ No se pudo guardar el nombre.';
+            nameStatus.textContent = 'No se pudo guardar el nombre.';
           }
         } finally {
           btnSaveName.textContent = 'Guardar';
@@ -382,13 +382,21 @@ import { supabase } from '@lib/supabase';
 
           // Actualizar avatar_url en tabla profiles de Supabase
           const targetId = currentUserId || 'usr-root';
+          const updateFilter = currentUserEmail 
+            ? `id.eq.${targetId},email.eq.${currentUserEmail}`
+            : `id.eq.${targetId}`;
+
           await supabase
             .from('profiles')
             .update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
-            .eq('id', targetId);
+            .or(updateFilter);
 
-          // Guardar y actualizar vista
+          // Guardar y actualizar vista globalmente
+          localStorage.setItem('sgd_user_avatar', publicUrl);
           localStorage.setItem(`sgd_avatar_${currentUserId}`, publicUrl);
+          if (currentUserEmail) {
+            localStorage.setItem(`sgd_avatar_${currentUserEmail}`, publicUrl);
+          }
           const rawUser = localStorage.getItem("sgd_current_user");
           let uObj: any = {};
           if (rawUser) {
@@ -463,12 +471,15 @@ import { supabase } from '@lib/supabase';
 
     function updateRuleUI(el: HTMLElement | null, valid: boolean) {
       if (!el) return;
+      const text = el.getAttribute('data-policy-label') || el.textContent?.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚ\s!@#$%^&*().-]/g, '').trim() || '';
+      if (!el.getAttribute('data-policy-label')) el.setAttribute('data-policy-label', text);
+
       if (valid) {
         el.style.color = '#059669';
-        el.innerHTML = `<span style="color: #059669; font-weight: bold;">✔</span> ${el.textContent?.replace(/[⚪✔✖]/g, '').trim()}`;
+        el.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="3" style="display: inline-block; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg> <span>${text}</span>`;
       } else {
         el.style.color = 'var(--text-muted)';
-        el.innerHTML = `<span style="color: var(--text-muted);">⚪</span> ${el.textContent?.replace(/[⚪✔✖]/g, '').trim()}`;
+        el.innerHTML = `<span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); margin: 0 3px; vertical-align: middle;"></span> <span>${text}</span>`;
       }
     }
 
@@ -492,10 +503,10 @@ import { supabase } from '@lib/supabase';
       matchMsg.style.display = 'block';
       if (confirmPassInput.value === newPassInput.value) {
         matchMsg.style.color = '#059669';
-        matchMsg.textContent = '✔ Las contraseñas coinciden correctamente.';
+        matchMsg.textContent = 'Las contraseñas coinciden correctamente.';
       } else {
         matchMsg.style.color = '#DC2626';
-        matchMsg.textContent = '✖ Las contraseñas no coinciden.';
+        matchMsg.textContent = 'Las contraseñas no coinciden.';
       }
     }
 
@@ -556,7 +567,7 @@ import { supabase } from '@lib/supabase';
           if (statusFeedback) {
             statusFeedback.style.display = 'block';
             statusFeedback.style.color = '#059669';
-            statusFeedback.textContent = '✔ Contraseña institucional actualizada exitosamente.';
+            statusFeedback.textContent = 'Contraseña institucional actualizada exitosamente.';
           }
 
           window.showToast('Contraseña actualizada exitosamente con los estándares de seguridad institucional.');
@@ -568,7 +579,7 @@ import { supabase } from '@lib/supabase';
           if (statusFeedback) {
             statusFeedback.style.display = 'block';
             statusFeedback.style.color = '#dc2626';
-            statusFeedback.textContent = '✖ Error actualizando contraseña: ' + (err.message || 'Error de conexión');
+            statusFeedback.textContent = 'Error actualizando contraseña: ' + (err.message || 'Error de conexión');
           }
         } finally {
           if (submitBtn) {

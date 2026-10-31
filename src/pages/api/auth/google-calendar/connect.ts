@@ -36,12 +36,24 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
 
     const targetId = profile?.id || userParam;
 
-    // Actualizar conexión en Supabase
-    await (supabase.rpc as any)('set_user_calendar_connection', {
-      p_user_id: targetId,
-      p_connected: true,
-      p_calendar_id: 'primary',
-    });
+    // Actualizar conexión directamente en tabla profiles de Supabase
+    const { error: updateErr } = await supabase
+      .from('profiles')
+      .update({
+        google_calendar_connected: true,
+        google_calendar_id: 'primary',
+        updated_at: new Date().toISOString(),
+      })
+      .or(`id.eq.${targetId},email.eq.${userParam}`);
+
+    if (updateErr) {
+      console.warn('Advertencia actualizando conexión directa en profiles:', updateErr.message);
+      await (supabase.rpc as any)('set_user_calendar_connection', {
+        p_user_id: targetId,
+        p_connected: true,
+        p_calendar_id: 'primary',
+      }).catch(() => {});
+    }
 
     return redirect('/calendario?connected=true');
   } catch (err) {

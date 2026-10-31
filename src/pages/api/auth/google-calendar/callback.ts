@@ -39,11 +39,23 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
   if (!googleClientId || !googleClientSecret) {
     // Si no hay client secret configurado, marcar conexión directa para el usuario
     try {
-      await (supabase.rpc as any)('set_user_calendar_connection', {
-        p_user_id: targetUserId,
-        p_connected: true,
-        p_calendar_id: 'primary',
-      });
+      const { error: updateErr } = await supabase
+        .from('profiles')
+        .update({
+          google_calendar_connected: true,
+          google_calendar_id: 'primary',
+          updated_at: new Date().toISOString(),
+        })
+        .or(`id.eq.${targetUserId},email.eq.${targetUserId}`);
+
+      if (updateErr) {
+        await (supabase.rpc as any)('set_user_calendar_connection', {
+          p_user_id: targetUserId,
+          p_connected: true,
+          p_calendar_id: 'primary',
+        }).catch(() => {});
+      }
+
       return redirect('/calendario?connected=true');
     } catch (err) {
       console.error('Error registrando conexión:', err);
@@ -76,13 +88,27 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
     const refreshToken = tokens.refresh_token || null;
 
     // 4. Persistir tokens cifrados/privados en el perfil del usuario en Supabase
-    await (supabase.rpc as any)('set_user_calendar_connection', {
-      p_user_id: targetUserId,
-      p_connected: true,
-      p_access_token: accessToken,
-      p_refresh_token: refreshToken,
-      p_calendar_id: 'primary',
-    });
+    const { error: saveErr } = await supabase
+      .from('profiles')
+      .update({
+        google_calendar_connected: true,
+        google_access_token: accessToken,
+        google_refresh_token: refreshToken,
+        google_calendar_id: 'primary',
+        updated_at: new Date().toISOString(),
+      })
+      .or(`id.eq.${targetUserId},email.eq.${targetUserId}`);
+
+    if (saveErr) {
+      console.warn('Advertencia actualizando tokens en profiles:', saveErr.message);
+      await (supabase.rpc as any)('set_user_calendar_connection', {
+        p_user_id: targetUserId,
+        p_connected: true,
+        p_access_token: accessToken,
+        p_refresh_token: refreshToken,
+        p_calendar_id: 'primary',
+      }).catch(() => {});
+    }
 
     return redirect('/calendario?connected=true');
   } catch (err: any) {
