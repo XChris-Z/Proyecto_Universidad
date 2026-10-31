@@ -50,16 +50,10 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
         </p>
       </div>
 
-      <div style="display: flex; gap: 8px; align-items: center;">
-        <button type="button" class="btn btn-secondary btn-sm" onclick="if((window as any).openSmtpConfigModal) (window as any).openSmtpConfigModal()" style="font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--verde-principal);"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-          <span>Conectar Correo</span>
-        </button>
-        <a href="/peticiones" style="background: var(--verde-suave-bg); color: var(--verde-principal); border: 1px solid var(--verde-borde); padding: 8px 16px; border-radius: var(--radius-sm); font-size: 0.8rem; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-          <span>Volver a Radicados</span>
-        </a>
-      </div>
+      <a href="/peticiones" style="background: var(--verde-suave-bg); color: var(--verde-principal); border: 1px solid var(--verde-borde); padding: 8px 16px; border-radius: var(--radius-sm); font-size: 0.8rem; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        <span>Volver a Radicados</span>
+      </a>
     </div>
 
     <!-- Formulario de Radicación de Petición -->
@@ -519,8 +513,8 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
         if (selectedOfficeIds.length === 0) {
           if ((window as any).showToast) {
             (window as any).showToast('Por favor seleccione al menos una oficina responsable para esta petición.', 'warning');
-          } else {
-            alert('Por favor seleccione al menos una oficina responsable para esta petición.');
+          } else if ((window as any).showAlert) {
+            (window as any).showAlert('Por favor seleccione al menos una oficina responsable para esta petición.', 'Selección Requerida');
           }
           return;
         }
@@ -571,8 +565,8 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
             const errMsg = `Error del servidor (${res.status}): ${rawText.slice(0, 150) || res.statusText || 'Error inesperado'}`;
             if ((window as any).showToast) {
               (window as any).showToast(errMsg, 'error');
-            } else {
-              alert(errMsg);
+            } else if ((window as any).showAlert) {
+              (window as any).showAlert(errMsg, 'Error del Servidor');
             }
             return;
           }
@@ -581,11 +575,8 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
             const errMsg = 'Error al radicar petición: ' + (data.error || 'Ocurrió un error en el servidor.');
             if ((window as any).showToast) {
               (window as any).showToast(errMsg, 'error');
-            } else {
-              alert(errMsg);
-            }
-            if (data.needsSmtpConfig && typeof (window as any).openSmtpConfigModal === 'function') {
-              (window as any).openSmtpConfigModal();
+            } else if ((window as any).showAlert) {
+              (window as any).showAlert(errMsg, 'Error en Radicación');
             }
             return;
           }
@@ -640,8 +631,8 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
           const errMsg = 'Error de conexión al servidor: ' + (err.message || 'Verifique su conexión de red.');
           if ((window as any).showToast) {
             (window as any).showToast(errMsg, 'error');
-          } else {
-            alert(errMsg);
+          } else if ((window as any).showAlert) {
+            (window as any).showAlert(errMsg, 'Error de Conexión');
           }
         } finally {
           if (submitBtn) {

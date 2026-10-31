@@ -392,6 +392,27 @@ body.sidebar-collapsed .sidebar {
 body.sidebar-collapsed .main-wrapper {
   width: 100% !important;
   max-width: 100% !important;
+  flex: 1 1 100% !important;
+  margin-left: 0 !important;
+}
+
+body.sidebar-collapsed .topbar {
+  padding-left: 54px !important;
+}
+
+body.sidebar-collapsed .content-body {
+  max-width: 100% !important;
+  width: 100% !important;
+}
+
+body.sidebar-collapsed .subir-peticion-container,
+body.sidebar-collapsed .profile-container,
+body.sidebar-collapsed .calendar-module-container,
+body.sidebar-collapsed .archivos-container,
+body.sidebar-collapsed .users-admin-container,
+body.sidebar-collapsed .hero-banner {
+  max-width: 100% !important;
+  width: 100% !important;
 }
 
 .topbar {
@@ -407,14 +428,17 @@ body.sidebar-collapsed .main-wrapper {
   top: 0;
   z-index: 40;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  transition: padding-left 0.25s ease;
 }
 
-.btn-toggle-sidebar {
+/* Botón de plegar dentro del Sidebar */
+.btn-sidebar-collapse {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
   border-radius: 8px;
   border: 1px solid var(--border-color);
   background: #ffffff;
@@ -423,15 +447,48 @@ body.sidebar-collapsed .main-wrapper {
   transition: all 0.2s ease;
 }
 
-.btn-toggle-sidebar:hover {
+.btn-sidebar-collapse:hover {
   background: var(--verde-suave-bg);
   color: var(--verde-principal);
   border-color: var(--verde-borde);
 }
 
+/* Pestaña flotante discreta pegada al borde superior izquierdo para volver a desplegar */
+.btn-sidebar-expand-tab {
+  position: fixed;
+  left: 0;
+  top: 17px;
+  z-index: 99;
+  width: 36px;
+  height: 38px;
+  background: #ffffff;
+  color: var(--verde-principal);
+  border: 1px solid var(--border-color);
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.08);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-sidebar-expand-tab:hover {
+  background: var(--verde-suave-bg);
+  color: var(--verde-principal);
+  border-color: var(--verde-borde);
+  width: 40px;
+}
+
+body.sidebar-collapsed .btn-sidebar-expand-tab {
+  display: flex !important;
+}
+
 @media (max-width: 1024px) {
-  .btn-toggle-sidebar {
-    display: none;
+  .btn-sidebar-collapse,
+  .btn-sidebar-expand-tab {
+    display: none !important;
   }
 }
 

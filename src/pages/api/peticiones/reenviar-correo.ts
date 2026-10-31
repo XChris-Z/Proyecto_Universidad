@@ -164,12 +164,10 @@ export const POST: APIRoute = async ({ request, url }) => {
 
     if (exitosos === 0 && fallidos > 0) {
       const primerError = resultados.find((r) => r.status === 'error')?.error || 'Error enviando correo SMTP';
-      const needsSmtpConfig = primerError.includes('Configuración SMTP no encontrada');
       return new Response(
         JSON.stringify({
           success: false,
           error: primerError,
-          needsSmtpConfig,
           resultados,
         }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }

@@ -25,3 +25,4 @@ CREATE POLICY "Modificacion admin de configuracion"
 ON public.configuracion_sistema FOR ALL 
 USING (true)
 WITH CHECK (true);
+

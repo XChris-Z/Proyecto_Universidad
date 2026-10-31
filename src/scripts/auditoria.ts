@@ -88,12 +88,15 @@ export async function initAuditoria() {
         `;
       } else {
         const isInternalId = !entityIdStr || 
+          /^[0-9a-f-]{20,}$/i.test(entityIdStr) ||
           /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entityIdStr) || 
           entityIdStr.startsWith('usr-') ||
           entityIdStr.startsWith('cal-') ||
           entityIdStr.startsWith('alog-') ||
           entityIdStr.startsWith('doc-') ||
-          entityIdStr.length > 25;
+          entityIdStr.startsWith('pet-') ||
+          entityIdStr.startsWith('sec-') ||
+          entityIdStr.length > 20;
 
         if (isInternalId) {
           entityHtml = `<div style="font-weight: 700; color: var(--text-main); font-size: 0.85rem;">${entityStr}</div>`;

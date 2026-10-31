@@ -24,17 +24,17 @@ export interface EmailPeticionNotificationParams {
 }
 
 /**
- * Obtiene las credenciales SMTP desde variables de entorno o desde Supabase (configuracion_sistema)
+ * Obtiene las credenciales SMTP desde variables de entorno o desde Supabase (configuracion_sistema como respaldo)
  */
 async function getSmtpCredentials() {
   const metaEnv = typeof import.meta !== 'undefined' ? (import.meta as any).env || {} : {};
   let rawUser = process.env.GOOGLE_SMTP_USER || process.env.SMTP_USER || metaEnv.GOOGLE_SMTP_USER || metaEnv.SMTP_USER;
   let rawPass = process.env.GOOGLE_SMTP_PASS || process.env.SMTP_PASS || metaEnv.GOOGLE_SMTP_PASS || metaEnv.SMTP_PASS;
   let host = process.env.GOOGLE_SMTP_HOST || process.env.SMTP_HOST || metaEnv.GOOGLE_SMTP_HOST || metaEnv.SMTP_HOST || 'smtp.gmail.com';
-  let port = Number(process.env.GOOGLE_SMTP_PORT || process.env.SMTP_PORT || metaEnv.GOOGLE_SMTP_PORT || metaEnv.SMTP_PORT || 587);
+  let port = Number(process.env.GOOGLE_SMTP_PORT || process.env.SMTP_PORT || metaEnv.GOOGLE_SMTP_PORT || metaEnv.SMTP_PORT || 465);
 
-  // Si no está en variables de entorno, consultar Supabase configuracion_sistema
-  if (!rawUser || !rawPass) {
+  // Si no está en variables de entorno o es placeholder, consultar Supabase configuracion_sistema como respaldo
+  if (!rawUser || !rawPass || String(rawPass).includes('pegar_aqui')) {
     try {
       const { data } = await (supabase
         .from('configuracion_sistema' as any)
@@ -42,7 +42,7 @@ async function getSmtpCredentials() {
         .eq('id', 'config_smtp')
         .maybeSingle() as any);
 
-      if (data && data.smtp_user && data.smtp_pass) {
+      if (data && data.smtp_user && data.smtp_pass && !String(data.smtp_pass).includes('pegar_aqui')) {
         rawUser = data.smtp_user;
         rawPass = data.smtp_pass;
         if (data.smtp_host) host = data.smtp_host;
@@ -53,7 +53,7 @@ async function getSmtpCredentials() {
     }
   }
 
-  if (!rawUser || !rawPass) {
+  if (!rawUser || !rawPass || String(rawPass).includes('pegar_aqui')) {
     return null;
   }
 
@@ -64,7 +64,7 @@ async function getSmtpCredentials() {
     user: cleanUser,
     pass: cleanPass,
     host: String(host).replace(/['"]+/g, '').trim(),
-    port: Number(port) || 587,
+    port: Number(port) || 465,
   };
 }
 
@@ -267,12 +267,11 @@ export async function sendPeticionAssignmentEmail(
   `;
 
   if (!smtpInfo) {
-    const errorMsg = 'Configuración SMTP no encontrada en el servidor. Puede vincular la cuenta institucional de Google desde el botón "Conectar Correo Institucional" en la interfaz o configurar GOOGLE_SMTP_USER y GOOGLE_SMTP_PASS en Vercel.';
+    const errorMsg = 'Configuración SMTP no encontrada en el servidor. Por favor configure las variables de entorno GOOGLE_SMTP_USER y GOOGLE_SMTP_PASS en el archivo .env.';
     console.error(`[SMTP NO CONFIGURADO] ${errorMsg}`);
     return {
       success: false,
       error: errorMsg,
-      needsSmtpConfig: true,
     };
   }
 

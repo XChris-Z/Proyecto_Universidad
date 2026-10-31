@@ -70,11 +70,7 @@ const pendientesCount = peticionesList.filter((p: any) => p.estado !== 'respondi
       </button>
     </div>
 
-    <div style="display: flex; gap: 10px; align-items: center;">
-      <button type="button" class="btn btn-secondary" onclick="if((window as any).openSmtpConfigModal) (window as any).openSmtpConfigModal()" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 700;">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--verde-principal);"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-        <span>Conectar Correo Institucional</span>
-      </button>
+    <div>
       <a href="/peticiones/subir" class="btn btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
         <span>+ Subir Petición</span>
@@ -487,22 +483,11 @@ const pendientesCount = peticionesList.filter((p: any) => p.estado !== 'respondi
 
           const data = await res.json();
           if (!res.ok || !data.success) {
-            if (data.needsSmtpConfig || (data.error && data.error.includes('Configuración SMTP'))) {
-              (window as any).showToast(
-                `Configuración de correo no encontrada en el servidor. Abriendo panel para vincular cuenta Google...`,
-                'warning',
-                'Configuración Requerida'
-              );
-              if (typeof (window as any).openSmtpConfigModal === 'function') {
-                (window as any).openSmtpConfigModal();
-              }
-            } else {
-              (window as any).showToast(
-                `Fallo en el envío SMTP para ${radicado}: ${data.error || 'No se pudo conectar con el servidor de correo'}`,
-                'error',
-                'Diagnóstico SMTP'
-              );
-            }
+            (window as any).showToast(
+              `Fallo en el envío SMTP para ${radicado}: ${data.error || 'No se pudo conectar con el servidor de correo'}`,
+              'error',
+              'Diagnóstico SMTP'
+            );
           } else {
             (window as any).showToast(
               `Notificación enviada exitosamente para ${radicado}.`,
