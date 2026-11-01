@@ -519,31 +519,47 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
           return;
         }
 
-        const formData = new FormData();
-        formData.append('asunto', (document.getElementById('peticion-asunto') as HTMLInputElement).value);
-        
         const instruccionesEl = document.getElementById('instrucciones-anexos') as HTMLTextAreaElement;
         const instruccionesVal = instruccionesEl ? instruccionesEl.value : '';
-        formData.append('instrucciones_anexos', instruccionesVal);
-        formData.append('descripcion', instruccionesVal);
-
-        formData.append('solicitante_nombre', (document.getElementById('solicitante-nombre') as HTMLInputElement).value);
-        formData.append('solicitante_email', (document.getElementById('solicitante-email') as HTMLInputElement).value);
-        formData.append('solicitante_tipo', (document.getElementById('solicitante-tipo') as HTMLSelectElement).value);
-        formData.append('categoria', (document.getElementById('peticion-categoria') as HTMLSelectElement).value);
-        formData.append('prioridad', (document.getElementById('peticion-prioridad') as HTMLSelectElement).value);
-        formData.append('fecha_limite_entrega', inputFechaEntrega.value);
-        formData.append('oficinas_json', JSON.stringify(selectedOfficeIds));
-        
-        selectedOfficeIds.forEach(id => formData.append('oficina_ids', id));
 
         if (!primaryFile && fileInput?.files && fileInput.files.length > 0) {
           primaryFile = fileInput.files[0]!;
         }
 
+        let archivoBase64: string | null = null;
+        let archivoNombre: string | null = null;
+        let archivoMime: string | null = null;
+
         if (primaryFile) {
-          formData.append('archivo_peticion', primaryFile);
+          archivoNombre = primaryFile.name;
+          archivoMime = primaryFile.type || 'application/pdf';
+          archivoBase64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const resStr = String(reader.result || '');
+              const base64Data = resStr.includes(',') ? resStr.split(',')[1] : resStr;
+              resolve(base64Data || '');
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(primaryFile!);
+          });
         }
+
+        const payload = {
+          asunto: (document.getElementById('peticion-asunto') as HTMLInputElement).value,
+          descripcion: instruccionesVal,
+          instrucciones_anexos: instruccionesVal,
+          solicitante_nombre: (document.getElementById('solicitante-nombre') as HTMLInputElement).value,
+          solicitante_email: (document.getElementById('solicitante-email') as HTMLInputElement).value,
+          solicitante_tipo: (document.getElementById('solicitante-tipo') as HTMLSelectElement).value,
+          categoria: (document.getElementById('peticion-categoria') as HTMLSelectElement).value,
+          prioridad: (document.getElementById('peticion-prioridad') as HTMLSelectElement).value,
+          fecha_limite_entrega: inputFechaEntrega.value,
+          oficina_ids: selectedOfficeIds,
+          archivo_nombre: archivoNombre,
+          archivo_mime: archivoMime,
+          archivo_base64: archivoBase64,
+        };
 
         if (submitBtn) {
           submitBtn.disabled = true;
@@ -553,7 +569,8 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
         try {
           const res = await fetch('/api/peticiones/crear', {
             method: 'POST',
-            body: formData,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
           });
 
           const rawText = await res.text();

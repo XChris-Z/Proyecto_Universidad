@@ -416,18 +416,31 @@ import Layout from '@layouts/Layout.astro';
 
         try {
           for (const file of selectedFilesToUpload) {
-            const formData = new FormData();
-            formData.append('archivo', file);
-            formData.append('peticion_id', activeSessionData.peticion_id);
-            formData.append('responsable_id', activeSessionData.responsable_id);
-            formData.append('numero_radicado', activeSessionData.numero_radicado);
-            formData.append('email_institucional', activeSessionData.email_institucional);
-            formData.append('storage_subfolder_path', activeSessionData.storage_subfolder_path);
-            formData.append('observaciones', obs);
+            const fileBase64 = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => {
+                const resStr = String(reader.result || '');
+                const base64Data = resStr.includes(',') ? resStr.split(',')[1] : resStr;
+                resolve(base64Data || '');
+              };
+              reader.onerror = reject;
+              reader.readAsDataURL(file);
+            });
 
             const res = await fetch('/api/portal/subir-anexo', {
               method: 'POST',
-              body: formData,
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                archivo_base64: fileBase64,
+                archivo_nombre: file.name,
+                archivo_mime: file.type || 'application/octet-stream',
+                peticion_id: activeSessionData.peticion_id,
+                responsable_id: activeSessionData.responsable_id,
+                numero_radicado: activeSessionData.numero_radicado,
+                email_institucional: activeSessionData.email_institucional,
+                storage_subfolder_path: activeSessionData.storage_subfolder_path,
+                observaciones: obs,
+              }),
             });
 
             const resData = await res.json();

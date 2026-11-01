@@ -102,9 +102,16 @@ const pendientesCount = peticionesList.filter((p: any) => p.estado !== 'respondi
                 <tr id={`row-pet-${pet.id}`} data-estado={pet.estado} style="border-bottom: 1px solid var(--border-subtle); font-size: 0.84rem;">
                   <td style="padding: 12px 8px;">
                     <div style="display: flex; align-items: center; gap: 8px;">
-                      <span style="font-family: monospace; font-size: 0.86rem; font-weight: 800; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 3px 8px; border-radius: 4px; border: 1px solid var(--verde-borde);">
-                        {pet.numero_radicado}
-                      </span>
+                      <a 
+                        href={`/archivos?radicado=${encodeURIComponent(pet.numero_radicado)}`}
+                        class="btn-abrir-carpeta"
+                        data-radicado={pet.numero_radicado}
+                        title="Abrir Carpeta de este Radicado en Gestor de Archivos"
+                        style="text-decoration: none; font-family: monospace; font-size: 0.86rem; font-weight: 800; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 3px 8px; border-radius: 4px; border: 1px solid var(--verde-borde); display: inline-flex; align-items: center; gap: 4px; transition: all 0.15s ease;"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                        <span>{pet.numero_radicado}</span>
+                      </a>
                       <span style={`font-size: 0.65rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; ${pet.prioridad === 'Alta' ? 'background: #FEE2E2; color: #B91C1C;' : 'background: #E0F2FE; color: #0369A1;'}`}>
                         {pet.prioridad || 'Media'}
                       </span>
@@ -176,11 +183,12 @@ const pendientesCount = peticionesList.filter((p: any) => p.estado !== 'respondi
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                       </button>
 
-                      <!-- Botón Explorar Carpeta en Módulo de Archivos -->
+                      <!-- Botón Abrir Carpeta en Gestor de Archivos -->
                       <a 
                         href={`/archivos?radicado=${encodeURIComponent(pet.numero_radicado)}`}
-                        class="btn-icon-action" 
-                        title="Ver Carpeta Drive y Archivos"
+                        class="btn-icon-action btn-abrir-carpeta" 
+                        data-radicado={pet.numero_radicado}
+                        title="Abrir Carpeta en Gestor de Archivos"
                         style="width: 32px; height: 32px; border-radius: var(--radius-sm); border: 1px solid var(--verde-borde); background: var(--verde-suave-bg); color: var(--verde-principal); text-decoration: none; display: flex; align-items: center; justify-content: center; transition: all 0.15s ease;"
                       >
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
@@ -346,17 +354,35 @@ const pendientesCount = peticionesList.filter((p: any) => p.estado !== 'respondi
     const inputEntrega = document.getElementById('edit-pet-entrega') as HTMLInputElement;
     const formEdit = document.getElementById('form-edit-peticion') as HTMLFormElement;
 
-    document.querySelectorAll('.btn-edit-pet').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const target = e.currentTarget as HTMLElement;
-        const id = target.dataset.id || '';
-        const radicado = target.dataset.radicado || '';
-        const asunto = target.dataset.asunto || '';
-        const solicitante = target.dataset.solicitante || '';
-        const tipo = target.dataset.tipo || 'Ciudadano';
-        const prioridad = target.dataset.prioridad || 'Media';
-        const estado = target.dataset.estado || 'en_tramite';
-        const entrega = target.dataset.entrega || '';
+    const closeEdit = () => { if (editModal) editModal.style.display = 'none'; };
+    document.getElementById('btn-close-edit-modal')?.addEventListener('click', closeEdit);
+    document.getElementById('btn-cancel-edit-pet')?.addEventListener('click', closeEdit);
+
+    // 3. DELEGACIÓN GLOBAL DE ACCIONES (Abrir Carpeta, Editar, Eliminar y Reenviar)
+    document.addEventListener('click', async (e) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+
+      // A. Botón Abrir Carpeta
+      const abrirBtn = target.closest('.btn-abrir-carpeta') as HTMLAnchorElement | null;
+      if (abrirBtn && abrirBtn.href) {
+        // Permitir la navegación natural inmediata al módulo de archivos
+        return;
+      }
+
+      // B. Botón Editar
+      const editBtn = target.closest('.btn-edit-pet') as HTMLElement | null;
+      if (editBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const id = editBtn.dataset.id || '';
+        const radicado = editBtn.dataset.radicado || '';
+        const asunto = editBtn.dataset.asunto || '';
+        const solicitante = editBtn.dataset.solicitante || '';
+        const tipo = editBtn.dataset.tipo || 'Ciudadano';
+        const prioridad = editBtn.dataset.prioridad || 'Media';
+        const estado = editBtn.dataset.estado || 'en_tramite';
+        const entrega = editBtn.dataset.entrega || '';
 
         if (editTitle) editTitle.textContent = `Editar Radicado ${radicado}`;
         if (inputId) inputId.value = id;
@@ -368,12 +394,100 @@ const pendientesCount = peticionesList.filter((p: any) => p.estado !== 'respondi
         if (inputEntrega) inputEntrega.value = entrega;
 
         if (editModal) editModal.style.display = 'flex';
-      });
-    });
+        return;
+      }
 
-    const closeEdit = () => { if (editModal) editModal.style.display = 'none'; };
-    document.getElementById('btn-close-edit-modal')?.addEventListener('click', closeEdit);
-    document.getElementById('btn-cancel-edit-pet')?.addEventListener('click', closeEdit);
+      // C. Botón Eliminar
+      const deleteBtn = target.closest('.btn-delete-pet') as HTMLElement | null;
+      if (deleteBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const id = deleteBtn.dataset.id;
+        const radicado = deleteBtn.dataset.radicado;
+        if (!id) return;
+
+        const confirmed = typeof (window as any).showConfirm === 'function'
+          ? await (window as any).showConfirm(
+              `¿Está seguro de que desea eliminar definitivamente el radicado ${radicado}?\n\nEsta acción purgará los registros de oficinas asignadas, archivos en storage y registrará el evento de eliminación en la Auditoría institucional.`,
+              'Confirmar Eliminación'
+            )
+          : true;
+        if (!confirmed) return;
+
+        deleteBtn.setAttribute('disabled', 'true');
+
+        try {
+          const res = await fetch('/api/peticiones/eliminar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id }),
+          });
+
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            (window as any).showToast('Error al eliminar: ' + (data.error || 'No se pudo procesar la eliminación'), 'error');
+            deleteBtn.removeAttribute('disabled');
+            return;
+          }
+
+          const row = document.getElementById(`row-pet-${id}`);
+          if (row) {
+            row.style.transition = 'opacity 0.3s ease';
+            row.style.opacity = '0';
+            setTimeout(() => row.remove(), 300);
+          }
+
+          (window as any).showToast(`El radicado ${radicado} ha sido eliminado satisfactoriamente.`, 'success');
+        } catch (err: any) {
+          (window as any).showToast('Error al comunicarse con el servidor para la eliminación.', 'error');
+          deleteBtn.removeAttribute('disabled');
+        }
+        return;
+      }
+
+      // D. Botón Reenviar Correo SMTP
+      const resendBtn = target.closest('.btn-resend-mail') as HTMLButtonElement | null;
+      if (resendBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const id = resendBtn.dataset.id;
+        const radicado = resendBtn.dataset.radicado;
+        if (!id) return;
+
+        resendBtn.disabled = true;
+        const originalContent = resendBtn.innerHTML;
+        resendBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite;"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>`;
+
+        try {
+          const res = await fetch('/api/peticiones/reenviar-correo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id }),
+          });
+
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            (window as any).showToast(
+              `Fallo en el envío SMTP para ${radicado}: ${data.error || 'No se pudo conectar con el servidor de correo'}`,
+              'error',
+              'Diagnóstico SMTP'
+            );
+          } else {
+            (window as any).showToast(
+              `Notificación enviada exitosamente para ${radicado}.`,
+              'success',
+              'Despacho de Correo'
+            );
+          }
+        } catch (err: any) {
+          (window as any).showToast('Error de red al intentar conectar con el servicio de correo.', 'error');
+        } finally {
+          resendBtn.disabled = false;
+          resendBtn.innerHTML = originalContent;
+        }
+        return;
+      }
+    });
 
     formEdit?.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -416,98 +530,6 @@ const pendientesCount = peticionesList.filter((p: any) => p.estado !== 'respondi
           saveBtn.textContent = 'Guardar Cambios';
         }
       }
-    });
-
-    // 3. ELIMINACIÓN DE PETICIONES CON CONFIRMACIÓN INSTITUCIONAL Y AUDITORÍA
-    document.querySelectorAll('.btn-delete-pet').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        const target = e.currentTarget as HTMLElement;
-        const id = target.dataset.id;
-        const radicado = target.dataset.radicado;
-
-        if (!id) return;
-
-        const confirmed = typeof (window as any).showConfirm === 'function'
-          ? await (window as any).showConfirm(
-              `¿Está seguro de que desea eliminar definitivamente el radicado ${radicado}?\n\nEsta acción purgará los registros de oficinas asignadas, archivos en storage y registrará el evento de eliminación en la Auditoría institucional.`,
-              'Confirmar Eliminación'
-            )
-          : true;
-        if (!confirmed) return;
-
-        target.setAttribute('disabled', 'true');
-
-        try {
-          const res = await fetch('/api/peticiones/eliminar', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id }),
-          });
-
-          const data = await res.json();
-          if (!res.ok || !data.success) {
-            (window as any).showToast('Error al eliminar: ' + (data.error || 'No se pudo procesar la eliminación'), 'error');
-            target.removeAttribute('disabled');
-            return;
-          }
-
-          // Remover la fila visualmente de inmediato
-          const row = document.getElementById(`row-pet-${id}`);
-          if (row) {
-            row.style.transition = 'opacity 0.3s ease';
-            row.style.opacity = '0';
-            setTimeout(() => row.remove(), 300);
-          }
-
-          (window as any).showToast(`El radicado ${radicado} ha sido eliminado satisfactoriamente.`, 'success');
-        } catch (err: any) {
-          (window as any).showToast('Error al comunicarse con el servidor para la eliminación.', 'error');
-          target.removeAttribute('disabled');
-        }
-      });
-    });
-
-    // 4. REENVIAR CORREO / DIAGNÓSTICO ACTIVO SMTP
-    document.querySelectorAll('.btn-resend-mail').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        const target = e.currentTarget as HTMLButtonElement;
-        const id = target.dataset.id;
-        const radicado = target.dataset.radicado;
-
-        if (!id) return;
-
-        target.disabled = true;
-        const originalContent = target.innerHTML;
-        target.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite;"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>`;
-
-        try {
-          const res = await fetch('/api/peticiones/reenviar-correo', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id }),
-          });
-
-          const data = await res.json();
-          if (!res.ok || !data.success) {
-            (window as any).showToast(
-              `Fallo en el envío SMTP para ${radicado}: ${data.error || 'No se pudo conectar con el servidor de correo'}`,
-              'error',
-              'Diagnóstico SMTP'
-            );
-          } else {
-            (window as any).showToast(
-              `Notificación enviada exitosamente para ${radicado}.`,
-              'success',
-              'Despacho de Correo'
-            );
-          }
-        } catch (err: any) {
-          (window as any).showToast('Error de red al intentar conectar con el servicio de correo.', 'error');
-        } finally {
-          target.disabled = false;
-          target.innerHTML = originalContent;
-        }
-      });
     });
   </script>
 

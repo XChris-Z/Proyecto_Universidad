@@ -22,6 +22,8 @@ export const POST: APIRoute = async ({ request, url }) => {
     let oficina_ids: string[] = [];
     let primaryFile: File | null = null;
 
+    let rawBase64File: { buffer: Buffer; name: string; mime: string } | null = null;
+
     if (contentType.includes('multipart/form-data')) {
       const formData = await request.formData();
       asunto = (formData.get('asunto') as string) || '';
@@ -60,6 +62,18 @@ export const POST: APIRoute = async ({ request, url }) => {
       prioridad = body.prioridad || 'Media';
       fecha_limite_entrega = body.fecha_limite_entrega;
       oficina_ids = body.oficina_ids || [];
+
+      if (body.archivo_base64 && body.archivo_nombre) {
+        try {
+          rawBase64File = {
+            buffer: Buffer.from(body.archivo_base64, 'base64'),
+            name: body.archivo_nombre,
+            mime: body.archivo_mime || 'application/pdf',
+          };
+        } catch (b64Err) {
+          console.warn('Error decodificando archivo base64:', b64Err);
+        }
+      }
     }
 
     if (!asunto || !solicitante_nombre || !fecha_limite_entrega) {
@@ -91,6 +105,10 @@ export const POST: APIRoute = async ({ request, url }) => {
       fileBuffer = Buffer.from(arrayBuf);
       fileName = primaryFile.name || 'documento_radicado.pdf';
       fileMime = primaryFile.type || 'application/pdf';
+    } else if (rawBase64File && rawBase64File.buffer.length > 0) {
+      fileBuffer = rawBase64File.buffer;
+      fileName = rawBase64File.name;
+      fileMime = rawBase64File.mime;
     }
 
     // 1. Insertar Petición en Base de Datos (Disparador PL/pgSQL calcula Radicado, margen de 5 días y carpeta)

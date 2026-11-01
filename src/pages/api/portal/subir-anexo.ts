@@ -6,16 +6,53 @@ import { supabase } from '@lib/supabase';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    const formData = await request.formData();
-    const file = formData.get('archivo') as File | null;
-    const peticionId = formData.get('peticion_id') as string | null;
-    const responsableId = formData.get('responsable_id') as string | null;
-    const numeroRadicado = formData.get('numero_radicado') as string | null;
-    const emailInstitucional = formData.get('email_institucional') as string | null;
-    const storageSubfolder = formData.get('storage_subfolder_path') as string | null;
-    const observaciones = (formData.get('observaciones') as string | null) || '';
+    const contentType = request.headers.get('content-type') || '';
+    let peticionId = '';
+    let responsableId = '';
+    let numeroRadicado = '';
+    let emailInstitucional = '';
+    let storageSubfolder = '';
+    let observaciones = '';
+    let fileBuffer: Buffer | null = null;
+    let fileName = '';
+    let fileMime = 'application/octet-stream';
+    let fileSize = 0;
 
-    if (!file || !peticionId || !responsableId || !numeroRadicado || !storageSubfolder) {
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData();
+      const file = formData.get('archivo') as File | null;
+      peticionId = (formData.get('peticion_id') as string) || '';
+      responsableId = (formData.get('responsable_id') as string) || '';
+      numeroRadicado = (formData.get('numero_radicado') as string) || '';
+      emailInstitucional = (formData.get('email_institucional') as string) || '';
+      storageSubfolder = (formData.get('storage_subfolder_path') as string) || '';
+      observaciones = (formData.get('observaciones') as string) || '';
+
+      if (file && typeof file.arrayBuffer === 'function') {
+        const arrayBuffer = await file.arrayBuffer();
+        fileBuffer = Buffer.from(arrayBuffer);
+        fileName = file.name;
+        fileMime = file.type || 'application/octet-stream';
+        fileSize = file.size;
+      }
+    } else {
+      const body = await request.json().catch(() => ({}));
+      peticionId = body.peticion_id || '';
+      responsableId = body.responsable_id || '';
+      numeroRadicado = body.numero_radicado || '';
+      emailInstitucional = body.email_institucional || '';
+      storageSubfolder = body.storage_subfolder_path || '';
+      observaciones = body.observaciones || '';
+
+      if (body.archivo_base64 && body.archivo_nombre) {
+        fileBuffer = Buffer.from(body.archivo_base64, 'base64');
+        fileName = body.archivo_nombre;
+        fileMime = body.archivo_mime || 'application/octet-stream';
+        fileSize = fileBuffer.length;
+      }
+    }
+
+    if (!fileBuffer || !peticionId || !responsableId || !numeroRadicado || !storageSubfolder) {
       return new Response(
         JSON.stringify({ success: false, error: 'Parámetros obligatorios faltantes para la carga.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -50,17 +87,14 @@ export const POST: APIRoute = async ({ request }) => {
 
     // 2. Subir archivo a Supabase Storage bucket 'peticiones'
     // Ruta: peticiones/{numero_radicado}/{nombre_oficina_slug}/{timestamp}_{filename}
-    const cleanFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const cleanFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
     const relativeStoragePath = `${storageSubfolder.replace(/^peticiones\//, '')}${Date.now()}_${cleanFileName}`;
     const fullStoragePath = `peticiones/${relativeStoragePath}`;
 
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
     const { error: uploadError } = await supabase.storage
       .from('peticiones')
-      .upload(relativeStoragePath, buffer, {
-        contentType: file.type || 'application/octet-stream',
+      .upload(relativeStoragePath, fileBuffer, {
+        contentType: fileMime,
         upsert: true,
       });
 
@@ -74,10 +108,10 @@ export const POST: APIRoute = async ({ request }) => {
       .insert({
         peticion_id: peticionId,
         peticion_responsable_id: responsableId,
-        nombre_archivo: file.name,
+        nombre_archivo: fileName,
         storage_path: fullStoragePath,
-        tamano_bytes: file.size,
-        mime_type: file.type,
+        tamano_bytes: fileSize,
+        mime_type: fileMime,
         subido_por_email: emailInstitucional || 'oficina@unitropico.edu.co',
         es_anexo_oficina: true,
       } as any)
@@ -102,9 +136,9 @@ export const POST: APIRoute = async ({ request }) => {
       JSON.stringify({
         success: true,
         anexo: anexoData || {
-          nombre_archivo: file.name,
+          nombre_archivo: fileName,
           storage_path: fullStoragePath,
-          tamano_bytes: file.size,
+          tamano_bytes: fileSize,
         },
         message: 'Anexo recibido y registrado correctamente en la subcarpeta del radicado.',
       }),

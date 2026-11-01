@@ -88,14 +88,10 @@ export async function initAuditoria() {
         `;
       } else {
         const isInternalId = !entityIdStr || 
-          /^[0-9a-f-]{20,}$/i.test(entityIdStr) ||
+          /^[0-9a-f-]{16,}$/i.test(entityIdStr) ||
           /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entityIdStr) || 
-          entityIdStr.startsWith('usr-') ||
-          entityIdStr.startsWith('cal-') ||
-          entityIdStr.startsWith('alog-') ||
-          entityIdStr.startsWith('doc-') ||
-          entityIdStr.startsWith('pet-') ||
-          entityIdStr.startsWith('sec-') ||
+          /^(usr|cal|alog|doc|pet|sec|config|role|perm|dep|ofi)-/i.test(entityIdStr) ||
+          entityIdStr.includes('@') ||
           entityIdStr.length > 20;
 
         if (isInternalId) {

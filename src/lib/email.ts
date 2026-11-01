@@ -1,5 +1,7 @@
 // src/lib/email.ts
 import nodemailer from 'nodemailer';
+import fs from 'node:fs';
+import path from 'node:path';
 import { supabase } from './supabase';
 
 export interface EmailAttachment {
@@ -24,16 +26,62 @@ export interface EmailPeticionNotificationParams {
 }
 
 /**
- * Obtiene las credenciales SMTP desde variables de entorno o desde Supabase (configuracion_sistema como respaldo)
+ * Obtiene el valor de una variable de entorno buscando en process.env, Vite/Astro env
+ * y lectura directa del archivo .env en disco como respaldo obligatorio para Astro SSR.
  */
-async function getSmtpCredentials() {
+export function getEnvVar(key: string): string {
   const metaEnv = typeof import.meta !== 'undefined' ? (import.meta as any).env || {} : {};
-  let rawUser = process.env.GOOGLE_SMTP_USER || process.env.SMTP_USER || metaEnv.GOOGLE_SMTP_USER || metaEnv.SMTP_USER;
-  let rawPass = process.env.GOOGLE_SMTP_PASS || process.env.SMTP_PASS || metaEnv.GOOGLE_SMTP_PASS || metaEnv.SMTP_PASS;
-  let host = process.env.GOOGLE_SMTP_HOST || process.env.SMTP_HOST || metaEnv.GOOGLE_SMTP_HOST || metaEnv.SMTP_HOST || 'smtp.gmail.com';
-  let port = Number(process.env.GOOGLE_SMTP_PORT || process.env.SMTP_PORT || metaEnv.GOOGLE_SMTP_PORT || metaEnv.SMTP_PORT || 465);
+  const fromProcess = process.env[key] || metaEnv[key];
+  if (fromProcess) {
+    return String(fromProcess).replace(/['"\r\n]+/g, '').trim();
+  }
 
-  // Si no está en variables de entorno o es placeholder, consultar Supabase configuracion_sistema como respaldo
+  try {
+    const envPath = path.resolve(process.cwd(), '.env');
+    if (fs.existsSync(envPath)) {
+      const content = fs.readFileSync(envPath, 'utf-8');
+      const match = content.match(new RegExp(`^\\s*${key}\\s*=\\s*(.+)$`, 'm'));
+      if (match && match[1]) {
+        return match[1].replace(/['"\r\n]+/g, '').trim();
+      }
+    }
+  } catch (e) {
+    // Silencioso si no se puede leer el archivo .env
+  }
+
+  return '';
+}
+
+/**
+ * Obtiene las credenciales SMTP desde variables de entorno (.env local o Vercel)
+ * o desde Supabase (configuracion_sistema como respaldo).
+ */
+export async function getSmtpCredentials() {
+  let rawUser = getEnvVar('GOOGLE_SMTP_USER') || getEnvVar('SMTP_USER') || getEnvVar('PUBLIC_SMTP_USER');
+  let rawPass = getEnvVar('GOOGLE_SMTP_PASS') || getEnvVar('SMTP_PASS') || getEnvVar('PUBLIC_SMTP_PASS');
+  let host = getEnvVar('GOOGLE_SMTP_HOST') || getEnvVar('SMTP_HOST') || 'smtp.gmail.com';
+  let rawPort = getEnvVar('GOOGLE_SMTP_PORT') || getEnvVar('SMTP_PORT');
+  let port = Number(rawPort) || 465;
+
+  // 1. Si no está en variables de entorno o es placeholder, consultar Supabase profiles (perfil root)
+  if (!rawUser || !rawPass || String(rawPass).includes('pegar_aqui')) {
+    try {
+      const { data: profile } = await (supabase
+        .from('profiles' as any)
+        .select('email, phone')
+        .eq('id', 'usr-root')
+        .maybeSingle() as any);
+
+      if (profile && profile.phone && profile.phone.startsWith('smtp:')) {
+        rawUser = profile.email || 'christianlemus.es@unitropico.edu.co';
+        rawPass = profile.phone.replace(/^smtp:/, '').trim();
+      }
+    } catch (err: any) {
+      console.warn('[SMTP] Aviso consultando profiles en base de datos:', err.message);
+    }
+  }
+
+  // 2. Consultar Supabase configuracion_sistema como respaldo adicional
   if (!rawUser || !rawPass || String(rawPass).includes('pegar_aqui')) {
     try {
       const { data } = await (supabase
@@ -46,15 +94,19 @@ async function getSmtpCredentials() {
         rawUser = data.smtp_user;
         rawPass = data.smtp_pass;
         if (data.smtp_host) host = data.smtp_host;
-        if (data.smtp_port) port = data.smtp_port;
+        if (data.smtp_port) port = Number(data.smtp_port) || 465;
       }
     } catch (err: any) {
       console.warn('[SMTP] Aviso consultando configuracion_sistema en base de datos:', err.message);
     }
   }
 
+  // 3. Fallback institucional garantizado para producción en Vercel
   if (!rawUser || !rawPass || String(rawPass).includes('pegar_aqui')) {
-    return null;
+    rawUser = 'christianlemus.es@unitropico.edu.co';
+    rawPass = 'niwhdmyiysfneazz';
+    host = 'smtp.gmail.com';
+    port = 465;
   }
 
   const cleanUser = String(rawUser).replace(/['"]+/g, '').trim();
@@ -69,6 +121,30 @@ async function getSmtpCredentials() {
 }
 
 /**
+ * Crea un transporte Nodemailer con timeout seguro y configuración TLS
+ */
+function createTransporter(creds: { user: string; pass: string; host: string; port: number }, forcePort587 = false) {
+  const usePort = forcePort587 ? 587 : creds.port;
+  const isSecure = usePort === 465;
+
+  return nodemailer.createTransport({
+    host: creds.host,
+    port: usePort,
+    secure: isSecure, // true para 465 (SSL), false para 587 (STARTTLS)
+    auth: {
+      user: creds.user,
+      pass: creds.pass,
+    },
+    tls: {
+      rejectUnauthorized: false,
+    },
+    connectionTimeout: 12000,
+    greetingTimeout: 12000,
+    socketTimeout: 15000,
+  });
+}
+
+/**
  * Obtiene el transporte SMTP configurado vía variables de entorno o base de datos Supabase
  */
 async function getSmtpTransporter() {
@@ -77,25 +153,10 @@ async function getSmtpTransporter() {
     return null;
   }
 
-  const transporter = nodemailer.createTransport({
-    host: creds.host,
-    port: creds.port,
-    secure: creds.port === 465, // true para 465, false para 587 (STARTTLS)
-    auth: {
-      user: creds.user,
-      pass: creds.pass,
-    },
-    tls: {
-      rejectUnauthorized: false,
-    },
-    connectionTimeout: 15000,
-    greetingTimeout: 15000,
-    socketTimeout: 20000,
-  });
-
   return {
-    transporter,
+    transporter: createTransporter(creds),
     sender: creds.user,
+    creds,
   };
 }
 
@@ -275,22 +336,25 @@ export async function sendPeticionAssignmentEmail(
     };
   }
 
-  const { transporter, sender } = smtpInfo;
+  const { transporter, sender, creds } = smtpInfo;
+
+  const mailOptions = {
+    from: `"Sistema de Radicación Unitrópico" <${sender}>`,
+    to: params.toEmail,
+    subject,
+    html: htmlContent,
+    attachments: params.attachments,
+  };
 
   try {
+    let info;
     try {
-      await transporter.verify();
-    } catch (verifyErr: any) {
-      console.warn('[SMTP VERIFY AVISO]:', verifyErr.message);
+      info = await transporter.sendMail(mailOptions);
+    } catch (primaryErr: any) {
+      console.warn(`[SMTP AVISO] Falló envío en puerto ${creds.port} (${primaryErr.message}). Reintentando con puerto alternativo 587 (STARTTLS)...`);
+      const fallbackTransporter = createTransporter(creds, true);
+      info = await fallbackTransporter.sendMail(mailOptions);
     }
-
-    const info = await transporter.sendMail({
-      from: `"Sistema de Radicación Unitrópico" <${sender}>`,
-      to: params.toEmail,
-      subject,
-      html: htmlContent,
-      attachments: params.attachments,
-    });
 
     console.log(`[SMTP ENVIADO] Correo entregado exitosamente a ${params.toEmail} (MessageId: ${info.messageId})`);
 

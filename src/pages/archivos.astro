@@ -253,7 +253,7 @@ function formatBytes(bytes?: number | null) {
 
               <!-- Barra de Acciones de la Carpeta (Abrir, Descargar, Editar, Eliminar) -->
               <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px; border-top: 1px solid var(--border-subtle); padding-top: 10px;">
-                <button type="button" class="btn-open-folder btn btn-primary btn-sm" style="flex: 1; justify-content: center; gap: 6px; font-weight: 800; font-size: 0.8rem;" data-folder-id={doc.id}>
+                <button type="button" class="btn-open-folder btn-abrir-carpeta btn btn-primary btn-sm" style="flex: 1; justify-content: center; gap: 6px; font-weight: 800; font-size: 0.8rem;" data-folder-id={doc.id} data-radicado={doc.numero_radicado}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                   <span>Abrir Carpeta</span>
                 </button>
@@ -405,7 +405,7 @@ function formatBytes(bytes?: number | null) {
                   </td>
                   <td style="text-align: right;">
                     <div style="display: inline-flex; align-items: center; gap: 6px;">
-                      <button type="button" class="btn btn-primary btn-sm btn-open-folder" data-folder-id={doc.id} style="font-size: 0.75rem; font-weight: 700;">
+                      <button type="button" class="btn btn-primary btn-sm btn-open-folder btn-abrir-carpeta" data-folder-id={doc.id} data-radicado={doc.numero_radicado} style="font-size: 0.75rem; font-weight: 700;">
                         Abrir
                       </button>
 
@@ -635,8 +635,17 @@ function formatBytes(bytes?: number | null) {
 
     // 2. Abrir Carpeta Virtual
     function openFolderDetail(folderId) {
-      const peticion = allPeticiones.find(p => p.id === folderId);
-      if (!peticion || !detailContainer) return;
+      if (!folderId) return;
+      const cleanTarget = String(folderId).trim();
+      const peticion = allPeticiones.find(p => 
+        String(p.id) === cleanTarget || 
+        p.numero_radicado === cleanTarget || 
+        (p.numero_radicado && p.numero_radicado.toLowerCase() === cleanTarget.toLowerCase())
+      );
+      if (!peticion || !detailContainer) {
+        console.warn('Expediente no encontrado para el identificador:', cleanTarget);
+        return;
+      }
 
       currentActiveFolderId = folderId;
       if (gridContainer) gridContainer.style.display = 'none';
@@ -856,12 +865,110 @@ function formatBytes(bytes?: number | null) {
 
     bcRoot?.addEventListener('click', closeFolderDetail);
 
-    // 4. Delegar clic en los botones "Abrir Carpeta"
-    document.addEventListener('click', (e) => {
-      const target = e.target.closest('.btn-open-folder');
-      if (target) {
-        const id = target.getAttribute('data-folder-id');
+    // 4. Delegación Global de Eventos (Abrir Carpeta, Editar y Eliminar)
+    document.addEventListener('click', async (e) => {
+      const target = e.target;
+      if (!target || !(target instanceof Element)) return;
+
+      // A. Botón Editar Petición / Carpeta
+      const editBtn = target.closest('.btn-edit-pet');
+      if (editBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const id = editBtn.getAttribute('data-id') || '';
+        const radicado = editBtn.getAttribute('data-radicado') || '';
+        const asunto = editBtn.getAttribute('data-asunto') || '';
+        const solicitante = editBtn.getAttribute('data-solicitante') || '';
+        const tipo = editBtn.getAttribute('data-tipo') || 'Ciudadano';
+        const prioridad = editBtn.getAttribute('data-prioridad') || 'Media';
+        const estado = editBtn.getAttribute('data-estado') || 'en_tramite';
+        const entrega = editBtn.getAttribute('data-entrega') || '';
+
+        if (editTitle) editTitle.textContent = `Editar Expediente ${radicado}`;
+        if (inputId) (inputId as HTMLInputElement).value = id;
+        if (inputAsunto) (inputAsunto as HTMLInputElement).value = asunto;
+        if (inputSolicitante) (inputSolicitante as HTMLInputElement).value = solicitante;
+        if (selectTipo) (selectTipo as HTMLSelectElement).value = tipo;
+        if (selectPrioridad) (selectPrioridad as HTMLSelectElement).value = prioridad;
+        if (selectEstado) (selectEstado as HTMLSelectElement).value = estado;
+        if (inputEntrega) (inputEntrega as HTMLInputElement).value = entrega;
+
+        if (editModal) editModal.style.display = 'flex';
+        return;
+      }
+
+      // B. Botón Eliminar Carpeta
+      const deleteBtn = target.closest('.btn-delete-pet');
+      if (deleteBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const id = deleteBtn.getAttribute('data-id');
+        const radicado = deleteBtn.getAttribute('data-radicado');
+        if (!id) return;
+
+        const confirmed = typeof (window as any).showConfirm === 'function'
+          ? await (window as any).showConfirm(
+              `¿Está seguro de que desea eliminar definitivamente la carpeta del radicado ${radicado}?\n\nEsta acción purgará los archivos almacenados en Storage y registrará el evento en la Auditoría institucional.`,
+              'Confirmar Eliminación'
+            )
+          : true;
+        if (!confirmed) return;
+
+        deleteBtn.setAttribute('disabled', 'true');
+        try {
+          const res = await fetch('/api/peticiones/eliminar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id }),
+          });
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            (window as any).showToast('Error al eliminar: ' + (data.error || 'No se pudo eliminar'), 'error');
+            deleteBtn.removeAttribute('disabled');
+            return;
+          }
+
+          const card = document.getElementById(`card-folder-${id}`);
+          if (card) card.remove();
+          const row = document.getElementById(`row-folder-${id}`);
+          if (row) row.remove();
+
+          if (currentActiveFolderId === id) {
+            closeFolderDetail();
+          }
+
+          (window as any).showToast(`Carpeta y radicado ${radicado} eliminados exitosamente.`, 'success');
+        } catch (err) {
+          (window as any).showToast('Error de conexión al eliminar.', 'error');
+          deleteBtn.removeAttribute('disabled');
+        }
+        return;
+      }
+
+      // C. Botón "Abrir Carpeta" (.btn-open-folder o .btn-abrir-carpeta)
+      const openBtn = target.closest('.btn-open-folder, .btn-abrir-carpeta');
+      if (openBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const id = openBtn.getAttribute('data-folder-id') || openBtn.getAttribute('data-id') || openBtn.getAttribute('data-radicado');
         if (id) openFolderDetail(id);
+        return;
+      }
+
+      // D. Clic en la tarjeta de carpeta (sin tocar botones ni enlaces secundarios)
+      const folderCard = target.closest('.drive-folder-card');
+      if (folderCard && !target.closest('.btn-edit-pet, .btn-delete-pet, a, button')) {
+        const id = folderCard.getAttribute('data-folder-id') || folderCard.getAttribute('data-id') || folderCard.getAttribute('data-radicado');
+        if (id) openFolderDetail(id);
+        return;
+      }
+
+      // E. Clic en la fila de tabla (sin tocar la columna de acciones o enlaces)
+      const tableRow = target.closest('.doc-row');
+      if (tableRow && !target.closest('td:last-child, a, button')) {
+        const id = tableRow.getAttribute('data-folder-id') || tableRow.getAttribute('data-id') || tableRow.getAttribute('data-radicado');
+        if (id) openFolderDetail(id);
+        return;
       }
     });
 
@@ -929,7 +1036,7 @@ function formatBytes(bytes?: number | null) {
       });
     }
 
-    // 7. Acciones Editar y Eliminar
+    // 7. Acciones Modal Editar
     const editModal = document.getElementById('modal-edit-peticion');
     const editTitle = document.getElementById('edit-modal-title');
     const inputId = document.getElementById('edit-pet-id');
@@ -940,82 +1047,6 @@ function formatBytes(bytes?: number | null) {
     const selectEstado = document.getElementById('edit-pet-estado');
     const inputEntrega = document.getElementById('edit-pet-entrega');
     const formEdit = document.getElementById('form-edit-peticion');
-
-    function attachActionListeners() {
-      document.querySelectorAll('.btn-edit-pet').forEach(btn => {
-        btn.onclick = (e) => {
-          const target = e.currentTarget;
-          const id = target.dataset.id || '';
-          const radicado = target.dataset.radicado || '';
-          const asunto = target.dataset.asunto || '';
-          const solicitante = target.dataset.solicitante || '';
-          const tipo = target.dataset.tipo || 'Ciudadano';
-          const prioridad = target.dataset.prioridad || 'Media';
-          const estado = target.dataset.estado || 'en_tramite';
-          const entrega = target.dataset.entrega || '';
-
-          if (editTitle) editTitle.textContent = `Editar Expediente ${radicado}`;
-          if (inputId) inputId.value = id;
-          if (inputAsunto) inputAsunto.value = asunto;
-          if (inputSolicitante) inputSolicitante.value = solicitante;
-          if (selectTipo) selectTipo.value = tipo;
-          if (selectPrioridad) selectPrioridad.value = prioridad;
-          if (selectEstado) selectEstado.value = estado;
-          if (inputEntrega) inputEntrega.value = entrega;
-
-          if (editModal) editModal.style.display = 'flex';
-        };
-      });
-
-      document.querySelectorAll('.btn-delete-pet').forEach(btn => {
-        btn.onclick = async (e) => {
-          const target = e.currentTarget;
-          const id = target.dataset.id;
-          const radicado = target.dataset.radicado;
-          if (!id) return;
-
-          const confirmed = typeof (window as any).showConfirm === 'function'
-            ? await (window as any).showConfirm(
-                `¿Está seguro de que desea eliminar definitivamente la carpeta del radicado ${radicado}?\n\nEsta acción purgará los archivos almacenados en Storage y registrará el evento en la Auditoría institucional.`,
-                'Confirmar Eliminación'
-              )
-            : true;
-          if (!confirmed) return;
-
-          target.setAttribute('disabled', 'true');
-          try {
-            const res = await fetch('/api/peticiones/eliminar', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ id }),
-            });
-            const data = await res.json();
-            if (!res.ok || !data.success) {
-              (window as any).showToast('Error al eliminar: ' + (data.error || 'No se pudo eliminar'), 'error');
-              target.removeAttribute('disabled');
-              return;
-            }
-
-            // Remover tarjeta y fila
-            const card = document.getElementById(`card-folder-${id}`);
-            if (card) card.remove();
-            const row = document.getElementById(`row-folder-${id}`);
-            if (row) row.remove();
-
-            if (currentActiveFolderId === id) {
-              closeFolderDetail();
-            }
-
-            (window as any).showToast(`Carpeta y radicado ${radicado} eliminados exitosamente.`, 'success');
-          } catch (err) {
-            (window as any).showToast('Error de conexión al eliminar.', 'error');
-            target.removeAttribute('disabled');
-          }
-        };
-      });
-    }
-
-    attachActionListeners();
 
     const closeEdit = () => { if (editModal) editModal.style.display = 'none'; };
     document.getElementById('btn-close-edit-modal')?.addEventListener('click', closeEdit);
@@ -1064,14 +1095,11 @@ function formatBytes(bytes?: number | null) {
       }
     });
 
-    // 8. Auto-abrir carpeta si viene parámetro ?radicado=... en la URL
+    // 8. Auto-abrir carpeta si viene parámetro ?radicado=... o ?id=... en la URL
     const urlParams = new URLSearchParams(window.location.search);
-    const targetRadicado = urlParams.get('radicado');
-    if (targetRadicado) {
-      const targetPeticion = allPeticiones.find(p => p.numero_radicado === targetRadicado);
-      if (targetPeticion) {
-        openFolderDetail(targetPeticion.id);
-      }
+    const targetQuery = urlParams.get('radicado') || urlParams.get('folderId') || urlParams.get('id');
+    if (targetQuery) {
+      openFolderDetail(targetQuery);
     }
   </script>
 </AppLayout>
