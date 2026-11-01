@@ -581,11 +581,23 @@ function formatBytes(bytes?: number | null) {
     }
   </style>
 
-  <!-- Datos y Lógica Interactiva del Explorador de Carpetas -->
-  <script define:vars={{ peticionesJson: JSON.stringify(peticiones) }}>
-    const allPeticiones = JSON.parse(peticionesJson);
+  <!-- Datos Seguros Incrustados en el DOM (Sin riesgo de SyntaxError por caracteres especiales) -->
+  <script id="peticiones-data" type="application/json" set:html={JSON.stringify(peticiones)}></script>
+
+  <!-- Lógica Interactiva del Explorador de Carpetas -->
+  <script>
+    let allPeticiones: any[] = [];
+    try {
+      const dataEl = document.getElementById('peticiones-data');
+      if (dataEl && dataEl.textContent) {
+        allPeticiones = JSON.parse(dataEl.textContent);
+      }
+    } catch (err) {
+      console.error('Error parseando peticiones-data:', err);
+    }
+
     let currentView = 'grid'; // 'grid' | 'table'
-    let currentActiveFolderId = null;
+    let currentActiveFolderId: string | null = null;
 
     const gridContainer = document.getElementById('drive-grid-container');
     const tableContainer = document.getElementById('drive-table-container');
@@ -596,7 +608,7 @@ function formatBytes(bytes?: number | null) {
     const bcRoot = document.getElementById('bc-root');
     const bcSep = document.getElementById('bc-separator');
     const bcFolder = document.getElementById('bc-folder-name');
-    const searchInput = document.getElementById('drive-search-input');
+    const searchInput = document.getElementById('drive-search-input') as HTMLInputElement | null;
 
     // 1. Alternador de Vistas (Carpetas vs Tabla)
     btnGrid?.addEventListener('click', () => {
@@ -634,14 +646,36 @@ function formatBytes(bytes?: number | null) {
     }
 
     // 2. Abrir Carpeta Virtual
-    function openFolderDetail(folderId) {
+    function openFolderDetail(folderId: string | null) {
       if (!folderId) return;
       const cleanTarget = String(folderId).trim();
-      const peticion = allPeticiones.find(p => 
+      let peticion = allPeticiones.find(p => 
         String(p.id) === cleanTarget || 
-        p.numero_radicado === cleanTarget || 
-        (p.numero_radicado && p.numero_radicado.toLowerCase() === cleanTarget.toLowerCase())
+        String(p.numero_radicado || '').toUpperCase() === cleanTarget.toUpperCase()
       );
+
+      // Fallback de rescate si no se encuentra en el array inicial
+      if (!peticion) {
+        const card = document.getElementById(`card-folder-${cleanTarget}`) || 
+                     document.querySelector(`[data-radicado="${cleanTarget}"]`) || 
+                     document.querySelector(`[data-id="${cleanTarget}"]`);
+        if (card) {
+          peticion = {
+            id: card.getAttribute('data-id') || cleanTarget,
+            numero_radicado: card.getAttribute('data-radicado') || cleanTarget,
+            asunto: card.getAttribute('data-asunto') || 'Expediente Documental',
+            solicitante_nombre: card.getAttribute('data-solicitante') || 'Ciudadano',
+            solicitante_tipo: 'Ciudadano',
+            estado: card.getAttribute('data-status') === 'responded' ? 'respondida' : 'en_tramite',
+            prioridad: 'Media',
+            fecha_limite_entrega: '--',
+            fecha_limite_responsable: '--',
+            peticion_anexos: [],
+            peticion_responsables: []
+          };
+        }
+      }
+
       if (!peticion || !detailContainer) {
         console.warn('Expediente no encontrado para el identificador:', cleanTarget);
         return;
@@ -841,9 +875,10 @@ function formatBytes(bytes?: number | null) {
 
       // Listener para botón volver
       document.getElementById('btn-back-root')?.addEventListener('click', closeFolderDetail);
-      // Re-enlazar listeners de edición dentro del detalle
-      attachActionListeners();
     }
+
+    // Exponer globalmente para invocación segura
+    (window as any).openFolderDetail = openFolderDetail;
 
     // 3. Cerrar Detalle de Carpeta y volver a la raíz
     function closeFolderDetail() {
@@ -861,6 +896,17 @@ function formatBytes(bytes?: number | null) {
 
       if (bcSep) bcSep.style.display = 'none';
       if (bcFolder) bcFolder.style.display = 'none';
+
+      // Limpiar URL si venía con ?radicado=...
+      try {
+        const url = new URL(window.location.href);
+        if (url.searchParams.has('radicado') || url.searchParams.has('folderId') || url.searchParams.has('id')) {
+          url.searchParams.delete('radicado');
+          url.searchParams.delete('folderId');
+          url.searchParams.delete('id');
+          window.history.replaceState({}, '', url.pathname);
+        }
+      } catch (e) {}
     }
 
     bcRoot?.addEventListener('click', closeFolderDetail);
