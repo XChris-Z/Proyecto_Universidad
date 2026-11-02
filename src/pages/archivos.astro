@@ -6,6 +6,55 @@ import AppLayout from '@layouts/AppLayout.astro';
 import { supabase } from '@lib/supabase';
 import { calculateDeadlineProgress } from '@lib/utils';
 
+// Interfaces estrictas para TypeScript
+export interface PeticionAnexo {
+  id: string;
+  nombre_archivo: string;
+  storage_path: string;
+  tamano_bytes: number | null;
+  mime_type?: string | null;
+  es_anexo_oficina?: boolean | null;
+  peticion_responsable_id?: string | null;
+  created_at: string;
+}
+
+export interface OficinaInfo {
+  id: string;
+  codigo: string;
+  nombre: string;
+  email_institucional?: string | null;
+}
+
+export interface PeticionResponsable {
+  id: string;
+  codigo_acceso: string;
+  estado_entrega?: string | null;
+  fecha_entrega?: string | null;
+  storage_subfolder_path?: string | null;
+  oficinas?: OficinaInfo | null;
+}
+
+export interface PeticionExpediente {
+  id: string;
+  numero_radicado: string;
+  asunto: string;
+  descripcion?: string | null;
+  categoria?: string | null;
+  instrucciones_anexos?: string | null;
+  solicitante_nombre: string;
+  solicitante_tipo?: string | null;
+  solicitante_email?: string | null;
+  fecha_radicacion: string;
+  fecha_limite_entrega: string;
+  fecha_limite_responsable: string;
+  storage_folder_path?: string | null;
+  estado: string;
+  prioridad?: string | null;
+  created_at: string;
+  peticion_anexos?: PeticionAnexo[];
+  peticion_responsables?: PeticionResponsable[];
+}
+
 // Consultar peticiones, archivo principal y anexos reales en PostgreSQL
 const { data: dbPeticiones } = await (supabase
   .from('peticiones' as any)
@@ -14,6 +63,7 @@ const { data: dbPeticiones } = await (supabase
     numero_radicado,
     asunto,
     descripcion,
+    categoria,
     instrucciones_anexos,
     solicitante_nombre,
     solicitante_tipo,
@@ -51,16 +101,16 @@ const { data: dbPeticiones } = await (supabase
   `)
   .order('created_at', { ascending: false }) as any);
 
-const peticiones = dbPeticiones || [];
+const peticiones: PeticionExpediente[] = (dbPeticiones as unknown as PeticionExpediente[]) || [];
 const totalCount = peticiones.length;
-const pendingCount = peticiones.filter((p: any) => p.estado !== 'respondida' && p.estado !== 'completada').length;
-const respondedCount = peticiones.filter((p: any) => p.estado === 'respondida' || p.estado === 'completada').length;
+const pendingCount = peticiones.filter((p) => p.estado !== 'respondida' && p.estado !== 'completada').length;
+const respondedCount = peticiones.filter((p) => p.estado === 'respondida' || p.estado === 'completada').length;
 
 let safeCount = 0;
 let warnCount = 0;
 let criticalCount = 0;
 
-peticiones.forEach((p: any) => {
+peticiones.forEach((p) => {
   const prog = calculateDeadlineProgress(p.fecha_radicacion || p.created_at, p.fecha_limite_entrega);
   if (prog.daysRemaining > 7) safeCount++;
   else if (prog.daysRemaining >= 3) warnCount++;
@@ -74,7 +124,7 @@ function getDownloadUrl(storagePath: string | null | undefined): string {
   return `https://irjjpjtvhxoakiazfswn.supabase.co/storage/v1/object/public/peticiones/${clean}`;
 }
 
-function formatBytes(bytes?: number | null) {
+function formatBytes(bytes?: number | null): string {
   if (!bytes || bytes === 0) return '0 KB';
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
@@ -86,364 +136,371 @@ function formatBytes(bytes?: number | null) {
 <AppLayout title="Gestor de Archivos y Carpetas de Radicados" activeNav="archivos">
   <div class="archivos-wrapper" style="display: flex; flex-direction: column; gap: 20px;">
 
-    <!-- Barra de Navegación Estilo Google Drive (Breadcrumbs y Herramientas) -->
-    <div class="card" style="padding: 16px 20px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
-      
-      <!-- Breadcrumb Interactivo -->
-      <div style="display: flex; align-items: center; gap: 8px; font-size: 0.92rem; font-weight: 700;">
-        <div style="width: 32px; height: 32px; border-radius: 8px; background: var(--verde-suave-bg); color: var(--verde-principal); display: flex; align-items: center; justify-content: center;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-        </div>
-        <button type="button" id="bc-root" class="breadcrumb-btn active" style="background: none; border: none; cursor: pointer; color: var(--text-main); font-weight: 800; font-size: 0.95rem; padding: 0;">
-          Gestor de Archivos (Raíz)
-        </button>
-        <span id="bc-separator" style="display: none; color: var(--text-muted);">&rsaquo;</span>
-        <span id="bc-folder-name" style="display: none; color: var(--verde-principal); font-family: monospace; font-size: 0.9rem;">--</span>
-      </div>
+    <!-- =========================================================================
+         1. VISTA GENERAL DE EXPLORADOR DE CARPETAS (RAÍZ)
+         Se oculta por completo cuando se abre una carpeta para dar paso a la vista dedicada
+         ========================================================================= -->
+    <div id="explorer-root-view" style="display: flex; flex-direction: column; gap: 20px;">
 
-      <!-- Acciones de Cabecera: Buscador y Alternador de Vistas -->
-      <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-        <!-- Buscador en Vivo -->
-        <div style="position: relative; width: 260px;">
-          <input type="text" id="drive-search-input" placeholder="Buscar carpeta o archivo..." class="form-input" style="padding-left: 32px; height: 38px; font-size: 0.82rem;" />
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position: absolute; left: 10px; top: 12px; color: var(--text-muted);"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        </div>
-
-        <!-- Alternador Vista Drive / Vista Lista -->
-        <div style="display: flex; background: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 2px;">
-          <button type="button" id="btn-view-grid" class="view-toggle-btn active" title="Vista de Carpetas estilo Drive">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-            <span>Carpetas</span>
-          </button>
-          <button type="button" id="btn-view-table" class="view-toggle-btn" title="Vista de Tabla Detallada">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-            <span>Lista</span>
-          </button>
-        </div>
-
-        <a href="/peticiones/subir" class="btn btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 0.82rem; height: 38px;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-          <span>Nueva Carpeta / Radicación</span>
-        </a>
-      </div>
-    </div>
-
-    <!-- Pestañas de Filtro Rápido -->
-    <div class="filter-tabs" id="archivos-filter-tabs">
-      <button class="filter-tab active" data-filter="all">
-        <span>Todas las Carpetas</span>
-        <span class="filter-count" id="count-all">{totalCount}</span>
-      </button>
-      <button class="filter-tab" data-filter="pending">
-        <span class="dist-dot" style="background: var(--dorado-oscuro);"></span>
-        <span>En Trámite</span>
-        <span class="filter-count" id="count-pending">{pendingCount}</span>
-      </button>
-      <button class="filter-tab" data-filter="responded">
-        <span class="dist-dot" style="background: var(--verde-principal);"></span>
-        <span>Respondidas</span>
-        <span class="filter-count" id="count-responded">{respondedCount}</span>
-      </button>
-      <button class="filter-tab" data-filter="safe">
-        <span class="dist-dot" style="background: #16a34a;"></span>
-        <span>Plazo Saludable</span>
-        <span class="filter-count" id="count-safe">{safeCount}</span>
-      </button>
-      <button class="filter-tab" data-filter="warn">
-        <span class="dist-dot" style="background: #d97706;"></span>
-        <span>Próximo a Vencer</span>
-        <span class="filter-count" id="count-warn">{warnCount}</span>
-      </button>
-      <button class="filter-tab" data-filter="critical">
-        <span class="dist-dot" style="background: #dc2626;"></span>
-        <span>Crítico / Vencido</span>
-        <span class="filter-count" id="count-critical">{criticalCount}</span>
-      </button>
-    </div>
-
-    <!-- SECCIÓN A: VISTA GOOGLE DRIVE DE CARPETAS (GRID) -->
-    <div id="drive-grid-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 16px;">
-      {peticiones.length > 0 ? (
-        peticiones.map((doc: any) => {
-          const isResponded = doc.estado === 'respondida' || doc.estado === 'completada';
-          const anexos = doc.peticion_anexos || [];
-          const anexoPrincipal = anexos.find((a: any) => !a.es_anexo_oficina) || anexos[0];
-          const responsables = doc.peticion_responsables || [];
-          const prog = calculateDeadlineProgress(doc.fecha_radicacion || doc.created_at, doc.fecha_limite_entrega);
-          const filterSla = prog.daysRemaining <= 2 ? 'critical' : prog.daysRemaining <= 7 ? 'warn' : 'safe';
-
-          return (
-            <div 
-              class="drive-folder-card" 
-              id={`card-folder-${doc.id}`}
-              data-id={doc.id}
-              data-radicado={doc.numero_radicado}
-              data-asunto={doc.asunto}
-              data-solicitante={doc.solicitante_nombre}
-              data-status={isResponded ? 'responded' : 'pending'} 
-              data-sla={filterSla}
-            >
-              <!-- Cabecera de Carpeta -->
-              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                  <div class="folder-svg-icon" style="width: 44px; height: 44px; border-radius: 10px; background: rgba(0, 89, 78, 0.08); color: var(--verde-principal); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0, 89, 78, 0.2);">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg>
-                  </div>
-                  <div>
-                    <span class="radicado-chip">{doc.numero_radicado}</span>
-                    <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 3px;">
-                      Radicado: {doc.fecha_radicacion || 'Reciente'}
-                    </div>
-                  </div>
-                </div>
-
-                <span style={`font-size: 0.68rem; font-weight: 800; padding: 2px 8px; border-radius: 4px; background: ${prog.bgLight}; color: ${prog.color};`}>
-                  {prog.statusBadge}
-                </span>
-              </div>
-
-              <!-- Título de la Carpeta (Asunto) -->
-              <h4 class="folder-title" title={doc.asunto}>{doc.asunto}</h4>
-
-              <!-- Solicitante -->
-              <div style="font-size: 0.76rem; color: var(--text-muted); margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                <span style="font-weight: 700; color: var(--text-main);">{doc.solicitante_nombre}</span> ({doc.solicitante_tipo || 'Ciudadano'})
-              </div>
-
-              <!-- BARRA DE SEMÁFORO SLA EN LA TARJETA (CORREGIDO BUG 0%) -->
-              <div style="margin-bottom: 12px; background: #FAF9F5; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border-subtle);">
-                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.70rem; margin-bottom: 4px;">
-                  <span style="color: var(--text-muted); font-weight: 600;">Término Legal ({doc.fecha_limite_entrega}):</span>
-                  <span style={`font-weight: 800; color: ${prog.color};`}>{prog.percentage}% consumido</span>
-                </div>
-                <div style="width: 100%; height: 6px; background: #E2E8F0; border-radius: 9999px; overflow: hidden;">
-                  <div style={`width: ${prog.percentage}%; height: 100%; background: ${prog.color}; transition: width 0.3s ease; border-radius: 9999px;`}></div>
-                </div>
-              </div>
-
-              <!-- Contenido de la Carpeta (Archivos & Responsables) -->
-              <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 0.75rem; margin-bottom: 14px; display: flex; flex-direction: column; gap: 6px;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <span style="color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                    <span>Documento Raíz:</span>
-                  </span>
-                  <span style="font-weight: 700; color: var(--verde-principal); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                    {anexoPrincipal?.nombre_archivo || 'Documento Inicial'}
-                  </span>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <span style="color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                    <span>Subcarpetas:</span>
-                  </span>
-                  <span style="font-weight: 800; color: var(--text-main);">
-                    {responsables.length} dependencias
-                  </span>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <span style="color: var(--text-muted);">Límite Dependencias:</span>
-                  <span style="font-weight: 700; color: var(--dorado-oscuro); font-family: monospace;">
-                    {doc.fecha_limite_responsable}
-                  </span>
-                </div>
-              </div>
-
-              <!-- Barra de Acciones de la Carpeta (Abrir, Descargar, Editar, Eliminar) -->
-              <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px; border-top: 1px solid var(--border-subtle); padding-top: 10px;">
-                <button type="button" class="btn-open-folder btn-abrir-carpeta btn btn-primary btn-sm" style="flex: 1; justify-content: center; gap: 6px; font-weight: 800; font-size: 0.8rem;" data-folder-id={doc.id} data-radicado={doc.numero_radicado}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                  <span>Abrir Carpeta</span>
-                </button>
-
-                {anexoPrincipal && (
-                  <a href={getDownloadUrl(anexoPrincipal.storage_path)} target="_blank" rel="noopener noreferrer" class="btn-icon-action" title="Descargar documento principal" style="width: 32px; height: 32px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: #ffffff; color: var(--text-muted); display: flex; align-items: center; justify-content: center;">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                  </a>
-                )}
-
-                <button 
-                  type="button" 
-                  class="btn-icon-action btn-edit-pet" 
-                  data-id={doc.id} 
-                  data-radicado={doc.numero_radicado}
-                  data-asunto={doc.asunto}
-                  data-solicitante={doc.solicitante_nombre}
-                  data-tipo={doc.solicitante_tipo || 'Ciudadano'}
-                  data-prioridad={doc.prioridad || 'Media'}
-                  data-entrega={doc.fecha_limite_entrega}
-                  data-estado={doc.estado || 'en_tramite'}
-                  title="Editar Carpeta / Expediente"
-                  style="width: 32px; height: 32px; border-radius: var(--radius-sm); border: 1px solid var(--dorado-borde); background: var(--dorado-suave-bg); color: var(--dorado-oscuro); display: flex; align-items: center; justify-content: center; cursor: pointer;"
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                </button>
-
-                <button 
-                  type="button" 
-                  class="btn-icon-action btn-delete-pet" 
-                  data-id={doc.id} 
-                  data-radicado={doc.numero_radicado}
-                  title="Eliminar Carpeta y Radicado"
-                  style="width: 32px; height: 32px; border-radius: var(--radius-sm); border: 1px solid #FECACA; background: #FEF2F2; color: #DC2626; display: flex; align-items: center; justify-content: center; cursor: pointer;"
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                </button>
-              </div>
-            </div>
-          );
-        })
-      ) : (
-        <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
-          <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--verde-suave-bg); color: var(--verde-principal); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px auto;">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      <!-- Barra de Navegación y Herramientas Estilo Google Drive -->
+      <div class="card" style="padding: 16px 20px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+        
+        <!-- Breadcrumb de Raíz -->
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 36px; height: 36px; border-radius: 8px; background: var(--verde-suave-bg); color: var(--verde-principal); display: flex; align-items: center; justify-content: center;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
           </div>
-          <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--text-main); margin: 0 0 6px 0;">No hay carpetas de expedientes creadas</h3>
-          <p style="font-size: 0.85rem; color: var(--text-muted); max-width: 480px; margin: 0 auto 16px auto;">
-            Al radicar una nueva petición se creará automáticamente su carpeta virtual en Supabase Storage con su documento inicial y las subcarpetas de las dependencias asignadas.
-          </p>
-          <a href="/peticiones/subir" class="btn btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
-            <span>+ Radicar Primera Petición</span>
+          <div>
+            <div style="font-weight: 800; font-size: 0.95rem; color: var(--text-main);">Gestor de Archivos y Expedientes</div>
+            <div style="font-size: 0.72rem; color: var(--text-muted);">Directorio raíz de expedientes virtuales en Supabase Storage</div>
+          </div>
+        </div>
+
+        <!-- Acciones de Cabecera: Buscador, Alternador y Nueva Radicación -->
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+          <!-- Buscador en Vivo -->
+          <div style="position: relative; width: 260px;">
+            <input type="text" id="drive-search-input" placeholder="Buscar carpeta, radicado o titular..." class="form-input" style="padding-left: 34px; height: 38px; font-size: 0.82rem;" />
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position: absolute; left: 11px; top: 12px; color: var(--text-muted);"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </div>
+
+          <!-- Alternador Vista Carpetas / Vista Lista -->
+          <div style="display: flex; background: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 2px;">
+            <button type="button" id="btn-view-grid" class="view-toggle-btn active" title="Vista de Carpetas estilo Drive">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              <span>Carpetas</span>
+            </button>
+            <button type="button" id="btn-view-table" class="view-toggle-btn" title="Vista de Tabla Detallada">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              <span>Lista</span>
+            </button>
+          </div>
+
+          <a href="/peticiones/subir" class="btn btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 0.82rem; height: 38px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            <span>+ Nueva Carpeta / Radicación</span>
           </a>
         </div>
-      )}
-    </div>
+      </div>
 
-    <!-- SECCIÓN B: VISTA DE DETALLE DE CARPETA ABIERTA (EXPLORADOR TIPO GOOGLE DRIVE) -->
-    <div id="drive-folder-detail-container" style="display: none; flex-direction: column; gap: 20px;">
-      <!-- Se inyecta dinámicamente vía JavaScript con los datos completos del expediente -->
-    </div>
+      <!-- Pestañas de Filtro Rápido -->
+      <div class="filter-tabs" id="archivos-filter-tabs">
+        <button class="filter-tab active" data-filter="all">
+          <span>Todas las Carpetas</span>
+          <span class="filter-count" id="count-all">{totalCount}</span>
+        </button>
+        <button class="filter-tab" data-filter="pending">
+          <span class="dist-dot" style="background: var(--dorado-oscuro);"></span>
+          <span>En Trámite</span>
+          <span class="filter-count" id="count-pending">{pendingCount}</span>
+        </button>
+        <button class="filter-tab" data-filter="responded">
+          <span class="dist-dot" style="background: var(--verde-principal);"></span>
+          <span>Respondidas</span>
+          <span class="filter-count" id="count-responded">{respondedCount}</span>
+        </button>
+        <button class="filter-tab" data-filter="safe">
+          <span class="dist-dot" style="background: #16a34a;"></span>
+          <span>Plazo Saludable</span>
+          <span class="filter-count" id="count-safe">{safeCount}</span>
+        </button>
+        <button class="filter-tab" data-filter="warn">
+          <span class="dist-dot" style="background: #d97706;"></span>
+          <span>Próximo a Vencer</span>
+          <span class="filter-count" id="count-warn">{warnCount}</span>
+        </button>
+        <button class="filter-tab" data-filter="critical">
+          <span class="dist-dot" style="background: #dc2626;"></span>
+          <span>Crítico / Vencido</span>
+          <span class="filter-count" id="count-critical">{criticalCount}</span>
+        </button>
+      </div>
 
-    <!-- SECCIÓN C: VISTA TABULAR CLÁSICA CON SLAs -->
-    <div id="drive-table-container" style="display: none;">
-      <div class="table-responsive">
-        <table class="doc-table">
-          <thead>
-            <tr>
-              <th>Carpeta / Expediente</th>
-              <th>Radicado</th>
-              <th>Fechas (Radicado - Límite)</th>
-              <th style="min-width: 170px;">Plazo General (SLA)</th>
-              <th>Oficinas Responsables</th>
-              <th>Estado</th>
-              <th style="text-align: right;">Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="documents-table-body">
-            {peticiones.map((doc: any) => {
-              const prog = calculateDeadlineProgress(doc.fecha_radicacion || doc.created_at, doc.fecha_limite_entrega);
-              const isResponded = doc.estado === 'respondida' || doc.estado === 'completada';
-              const anexos = doc.peticion_anexos || [];
-              const anexoPrincipal = anexos.find((a: any) => !a.es_anexo_oficina) || anexos[0];
-              const responsables = doc.peticion_responsables || [];
-              const filterSla = prog.daysRemaining <= 2 ? 'critical' : prog.daysRemaining <= 7 ? 'warn' : 'safe';
+      <!-- SECCIÓN A: MODO CUADRÍCULA DE CARPETAS (GRID ESTILO GOOGLE DRIVE) -->
+      <div id="drive-grid-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 16px;">
+        {peticiones.length > 0 ? (
+          peticiones.map((doc) => {
+            const isResponded = doc.estado === 'respondida' || doc.estado === 'completada';
+            const anexos = doc.peticion_anexos || [];
+            const anexoPrincipal = anexos.find((a) => !a.es_anexo_oficina) || anexos[0];
+            const responsables = doc.peticion_responsables || [];
+            const prog = calculateDeadlineProgress(doc.fecha_radicacion || doc.created_at, doc.fecha_limite_entrega);
+            const filterSla = prog.daysRemaining <= 2 ? 'critical' : prog.daysRemaining <= 7 ? 'warn' : 'safe';
 
-              return (
-                <tr class="doc-row" id={`row-folder-${doc.id}`} data-id={doc.id} data-radicado={doc.numero_radicado} data-asunto={doc.asunto} data-solicitante={doc.solicitante_nombre} data-status={isResponded ? 'responded' : 'pending'} data-sla={filterSla}>
-                  <td>
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                      <div class="doc-icon-badge pdf" style="width: 34px; height: 34px; font-size: 0.68rem; background: var(--verde-suave-bg); color: var(--verde-principal); border: 1px solid var(--verde-borde); display: flex; align-items: center; justify-content: center; border-radius: 6px;">
-                        <span>DOC</span>
+            return (
+              <div 
+                class="drive-folder-card" 
+                id={`card-folder-${doc.id}`}
+                data-id={doc.id}
+                data-radicado={doc.numero_radicado}
+                data-asunto={doc.asunto}
+                data-solicitante={doc.solicitante_nombre}
+                data-status={isResponded ? 'responded' : 'pending'} 
+                data-sla={filterSla}
+              >
+                <!-- Cabecera de Carpeta -->
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="folder-svg-icon" style="width: 44px; height: 44px; border-radius: 10px; background: rgba(0, 89, 78, 0.08); color: var(--verde-principal); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0, 89, 78, 0.2);">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg>
+                    </div>
+                    <div>
+                      <span class="radicado-chip">{doc.numero_radicado}</span>
+                      <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 3px;">
+                        Radicado: {doc.fecha_radicacion || 'Reciente'}
                       </div>
-                      <div>
-                        <div style="font-weight: 700; font-size: 0.88rem; color: var(--text-main);">{doc.asunto}</div>
-                        <div style="font-size: 0.74rem; color: var(--text-muted);">
-                          {doc.solicitante_tipo || 'Peticionario'} &bull; {doc.solicitante_nombre}
-                          {anexoPrincipal && (
-                            <span style="color: var(--verde-principal); font-weight: 600; margin-left: 6px;">
-                              ({anexoPrincipal.nombre_archivo})
-                            </span>
-                          )}
+                    </div>
+                  </div>
+
+                  <span style={`font-size: 0.68rem; font-weight: 800; padding: 2px 8px; border-radius: 4px; background: ${prog.bgLight}; color: ${prog.color};`}>
+                    {prog.statusBadge}
+                  </span>
+                </div>
+
+                <!-- Título de la Carpeta (Asunto) -->
+                <h4 class="folder-title" title={doc.asunto}>{doc.asunto}</h4>
+
+                <!-- Solicitante -->
+                <div style="font-size: 0.76rem; color: var(--text-muted); margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                  <span style="font-weight: 700; color: var(--text-main);">{doc.solicitante_nombre}</span> ({doc.solicitante_tipo || 'Ciudadano'})
+                </div>
+
+                <!-- Barra de Semáforo SLA en la Tarjeta -->
+                <div style="margin-bottom: 12px; background: #FAF9F5; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border-subtle);">
+                  <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.70rem; margin-bottom: 4px;">
+                    <span style="color: var(--text-muted); font-weight: 600;">Término Legal ({doc.fecha_limite_entrega}):</span>
+                    <span style={`font-weight: 800; color: ${prog.color};`}>{prog.percentage}% consumido</span>
+                  </div>
+                  <div style="width: 100%; height: 6px; background: #E2E8F0; border-radius: 9999px; overflow: hidden;">
+                    <div style={`width: ${prog.percentage}%; height: 100%; background: ${prog.color}; transition: width 0.3s ease; border-radius: 9999px;`}></div>
+                  </div>
+                </div>
+
+                <!-- Contenido de la Carpeta (Archivos & Subcarpetas de Oficinas) -->
+                <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 0.75rem; margin-bottom: 14px; display: flex; flex-direction: column; gap: 6px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                      <span>Documento Raíz:</span>
+                    </span>
+                    <span style="font-weight: 700; color: var(--verde-principal); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                      {anexoPrincipal?.nombre_archivo || 'Documento Inicial'}
+                    </span>
+                  </div>
+
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                      <span>Subcarpetas:</span>
+                    </span>
+                    <span style="font-weight: 800; color: var(--text-main);">
+                      {responsables.length} dependencias
+                    </span>
+                  </div>
+
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: var(--text-muted);">Límite Dependencias:</span>
+                    <span style="font-weight: 700; color: var(--dorado-oscuro); font-family: monospace;">
+                      {doc.fecha_limite_responsable}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Barra de Acciones de la Carpeta -->
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px; border-top: 1px solid var(--border-subtle); padding-top: 10px;">
+                  <button 
+                    type="button" 
+                    class="btn-open-folder btn-abrir-carpeta btn btn-primary btn-sm" 
+                    style="flex: 1; justify-content: center; gap: 6px; font-weight: 800; font-size: 0.8rem;" 
+                    data-folder-id={doc.id} 
+                    data-radicado={doc.numero_radicado}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                    <span>Abrir Carpeta</span>
+                  </button>
+
+                  {anexoPrincipal && (
+                    <a 
+                      href={getDownloadUrl(anexoPrincipal.storage_path)} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      class="btn-icon-action" 
+                      title="Descargar documento principal" 
+                      style="width: 32px; height: 32px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: #ffffff; color: var(--text-muted); display: flex; align-items: center; justify-content: center;"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    </a>
+                  )}
+
+                  <button 
+                    type="button" 
+                    class="btn-icon-action btn-edit-pet" 
+                    data-id={doc.id} 
+                    data-radicado={doc.numero_radicado}
+                    data-asunto={doc.asunto}
+                    data-solicitante={doc.solicitante_nombre}
+                    data-tipo={doc.solicitante_tipo || 'Ciudadano'}
+                    data-prioridad={doc.prioridad || 'Media'}
+                    data-entrega={doc.fecha_limite_entrega}
+                    data-estado={doc.estado || 'en_tramite'}
+                    title="Editar Expediente"
+                    style="width: 32px; height: 32px; border-radius: var(--radius-sm); border: 1px solid var(--dorado-borde); background: var(--dorado-suave-bg); color: var(--dorado-oscuro); display: flex; align-items: center; justify-content: center; cursor: pointer;"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </button>
+
+                  <button 
+                    type="button" 
+                    class="btn-icon-action btn-delete-pet" 
+                    data-id={doc.id} 
+                    data-radicado={doc.numero_radicado}
+                    title="Eliminar Carpeta y Radicado"
+                    style="width: 32px; height: 32px; border-radius: var(--radius-sm); border: 1px solid #FECACA; background: #FEF2F2; color: #DC2626; display: flex; align-items: center; justify-content: center; cursor: pointer;"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+            <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--verde-suave-bg); color: var(--verde-principal); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px auto;">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            </div>
+            <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--text-main); margin: 0 0 6px 0;">No hay carpetas de expedientes creadas</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); max-width: 480px; margin: 0 auto 16px auto;">
+              Al radicar una nueva petición se creará automáticamente su carpeta virtual en Supabase Storage con su documento inicial y las subcarpetas de las dependencias asignadas.
+            </p>
+            <a href="/peticiones/subir" class="btn btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+              <span>+ Radicar Primera Petición</span>
+            </a>
+          </div>
+        )}
+      </div>
+
+      <!-- SECCIÓN B: MODO LISTA TABULAR DETALLADA -->
+      <div id="drive-table-container" style="display: none;">
+        <div class="table-responsive">
+          <table class="doc-table">
+            <thead>
+              <tr>
+                <th>Carpeta / Expediente</th>
+                <th>Radicado</th>
+                <th>Fechas (Radicado - Límite)</th>
+                <th style="min-width: 170px;">Plazo General (SLA)</th>
+                <th>Oficinas Responsables</th>
+                <th>Estado</th>
+                <th style="text-align: right;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="documents-table-body">
+              {peticiones.map((doc) => {
+                const prog = calculateDeadlineProgress(doc.fecha_radicacion || doc.created_at, doc.fecha_limite_entrega);
+                const isResponded = doc.estado === 'respondida' || doc.estado === 'completada';
+                const anexos = doc.peticion_anexos || [];
+                const anexoPrincipal = anexos.find((a) => !a.es_anexo_oficina) || anexos[0];
+                const responsables = doc.peticion_responsables || [];
+                const filterSla = prog.daysRemaining <= 2 ? 'critical' : prog.daysRemaining <= 7 ? 'warn' : 'safe';
+
+                return (
+                  <tr class="doc-row" id={`row-folder-${doc.id}`} data-id={doc.id} data-radicado={doc.numero_radicado} data-asunto={doc.asunto} data-solicitante={doc.solicitante_nombre} data-status={isResponded ? 'responded' : 'pending'} data-sla={filterSla}>
+                    <td>
+                      <div style="display: flex; align-items: center; gap: 10px;">
+                        <div class="doc-icon-badge pdf" style="width: 34px; height: 34px; font-size: 0.68rem; background: var(--verde-suave-bg); color: var(--verde-principal); border: 1px solid var(--verde-borde); display: flex; align-items: center; justify-content: center; border-radius: 6px;">
+                          <span>DOC</span>
+                        </div>
+                        <div>
+                          <div style="font-weight: 700; font-size: 0.88rem; color: var(--text-main);">{doc.asunto}</div>
+                          <div style="font-size: 0.74rem; color: var(--text-muted);">
+                            {doc.solicitante_tipo || 'Peticionario'} &bull; {doc.solicitante_nombre}
+                            {anexoPrincipal && (
+                              <span style="color: var(--verde-principal); font-weight: 600; margin-left: 6px;">
+                                ({anexoPrincipal.nombre_archivo})
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </td>
-                  <td>
-                    <span style="font-family: monospace; font-size: 0.82rem; font-weight: 700; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--verde-borde);">
-                      {doc.numero_radicado}
-                    </span>
-                  </td>
-                  <td>
-                    <div style="font-size: 0.78rem;">
-                      <div>Rad: <strong>{doc.fecha_radicacion || 'Reciente'}</strong></div>
-                      <div style="color: var(--text-muted);">Límite: {doc.fecha_limite_entrega}</div>
-                    </div>
-                  </td>
-                  <td>
-                    <div style="min-width: 150px;">
-                      <div style="display: flex; justify-content: space-between; font-size: 0.72rem; margin-bottom: 3px;">
-                        <span style={`font-size: 0.68rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: ${prog.bgLight}; color: ${prog.color};`}>
-                          {prog.statusBadge}
-                        </span>
-                        <span style="font-weight: 700;">{prog.percentage}%</span>
+                    </td>
+                    <td>
+                      <span class="radicado-chip">{doc.numero_radicado}</span>
+                    </td>
+                    <td style="font-size: 0.8rem;">
+                      <div>Rad: <strong>{doc.fecha_radicacion || '--'}</strong></div>
+                      <div style="color: var(--text-muted); font-size: 0.74rem;">Límite: {doc.fecha_limite_entrega}</div>
+                    </td>
+                    <td>
+                      <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.72rem; margin-bottom: 3px;">
+                        <span style={`font-weight: 800; color: ${prog.color};`}>{prog.percentage}%</span>
+                        <span style="color: var(--text-muted); font-size: 0.68rem;">{prog.daysRemaining} días</span>
                       </div>
-                      <div style="width: 100%; height: 6px; background: #E2E8F0; border-radius: 9999px; overflow: hidden;">
+                      <div style="width: 100%; height: 5px; background: #E2E8F0; border-radius: 9999px; overflow: hidden;">
                         <div style={`width: ${prog.percentage}%; height: 100%; background: ${prog.color}; border-radius: 9999px;`}></div>
                       </div>
-                    </div>
-                  </td>
-                  <td>
-                    {responsables.length > 0 ? (
-                      <div style="display: flex; flex-direction: column; gap: 3px;">
-                        {responsables.map((r: any) => (
-                          <div style="font-size: 0.76rem; color: var(--text-main); display: flex; align-items: center; gap: 4px;">
-                            <span style={`width: 6px; height: 6px; border-radius: 50%; background: ${r.estado_entrega === 'Entregado' ? 'var(--verde-principal)' : 'var(--dorado-principal)'};`}></span>
-                            <span>{r.oficinas?.nombre || 'Oficina'}</span>
-                          </div>
-                        ))}
+                    </td>
+                    <td>
+                      <span style="font-size: 0.78rem; font-weight: 700; color: var(--text-main);">
+                        {responsables.length} asignadas
+                      </span>
+                      <div style="font-size: 0.70rem; color: var(--dorado-oscuro);">Límite: {doc.fecha_limite_responsable}</div>
+                    </td>
+                    <td>
+                      <span style={`font-size: 0.72rem; font-weight: 700; padding: 4px 8px; border-radius: 4px; ${isResponded ? 'background: #DCFCE7; color: #15803D;' : 'background: #FEF3C7; color: #92400E;'}`}>
+                        {isResponded ? 'Respondida' : 'En Trámite'}
+                      </span>
+                    </td>
+                    <td style="text-align: right; white-space: nowrap;">
+                      <div style="display: inline-flex; align-items: center; gap: 6px;">
+                        <button type="button" class="btn btn-primary btn-sm btn-open-folder btn-abrir-carpeta" data-folder-id={doc.id} data-radicado={doc.numero_radicado} style="font-size: 0.75rem; font-weight: 700;">
+                          Abrir
+                        </button>
+
+                        <button 
+                          type="button" 
+                          class="btn-icon-action btn-edit-pet" 
+                          data-id={doc.id} 
+                          data-radicado={doc.numero_radicado}
+                          data-asunto={doc.asunto}
+                          data-solicitante={doc.solicitante_nombre}
+                          data-tipo={doc.solicitante_tipo || 'Ciudadano'}
+                          data-prioridad={doc.prioridad || 'Media'}
+                          data-entrega={doc.fecha_limite_entrega}
+                          data-estado={doc.estado || 'en_tramite'}
+                          title="Editar Expediente"
+                          style="width: 30px; height: 30px; border-radius: var(--radius-sm); border: 1px solid var(--dorado-borde); background: var(--dorado-suave-bg); color: var(--dorado-oscuro); display: flex; align-items: center; justify-content: center; cursor: pointer;"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        </button>
+
+                        <button 
+                          type="button" 
+                          class="btn-icon-action btn-delete-pet" 
+                          data-id={doc.id} 
+                          data-radicado={doc.numero_radicado}
+                          title="Eliminar Expediente"
+                          style="width: 30px; height: 30px; border-radius: var(--radius-sm); border: 1px solid #FECACA; background: #FEF2F2; color: #DC2626; display: flex; align-items: center; justify-content: center; cursor: pointer;"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                        </button>
                       </div>
-                    ) : (
-                      <span style="font-size: 0.75rem; color: var(--text-muted);">Sin oficinas asignadas</span>
-                    )}
-                  </td>
-                  <td>
-                    <span style={`font-size: 0.72rem; font-weight: 700; padding: 4px 8px; border-radius: 4px; ${isResponded ? 'background: #DCFCE7; color: #15803D;' : 'background: #FEF3C7; color: #92400E;'}`}>
-                      {isResponded ? 'Respondida' : 'En Trámite'}
-                    </span>
-                  </td>
-                  <td style="text-align: right; white-space: nowrap;">
-                    <div style="display: inline-flex; align-items: center; gap: 6px;">
-                      <button type="button" class="btn btn-primary btn-sm btn-open-folder btn-abrir-carpeta" data-folder-id={doc.id} data-radicado={doc.numero_radicado} style="font-size: 0.75rem; font-weight: 700;">
-                        Abrir
-                      </button>
-
-                      <button 
-                        type="button" 
-                        class="btn-icon-action btn-edit-pet" 
-                        data-id={doc.id} 
-                        data-radicado={doc.numero_radicado}
-                        data-asunto={doc.asunto}
-                        data-solicitante={doc.solicitante_nombre}
-                        data-tipo={doc.solicitante_tipo || 'Ciudadano'}
-                        data-prioridad={doc.prioridad || 'Media'}
-                        data-entrega={doc.fecha_limite_entrega}
-                        data-estado={doc.estado || 'en_tramite'}
-                        title="Editar Petición"
-                        style="width: 30px; height: 30px; border-radius: var(--radius-sm); border: 1px solid var(--dorado-borde); background: var(--dorado-suave-bg); color: var(--dorado-oscuro); display: flex; align-items: center; justify-content: center; cursor: pointer;"
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                      </button>
-
-                      <button 
-                        type="button" 
-                        class="btn-icon-action btn-delete-pet" 
-                        data-id={doc.id} 
-                        data-radicado={doc.numero_radicado}
-                        title="Eliminar Expediente"
-                        style="width: 30px; height: 30px; border-radius: var(--radius-sm); border: 1px solid #FECACA; background: #FEF2F2; color: #DC2626; display: flex; align-items: center; justify-content: center; cursor: pointer;"
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
+
+    </div>
+
+    <!-- =========================================================================
+         2. VISTA DEDICADA Y EXCLUSIVA DE CARPETA (ESTILO GOOGLE DRIVE)
+         Ocupa el 100% de la pantalla reemplazando al listado de carpetas
+         ========================================================================= -->
+    <div id="explorer-folder-view" style="display: none; flex-direction: column; gap: 20px;">
+      <!-- El contenido completo de la carpeta se inyecta dinámicamente vía TypeScript/JS -->
     </div>
 
   </div>
@@ -579,14 +636,72 @@ function formatBytes(bytes?: number | null) {
       transform: translateY(-1px);
       box-shadow: 0 2px 6px rgba(0,0,0,0.08);
     }
+    .subfolder-box {
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      background: #ffffff;
+      transition: border-color 0.15s ease;
+    }
+    .subfolder-box:hover {
+      border-color: var(--verde-principal);
+    }
   </style>
 
-  <!-- Datos Seguros Incrustados en el DOM (Sin riesgo de SyntaxError por caracteres especiales) -->
-  <script id="peticiones-data" type="application/json" set:html={JSON.stringify(peticiones)}></script>
+  <!-- Datos Seguros de Peticiones Incrustados en el DOM -->
+  <script id="peticiones-data" type="application/json" is:inline set:html={JSON.stringify(peticiones)}></script>
 
   <!-- Lógica Interactiva del Explorador de Carpetas -->
   <script>
-    let allPeticiones: any[] = [];
+    interface PeticionAnexo {
+      id: string;
+      nombre_archivo: string;
+      storage_path: string;
+      tamano_bytes: number | null;
+      mime_type?: string | null;
+      es_anexo_oficina?: boolean | null;
+      peticion_responsable_id?: string | null;
+      created_at: string;
+    }
+
+    interface OficinaInfo {
+      id: string;
+      codigo: string;
+      nombre: string;
+      email_institucional?: string | null;
+    }
+
+    interface PeticionResponsable {
+      id: string;
+      codigo_acceso: string;
+      estado_entrega?: string | null;
+      fecha_entrega?: string | null;
+      storage_subfolder_path?: string | null;
+      oficinas?: OficinaInfo | null;
+    }
+
+    interface PeticionExpediente {
+      id: string;
+      numero_radicado: string;
+      asunto: string;
+      descripcion?: string | null;
+      categoria?: string | null;
+      instrucciones_anexos?: string | null;
+      solicitante_nombre: string;
+      solicitante_tipo?: string | null;
+      solicitante_email?: string | null;
+      fecha_radicacion: string;
+      fecha_limite_entrega: string;
+      fecha_limite_responsable: string;
+      storage_folder_path?: string | null;
+      estado: string;
+      prioridad?: string | null;
+      created_at: string;
+      peticion_anexos?: PeticionAnexo[];
+      peticion_responsables?: PeticionResponsable[];
+    }
+
+    let allPeticiones: PeticionExpediente[] = [];
     try {
       const dataEl = document.getElementById('peticiones-data');
       if (dataEl && dataEl.textContent) {
@@ -596,48 +711,53 @@ function formatBytes(bytes?: number | null) {
       console.error('Error parseando peticiones-data:', err);
     }
 
-    let currentView = 'grid'; // 'grid' | 'table'
+    let currentView: 'grid' | 'table' = 'grid';
     let currentActiveFolderId: string | null = null;
 
-    const gridContainer = document.getElementById('drive-grid-container');
-    const tableContainer = document.getElementById('drive-table-container');
-    const detailContainer = document.getElementById('drive-folder-detail-container');
-    const filterTabsContainer = document.getElementById('archivos-filter-tabs');
-    const btnGrid = document.getElementById('btn-view-grid');
-    const btnTable = document.getElementById('btn-view-table');
-    const bcRoot = document.getElementById('bc-root');
-    const bcSep = document.getElementById('bc-separator');
-    const bcFolder = document.getElementById('bc-folder-name');
+    const explorerRootView = document.getElementById('explorer-root-view') as HTMLElement | null;
+    const explorerFolderView = document.getElementById('explorer-folder-view') as HTMLElement | null;
+    const gridContainer = document.getElementById('drive-grid-container') as HTMLElement | null;
+    const tableContainer = document.getElementById('drive-table-container') as HTMLElement | null;
+    const btnGrid = document.getElementById('btn-view-grid') as HTMLButtonElement | null;
+    const btnTable = document.getElementById('btn-view-table') as HTMLButtonElement | null;
     const searchInput = document.getElementById('drive-search-input') as HTMLInputElement | null;
+
+    // Elementos del Modal Editar
+    const editModal = document.getElementById('modal-edit-peticion') as HTMLElement | null;
+    const editTitle = document.getElementById('edit-modal-title') as HTMLElement | null;
+    const inputId = document.getElementById('edit-pet-id') as HTMLInputElement | null;
+    const inputAsunto = document.getElementById('edit-pet-asunto') as HTMLInputElement | null;
+    const inputSolicitante = document.getElementById('edit-pet-solicitante') as HTMLInputElement | null;
+    const selectTipo = document.getElementById('edit-pet-tipo') as HTMLSelectElement | null;
+    const selectPrioridad = document.getElementById('edit-pet-prioridad') as HTMLSelectElement | null;
+    const selectEstado = document.getElementById('edit-pet-estado') as HTMLSelectElement | null;
+    const inputEntrega = document.getElementById('edit-pet-entrega') as HTMLInputElement | null;
+    const formEdit = document.getElementById('form-edit-peticion') as HTMLFormElement | null;
 
     // 1. Alternador de Vistas (Carpetas vs Tabla)
     btnGrid?.addEventListener('click', () => {
       currentView = 'grid';
       btnGrid.classList.add('active');
       btnTable?.classList.remove('active');
-      if (!currentActiveFolderId) {
-        if (gridContainer) gridContainer.style.display = 'grid';
-        if (tableContainer) tableContainer.style.display = 'none';
-      }
+      if (gridContainer) gridContainer.style.display = 'grid';
+      if (tableContainer) tableContainer.style.display = 'none';
     });
 
     btnTable?.addEventListener('click', () => {
       currentView = 'table';
       btnTable.classList.add('active');
       btnGrid?.classList.remove('active');
-      if (!currentActiveFolderId) {
-        if (gridContainer) gridContainer.style.display = 'none';
-        if (tableContainer) tableContainer.style.display = 'block';
-      }
+      if (gridContainer) gridContainer.style.display = 'none';
+      if (tableContainer) tableContainer.style.display = 'block';
     });
 
-    function getPublicStorageUrl(storagePath) {
+    function getPublicStorageUrl(storagePath: string | null | undefined): string {
       if (!storagePath) return '#';
       const clean = storagePath.replace(/^peticiones\//, '');
       return `https://irjjpjtvhxoakiazfswn.supabase.co/storage/v1/object/public/peticiones/${clean}`;
     }
 
-    function formatFileSize(bytes) {
+    function formatFileSize(bytes: number | null | undefined): string {
       if (!bytes || bytes === 0) return '0 KB';
       const k = 1024;
       const sizes = ['Bytes', 'KB', 'MB', 'GB'];
@@ -645,16 +765,16 @@ function formatBytes(bytes?: number | null) {
       return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
     }
 
-    // 2. Abrir Carpeta Virtual
+    // 2. ABRIR CARPETA VIRTUAL (VISTA EXCLUSIVA DEDICADA ESTILO GOOGLE DRIVE)
     function openFolderDetail(folderId: string | null) {
       if (!folderId) return;
       const cleanTarget = String(folderId).trim();
-      let peticion = allPeticiones.find(p => 
+      let peticion = allPeticiones.find((p) => 
         String(p.id) === cleanTarget || 
         String(p.numero_radicado || '').toUpperCase() === cleanTarget.toUpperCase()
       );
 
-      // Fallback de rescate si no se encuentra en el array inicial
+      // Rescate si no estuviera en memoria
       if (!peticion) {
         const card = document.getElementById(`card-folder-${cleanTarget}`) || 
                      document.querySelector(`[data-radicado="${cleanTarget}"]`) || 
@@ -666,118 +786,176 @@ function formatBytes(bytes?: number | null) {
             asunto: card.getAttribute('data-asunto') || 'Expediente Documental',
             solicitante_nombre: card.getAttribute('data-solicitante') || 'Ciudadano',
             solicitante_tipo: 'Ciudadano',
-            estado: card.getAttribute('data-status') === 'responded' ? 'respondida' : 'en_tramite',
-            prioridad: 'Media',
+            fecha_radicacion: new Date().toISOString().split('T')[0],
             fecha_limite_entrega: '--',
             fecha_limite_responsable: '--',
+            estado: card.getAttribute('data-status') === 'responded' ? 'respondida' : 'en_tramite',
+            prioridad: 'Media',
+            created_at: new Date().toISOString(),
             peticion_anexos: [],
             peticion_responsables: []
           };
         }
       }
 
-      if (!peticion || !detailContainer) {
+      if (!peticion || !explorerFolderView || !explorerRootView) {
         console.warn('Expediente no encontrado para el identificador:', cleanTarget);
         return;
       }
 
       currentActiveFolderId = folderId;
-      if (gridContainer) gridContainer.style.display = 'none';
-      if (tableContainer) tableContainer.style.display = 'none';
-      if (filterTabsContainer) filterTabsContainer.style.display = 'none';
-      detailContainer.style.display = 'flex';
 
-      // Actualizar Breadcrumbs
-      if (bcSep) bcSep.style.display = 'inline';
-      if (bcFolder) {
-        bcFolder.textContent = `${peticion.numero_radicado} — ${peticion.asunto.slice(0, 30)}...`;
-        bcFolder.style.display = 'inline';
-      }
+      // OCULTAR POR COMPLETO LA VISTA GENERAL DE CARPETAS Y MOSTRAR ÚNICAMENTE LA VISTA DEDICADA
+      explorerRootView.style.display = 'none';
+      explorerFolderView.style.display = 'flex';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      // Actualizar URL sin recargar la página
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('radicado', peticion.numero_radicado);
+        window.history.replaceState({}, '', url.toString());
+      } catch (e) {}
 
       const anexos = peticion.peticion_anexos || [];
-      const anexoPrincipal = anexos.find(a => !a.es_anexo_oficina) || anexos[0];
-      const anexosOficinas = anexos.filter(a => a.es_anexo_oficina);
+      const anexoPrincipal = anexos.find((a) => !a.es_anexo_oficina) || anexos[0];
+      const anexosOficinas = anexos.filter((a) => a.es_anexo_oficina);
       const responsables = peticion.peticion_responsables || [];
 
-      detailContainer.innerHTML = `
-        <!-- Banner del Expediente / Carpeta -->
-        <div class="card" style="padding: 24px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); border-left: 5px solid var(--verde-principal); display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
-          <div>
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
-              <span class="radicado-chip" style="font-size: 1rem; padding: 4px 10px;">${peticion.numero_radicado}</span>
-              <span style="font-size: 0.72rem; font-weight: 700; padding: 4px 8px; border-radius: 4px; ${peticion.estado === 'respondida' ? 'background: #DCFCE7; color: #15803D;' : 'background: #FEF3C7; color: #92400E;'}">
-                ${peticion.estado === 'respondida' ? 'Respondida' : 'En Trámite'}
-              </span>
-              <span style="font-size: 0.74rem; font-weight: 700; color: var(--dorado-oscuro); background: var(--dorado-suave-bg); border: 1px solid var(--dorado-borde); padding: 3px 8px; border-radius: 4px;">
-                Prioridad: ${peticion.prioridad || 'Media'}
-              </span>
+      // Calcular SLA
+      let slaPct = 0;
+      let daysRemaining = 0;
+      let slaColor = '#16a34a';
+      let slaBadge = 'Plazo Seguro';
+      try {
+        const start = new Date(peticion.fecha_radicacion || peticion.created_at).getTime();
+        const end = new Date(peticion.fecha_limite_entrega).getTime();
+        const now = Date.now();
+        if (!isNaN(start) && !isNaN(end) && end > start) {
+          const totalDays = Math.max(1, Math.round((end - start) / 86400000));
+          const elapsed = Math.max(0, Math.round((now - start) / 86400000));
+          daysRemaining = Math.max(0, Math.round((end - now) / 86400000));
+          slaPct = Math.min(100, Math.round((elapsed / totalDays) * 100));
+          if (daysRemaining <= 2) {
+            slaColor = '#dc2626';
+            slaBadge = 'Crítico / Por Vencer';
+          } else if (daysRemaining <= 7) {
+            slaColor = '#d97706';
+            slaBadge = 'Próximo a Vencer';
+          }
+        }
+      } catch (err) {}
+
+      explorerFolderView.innerHTML = `
+        <!-- CABECERA DE NAVEGACIÓN Y BREADCRUMB DEDICADO -->
+        <div class="card" style="padding: 16px 22px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+          
+          <!-- Botón Volver y Ruta -->
+          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <button type="button" id="btn-back-to-explorer" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 800; font-size: 0.84rem; padding: 8px 16px; border: 1px solid var(--verde-borde); background: var(--verde-suave-bg); color: var(--verde-principal); cursor: pointer;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+              <span>&larr; Volver a todas las carpetas</span>
+            </button>
+
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem;">
+              <span style="color: var(--text-muted); font-weight: 600;">Módulo de Archivos</span>
+              <span style="color: var(--text-muted);">&rsaquo;</span>
+              <span style="color: var(--verde-principal); font-weight: 800; font-family: monospace;">Carpeta ${peticion.numero_radicado}</span>
             </div>
-            <h2 style="font-size: 1.25rem; font-weight: 800; color: var(--text-main); margin: 6px 0;">${peticion.asunto}</h2>
-            <div style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.5;">
-              <strong>Peticionario:</strong> ${peticion.solicitante_nombre} (${peticion.solicitante_tipo || 'Ciudadano'}) &bull; 
-              <strong>Correo:</strong> ${peticion.solicitante_email || 'Sin correo registrado'} &bull;
-              <strong>Categoría:</strong> ${peticion.categoria || 'Petición General'}
-            </div>
-            ${peticion.instrucciones_anexos ? `
-              <div style="margin-top: 10px; background: #FAF9F5; border-left: 3px solid var(--dorado-principal); padding: 8px 12px; border-radius: 4px; font-size: 0.78rem; color: #475569;">
-                <strong>Instrucciones enviadas a las oficinas:</strong> "${peticion.instrucciones_anexos}"
-              </div>
-            ` : ''}
           </div>
 
-          <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
-            <div style="display: flex; gap: 8px;">
-              <button type="button" class="btn btn-secondary btn-sm btn-edit-pet" 
-                data-id="${peticion.id}"
-                data-radicado="${peticion.numero_radicado}"
-                data-asunto="${peticion.asunto}"
-                data-solicitante="${peticion.solicitante_nombre}"
-                data-tipo="${peticion.solicitante_tipo || 'Ciudadano'}"
-                data-prioridad="${peticion.prioridad || 'Media'}"
-                data-entrega="${peticion.fecha_limite_entrega}"
-                data-estado="${peticion.estado || 'en_tramite'}"
-                style="display: inline-flex; align-items: center; gap: 6px; font-weight: 700;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                <span>Editar</span>
-              </button>
-
-              <button type="button" id="btn-back-root" class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 700;">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-                <span>Volver al Gestor</span>
-              </button>
-            </div>
-
-            <div style="text-align: right; font-size: 0.74rem; color: var(--text-muted); margin-top: 4px;">
-              <div>Plazo Oficinas: <strong style="color: var(--dorado-oscuro); font-family: monospace;">${peticion.fecha_limite_responsable}</strong></div>
-              <div>Cierre General: <strong style="color: var(--text-main); font-family: monospace;">${peticion.fecha_limite_entrega}</strong></div>
-            </div>
+          <!-- Acciones de Cabecera -->
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button 
+              type="button" 
+              class="btn btn-secondary btn-sm btn-edit-pet" 
+              data-id="${peticion.id}"
+              data-radicado="${peticion.numero_radicado}"
+              data-asunto="${peticion.asunto}"
+              data-solicitante="${peticion.solicitante_nombre}"
+              data-tipo="${peticion.solicitante_tipo || 'Ciudadano'}"
+              data-prioridad="${peticion.prioridad || 'Media'}"
+              data-entrega="${peticion.fecha_limite_entrega}"
+              data-estado="${peticion.estado || 'en_tramite'}"
+              style="display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 0.8rem; border-color: var(--dorado-borde); background: var(--dorado-suave-bg); color: var(--dorado-oscuro);"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              <span>Editar Expediente</span>
+            </button>
           </div>
         </div>
 
-        <!-- SECCIÓN 1: ARCHIVO ORIGINAL RADICADO (RAÍZ DE LA CARPETA) -->
+        <!-- RESUMEN DEL RADICADO Y METADATOS -->
+        <div class="card" style="padding: 24px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); border-left: 5px solid var(--verde-principal); display: flex; flex-direction: column; gap: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                <span class="radicado-chip" style="font-size: 1.05rem; padding: 4px 12px;">${peticion.numero_radicado}</span>
+                <span style="font-size: 0.74rem; font-weight: 800; padding: 4px 10px; border-radius: 4px; ${peticion.estado === 'respondida' ? 'background: #DCFCE7; color: #15803D;' : 'background: #FEF3C7; color: #92400E;'}">
+                  ${peticion.estado === 'respondida' ? 'Respondida' : 'En Trámite'}
+                </span>
+                <span style="font-size: 0.74rem; font-weight: 700; color: var(--dorado-oscuro); background: var(--dorado-suave-bg); border: 1px solid var(--dorado-borde); padding: 4px 10px; border-radius: 4px;">
+                  Prioridad: ${peticion.prioridad || 'Media'}
+                </span>
+              </div>
+              <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--text-main); margin: 0 0 8px 0; line-height: 1.35;">${peticion.asunto}</h2>
+              <div style="font-size: 0.84rem; color: var(--text-muted); line-height: 1.6;">
+                <strong>Solicitante:</strong> <span style="color: var(--text-main); font-weight: 700;">${peticion.solicitante_nombre}</span> (${peticion.solicitante_tipo || 'Ciudadano'}) &bull;
+                <strong>Correo:</strong> ${peticion.solicitante_email || 'Sin correo registrado'} &bull;
+                <strong>Categoría:</strong> ${peticion.categoria || 'Petición General'} &bull;
+                <strong>Radicado:</strong> ${peticion.fecha_radicacion || 'Reciente'}
+              </div>
+            </div>
+
+            <!-- Semáforo SLA -->
+            <div style="background: #FAF9F5; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px 18px; min-width: 250px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.74rem; margin-bottom: 6px;">
+                <span style="color: var(--text-muted); font-weight: 700;">Plazo General:</span>
+                <span style="font-weight: 800; color: ${slaColor};">${slaPct}% consumido</span>
+              </div>
+              <div style="width: 100%; height: 7px; background: #E2E8F0; border-radius: 9999px; overflow: hidden; margin-bottom: 8px;">
+                <div style="width: ${slaPct}%; height: 100%; background: ${slaColor}; border-radius: 9999px;"></div>
+              </div>
+              <div style="font-size: 0.72rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 3px;">
+                <div>Término Legal: <strong style="color: var(--text-main); font-family: monospace;">${peticion.fecha_limite_entrega}</strong></div>
+                <div>Límite Oficinas: <strong style="color: var(--dorado-oscuro); font-family: monospace;">${peticion.fecha_limite_responsable}</strong></div>
+                <div style="color: ${slaColor}; font-weight: 700;">${daysRemaining} días restantes</div>
+              </div>
+            </div>
+          </div>
+
+          ${peticion.instrucciones_anexos ? `
+            <div style="background: #FAF9F5; border-left: 4px solid var(--dorado-principal); padding: 12px 16px; border-radius: 4px; font-size: 0.82rem; color: #475569;">
+              <strong style="color: var(--dorado-oscuro);">Instrucciones remitidas a las dependencias:</strong>
+              <p style="margin: 4px 0 0 0;">"${peticion.instrucciones_anexos}"</p>
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- SECCIÓN 1: DOCUMENTO ORIGINAL RADICADO (ARCHIVO BASE DEL EXPEDIENTE) -->
         <div class="card" style="padding: 22px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
-          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border-subtle);">
-            <div style="width: 32px; height: 32px; border-radius: 6px; background: var(--verde-suave-bg); color: var(--verde-principal); display: flex; align-items: center; justify-content: center;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle);">
+            <div style="width: 34px; height: 34px; border-radius: 6px; background: var(--verde-suave-bg); color: var(--verde-principal); display: flex; align-items: center; justify-content: center;">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             </div>
             <div>
               <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin: 0;">Documento Original Radicado</h3>
-              <span style="font-size: 0.72rem; color: var(--text-muted);">Archivo oficial cargado al momento de la radicación en Supabase Storage</span>
+              <span style="font-size: 0.74rem; color: var(--text-muted);">Archivo oficial cargado al momento de la radicación en Supabase Storage</span>
             </div>
           </div>
 
           ${anexoPrincipal ? `
             <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
               <div style="display: flex; align-items: center; gap: 12px;">
-                <div style="width: 42px; height: 42px; border-radius: 8px; background: #ffffff; border: 1px solid var(--verde-borde); color: var(--verde-principal); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem;">
+                <div style="width: 44px; height: 44px; border-radius: 8px; background: #ffffff; border: 1px solid var(--verde-borde); color: var(--verde-principal); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem;">
                   PDF
                 </div>
                 <div>
-                  <strong style="color: var(--text-main); font-size: 0.92rem;">${anexoPrincipal.nombre_archivo}</strong>
-                  <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">
+                  <strong style="color: var(--text-main); font-size: 0.94rem;">${anexoPrincipal.nombre_archivo}</strong>
+                  <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 3px;">
                     Tamaño: <strong>${formatFileSize(anexoPrincipal.tamano_bytes)}</strong> &bull; Subido: ${new Date(anexoPrincipal.created_at).toLocaleDateString('es-CO')}
                   </div>
-                  <code style="font-size: 0.68rem; color: var(--verde-principal);">${anexoPrincipal.storage_path}</code>
+                  <code style="font-size: 0.70rem; color: var(--verde-principal);">${anexoPrincipal.storage_path}</code>
                 </div>
               </div>
 
@@ -789,75 +967,75 @@ function formatBytes(bytes?: number | null) {
               </div>
             </div>
           ` : `
-            <div style="text-align: center; padding: 24px; color: var(--text-muted); font-size: 0.82rem; background: var(--bg-surface-elevated); border-radius: var(--radius-sm);">
+            <div style="text-align: center; padding: 24px; color: var(--text-muted); font-size: 0.84rem; background: var(--bg-surface-elevated); border-radius: var(--radius-sm);">
               No se adjuntó un archivo físico al radicar esta petición.
             </div>
           `}
         </div>
 
-        <!-- SECCIÓN 2: SUBCARPETAS DE OFICINAS RESPONSABLES Y ANEXOS -->
+        <!-- SECCIÓN 2: SUBCARPETAS Y ANEXOS DE OFICINAS RESPONSABLES -->
         <div class="card" style="padding: 22px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border-subtle); flex-wrap: wrap; gap: 10px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle); flex-wrap: wrap; gap: 10px;">
             <div style="display: flex; align-items: center; gap: 10px;">
-              <div style="width: 32px; height: 32px; border-radius: 6px; background: var(--dorado-suave-bg); color: var(--dorado-oscuro); display: flex; align-items: center; justify-content: center;">
+              <div style="width: 34px; height: 34px; border-radius: 6px; background: var(--dorado-suave-bg); color: var(--dorado-oscuro); display: flex; align-items: center; justify-content: center;">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
               </div>
               <div>
                 <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin: 0;">Subcarpetas de Oficinas Responsables</h3>
-                <span style="font-size: 0.72rem; color: var(--text-muted);">Espacio asignado para la entrega de anexos de cada dependencia</span>
+                <span style="font-size: 0.74rem; color: var(--text-muted);">Espacio virtual asignado para la entrega de anexos de cada dependencia</span>
               </div>
             </div>
 
-            <span style="font-size: 0.76rem; font-weight: 800; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 4px 10px; border-radius: 4px;">
+            <span style="font-size: 0.78rem; font-weight: 800; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 4px 12px; border-radius: 4px;">
               ${responsables.length} dependencias requeridas
             </span>
           </div>
 
           <div style="display: flex; flex-direction: column; gap: 14px;">
-            ${responsables.length > 0 ? responsables.map(r => {
-              const ofiAnexos = anexosOficinas.filter(a => a.peticion_responsable_id === r.id);
+            ${responsables.length > 0 ? responsables.map((r) => {
+              const ofiAnexos = anexosOficinas.filter((a) => a.peticion_responsable_id === r.id);
               const isDelivered = r.estado_entrega === 'Entregado' || ofiAnexos.length > 0;
 
               return `
-                <div style="border: 1px solid var(--border-color); border-radius: var(--radius-sm); overflow: hidden; background: #ffffff;">
+                <div class="subfolder-box">
                   <div style="background: var(--bg-surface-elevated); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--border-subtle);">
                     <div style="display: flex; align-items: center; gap: 10px;">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="color: ${isDelivered ? 'var(--verde-principal)' : 'var(--dorado-oscuro)'};"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="color: ${isDelivered ? 'var(--verde-principal)' : 'var(--dorado-oscuro)'};"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg>
                       <div>
-                        <strong style="font-size: 0.88rem; color: var(--text-main);">${r.oficinas?.nombre || 'Oficina Responsable'}</strong>
-                        ${(r.oficinas?.email_institucional && (r.oficinas?.nombre?.toLowerCase().includes('prueba') || r.oficinas?.codigo?.toUpperCase().includes('prueba'))) ? `<div style="font-size: 0.70rem; color: var(--text-muted); font-family: monospace;">${r.oficinas.email_institucional}</div>` : ''}
+                        <strong style="font-size: 0.90rem; color: var(--text-main);">${r.oficinas?.nombre || 'Oficina Responsable'}</strong>
+                        ${r.oficinas?.codigo ? `<span style="font-size: 0.72rem; color: var(--text-muted); margin-left: 6px;">(${r.oficinas.codigo})</span>` : ''}
                       </div>
                     </div>
 
                     <div style="display: flex; align-items: center; gap: 8px;">
-                      <span style="font-family: monospace; font-size: 0.74rem; font-weight: 800; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 3px 8px; border-radius: 4px; border: 1px solid var(--verde-borde);" title="Código Único de Acceso">${r.codigo_acceso}</span>
-                      <span style="font-size: 0.70rem; font-weight: 800; padding: 3px 8px; border-radius: 4px; background: ${isDelivered ? '#DCFCE7' : '#FEF3C7'}; color: ${isDelivered ? '#15803D' : '#92400E'};">
+                      <span style="font-family: monospace; font-size: 0.76rem; font-weight: 800; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 3px 8px; border-radius: 4px; border: 1px solid var(--verde-borde);" title="Código Único de Acceso">${r.codigo_acceso}</span>
+                      <span style="font-size: 0.72rem; font-weight: 800; padding: 3px 8px; border-radius: 4px; background: ${isDelivered ? '#DCFCE7' : '#FEF3C7'}; color: ${isDelivered ? '#15803D' : '#92400E'};">
                         ${isDelivered ? 'Anexos Aportados' : 'Pendiente de Respuesta'}
                       </span>
                     </div>
                   </div>
 
-                  <!-- Contenido de la Subcarpeta de la Oficina -->
+                  <!-- Contenido de la Subcarpeta -->
                   <div style="padding: 14px 16px;">
                     ${ofiAnexos.length > 0 ? `
                       <div style="display: flex; flex-direction: column; gap: 8px;">
-                        ${ofiAnexos.map(oa => `
-                          <div style="background: #ffffff; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem;">
+                        ${ofiAnexos.map((oa) => `
+                          <div style="background: #ffffff; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem;">
                             <div style="display: flex; align-items: center; gap: 8px;">
                               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--verde-principal)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                               <div>
                                 <strong style="color: var(--text-main);">${oa.nombre_archivo}</strong>
-                                <span style="font-size: 0.70rem; color: var(--text-muted); margin-left: 6px;">(${formatFileSize(oa.tamano_bytes)})</span>
+                                <span style="font-size: 0.72rem; color: var(--text-muted); margin-left: 6px;">(${formatFileSize(oa.tamano_bytes)})</span>
                               </div>
                             </div>
-                            <a href="${getPublicStorageUrl(oa.storage_path)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="text-decoration: none; font-size: 0.72rem; padding: 4px 10px;">
+                            <a href="${getPublicStorageUrl(oa.storage_path)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="text-decoration: none; font-size: 0.74rem; padding: 4px 10px;">
                               Descargar
                             </a>
                           </div>
                         `).join('')}
                       </div>
                     ` : `
-                      <div style="color: var(--text-muted); font-size: 0.76rem; font-style: italic;">
+                      <div style="color: var(--text-muted); font-size: 0.78rem; font-style: italic;">
                         Esta dependencia aún no ha cargado documentos de soporte en su subcarpeta virtual. Plazo máximo de entrega: ${peticion.fecha_limite_responsable}.
                       </div>
                     `}
@@ -865,7 +1043,7 @@ function formatBytes(bytes?: number | null) {
                 </div>
               `;
             }).join('') : `
-              <div style="text-align: center; padding: 16px; color: var(--text-muted); font-size: 0.8rem;">
+              <div style="text-align: center; padding: 18px; color: var(--text-muted); font-size: 0.82rem;">
                 No se asignaron dependencias para esta petición.
               </div>
             `}
@@ -873,31 +1051,20 @@ function formatBytes(bytes?: number | null) {
         </div>
       `;
 
-      // Listener para botón volver
-      document.getElementById('btn-back-root')?.addEventListener('click', closeFolderDetail);
+      // Registrar listener para el botón volver de la cabecera
+      document.getElementById('btn-back-to-explorer')?.addEventListener('click', closeFolderDetail);
     }
 
-    // Exponer globalmente para invocación segura
+    // Exponer globalmente para permitir apertura desde cualquier enlace
     (window as any).openFolderDetail = openFolderDetail;
 
-    // 3. Cerrar Detalle de Carpeta y volver a la raíz
+    // 3. CERRAR DETALLE DE CARPETA Y RESTAURAR VISTA PRINCIPAL
     function closeFolderDetail() {
       currentActiveFolderId = null;
-      if (detailContainer) detailContainer.style.display = 'none';
-      if (filterTabsContainer) filterTabsContainer.style.display = 'flex';
+      if (explorerFolderView) explorerFolderView.style.display = 'none';
+      if (explorerRootView) explorerRootView.style.display = 'flex';
 
-      if (currentView === 'grid') {
-        if (gridContainer) gridContainer.style.display = 'grid';
-        if (tableContainer) tableContainer.style.display = 'none';
-      } else {
-        if (gridContainer) gridContainer.style.display = 'none';
-        if (tableContainer) tableContainer.style.display = 'block';
-      }
-
-      if (bcSep) bcSep.style.display = 'none';
-      if (bcFolder) bcFolder.style.display = 'none';
-
-      // Limpiar URL si venía con ?radicado=...
+      // Restaurar URL limpia
       try {
         const url = new URL(window.location.href);
         if (url.searchParams.has('radicado') || url.searchParams.has('folderId') || url.searchParams.has('id')) {
@@ -907,17 +1074,17 @@ function formatBytes(bytes?: number | null) {
           window.history.replaceState({}, '', url.pathname);
         }
       } catch (e) {}
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    bcRoot?.addEventListener('click', closeFolderDetail);
-
-    // 4. Delegación Global de Eventos (Abrir Carpeta, Editar y Eliminar)
-    document.addEventListener('click', async (e) => {
-      const target = e.target;
-      if (!target || !(target instanceof Element)) return;
+    // 4. DELEGACIÓN GLOBAL DE EVENTOS (Abrir Carpeta, Editar y Eliminar)
+    document.addEventListener('click', async (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
 
       // A. Botón Editar Petición / Carpeta
-      const editBtn = target.closest('.btn-edit-pet');
+      const editBtn = target.closest('.btn-edit-pet') as HTMLElement | null;
       if (editBtn) {
         e.preventDefault();
         e.stopPropagation();
@@ -931,20 +1098,20 @@ function formatBytes(bytes?: number | null) {
         const entrega = editBtn.getAttribute('data-entrega') || '';
 
         if (editTitle) editTitle.textContent = `Editar Expediente ${radicado}`;
-        if (inputId) (inputId as HTMLInputElement).value = id;
-        if (inputAsunto) (inputAsunto as HTMLInputElement).value = asunto;
-        if (inputSolicitante) (inputSolicitante as HTMLInputElement).value = solicitante;
-        if (selectTipo) (selectTipo as HTMLSelectElement).value = tipo;
-        if (selectPrioridad) (selectPrioridad as HTMLSelectElement).value = prioridad;
-        if (selectEstado) (selectEstado as HTMLSelectElement).value = estado;
-        if (inputEntrega) (inputEntrega as HTMLInputElement).value = entrega;
+        if (inputId) inputId.value = id;
+        if (inputAsunto) inputAsunto.value = asunto;
+        if (inputSolicitante) inputSolicitante.value = solicitante;
+        if (selectTipo) selectTipo.value = tipo;
+        if (selectPrioridad) selectPrioridad.value = prioridad;
+        if (selectEstado) selectEstado.value = estado;
+        if (inputEntrega) inputEntrega.value = entrega;
 
         if (editModal) editModal.style.display = 'flex';
         return;
       }
 
       // B. Botón Eliminar Carpeta
-      const deleteBtn = target.closest('.btn-delete-pet');
+      const deleteBtn = target.closest('.btn-delete-pet') as HTMLElement | null;
       if (deleteBtn) {
         e.preventDefault();
         e.stopPropagation();
@@ -992,7 +1159,7 @@ function formatBytes(bytes?: number | null) {
       }
 
       // C. Botón "Abrir Carpeta" (.btn-open-folder o .btn-abrir-carpeta)
-      const openBtn = target.closest('.btn-open-folder, .btn-abrir-carpeta');
+      const openBtn = target.closest('.btn-open-folder, .btn-abrir-carpeta') as HTMLElement | null;
       if (openBtn) {
         e.preventDefault();
         e.stopPropagation();
@@ -1001,16 +1168,16 @@ function formatBytes(bytes?: number | null) {
         return;
       }
 
-      // D. Clic en la tarjeta de carpeta (sin tocar botones ni enlaces secundarios)
-      const folderCard = target.closest('.drive-folder-card');
+      // D. Clic en la tarjeta de carpeta (sin tocar botones secundarios)
+      const folderCard = target.closest('.drive-folder-card') as HTMLElement | null;
       if (folderCard && !target.closest('.btn-edit-pet, .btn-delete-pet, a, button')) {
         const id = folderCard.getAttribute('data-folder-id') || folderCard.getAttribute('data-id') || folderCard.getAttribute('data-radicado');
         if (id) openFolderDetail(id);
         return;
       }
 
-      // E. Clic en la fila de tabla (sin tocar la columna de acciones o enlaces)
-      const tableRow = target.closest('.doc-row');
+      // E. Clic en la fila de tabla (sin tocar la columna de acciones)
+      const tableRow = target.closest('.doc-row') as HTMLElement | null;
       if (tableRow && !target.closest('td:last-child, a, button')) {
         const id = tableRow.getAttribute('data-folder-id') || tableRow.getAttribute('data-id') || tableRow.getAttribute('data-radicado');
         if (id) openFolderDetail(id);
@@ -1018,11 +1185,11 @@ function formatBytes(bytes?: number | null) {
       }
     });
 
-    // 5. Filtrado por Pestañas (En Trámite, Respondidas, SLA)
+    // 5. Filtrado por Pestañas
     const filterTabs = document.querySelectorAll('#archivos-filter-tabs .filter-tab');
-    filterTabs.forEach(tab => {
+    filterTabs.forEach((tab) => {
       tab.addEventListener('click', () => {
-        filterTabs.forEach(t => t.classList.remove('active'));
+        filterTabs.forEach((t) => t.classList.remove('active'));
         tab.classList.add('active');
 
         const filter = tab.getAttribute('data-filter') || 'all';
@@ -1037,11 +1204,12 @@ function formatBytes(bytes?: number | null) {
       applyFilters(filter, searchInput.value.toLowerCase().trim());
     });
 
-    function applyFilters(filterStatus, searchText) {
+    function applyFilters(filterStatus: string, searchText: string) {
       const cards = document.querySelectorAll('.drive-folder-card');
       const rows = document.querySelectorAll('.doc-row');
 
-      cards.forEach(card => {
+      cards.forEach((el) => {
+        const card = el as HTMLElement;
         const status = card.getAttribute('data-status');
         const sla = card.getAttribute('data-sla');
         const radicado = (card.getAttribute('data-radicado') || '').toLowerCase();
@@ -1061,7 +1229,8 @@ function formatBytes(bytes?: number | null) {
         card.style.display = (matchesStatus && matchesSearch) ? 'flex' : 'none';
       });
 
-      rows.forEach(row => {
+      rows.forEach((el) => {
+        const row = el as HTMLElement;
         const status = row.getAttribute('data-status');
         const sla = row.getAttribute('data-sla');
         const radicado = (row.getAttribute('data-radicado') || '').toLowerCase();
@@ -1082,25 +1251,14 @@ function formatBytes(bytes?: number | null) {
       });
     }
 
-    // 7. Acciones Modal Editar
-    const editModal = document.getElementById('modal-edit-peticion');
-    const editTitle = document.getElementById('edit-modal-title');
-    const inputId = document.getElementById('edit-pet-id');
-    const inputAsunto = document.getElementById('edit-pet-asunto');
-    const inputSolicitante = document.getElementById('edit-pet-solicitante');
-    const selectTipo = document.getElementById('edit-pet-tipo');
-    const selectPrioridad = document.getElementById('edit-pet-prioridad');
-    const selectEstado = document.getElementById('edit-pet-estado');
-    const inputEntrega = document.getElementById('edit-pet-entrega');
-    const formEdit = document.getElementById('form-edit-peticion');
-
+    // 7. Modal Editar Petición
     const closeEdit = () => { if (editModal) editModal.style.display = 'none'; };
     document.getElementById('btn-close-edit-modal')?.addEventListener('click', closeEdit);
     document.getElementById('btn-cancel-edit-pet')?.addEventListener('click', closeEdit);
 
-    formEdit?.addEventListener('submit', async (e) => {
+    formEdit?.addEventListener('submit', async (e: Event) => {
       e.preventDefault();
-      const saveBtn = document.getElementById('btn-save-edit-pet');
+      const saveBtn = document.getElementById('btn-save-edit-pet') as HTMLButtonElement | null;
       if (saveBtn) {
         saveBtn.disabled = true;
         saveBtn.textContent = 'Actualizando...';
@@ -1108,13 +1266,13 @@ function formatBytes(bytes?: number | null) {
 
       try {
         const payload = {
-          id: inputId.value,
-          asunto: inputAsunto.value.trim(),
-          solicitante_nombre: inputSolicitante.value.trim(),
-          solicitante_tipo: selectTipo.value,
-          prioridad: selectPrioridad.value,
-          estado: selectEstado.value,
-          fecha_limite_entrega: inputEntrega.value,
+          id: inputId ? inputId.value : '',
+          asunto: inputAsunto ? inputAsunto.value.trim() : '',
+          solicitante_nombre: inputSolicitante ? inputSolicitante.value.trim() : '',
+          solicitante_tipo: selectTipo ? selectTipo.value : 'Ciudadano',
+          prioridad: selectPrioridad ? selectPrioridad.value : 'Media',
+          estado: selectEstado ? selectEstado.value : 'en_tramite',
+          fecha_limite_entrega: inputEntrega ? inputEntrega.value : '',
         };
 
         const res = await fetch('/api/peticiones/editar', {
