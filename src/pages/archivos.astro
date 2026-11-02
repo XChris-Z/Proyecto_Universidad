@@ -162,7 +162,7 @@ function formatBytes(bytes?: number | null) {
     </div>
 
     <!-- SECCIÓN A: VISTA GOOGLE DRIVE DE CARPETAS (GRID) -->
-    <div id="drive-grid-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;">
+    <div id="drive-grid-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 16px;">
       {peticiones.length > 0 ? (
         peticiones.map((doc: any) => {
           const isResponded = doc.estado === 'respondida' || doc.estado === 'completada';
@@ -403,7 +403,7 @@ function formatBytes(bytes?: number | null) {
                       {isResponded ? 'Respondida' : 'En Trámite'}
                     </span>
                   </td>
-                  <td style="text-align: right;">
+                  <td style="text-align: right; white-space: nowrap;">
                     <div style="display: inline-flex; align-items: center; gap: 6px;">
                       <button type="button" class="btn btn-primary btn-sm btn-open-folder btn-abrir-carpeta" data-folder-id={doc.id} data-radicado={doc.numero_radicado} style="font-size: 0.75rem; font-weight: 700;">
                         Abrir

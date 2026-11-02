@@ -76,7 +76,7 @@ const eleCount = normasList.filter((n: any) => n.organo_code === 'electoral').le
       </select>
     </div>
 
-    <div class="colegiados-grid" id="colegiados-cards-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;">
+    <div class="colegiados-grid" id="colegiados-cards-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 16px;">
       {normasList.length > 0 ? (
         normasList.map((norma: any) => (
           <div class="colegiado-card" data-org={norma.organo_code} data-vigencia={norma.vigencia} style="border: 1px solid var(--border-color); border-radius: 10px; padding: 18px; background: var(--bg-surface); display: flex; flex-direction: column; justify-content: space-between;">

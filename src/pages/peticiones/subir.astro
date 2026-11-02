@@ -211,7 +211,7 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
         </div>
 
         <!-- Selector de oficinas con Prueba 1 y Prueba 2 destacadas al inicio -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;" id="oficinas-checkbox-grid">
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 12px;" id="oficinas-checkbox-grid">
           {oficinas.map((ofi: any) => {
             const isTestOffice = ofi.codigo?.toUpperCase().includes('PRUEBA') || ofi.nombre?.toLowerCase().includes('prueba');
             const displayEmail = isTestOffice ? (ofi.email_institucional || '') : '';
