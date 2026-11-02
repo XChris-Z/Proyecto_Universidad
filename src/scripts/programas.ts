@@ -6,10 +6,17 @@ import { logSystemActivity } from '@lib/audit';
 
 let currentProgramasTab = 'historial';
 let programasList: any[] = [];
+let progSearchQuery = '';
 
 export async function initProgramas() {
   const container = document.getElementById('programas-tab-content');
   if (!container) return;
+
+  const searchInput = document.getElementById('programas-search-input') as HTMLInputElement | null;
+  searchInput?.addEventListener('input', () => {
+    progSearchQuery = (searchInput.value || '').toLowerCase().trim();
+    renderProgramasTab(currentProgramasTab);
+  });
 
   async function loadProgramas() {
     try {
@@ -62,7 +69,16 @@ export async function initProgramas() {
       btn.classList.toggle('active', btn.getAttribute('data-ptab') === tabName);
     });
 
-    const items = programasList.filter(p => p.categoria === tabName);
+    let items = programasList.filter(p => p.categoria === tabName);
+    if (progSearchQuery) {
+      items = items.filter(p => 
+        String(p.nombre || '').toLowerCase().includes(progSearchQuery) ||
+        String(p.codigo_snies || '').toLowerCase().includes(progSearchQuery) ||
+        String(p.numero_acto || '').toLowerCase().includes(progSearchQuery) ||
+        String(p.estado || '').toLowerCase().includes(progSearchQuery) ||
+        String(p.nivel || '').toLowerCase().includes(progSearchQuery)
+      );
+    }
 
     if (items.length === 0) {
       const labels: Record<string, string> = {

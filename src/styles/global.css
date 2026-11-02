@@ -6574,7 +6574,6 @@ body.sidebar-collapsed .btn-sidebar-expand-tab {
 #colegiados-cards-grid,
 #convenios-cards-grid,
 #oficinas-checkbox-grid {
-  display: grid !important;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)) !important;
   gap: 16px !important;
 }
@@ -6623,6 +6622,38 @@ body.sidebar-collapsed .btn-sidebar-expand-tab {
   .profile-container {
     max-width: 100% !important;
     width: 100% !important;
+  }
+}
+
+/* Regla unificada para Escritorio y Pantallas Grandes (>= 1024px) */
+@media (min-width: 1024px) {
+  .sidebar {
+    position: sticky !important;
+    top: 0 !important;
+    left: auto !important;
+    height: 100vh !important;
+    width: 270px;
+    transform: none !important;
+    box-shadow: none !important;
+    z-index: 50 !important;
+  }
+
+  body.sidebar-collapsed .sidebar {
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+    transform: translateX(-100%) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  .sidebar-backdrop {
+    display: none !important;
+  }
+
+  .btn-hamburger,
+  #btn-mobile-menu-toggle {
+    display: none !important;
   }
 }
 

@@ -57,17 +57,25 @@ const pendientesCount = peticionesList.filter((p: any) => p.estado !== 'respondi
     </div>
   </div>
 
-  <div class="section-toolbar" style="margin-bottom: 20px;">
-    <div class="filter-tabs" id="peticiones-filter-tabs">
-      <button class="filter-tab active" data-pfilter="all">
-        <span>Todas las Peticiones</span>
-        <span class="filter-count" id="pcount-all">{peticionesList.length}</span>
-      </button>
-      <button class="filter-tab" data-pfilter="pendientes">
-        <span class="dist-dot" style="background: var(--dorado-oscuro);"></span>
-        <span>En Trámite</span>
-        <span class="filter-count">{pendientesCount}</span>
-      </button>
+  <div class="section-toolbar" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+      <div class="filter-tabs" id="peticiones-filter-tabs">
+        <button class="filter-tab active" data-pfilter="all">
+          <span>Todas las Peticiones</span>
+          <span class="filter-count" id="pcount-all">{peticionesList.length}</span>
+        </button>
+        <button class="filter-tab" data-pfilter="pendientes">
+          <span class="dist-dot" style="background: var(--dorado-oscuro);"></span>
+          <span>En Trámite</span>
+          <span class="filter-count">{pendientesCount}</span>
+        </button>
+      </div>
+
+      <!-- Buscador en tiempo real de Peticiones -->
+      <div style="position: relative; width: 280px; max-width: 100%;">
+        <input type="text" id="peticiones-search-input" placeholder="Buscar radicado, solicitante, asunto..." class="form-input" style="padding-left: 34px; height: 38px; font-size: 0.82rem;" />
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position: absolute; left: 11px; top: 12px; color: var(--text-muted);"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </div>
     </div>
 
     <div>
@@ -318,29 +326,37 @@ const pendientesCount = peticionesList.filter((p: any) => p.estado !== 'respondi
   </div>
 
   <script>
-    // 1. FILTRO DE PESTAÑAS (TODAS / EN TRÁMITE)
+    // 1. FILTRO DE PESTAÑAS Y BUSCADOR EN TIEMPO REAL
     const filterButtons = document.querySelectorAll('#peticiones-filter-tabs .filter-tab');
     const tableRows = document.querySelectorAll<HTMLTableRowElement>('#tabla-peticiones tbody tr');
+    const searchInput = document.getElementById('peticiones-search-input') as HTMLInputElement | null;
+    let currentFilterMode = 'all';
+
+    function applyPeticionesFilters() {
+      const q = (searchInput?.value || '').toLowerCase().trim();
+      tableRows.forEach((row) => {
+        if (row.id && row.id.startsWith('row-pet-')) {
+          const estado = row.getAttribute('data-estado');
+          const isPendiente = estado !== 'respondida' && estado !== 'completada';
+          const matchesTab = currentFilterMode === 'all' || (currentFilterMode === 'pendientes' && isPendiente);
+          const text = row.textContent?.toLowerCase() || '';
+          const matchesQ = !q || text.includes(q);
+
+          row.style.display = (matchesTab && matchesQ) ? 'table-row' : 'none';
+        }
+      });
+    }
 
     filterButtons.forEach(btn => {
       btn.addEventListener('click', () => {
         filterButtons.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        const mode = btn.getAttribute('data-pfilter');
-
-        tableRows.forEach(row => {
-          if (row.id && row.id.startsWith('row-pet-')) {
-            if (mode === 'pendientes') {
-              const estado = row.getAttribute('data-estado');
-              const isPendiente = estado !== 'respondida' && estado !== 'completada';
-              row.style.display = isPendiente ? 'table-row' : 'none';
-            } else {
-              row.style.display = 'table-row';
-            }
-          }
-        });
+        currentFilterMode = btn.getAttribute('data-pfilter') || 'all';
+        applyPeticionesFilters();
       });
     });
+
+    searchInput?.addEventListener('input', applyPeticionesFilters);
 
     // 2. MODAL DE EDICIÓN
     const editModal = document.getElementById('modal-edit-peticion');

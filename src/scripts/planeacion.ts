@@ -6,10 +6,17 @@ import { logSystemActivity } from '@lib/audit';
 
 let currentPlanTab = 'financieros';
 let informesList: any[] = [];
+let planSearchQuery = '';
 
 export async function initPlaneacion() {
   const container = document.getElementById('planeacion-tab-content');
   const tabs = document.querySelectorAll('#planeacion-module-tabs .module-tab-btn');
+  const searchInput = document.getElementById('planeacion-search-input') as HTMLInputElement | null;
+
+  searchInput?.addEventListener('input', () => {
+    planSearchQuery = (searchInput.value || '').toLowerCase().trim();
+    renderContent();
+  });
 
   async function loadInformes() {
     try {
@@ -49,7 +56,14 @@ export async function initPlaneacion() {
     updateCounts();
 
     if (currentPlanTab === 'financieros') {
-      const finItems = informesList.filter(i => i.tipo === 'financiero');
+      let finItems = informesList.filter(i => i.tipo === 'financiero');
+      if (planSearchQuery) {
+        finItems = finItems.filter(i => 
+          String(i.periodo || '').toLowerCase().includes(planSearchQuery) ||
+          String(i.radicado_csu || '').toLowerCase().includes(planSearchQuery) ||
+          String(i.observaciones || '').toLowerCase().includes(planSearchQuery)
+        );
+      }
 
       if (finItems.length === 0) {
         container.innerHTML = `
@@ -104,7 +118,14 @@ export async function initPlaneacion() {
         </div>
       `;
     } else if (currentPlanTab === 'rectorales') {
-      const recItems = informesList.filter(i => i.tipo === 'rectoral');
+      let recItems = informesList.filter(i => i.tipo === 'rectoral');
+      if (planSearchQuery) {
+        recItems = recItems.filter(i => 
+          String(i.periodo || '').toLowerCase().includes(planSearchQuery) ||
+          String(i.radicado_csu || '').toLowerCase().includes(planSearchQuery) ||
+          String(i.observaciones || '').toLowerCase().includes(planSearchQuery)
+        );
+      }
 
       if (recItems.length === 0) {
         container.innerHTML = `

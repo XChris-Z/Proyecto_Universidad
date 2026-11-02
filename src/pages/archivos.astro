@@ -381,7 +381,7 @@ function formatBytes(bytes?: number | null): string {
       </div>
 
       <!-- SECCIÓN B: MODO LISTA TABULAR DETALLADA -->
-      <div id="drive-table-container" style="display: none;">
+      <div id="drive-table-container" style="display: none !important;">
         <div class="table-responsive">
           <table class="doc-table">
             <thead>
@@ -735,21 +735,21 @@ function formatBytes(bytes?: number | null): string {
     const inputEntrega = document.getElementById('edit-pet-entrega') as HTMLInputElement | null;
     const formEdit = document.getElementById('form-edit-peticion') as HTMLFormElement | null;
 
-    // 1. Alternador de Vistas (Carpetas vs Tabla)
+    // 1. Alternador de Vistas (Carpetas vs Tabla) - Estrictamente Excluyentes
     btnGrid?.addEventListener('click', () => {
       currentView = 'grid';
       btnGrid.classList.add('active');
       btnTable?.classList.remove('active');
-      if (gridContainer) gridContainer.style.display = 'grid';
-      if (tableContainer) tableContainer.style.display = 'none';
+      if (gridContainer) gridContainer.style.setProperty('display', 'grid', 'important');
+      if (tableContainer) tableContainer.style.setProperty('display', 'none', 'important');
     });
 
     btnTable?.addEventListener('click', () => {
       currentView = 'table';
       btnTable.classList.add('active');
       btnGrid?.classList.remove('active');
-      if (gridContainer) gridContainer.style.display = 'none';
-      if (tableContainer) tableContainer.style.display = 'block';
+      if (gridContainer) gridContainer.style.setProperty('display', 'none', 'important');
+      if (tableContainer) tableContainer.style.setProperty('display', 'block', 'important');
     });
 
     function getPublicStorageUrl(storagePath: string | null | undefined): string {
@@ -830,8 +830,10 @@ function formatBytes(bytes?: number | null): string {
       let slaColor = '#16a34a';
       let slaBadge = 'Plazo Seguro';
       try {
-        const start = new Date(peticion.fecha_radicacion || peticion.created_at).getTime();
-        const end = new Date(peticion.fecha_limite_entrega).getTime();
+        const startStr = peticion.fecha_radicacion || peticion.created_at || '';
+        const endStr = peticion.fecha_limite_entrega || '';
+        const start = startStr ? new Date(startStr).getTime() : NaN;
+        const end = endStr ? new Date(endStr).getTime() : NaN;
         const now = Date.now();
         if (!isNaN(start) && !isNaN(end) && end > start) {
           const totalDays = Math.max(1, Math.round((end - start) / 86400000));
@@ -1065,6 +1067,14 @@ function formatBytes(bytes?: number | null): string {
       currentActiveFolderId = null;
       if (explorerFolderView) explorerFolderView.style.display = 'none';
       if (explorerRootView) explorerRootView.style.display = 'flex';
+
+      if (currentView === 'grid') {
+        if (gridContainer) gridContainer.style.setProperty('display', 'grid', 'important');
+        if (tableContainer) tableContainer.style.setProperty('display', 'none', 'important');
+      } else {
+        if (gridContainer) gridContainer.style.setProperty('display', 'none', 'important');
+        if (tableContainer) tableContainer.style.setProperty('display', 'block', 'important');
+      }
 
       // Restaurar URL limpia
       try {

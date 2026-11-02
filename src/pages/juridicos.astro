@@ -62,6 +62,14 @@ const countDirectivas = casosList.filter((c: any) => c.categoria === 'directivas
       </button>
     </div>
 
+    <!-- Buscador en tiempo real de Asuntos Jurídicos -->
+    <div style="display: flex; gap: 12px; margin-top: 18px; margin-bottom: 4px; flex-wrap: wrap;">
+      <div class="search-box" style="flex: 1; min-width: 260px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" id="juridicos-search-input" placeholder="Buscar asunto jurídico por título, expediente, despacho o responsable...">
+      </div>
+    </div>
+
     <div id="juridicos-tab-content" style="margin-top: 18px;">
       <!-- Dinámico desde JS según pestaña activa con datos reales de Supabase -->
     </div>

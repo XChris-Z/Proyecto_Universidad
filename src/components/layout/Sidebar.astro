@@ -121,4 +121,19 @@ const navItems = [
       </button>
     </div>
   </div>
+
+  <script is:inline>
+    (function () {
+      try {
+        var saved = sessionStorage.getItem('sidebar_scroll_pos');
+        if (saved !== null) {
+          var pos = parseInt(saved, 10);
+          var el = document.getElementById('sidebar-nav-menu');
+          if (el && !isNaN(pos)) {
+            el.scrollTop = pos;
+          }
+        }
+      } catch (e) {}
+    })();
+  </script>
 </aside>

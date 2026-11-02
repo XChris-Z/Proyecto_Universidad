@@ -6,10 +6,17 @@ import { logSystemActivity } from '@lib/audit';
 
 let currentStageFilter = 'all';
 let procesosList: any[] = [];
+let juzgSearchQuery = '';
 
 export async function initJuzgamiento() {
   const tbody = document.getElementById('juzgamiento-table-body');
   const stageTabs = document.querySelectorAll('#juzgamiento-module-tabs .module-tab-btn');
+  const searchInput = document.getElementById('juzgamiento-search-input') as HTMLInputElement | null;
+
+  searchInput?.addEventListener('input', () => {
+    juzgSearchQuery = (searchInput.value || '').toLowerCase().trim();
+    renderTable();
+  });
 
   async function loadProcesos() {
     try {
@@ -46,11 +53,19 @@ export async function initJuzgamiento() {
     if (!tbody) return;
     tbody.innerHTML = '';
 
+    const q = juzgSearchQuery.toLowerCase().trim();
     const filtered = procesosList.filter(c => {
-      if (currentStageFilter === 'all') return true;
-      if (currentStageFilter === 'autos') return c.tipo_acto && c.tipo_acto.toLowerCase().includes('auto');
-      if (currentStageFilter === 'apelaciones') return c.tipo_acto && (c.tipo_acto.toLowerCase().includes('apelación') || (c.etapa_procesal && c.etapa_procesal.toLowerCase().includes('segunda')));
-      return true;
+      let matchesStage = true;
+      if (currentStageFilter === 'autos') {
+        matchesStage = Boolean(c.tipo_acto && c.tipo_acto.toLowerCase().includes('auto'));
+      } else if (currentStageFilter === 'apelaciones') {
+        matchesStage = Boolean(c.tipo_acto && (c.tipo_acto.toLowerCase().includes('apelación') || (c.etapa_procesal && c.etapa_procesal.toLowerCase().includes('segunda'))));
+      }
+      
+      const text = (String(c.radicado || '') + ' ' + String(c.implicado_nombre || '') + ' ' + String(c.implicado_cargo || '') + ' ' + String(c.etapa_procesal || '') + ' ' + String(c.tipo_acto || '')).toLowerCase();
+      const matchesQ = !q || text.includes(q);
+
+      return matchesStage && matchesQ;
     });
 
     if (filtered.length === 0) {

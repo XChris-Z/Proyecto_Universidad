@@ -472,6 +472,61 @@ export function initAppLayout() {
     }
   });
 
+  // 7.2 Persistencia de Scroll y Estado Activo en la Barra Lateral
+  const sidebarNavMenu = document.getElementById('sidebar-nav-menu');
+  const appSidebar = document.getElementById('app-sidebar');
+
+  function restoreSidebarScrollPos() {
+    try {
+      const saved = sessionStorage.getItem('sidebar_scroll_pos');
+      if (saved !== null) {
+        const pos = parseInt(saved, 10);
+        if (sidebarNavMenu && !isNaN(pos)) {
+          sidebarNavMenu.scrollTop = pos;
+        }
+        if (appSidebar && !isNaN(pos)) {
+          appSidebar.scrollTop = pos;
+        }
+      }
+    } catch (e) {}
+  }
+
+  // Guardar en evento scroll pasivo
+  sidebarNavMenu?.addEventListener('scroll', () => {
+    sessionStorage.setItem('sidebar_scroll_pos', String(sidebarNavMenu.scrollTop));
+  }, { passive: true });
+
+  appSidebar?.addEventListener('scroll', () => {
+    sessionStorage.setItem('sidebar_scroll_pos', String(appSidebar.scrollTop));
+  }, { passive: true });
+
+  // Guardar inmediatamente antes de navegar al hacer clic en un enlace
+  document.querySelectorAll('#sidebar-nav-menu a, .sidebar a').forEach((link) => {
+    link.addEventListener('click', () => {
+      if (sidebarNavMenu) {
+        sessionStorage.setItem('sidebar_scroll_pos', String(sidebarNavMenu.scrollTop));
+      } else if (appSidebar) {
+        sessionStorage.setItem('sidebar_scroll_pos', String(appSidebar.scrollTop));
+      }
+    });
+  });
+
+  // Restaurar de forma inmediata
+  restoreSidebarScrollPos();
+
+  // Asegurar clase .active en el enlace del módulo actual
+  try {
+    const currentPath = window.location.pathname.replace(/\/$/, '') || '/';
+    const navLinks = document.querySelectorAll('#sidebar-nav-menu .nav-item');
+    navLinks.forEach((link) => {
+      const href = (link.getAttribute('href') || '').replace(/\/$/, '');
+      if (href && (currentPath === href || (href !== '/dashboard' && href !== '' && currentPath.startsWith(href)))) {
+        navLinks.forEach((l) => l.classList.remove('active'));
+        link.classList.add('active');
+      }
+    });
+  } catch (e) {}
+
   // 8. Cierre de sesión definitivo y purga integral de almacenamiento y cookies
   document.getElementById('btn-logout')?.addEventListener('click', async () => {
     try {

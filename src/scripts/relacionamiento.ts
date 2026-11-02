@@ -31,29 +31,34 @@ export function initRelacionamiento() {
   closeBtn?.addEventListener('click', closeModal);
   cancelBtn?.addEventListener('click', closeModal);
 
-  // Filtrado de pestañas
+  // Filtrado de pestañas y buscador en tiempo real
   const tabButtons = document.querySelectorAll('#convenios-module-tabs .module-tab-btn');
   const cards = document.querySelectorAll('.convenio-card') as NodeListOf<HTMLElement>;
+  const searchInput = document.getElementById('convenios-search-input') as HTMLInputElement | null;
+  let currentFilter = 'all';
+
+  function filterConvenios() {
+    const q = (searchInput?.value || '').toLowerCase().trim();
+    cards.forEach(card => {
+      const tipo = card.getAttribute('data-tipo');
+      const text = card.textContent?.toLowerCase() || '';
+      const matchesTab = currentFilter === 'all' || tipo === currentFilter;
+      const matchesQ = !q || text.includes(q);
+
+      card.style.display = (matchesTab && matchesQ) ? '' : 'none';
+    });
+  }
 
   tabButtons.forEach(btn => {
     btn.addEventListener('click', () => {
       tabButtons.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-
-      const filter = btn.getAttribute('data-ctab') || 'all';
-      let visibleCount = 0;
-
-      cards.forEach(card => {
-        const tipo = card.getAttribute('data-tipo');
-        if (filter === 'all' || tipo === filter) {
-          card.style.display = '';
-          visibleCount++;
-        } else {
-          card.style.display = 'none';
-        }
-      });
+      currentFilter = btn.getAttribute('data-ctab') || 'all';
+      filterConvenios();
     });
   });
+
+  searchInput?.addEventListener('input', filterConvenios);
 
   // Guardar convenio en Supabase
   form?.addEventListener('submit', async (e) => {

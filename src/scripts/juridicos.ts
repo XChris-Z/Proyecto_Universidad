@@ -6,10 +6,17 @@ import { logSystemActivity } from '@lib/audit';
 
 let activeTab = 'brechas';
 let casosList: any[] = [];
+let jurSearchQuery = '';
 
 export async function initJuridicos() {
   const container = document.getElementById('juridicos-tab-content');
   const tabs = document.querySelectorAll('#juridicos-module-tabs .module-tab-btn');
+  const searchInput = document.getElementById('juridicos-search-input') as HTMLInputElement | null;
+
+  searchInput?.addEventListener('input', () => {
+    jurSearchQuery = (searchInput.value || '').toLowerCase().trim();
+    renderContent();
+  });
 
   // Cargar casos reales desde Supabase
   async function loadCasos() {
@@ -58,7 +65,16 @@ export async function initJuridicos() {
     if (!container) return;
     updateCounts();
 
-    const currentItems = casosList.filter(c => c.categoria === activeTab);
+    let currentItems = casosList.filter(c => c.categoria === activeTab);
+    if (jurSearchQuery) {
+      currentItems = currentItems.filter(c => 
+        String(c.titulo || '').toLowerCase().includes(jurSearchQuery) ||
+        String(c.expediente || '').toLowerCase().includes(jurSearchQuery) ||
+        String(c.despacho || '').toLowerCase().includes(jurSearchQuery) ||
+        String(c.estado || '').toLowerCase().includes(jurSearchQuery) ||
+        String(c.observaciones || '').toLowerCase().includes(jurSearchQuery)
+      );
+    }
 
     if (currentItems.length === 0) {
       const labels: Record<string, string> = {
