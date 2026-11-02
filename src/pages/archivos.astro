@@ -44,9 +44,9 @@ export interface PeticionExpediente {
   solicitante_nombre: string;
   solicitante_tipo?: string | null;
   solicitante_email?: string | null;
-  fecha_radicacion: string;
-  fecha_limite_entrega: string;
-  fecha_limite_responsable: string;
+  fecha_radicacion?: string | null;
+  fecha_limite_entrega?: string | null;
+  fecha_limite_responsable?: string | null;
   storage_folder_path?: string | null;
   estado: string;
   prioridad?: string | null;
@@ -129,7 +129,8 @@ function formatBytes(bytes?: number | null): string {
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  const unit = sizes[i] ?? 'Bytes';
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + unit;
 }
 ---
 
@@ -690,9 +691,9 @@ function formatBytes(bytes?: number | null): string {
       solicitante_nombre: string;
       solicitante_tipo?: string | null;
       solicitante_email?: string | null;
-      fecha_radicacion: string;
-      fecha_limite_entrega: string;
-      fecha_limite_responsable: string;
+      fecha_radicacion?: string | null;
+      fecha_limite_entrega?: string | null;
+      fecha_limite_responsable?: string | null;
       storage_folder_path?: string | null;
       estado: string;
       prioridad?: string | null;
@@ -762,7 +763,8 @@ function formatBytes(bytes?: number | null): string {
       const k = 1024;
       const sizes = ['Bytes', 'KB', 'MB', 'GB'];
       const i = Math.floor(Math.log(bytes) / Math.log(k));
-      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+      const unit = sizes[i] ?? 'Bytes';
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + unit;
     }
 
     // 2. ABRIR CARPETA VIRTUAL (VISTA EXCLUSIVA DEDICADA ESTILO GOOGLE DRIVE)
@@ -786,7 +788,7 @@ function formatBytes(bytes?: number | null): string {
             asunto: card.getAttribute('data-asunto') || 'Expediente Documental',
             solicitante_nombre: card.getAttribute('data-solicitante') || 'Ciudadano',
             solicitante_tipo: 'Ciudadano',
-            fecha_radicacion: new Date().toISOString().split('T')[0],
+            fecha_radicacion: new Date().toISOString().slice(0, 10),
             fecha_limite_entrega: '--',
             fecha_limite_responsable: '--',
             estado: card.getAttribute('data-status') === 'responded' ? 'respondida' : 'en_tramite',
