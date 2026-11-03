@@ -12,5 +12,16 @@ export default defineConfig({
   },
 
   adapter: vercel(),
+
+  vite: {
+    build: {
+      sourcemap: false,
+      minify: 'esbuild',
+    },
+    esbuild: {
+      drop: ['debugger'],
+      legalComments: 'none',
+    },
+  },
 });
 

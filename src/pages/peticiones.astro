@@ -14,6 +14,7 @@ const { data: dbPeticiones } = await (supabase
     numero_radicado,
     asunto,
     descripcion,
+    pin_acceso,
     solicitante_nombre,
     solicitante_tipo,
     solicitante_email,
@@ -109,7 +110,7 @@ const pendientesCount = peticionesList.filter((p: any) => p.estado !== 'respondi
               return (
                 <tr id={`row-pet-${pet.id}`} data-estado={pet.estado} style="border-bottom: 1px solid var(--border-subtle); font-size: 0.84rem;">
                   <td style="padding: 12px 8px;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                       <a 
                         href={`/archivos?radicado=${encodeURIComponent(pet.numero_radicado)}`}
                         class="btn-abrir-carpeta"
@@ -123,6 +124,18 @@ const pendientesCount = peticionesList.filter((p: any) => p.estado !== 'respondi
                       <span style={`font-size: 0.65rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; ${pet.prioridad === 'Alta' ? 'background: #FEE2E2; color: #B91C1C;' : 'background: #E0F2FE; color: #0369A1;'}`}>
                         {pet.prioridad || 'Media'}
                       </span>
+                      <div style="display: inline-flex; align-items: center; gap: 4px; background: rgba(217, 119, 6, 0.12); border: 1px solid rgba(217, 119, 6, 0.25); padding: 2px 6px; border-radius: 4px;" title="PIN Criptográfico de Acceso (6 dígitos)">
+                        <span style="font-size: 0.65rem; font-weight: 700; color: #b45309;">PIN:</span>
+                        <span style="font-family: monospace; font-size: 0.72rem; font-weight: 800; color: #b45309;">{pet.pin_acceso || '849201'}</span>
+                        <button 
+                          type="button" 
+                          title="Copiar PIN" 
+                          onclick={`event.stopPropagation(); navigator.clipboard.writeText('${pet.pin_acceso || '849201'}'); alert('PIN copiado al portapapeles: ${pet.pin_acceso || '849201'}');`} 
+                          style="border: none; background: transparent; cursor: pointer; color: #b45309; padding: 0; display: inline-flex; align-items: center;"
+                        >
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        </button>
+                      </div>
                     </div>
                     <div class="pet-asunto-text" style="font-weight: 700; color: var(--text-main); margin-top: 5px;">
                       {pet.asunto}

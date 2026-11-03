@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { supabase } from '@lib/supabase';
 import { sendPeticionAssignmentEmail } from '@lib/email';
 import { logSystemActivity } from '@lib/audit';
+import { generatePin6 } from '@lib/security';
 
 export const POST: APIRoute = async ({ request, url }) => {
   try {
@@ -113,6 +114,8 @@ export const POST: APIRoute = async ({ request, url }) => {
 
     // 1. Insertar Petición en Base de Datos (Disparador PL/pgSQL calcula Radicado, margen de 5 días y carpeta)
     const finalInstrucciones = instrucciones_anexos || descripcion || null;
+    const pinAcceso = generatePin6();
+
     const { data: peticionData, error: peticionError } = await (supabase
       .from('peticiones' as any)
       .insert({
@@ -125,6 +128,7 @@ export const POST: APIRoute = async ({ request, url }) => {
         categoria,
         prioridad,
         fecha_limite_entrega,
+        pin_acceso: pinAcceso,
       } as any)
       .select()
       .single() as any);
@@ -236,7 +240,8 @@ export const POST: APIRoute = async ({ request, url }) => {
       const targetEmail = isTestOffice ? (oficina?.email_institucional || null) : null;
 
       if (oficina && targetEmail) {
-        const portalUrl = `${baseUrl}/portal-responsable?codigo=${encodeURIComponent(resp.codigo_acceso)}&email=${encodeURIComponent(targetEmail)}`;
+        const effectivePin = peticionData.pin_acceso || pinAcceso;
+        const portalUrl = `${baseUrl}/portal-responsable?codigo=${encodeURIComponent(resp.codigo_acceso)}&email=${encodeURIComponent(targetEmail)}&pin=${encodeURIComponent(effectivePin)}`;
         
         const emailPromise = sendPeticionAssignmentEmail({
           toEmail: targetEmail,
@@ -249,6 +254,7 @@ export const POST: APIRoute = async ({ request, url }) => {
           fechaLimiteEntrega: peticionData.fecha_limite_entrega,
           fechaLimiteResponsable: peticionData.fecha_limite_responsable,
           codigoAcceso: resp.codigo_acceso,
+          pinAcceso: effectivePin,
           portalUrl,
           attachments: emailAttachments,
         }).catch((err: any) => {
@@ -285,6 +291,7 @@ export const POST: APIRoute = async ({ request, url }) => {
           fecha_limite_entrega: peticionData.fecha_limite_entrega,
           fecha_limite_responsable: peticionData.fecha_limite_responsable,
           storage_folder_path: peticionData.storage_folder_path,
+          pin_acceso: peticionData.pin_acceso || pinAcceso,
           archivo_principal: savedPrimaryFile,
         },
         responsables: responsablesData.map((r: any) => {

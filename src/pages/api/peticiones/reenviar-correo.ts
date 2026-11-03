@@ -31,6 +31,7 @@ export const POST: APIRoute = async ({ request, url }) => {
         categoria,
         fecha_limite_entrega,
         fecha_limite_responsable,
+        pin_acceso,
         peticion_anexos (
           id,
           nombre_archivo,
@@ -115,7 +116,8 @@ export const POST: APIRoute = async ({ request, url }) => {
         continue;
       }
 
-      const portalUrl = `${baseUrl}/portal-responsable?codigo=${encodeURIComponent(resp.codigo_acceso)}&email=${encodeURIComponent(email)}`;
+      const effectivePin = peticion.pin_acceso || '849201';
+      const portalUrl = `${baseUrl}/portal-responsable?codigo=${encodeURIComponent(resp.codigo_acceso)}&email=${encodeURIComponent(email)}&pin=${encodeURIComponent(effectivePin)}`;
 
       const emailResult = await sendPeticionAssignmentEmail({
         toEmail: email,
@@ -128,6 +130,7 @@ export const POST: APIRoute = async ({ request, url }) => {
         fechaLimiteEntrega: peticion.fecha_limite_entrega,
         fechaLimiteResponsable: peticion.fecha_limite_responsable,
         codigoAcceso: resp.codigo_acceso,
+        pinAcceso: effectivePin,
         portalUrl,
         attachments: emailAttachments,
       });

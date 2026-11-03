@@ -21,6 +21,7 @@ export interface EmailPeticionNotificationParams {
   fechaLimiteEntrega: string;
   fechaLimiteResponsable: string;
   codigoAcceso: string;
+  pinAcceso?: string | null;
   portalUrl: string;
   attachments?: EmailAttachment[];
 }
@@ -287,12 +288,22 @@ export async function sendPeticionAssignmentEmail(
             <div class="instrucciones-text">"${instrucciones}"</div>
           </div>
 
-          <!-- CREDENCIALES DE ACCESO TEMPORAL -->
+          <!-- CREDENCIALES DE ACCESO TEMPORAL Y PIN DE SEGURIDAD -->
           <div class="credentials-card">
             <div class="cred-email">Correo Electrónico Autorizado: <strong>${params.toEmail}</strong></div>
-            <div class="cred-code-title">Código Único Temporal de Acceso</div>
-            <div class="cred-code-val">${params.codigoAcceso}</div>
-            <div style="font-size: 11px; color: #64748b;">Este código es intransferible y de uso temporal para cargar anexos en esta carpeta oficial.</div>
+            <div style="display: flex; gap: 12px; margin-top: 10px; flex-wrap: wrap;">
+              <div style="flex: 1; min-width: 160px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px; text-align: center;">
+                <div class="cred-code-title">Código Único de Acceso</div>
+                <div class="cred-code-val" style="margin: 4px 0;">${params.codigoAcceso}</div>
+              </div>
+              ${params.pinAcceso ? `
+                <div style="flex: 1; min-width: 160px; background: #FFFBEB; border: 1px solid #FCD34D; border-radius: 6px; padding: 10px; text-align: center;">
+                  <div style="font-size: 11px; font-weight: 700; color: #92400E; text-transform: uppercase; letter-spacing: 0.5px;">PIN de Seguridad (6 Dígitos)</div>
+                  <div style="font-family: monospace; font-size: 20px; font-weight: 900; color: #B45309; letter-spacing: 4px; margin: 4px 0;">${params.pinAcceso}</div>
+                </div>
+              ` : ''}
+            </div>
+            <div style="font-size: 11px; color: #64748b; margin-top: 10px;">Estas credenciales son confidenciales e intransferibles para cargar anexos en esta carpeta oficial.</div>
           </div>
 
           <!-- ADVERTENCIA DE VENCIMIENTO PERENTORIO (-5 DÍAS) -->

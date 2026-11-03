@@ -1,33 +1,39 @@
 ---
 // src/pages/login.astro
 // Pantalla de Autenticación Institucional Oficial UI/UX Pro Max — SGD Unitrópico
-import AuthLayout from '@layouts/AuthLayout.astro';
+import AuthLayout from "@layouts/AuthLayout.astro";
 ---
 
 <AuthLayout title="Acceso al Sistema — SGD Unitrópico">
   <div class="login-promax-wrapper">
-
     <!-- =====================================================================
-         PANEL IZQUIERDO: IDENTIDAD INSTITUCIONAL INMERSIVA (DESKTOP)
-         ===================================================================== -->
-    <aside class="login-brand-panel" aria-label="Identidad Institucional Unitrópico">
+        ANEL IZQUIERDO: IDENTIDAD INSTITUCIONAL INMERSIVA (DESKTOP)
+        ===================================================================== -->
+    <aside
+      class="login-brand-panel"
+      aria-label="Identidad Institucional Unitrópico"
+    >
       <div class="brand-panel-inner">
-        
         <!-- Cabecera de Marca -->
         <div class="brand-header">
           <div class="brand-logo-card">
-            <img 
-              src="/logo.png" 
-              alt="Logo Oficial Unitrópico" 
-              class="brand-logo-img" 
+            <img
+              src="/logo.png"
+              alt="Logo Oficial Unitrópico"
+              class="brand-logo-img"
               loading="eager"
             />
           </div>
           <div class="brand-gold-line"></div>
-          <span class="brand-institution-chip">Universidad Internacional del Trópico Americano</span>
-          <h1 class="brand-main-title">Sistema de Gestión y Gobierno Universitario</h1>
+          <span class="brand-institution-chip"
+            >Universidad Internacional del Trópico Americano</span
+          >
+          <h1 class="brand-main-title">
+            Sistema de Gestión Documental de Rectoría
+          </h1>
           <p class="brand-subtitle">
-            Plataforma institucional de radicación oficial, cuerpos colegiados, convenios y control estricto de términos perentorios.
+            Plataforma institucional de radicación oficial, seguimiento y
+            gestión de documentos.
           </p>
         </div>
 
@@ -35,31 +41,67 @@ import AuthLayout from '@layouts/AuthLayout.astro';
         <div class="brand-features-list">
           <div class="brand-feature-item">
             <div class="feature-icon-box gold">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                ><circle cx="12" cy="12" r="10"></circle><polyline
+                  points="12 6 12 12 16 14"></polyline></svg
+              >
             </div>
             <div class="feature-text">
               <strong>Control de Términos Ley 1755</strong>
-              <span>Semáforo preventivo SLA de 15 días con alertas tempranas automatizadas.</span>
+              <span
+                >Semáforo preventivo SLA de 15 días con alertas tempranas
+                automatizadas.</span
+              >
             </div>
           </div>
 
           <div class="brand-feature-item">
             <div class="feature-icon-box emerald">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                ><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"
+                ></path><polyline points="14 2 14 8 20 8"></polyline></svg
+              >
             </div>
             <div class="feature-text">
               <strong>Expedientes Digitales Centralizados</strong>
-              <span>Custodia y archivo digital con subcarpetas para cada oficina requerida.</span>
+              <span
+                >Custodia y archivo digital con subcarpetas para cada oficina
+                requerida.</span
+              >
             </div>
           </div>
 
           <div class="brand-feature-item">
             <div class="feature-icon-box teal">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                ><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+                ></path></svg
+              >
             </div>
             <div class="feature-text">
               <strong>Autenticación Cifrada y Trazabilidad</strong>
-              <span>Seguridad con Supabase Auth y registro inmutable en bitácora de auditoría.</span>
+              <span
+                >Seguridad con Supabase Auth y registro inmutable en bitácora de
+                auditoría.</span
+              >
             </div>
           </div>
         </div>
@@ -67,12 +109,22 @@ import AuthLayout from '@layouts/AuthLayout.astro';
         <!-- Footer del Panel de Marca -->
         <div class="brand-panel-footer">
           <div class="security-seal">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              ><rect x="3" y="11" width="18" height="11" rx="2" ry="2"
+              ></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg
+            >
             <span>Conexión Segura TLS 1.3 &bull; Despacho Rectoral</span>
           </div>
-          <p class="brand-copy">&copy; {new Date().getFullYear()} Unitrópico &bull; Yopal, Casanare, Colombia</p>
+          <p class="brand-copy">
+            &copy; {new Date().getFullYear()} Unitrópico &bull; Yopal, Casanare, Colombia
+          </p>
         </div>
-
       </div>
     </aside>
 
@@ -81,20 +133,18 @@ import AuthLayout from '@layouts/AuthLayout.astro';
          ===================================================================== -->
     <main class="login-form-panel">
       <div class="login-form-wrapper">
-
         <!-- Logo en Móvil (Visible solo en pantallas pequeñas) -->
         <div class="login-mobile-header">
-          <img 
-            src="/logo.png" 
-            alt="Logo Oficial Unitrópico" 
-            class="login-mobile-logo" 
+          <img
+            src="/logo.png"
+            alt="Logo Oficial Unitrópico"
+            class="login-mobile-logo"
             loading="eager"
           />
           <div class="brand-gold-line mobile"></div>
         </div>
 
         <div class="login-card-promax">
-          
           <!-- Encabezado del Formulario -->
           <div class="form-card-header">
             <div class="form-badge">
@@ -103,40 +153,65 @@ import AuthLayout from '@layouts/AuthLayout.astro';
             </div>
             <h2 class="form-main-title">Iniciar Sesión</h2>
             <p class="form-main-subtitle">
-              Ingrese su correo institucional para acceder al panel de control rectoral y gestión de expedientes.
+              Ingrese su correo institucional para acceder al panel de control
+              rectoral y gestión de expedientes.
             </p>
           </div>
 
           <!-- Caja de Alerta / Errores -->
-          <div id="login-alert-box" class="login-alert-promax" style="display: none;" role="alert">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="alert-icon">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="8" x2="12" y2="12"/>
-              <line x1="12" y1="16" x2="12.01" y2="16"/>
+          <div
+            id="login-alert-box"
+            class="login-alert-promax"
+            style="display: none;"
+            role="alert"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              class="alert-icon"
+            >
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
             </svg>
-            <span id="login-alert-text">Credenciales incorrectas o usuario no registrado.</span>
+            <span id="login-alert-text"
+              >Credenciales incorrectas o usuario no registrado.</span
+            >
           </div>
 
           <!-- Formulario Oficial de Autenticación con Supabase Auth -->
           <form id="form-login" class="login-form-body" autocomplete="on">
-            
             <!-- Campo: Correo Electrónico Institucional -->
             <div class="form-group-promax">
               <label for="login-email" class="form-label-promax">
                 Correo Electrónico Institucional
               </label>
               <div class="input-container-promax">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="input-icon-promax">
-                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                  <polyline points="22,6 12,13 2,6"/>
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  class="input-icon-promax"
+                >
+                  <path
+                    d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
+                  ></path>
+                  <polyline points="22,6 12,13 2,6"></polyline>
                 </svg>
-                <input 
-                  type="email" 
-                  id="login-email" 
+                <input
+                  type="email"
+                  id="login-email"
                   name="email"
-                  class="form-input-promax" 
-                  placeholder="usuario@unitropico.edu.co" 
-                  required 
+                  class="form-input-promax"
+                  placeholder="usuario@unitropico.edu.co"
+                  required
                   autocomplete="username"
                   autofocus
                 />
@@ -146,36 +221,67 @@ import AuthLayout from '@layouts/AuthLayout.astro';
             <!-- Campo: Contraseña Institucional con Toggle de Visibilidad -->
             <div class="form-group-promax">
               <div class="label-row-promax">
-                <label for="login-password" class="form-label-promax">Contraseña</label>
+                <label for="login-password" class="form-label-promax"
+                  >Contraseña</label
+                >
               </div>
               <div class="input-container-promax">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="input-icon-promax">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  class="input-icon-promax"
+                >
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"
+                  ></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                 </svg>
-                <input 
-                  type="password" 
-                  id="login-password" 
+                <input
+                  type="password"
+                  id="login-password"
                   name="password"
-                  class="form-input-promax" 
-                  placeholder="••••••••••••" 
-                  required 
+                  class="form-input-promax"
+                  placeholder="••••••••••••"
+                  required
                   autocomplete="current-password"
                 />
-                <button 
-                  type="button" 
-                  id="btn-toggle-password" 
-                  class="btn-toggle-eye-promax" 
+                <button
+                  type="button"
+                  id="btn-toggle-password"
+                  class="btn-toggle-eye-promax"
                   aria-label="Mostrar u ocultar contraseña"
                   title="Mostrar contraseña"
                 >
-                  <svg id="eye-icon-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                    <circle cx="12" cy="12" r="3"/>
+                  <svg
+                    id="eye-icon-open"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
+                    ></path>
+                    <circle cx="12" cy="12" r="3"></circle>
                   </svg>
-                  <svg id="eye-icon-closed" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
-                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-                    <line x1="1" y1="1" x2="23" y2="23"/>
+                  <svg
+                    id="eye-icon-closed"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    style="display: none;"
+                  >
+                    <path
+                      d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
+                    ></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
                   </svg>
                 </button>
               </div>
@@ -191,11 +297,21 @@ import AuthLayout from '@layouts/AuthLayout.astro';
             </div>
 
             <!-- Botón de Inicio de Sesión Oficial -->
-            <button type="submit" id="btn-submit-login" class="btn-submit-promax">
-              <span class="btn-text-promax" id="btn-login-text">Iniciar Sesión Institucional</span>
-              <div class="spinner-loader-promax" id="btn-login-spinner" style="display: none;"></div>
+            <button
+              type="submit"
+              id="btn-submit-login"
+              class="btn-submit-promax"
+            >
+              <span class="btn-text-promax" id="btn-login-text"
+                >Iniciar Sesión Institucional</span
+              >
+              <div
+                class="spinner-loader-promax"
+                id="btn-login-spinner"
+                style="display: none;"
+              >
+              </div>
             </button>
-
           </form>
 
           <!-- Separador Discreto -->
@@ -207,37 +323,61 @@ import AuthLayout from '@layouts/AuthLayout.astro';
           <div class="portal-banner-promax">
             <div class="portal-banner-content">
               <div class="portal-banner-title">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-                  <polyline points="10 17 15 12 10 7"/>
-                  <line x1="15" y1="12" x2="3" y2="12"/>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.2"
+                >
+                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                  <polyline points="10 17 15 12 10 7"></polyline>
+                  <line x1="15" y1="12" x2="3" y2="12"></line>
                 </svg>
                 <span>Portal de Entrega de Anexos</span>
               </div>
               <p class="portal-banner-desc">
-                ¿Tiene un código único temporal para aportar soportes a un radicado?
+                ¿Tiene un código único temporal para aportar soportes a un
+                radicado?
               </p>
             </div>
             <a href="/portal-responsable" class="btn-portal-promax">
               <span>Ingresar con Código</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                ><line x1="5" y1="12" x2="19" y2="12"></line><polyline
+                  points="12 5 19 12 12 19"></polyline></svg
+              >
             </a>
           </div>
 
           <!-- Pie de Seguridad y Cifrado -->
           <div class="login-security-notice">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
             </svg>
-            <span>Supabase Auth &bull; TLS 1.3 &bull; Trazabilidad Inmutable SHA-256</span>
+            <span
+              >Supabase Auth &bull; TLS 1.3 &bull; Trazabilidad Inmutable
+              SHA-256</span
+            >
           </div>
-
         </div>
-
       </div>
     </main>
-
   </div>
 </AuthLayout>
 
@@ -252,7 +392,11 @@ import AuthLayout from '@layouts/AuthLayout.astro';
     display: flex;
     overflow-x: hidden;
     background: #f8fafc;
-    font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
+    font-family:
+      "Montserrat",
+      system-ui,
+      -apple-system,
+      sans-serif;
   }
 
   /* ==========================================================================
@@ -468,7 +612,9 @@ import AuthLayout from '@layouts/AuthLayout.astro';
     background: #ffffff;
     border-radius: 20px;
     border: 1px solid rgba(15, 23, 42, 0.08);
-    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.07), 0 1px 3px rgba(0, 0, 0, 0.02);
+    box-shadow:
+      0 10px 30px -10px rgba(0, 0, 0, 0.07),
+      0 1px 3px rgba(0, 0, 0, 0.02);
     padding: clamp(28px, 4vw, 40px);
     box-sizing: border-box;
     animation: promaxCardCrossfade 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -546,9 +692,16 @@ import AuthLayout from '@layouts/AuthLayout.astro';
   }
 
   @keyframes promaxShake {
-    0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-4px); }
-    75% { transform: translateX(4px); }
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    25% {
+      transform: translateX(-4px);
+    }
+    75% {
+      transform: translateX(4px);
+    }
   }
 
   .alert-icon {
@@ -594,7 +747,7 @@ import AuthLayout from '@layouts/AuthLayout.astro';
   .form-input-promax {
     width: 100%;
     padding: 12px 14px 12px 42px;
-    font-size: 0.90rem;
+    font-size: 0.9rem;
     color: #0f172a;
     background: #f8fafc;
     border: 1.5px solid #cbd5e1;
@@ -628,7 +781,9 @@ import AuthLayout from '@layouts/AuthLayout.astro';
     align-items: center;
     justify-content: center;
     border-radius: 6px;
-    transition: color 0.15s ease, background 0.15s ease;
+    transition:
+      color 0.15s ease,
+      background 0.15s ease;
   }
 
   .btn-toggle-eye-promax:hover {
@@ -710,7 +865,9 @@ import AuthLayout from '@layouts/AuthLayout.astro';
   }
 
   @keyframes promaxSpin {
-    to { transform: rotate(360deg); }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   /* Separador */
@@ -723,7 +880,7 @@ import AuthLayout from '@layouts/AuthLayout.astro';
 
   .login-divider-promax::before,
   .login-divider-promax::after {
-    content: '';
+    content: "";
     flex: 1;
     border-bottom: 1px solid #e2e8f0;
   }
@@ -811,7 +968,7 @@ import AuthLayout from '@layouts/AuthLayout.astro';
     justify-content: center;
     gap: 6px;
     margin-top: 20px;
-    font-size: 0.70rem;
+    font-size: 0.7rem;
     color: #94a3b8;
     text-align: center;
     line-height: 1.4;
@@ -865,45 +1022,56 @@ import AuthLayout from '@layouts/AuthLayout.astro';
 </style>
 
 <script>
-  import { supabase } from '@lib/supabase';
-  import { SESSION_STORAGE_KEY, SESSION_COOKIE_KEY } from '@lib/constants';
-  import { logSystemActivity } from '@lib/audit';
+  import { supabase } from "@lib/supabase";
+  import { SESSION_STORAGE_KEY, SESSION_COOKIE_KEY } from "@lib/constants";
+  import { logSystemActivity } from "@lib/audit";
 
-  const form = document.getElementById('form-login') as HTMLFormElement;
-  const emailInput = document.getElementById('login-email') as HTMLInputElement;
-  const passwordInput = document.getElementById('login-password') as HTMLInputElement;
-  const rememberCheckbox = document.getElementById('remember-me') as HTMLInputElement;
-  const submitBtn = document.getElementById('btn-submit-login') as HTMLButtonElement;
-  const btnText = document.getElementById('btn-login-text') as HTMLElement;
-  const btnSpinner = document.getElementById('btn-login-spinner') as HTMLElement;
-  const alertBox = document.getElementById('login-alert-box') as HTMLElement;
-  const alertText = document.getElementById('login-alert-text') as HTMLElement;
+  const form = document.getElementById("form-login") as HTMLFormElement;
+  const emailInput = document.getElementById("login-email") as HTMLInputElement;
+  const passwordInput = document.getElementById(
+    "login-password",
+  ) as HTMLInputElement;
+  const rememberCheckbox = document.getElementById(
+    "remember-me",
+  ) as HTMLInputElement;
+  const submitBtn = document.getElementById(
+    "btn-submit-login",
+  ) as HTMLButtonElement;
+  const btnText = document.getElementById("btn-login-text") as HTMLElement;
+  const btnSpinner = document.getElementById(
+    "btn-login-spinner",
+  ) as HTMLElement;
+  const alertBox = document.getElementById("login-alert-box") as HTMLElement;
+  const alertText = document.getElementById("login-alert-text") as HTMLElement;
 
   // Toggle visibilidad de contraseña
-  const togglePassBtn = document.getElementById('btn-toggle-password');
-  const eyeOpen = document.getElementById('eye-icon-open');
-  const eyeClosed = document.getElementById('eye-icon-closed');
+  const togglePassBtn = document.getElementById("btn-toggle-password");
+  const eyeOpen = document.getElementById("eye-icon-open");
+  const eyeClosed = document.getElementById("eye-icon-closed");
 
   if (togglePassBtn && passwordInput && eyeOpen && eyeClosed) {
-    togglePassBtn.addEventListener('click', () => {
-      const isPassword = passwordInput.type === 'password';
-      passwordInput.type = isPassword ? 'text' : 'password';
-      eyeOpen.style.display = isPassword ? 'none' : 'block';
-      eyeClosed.style.display = isPassword ? 'block' : 'none';
-      togglePassBtn.setAttribute('title', isPassword ? 'Ocultar contraseña' : 'Mostrar contraseña');
+    togglePassBtn.addEventListener("click", () => {
+      const isPassword = passwordInput.type === "password";
+      passwordInput.type = isPassword ? "text" : "password";
+      eyeOpen.style.display = isPassword ? "none" : "block";
+      eyeClosed.style.display = isPassword ? "block" : "none";
+      togglePassBtn.setAttribute(
+        "title",
+        isPassword ? "Ocultar contraseña" : "Mostrar contraseña",
+      );
     });
   }
 
   function showAlert(msg: string) {
     if (alertBox && alertText) {
       alertText.textContent = msg;
-      alertBox.style.display = 'flex';
+      alertBox.style.display = "flex";
     }
   }
 
   function hideAlert() {
     if (alertBox) {
-      alertBox.style.display = 'none';
+      alertBox.style.display = "none";
     }
   }
 
@@ -911,25 +1079,27 @@ import AuthLayout from '@layouts/AuthLayout.astro';
     if (!submitBtn) return;
     submitBtn.disabled = loading;
     if (loading) {
-      if (btnText) btnText.textContent = 'Verificando credenciales...';
-      if (btnSpinner) btnSpinner.style.display = 'block';
+      if (btnText) btnText.textContent = "Verificando credenciales...";
+      if (btnSpinner) btnSpinner.style.display = "block";
     } else {
-      if (btnText) btnText.textContent = 'Iniciar Sesión Institucional';
-      if (btnSpinner) btnSpinner.style.display = 'none';
+      if (btnText) btnText.textContent = "Iniciar Sesión Institucional";
+      if (btnSpinner) btnSpinner.style.display = "none";
     }
   }
 
   // Manejo del Submit del Login Institucional
-  form?.addEventListener('submit', async (e) => {
+  form?.addEventListener("submit", async (e) => {
     e.preventDefault();
     hideAlert();
 
-    const email = emailInput?.value.trim().toLowerCase() || '';
-    const password = passwordInput?.value || '';
+    const email = emailInput?.value.trim().toLowerCase() || "";
+    const password = passwordInput?.value || "";
     const remember = rememberCheckbox?.checked ?? true;
 
     if (!email || !password) {
-      showAlert('Por favor ingrese tanto el correo institucional como la contraseña.');
+      showAlert(
+        "Por favor ingrese tanto el correo institucional como la contraseña.",
+      );
       return;
     }
 
@@ -937,16 +1107,19 @@ import AuthLayout from '@layouts/AuthLayout.astro';
 
     try {
       // 1. Autenticación oficial y cifrada con Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
+      const { data: authData, error: authError } =
+        await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
 
       if (authError || !authData.user) {
-        console.warn('Error de autenticación Supabase:', authError);
-        const msg = authError?.message === 'Invalid login credentials'
-          ? 'Credenciales incorrectas. Verifique su correo institucional y contraseña.'
-          : (authError?.message || 'No se pudo iniciar sesión. Verifique sus credenciales.');
+        console.warn("Error de autenticación Supabase:", authError);
+        const msg =
+          authError?.message === "Invalid login credentials"
+            ? "Credenciales incorrectas. Verifique su correo institucional y contraseña."
+            : authError?.message ||
+              "No se pudo iniciar sesión. Verifique sus credenciales.";
         showAlert(msg);
         setLoading(false);
         return;
@@ -954,41 +1127,57 @@ import AuthLayout from '@layouts/AuthLayout.astro';
 
       // 2. Consultar perfil institucional del usuario en Supabase PostgreSQL
       const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
+        .from("profiles")
+        .select("*")
         .or(`email.eq.${email},id.eq.${authData.user.id}`)
         .maybeSingle();
 
-      const fullName = profile?.full_name || authData.user.user_metadata?.full_name || 'Funcionario Institucional';
-      const roleCode = profile?.role || authData.user.user_metadata?.role || 'funcionario';
-      const isAdmin = roleCode === 'admin';
-      const userId = profile?.id || 'usr-root';
+      const fullName =
+        profile?.full_name ||
+        authData.user.user_metadata?.full_name ||
+        "Funcionario Institucional";
+      const roleCode =
+        profile?.role || authData.user.user_metadata?.role || "funcionario";
+      const isAdmin = roleCode === "admin";
+      const userId = profile?.id || "usr-root";
 
       const sessionUser = {
         id: userId,
         authId: authData.user.id,
         name: fullName,
         email: email,
-        role: isAdmin ? 'Administrador' : 'Funcionario',
+        role: isAdmin ? "Administrador" : "Funcionario",
         roleId: roleCode,
-        initials: fullName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() || 'FN',
-        avatarColor: isAdmin ? '#006837' : '#D4AF37',
+        initials:
+          fullName
+            .split(" ")
+            .map((n: string) => n[0])
+            .join("")
+            .substring(0, 2)
+            .toUpperCase() || "FN",
+        avatarColor: isAdmin ? "#006837" : "#D4AF37",
         avatar_url: profile?.avatar_url || null,
-        avatarUrl: profile?.avatar_url || null
+        avatarUrl: profile?.avatar_url || null,
       };
 
       // 3. Persistir sesión en localStorage y cookies del middleware
-      localStorage.setItem('sgd_current_user', JSON.stringify(sessionUser));
+      localStorage.setItem("sgd_current_user", JSON.stringify(sessionUser));
       const sessionPayload = {
         userId: sessionUser.id,
         email: sessionUser.email,
-        loggedAt: new Date().toISOString()
+        loggedAt: new Date().toISOString(),
       };
 
       if (remember) {
-        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionPayload));
+        localStorage.setItem(
+          SESSION_STORAGE_KEY,
+          JSON.stringify(sessionPayload),
+        );
       } else {
-        sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionPayload));
+        sessionStorage.setItem(
+          SESSION_STORAGE_KEY,
+          JSON.stringify(sessionPayload),
+        );
       }
 
       // Cookie de sesión que verifica el middleware (max-age 7 días si remember, o 1 día)
@@ -999,23 +1188,28 @@ import AuthLayout from '@layouts/AuthLayout.astro';
       try {
         await logSystemActivity({
           actor: sessionUser,
-          action: 'Inicio de Sesión Exitoso',
-          actionType: 'ACCESO',
-          entity: 'Control de Acceso Institucional',
+          action: "Inicio de Sesión Exitoso",
+          actionType: "ACCESO",
+          entity: "Control de Acceso Institucional",
           entityId: sessionUser.id,
           details: `El usuario ${sessionUser.name} (${sessionUser.email}) inició sesión con credenciales institucionales verificadas en Supabase Auth.`,
-          severity: 'INFO'
+          severity: "INFO",
         });
       } catch (auditErr) {
-        console.warn('Registro de auditoría completado en segundo plano:', auditErr);
+        console.warn(
+          "Registro de auditoría completado en segundo plano:",
+          auditErr,
+        );
       }
 
       // 5. Redirección inmediata al Dashboard Institucional
-      window.location.href = '/dashboard';
-
+      window.location.href = "/dashboard";
     } catch (err: any) {
-      console.error('Error general durante el login:', err);
-      showAlert(err.message || 'Ocurrió un error inesperado al conectar con el servidor de autenticación.');
+      console.error("Error general durante el login:", err);
+      showAlert(
+        err.message ||
+          "Ocurrió un error inesperado al conectar con el servidor de autenticación.",
+      );
       setLoading(false);
     }
   });
