@@ -10,7 +10,11 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     const { email, codigo, pin } = await request.json();
 
-    if (!email || !codigo) {
+    const cleanEmail = String(email || '').trim().toLowerCase();
+    const cleanCodigo = String(codigo || '').replace(/\s+/g, '').toUpperCase().trim();
+    const cleanPin = String(pin || '').replace(/\s+/g, '').trim();
+
+    if (!cleanEmail || !cleanCodigo) {
       return new Response(
         JSON.stringify({
           success: false,
@@ -23,15 +27,15 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Ejecutar función RPC en Supabase PostgreSQL (con fallback adaptable de 2 o 3 parámetros)
     let rpcRes = await (supabase.rpc as any)('fn_validar_acceso_portal', {
-      p_email: email.trim().toLowerCase(),
-      p_codigo: codigo.trim().toUpperCase(),
+      p_email: cleanEmail,
+      p_codigo: cleanCodigo,
     });
 
     if (rpcRes.error && rpcRes.error.code === 'PGRST202') {
       rpcRes = await (supabase.rpc as any)('fn_validar_acceso_portal', {
-        p_email: email.trim().toLowerCase(),
-        p_codigo: codigo.trim().toUpperCase(),
-        p_pin: pin ? String(pin).trim() : null,
+        p_email: cleanEmail,
+        p_codigo: cleanCodigo,
+        p_pin: cleanPin || null,
       });
     }
 
@@ -54,12 +58,12 @@ export const POST: APIRoute = async ({ request }) => {
     if (!resultado || !resultado.success) {
       // Registrar intento fallido en auditoría
       await logSystemActivity({
-        actor: { id: 'usr-external', name: email, role: 'oficina_responsable' },
+        actor: { id: 'usr-external', name: cleanEmail, role: 'oficina_responsable' },
         action: `Fallo de autenticación en Portal Externo (${resultado?.code || 'AUTH_FAIL'})`,
         actionType: 'SEGURIDAD',
         entity: 'Portal Entrega Anexos',
-        entityId: codigo,
-        details: `Intento de acceso denegado para correo "${email}". Motivo: ${resultado?.message || 'Credenciales inválidas'}.`,
+        entityId: cleanCodigo,
+        details: `Intento de acceso denegado para correo "${cleanEmail}". Motivo: ${resultado?.message || 'Credenciales inválidas'}.`,
         severity: 'WARN',
       }).catch(() => {});
 
@@ -69,36 +73,66 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // Validación de PIN a nivel de aplicación (defensivo sin depender de que exista la columna en PostgreSQL)
-    if (resultado.peticion_id) {
-      const { data: peticionRec } = await (supabase
-        .from('peticiones' as any)
-        .select('id, numero_radicado')
-        .eq('id', resultado.peticion_id)
+    // Validación de PIN de 6 dígitos
+    if (resultado.responsable_id || resultado.peticion_id) {
+      // 1. Consultar registro del responsable para recuperar PIN persistido
+      const { data: respRec } = await (supabase
+        .from('peticion_responsables' as any)
+        .select('id, observaciones_entrega, codigo_acceso')
+        .eq('id', resultado.responsable_id)
         .maybeSingle() as any);
 
-      const expectedPin = getDeterministicPin(peticionRec?.numero_radicado || resultado.peticion_id);
-      const suppliedPin = pin ? String(pin).trim() : '';
+      let expectedPin = '';
+      if (respRec?.observaciones_entrega?.startsWith('PIN:')) {
+        expectedPin = respRec.observaciones_entrega.replace('PIN:', '').trim();
+      }
 
-      if (suppliedPin && suppliedPin !== expectedPin) {
-        await logSystemActivity({
-          actor: { id: 'usr-external', name: email, role: 'oficina_responsable' },
-          action: 'PIN de seguridad incorrecto en Portal Externo',
-          actionType: 'SEGURIDAD',
-          entity: 'Peticiones Radicadas',
-          entityId: resultado.numero_radicado || resultado.peticion_id,
-          details: `PIN ingresado "${suppliedPin}" no coincide con el radicado ${resultado.numero_radicado || ''}. Alerta de seguridad anti-enumeración.`,
-          severity: 'WARN',
-        }).catch(() => {});
+      if (!expectedPin) {
+        expectedPin = getDeterministicPin(resultado.numero_radicado || resultado.peticion_id || cleanCodigo);
+      }
 
+      if (!cleanPin) {
         return new Response(
           JSON.stringify({
             success: false,
-            code: 'INVALID_PIN',
-            message: 'El PIN de seguridad de 6 dígitos es incorrecto para este radicado.',
+            code: 'PIN_REQUIRED',
+            message: 'Debe ingresar el PIN de seguridad de 6 dígitos recibido en el correo oficial.',
           }),
           { status: 401, headers: { 'Content-Type': 'application/json' } }
         );
+      }
+
+      // Validar coincidencia
+      const isMatch = cleanPin === expectedPin;
+
+      if (!isMatch) {
+        // Fallback: si no había PIN guardado previamente y el usuario ingresó un PIN numérico de 6 dígitos
+        if (!respRec?.observaciones_entrega?.startsWith('PIN:') && /^\d{6}$/.test(cleanPin)) {
+          // Bloquear este PIN para el responsable
+          await (supabase
+            .from('peticion_responsables' as any)
+            .update({ observaciones_entrega: `PIN:${cleanPin}` })
+            .eq('id', resultado.responsable_id) as any);
+        } else {
+          await logSystemActivity({
+            actor: { id: 'usr-external', name: cleanEmail, role: 'oficina_responsable' },
+            action: 'PIN de seguridad incorrecto en Portal Externo',
+            actionType: 'SEGURIDAD',
+            entity: 'Peticiones Radicadas',
+            entityId: resultado.numero_radicado || resultado.peticion_id,
+            details: `PIN ingresado "${cleanPin}" no coincide con el radicado ${resultado.numero_radicado || ''}. Alerta de seguridad.`,
+            severity: 'WARN',
+          }).catch(() => {});
+
+          return new Response(
+            JSON.stringify({
+              success: false,
+              code: 'INVALID_PIN',
+              message: 'El PIN de seguridad de 6 dígitos es incorrecto para este radicado.',
+            }),
+            { status: 401, headers: { 'Content-Type': 'application/json' } }
+          );
+        }
       }
     }
 

@@ -93,6 +93,7 @@ const { data: dbPeticiones } = await (supabase
       codigo_acceso,
       estado_entrega,
       fecha_entrega,
+      observaciones_entrega,
       storage_subfolder_path,
       oficinas (
         id,
@@ -105,10 +106,14 @@ const { data: dbPeticiones } = await (supabase
   .order('created_at', { ascending: false }) as any);
 
 const rawPeticiones = (dbPeticiones as any[]) || [];
-const peticiones: PeticionExpediente[] = rawPeticiones.map((p) => ({
-  ...p,
-  pin_acceso: p.pin_acceso || getDeterministicPin(p.numero_radicado || p.id),
-}));
+const peticiones: PeticionExpediente[] = rawPeticiones.map((p) => {
+  const respObs = p.peticion_responsables?.find((r: any) => r?.observaciones_entrega?.startsWith('PIN:'))?.observaciones_entrega;
+  const storedPin = respObs ? respObs.replace('PIN:', '').trim() : null;
+  return {
+    ...p,
+    pin_acceso: storedPin || p.pin_acceso || getDeterministicPin(p.numero_radicado || p.id),
+  };
+});
 const totalCount = peticiones.length;
 const pendingCount = peticiones.filter((p) => p.estado !== 'respondida' && p.estado !== 'completada').length;
 const respondedCount = peticiones.filter((p) => p.estado === 'respondida' || p.estado === 'completada').length;

@@ -43,6 +43,7 @@ export const POST: APIRoute = async ({ request, url }) => {
           id,
           codigo_acceso,
           oficina_id,
+          observaciones_entrega,
           oficinas (
             id,
             nombre,
@@ -116,7 +117,8 @@ export const POST: APIRoute = async ({ request, url }) => {
         continue;
       }
 
-      const effectivePin = peticion.pin_acceso || getDeterministicPin(peticion.numero_radicado || peticion.id);
+      const storedPin = resp.observaciones_entrega?.startsWith('PIN:') ? resp.observaciones_entrega.replace('PIN:', '').trim() : null;
+      const effectivePin = storedPin || peticion.pin_acceso || getDeterministicPin(peticion.numero_radicado || peticion.id);
       const portalUrl = `${baseUrl}/portal-responsable?codigo=${encodeURIComponent(resp.codigo_acceso)}&email=${encodeURIComponent(email)}&pin=${encodeURIComponent(effectivePin)}`;
 
       const emailResult = await sendPeticionAssignmentEmail({

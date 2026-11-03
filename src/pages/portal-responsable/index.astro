@@ -1277,17 +1277,17 @@ import Layout from '@layouts/Layout.astro';
   const inputCodigo = document.getElementById('portal-input-codigo') as HTMLInputElement;
   const inputPin = document.getElementById('portal-input-pin') as HTMLInputElement;
 
-  if (paramEmail && inputEmail) inputEmail.value = paramEmail;
-  if (paramCodigo && inputCodigo) inputCodigo.value = paramCodigo;
-  if (paramPin && inputPin) inputPin.value = paramPin;
+  if (paramEmail && inputEmail) inputEmail.value = paramEmail.trim();
+  if (paramCodigo && inputCodigo) inputCodigo.value = paramCodigo.replace(/\s+/g, '').toUpperCase().trim();
+  if (paramPin && inputPin) inputPin.value = paramPin.replace(/\s+/g, '').trim();
 
   // 1. Manejo del Login de Responsables
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const email = (document.getElementById('portal-input-email') as HTMLInputElement)?.value.trim();
-      const codigo = (document.getElementById('portal-input-codigo') as HTMLInputElement)?.value.trim();
-      const pin = (document.getElementById('portal-input-pin') as HTMLInputElement)?.value.trim();
+      const email = (document.getElementById('portal-input-email') as HTMLInputElement)?.value.trim().toLowerCase();
+      const codigo = (document.getElementById('portal-input-codigo') as HTMLInputElement)?.value.replace(/\s+/g, '').toUpperCase().trim();
+      const pin = (document.getElementById('portal-input-pin') as HTMLInputElement)?.value.replace(/\s+/g, '').trim();
 
       if (loginError) loginError.style.display = 'none';
 

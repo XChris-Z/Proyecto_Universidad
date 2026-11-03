@@ -237,6 +237,7 @@ export const POST: APIRoute = async ({ request, url }) => {
       peticion_id: peticionData.id,
       oficina_id: ofi.id,
       estado_entrega: 'Pendiente',
+      observaciones_entrega: `PIN:${pinAcceso}`,
     }));
 
     const { data: responsablesData, error: respError } = await (supabase
