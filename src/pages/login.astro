@@ -1,287 +1,539 @@
 ---
 // src/pages/login.astro
-// Pantalla de Autenticación Institucional Oficial — SGD Unitrópico
+// Pantalla de Autenticación Institucional Oficial UI/UX Pro Max — SGD Unitrópico
 import AuthLayout from '@layouts/AuthLayout.astro';
 ---
 
 <AuthLayout title="Acceso al Sistema — SGD Unitrópico">
-  <div class="login-page-wrapper">
-    <!-- Fondo con motivos geométricos institucionales sutiles -->
-    <div class="login-bg-overlay"></div>
+  <div class="login-promax-wrapper">
 
-    <div class="login-card-container">
-      <!-- Tarjeta Principal de Login -->
-      <div class="login-card">
+    <!-- =====================================================================
+         PANEL IZQUIERDO: IDENTIDAD INSTITUCIONAL INMERSIVA (DESKTOP)
+         ===================================================================== -->
+    <aside class="login-brand-panel" aria-label="Identidad Institucional Unitrópico">
+      <div class="brand-panel-inner">
         
-        <!-- Cabecera Institucional con Logo Centrado -->
-        <div class="login-card-header">
-          <div class="logo-wrapper">
+        <!-- Cabecera de Marca -->
+        <div class="brand-header">
+          <div class="brand-logo-card">
             <img 
               src="/logo.png" 
               alt="Logo Oficial Unitrópico" 
-              class="login-logo-img" 
+              class="brand-logo-img" 
               loading="eager"
             />
           </div>
-          <div class="gold-accent-line"></div>
-          <h1 class="system-title">Sistema de Gestión Documental</h1>
-          <p class="system-subtitle">Gobierno Institucional y Correspondencia Oficial</p>
+          <div class="brand-gold-line"></div>
+          <span class="brand-institution-chip">Universidad Internacional del Trópico Americano</span>
+          <h1 class="brand-main-title">Sistema de Gestión y Gobierno Universitario</h1>
+          <p class="brand-subtitle">
+            Plataforma institucional de radicación oficial, cuerpos colegiados, convenios y control estricto de términos perentorios.
+          </p>
         </div>
 
-        <!-- Caja de Alerta / Mensajes de Error -->
-        <div id="login-alert-box" class="login-alert" style="display: none;" role="alert">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="alert-icon">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="8" x2="12" y2="12"/>
-            <line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
-          <span id="login-alert-text">Credenciales incorrectas o usuario no registrado en el sistema.</span>
+        <!-- 3 Píldoras de Valor Institucional -->
+        <div class="brand-features-list">
+          <div class="brand-feature-item">
+            <div class="feature-icon-box gold">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div class="feature-text">
+              <strong>Control de Términos Ley 1755</strong>
+              <span>Semáforo preventivo SLA de 15 días con alertas tempranas automatizadas.</span>
+            </div>
+          </div>
+
+          <div class="brand-feature-item">
+            <div class="feature-icon-box emerald">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            <div class="feature-text">
+              <strong>Expedientes Digitales Centralizados</strong>
+              <span>Custodia y archivo digital con subcarpetas para cada oficina requerida.</span>
+            </div>
+          </div>
+
+          <div class="brand-feature-item">
+            <div class="feature-icon-box teal">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div class="feature-text">
+              <strong>Autenticación Cifrada y Trazabilidad</strong>
+              <span>Seguridad con Supabase Auth y registro inmutable en bitácora de auditoría.</span>
+            </div>
+          </div>
         </div>
 
-        <!-- Formulario Oficial de Autenticación con Supabase Auth -->
-        <form id="form-login" class="login-form" autocomplete="on">
+        <!-- Footer del Panel de Marca -->
+        <div class="brand-panel-footer">
+          <div class="security-seal">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <span>Conexión Segura TLS 1.3 &bull; Despacho Rectoral</span>
+          </div>
+          <p class="brand-copy">&copy; {new Date().getFullYear()} Unitrópico &bull; Yopal, Casanare, Colombia</p>
+        </div>
+
+      </div>
+    </aside>
+
+    <!-- =====================================================================
+         PANEL DERECHO: FORMULARIO EJECUTIVO PRO MAX
+         ===================================================================== -->
+    <main class="login-form-panel">
+      <div class="login-form-wrapper">
+
+        <!-- Logo en Móvil (Visible solo en pantallas pequeñas) -->
+        <div class="login-mobile-header">
+          <img 
+            src="/logo.png" 
+            alt="Logo Oficial Unitrópico" 
+            class="login-mobile-logo" 
+            loading="eager"
+          />
+          <div class="brand-gold-line mobile"></div>
+        </div>
+
+        <div class="login-card-promax">
           
-          <!-- Campo: Correo Electrónico Institucional -->
-          <div class="form-group">
-            <label for="login-email" class="form-label">
-              Correo Electrónico Institucional
-            </label>
-            <div class="input-with-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="input-icon">
-                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                <polyline points="22,6 12,13 2,6"/>
-              </svg>
-              <input 
-                type="email" 
-                id="login-email" 
-                name="email"
-                class="form-control" 
-                placeholder="usuario@unitropico.edu.co" 
-                required 
-                autocomplete="username"
-                autofocus
-              />
+          <!-- Encabezado del Formulario -->
+          <div class="form-card-header">
+            <div class="form-badge">
+              <span class="badge-dot"></span>
+              <span>Portal de Funcionarios Institucionales</span>
             </div>
+            <h2 class="form-main-title">Iniciar Sesión</h2>
+            <p class="form-main-subtitle">
+              Ingrese su correo institucional para acceder al panel de control rectoral y gestión de expedientes.
+            </p>
           </div>
 
-          <!-- Campo: Contraseña Institucional con Toggle de Visibilidad -->
-          <div class="form-group">
-            <div class="label-row">
-              <label for="login-password" class="form-label">Contraseña</label>
-            </div>
-            <div class="input-with-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="input-icon">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              </svg>
-              <input 
-                type="password" 
-                id="login-password" 
-                name="password"
-                class="form-control" 
-                placeholder="••••••••••••" 
-                required 
-                autocomplete="current-password"
-              />
-              <button 
-                type="button" 
-                id="btn-toggle-password" 
-                class="btn-toggle-eye" 
-                aria-label="Mostrar u ocultar contraseña"
-                title="Mostrar contraseña"
-              >
-                <svg id="eye-icon-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                  <circle cx="12" cy="12" r="3"/>
+          <!-- Caja de Alerta / Errores -->
+          <div id="login-alert-box" class="login-alert-promax" style="display: none;" role="alert">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="alert-icon">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span id="login-alert-text">Credenciales incorrectas o usuario no registrado.</span>
+          </div>
+
+          <!-- Formulario Oficial de Autenticación con Supabase Auth -->
+          <form id="form-login" class="login-form-body" autocomplete="on">
+            
+            <!-- Campo: Correo Electrónico Institucional -->
+            <div class="form-group-promax">
+              <label for="login-email" class="form-label-promax">
+                Correo Electrónico Institucional
+              </label>
+              <div class="input-container-promax">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="input-icon-promax">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                  <polyline points="22,6 12,13 2,6"/>
                 </svg>
-                <svg id="eye-icon-closed" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
-                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-                  <line x1="1" y1="1" x2="23" y2="23"/>
-                </svg>
-              </button>
+                <input 
+                  type="email" 
+                  id="login-email" 
+                  name="email"
+                  class="form-input-promax" 
+                  placeholder="usuario@unitropico.edu.co" 
+                  required 
+                  autocomplete="username"
+                  autofocus
+                />
+              </div>
             </div>
-          </div>
 
-          <!-- Opciones Adicionales: Recordar Sesión -->
-          <div class="form-options">
-            <label class="remember-checkbox-label">
-              <input type="checkbox" id="remember-me" checked />
-              <span class="checkbox-custom"></span>
-              <span class="remember-text">Recordar sesión en este equipo</span>
-            </label>
-          </div>
+            <!-- Campo: Contraseña Institucional con Toggle de Visibilidad -->
+            <div class="form-group-promax">
+              <div class="label-row-promax">
+                <label for="login-password" class="form-label-promax">Contraseña</label>
+              </div>
+              <div class="input-container-promax">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="input-icon-promax">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                <input 
+                  type="password" 
+                  id="login-password" 
+                  name="password"
+                  class="form-input-promax" 
+                  placeholder="••••••••••••" 
+                  required 
+                  autocomplete="current-password"
+                />
+                <button 
+                  type="button" 
+                  id="btn-toggle-password" 
+                  class="btn-toggle-eye-promax" 
+                  aria-label="Mostrar u ocultar contraseña"
+                  title="Mostrar contraseña"
+                >
+                  <svg id="eye-icon-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  <svg id="eye-icon-closed" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                    <line x1="1" y1="1" x2="23" y2="23"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
 
-          <!-- Botón de Inicio de Sesión Oficial -->
-          <div class="form-submit">
-            <button type="submit" id="btn-submit-login" class="btn-login-primary">
-              <span class="btn-text" id="btn-login-text">Iniciar Sesión</span>
-              <div class="spinner-loader" id="btn-login-spinner" style="display: none;"></div>
+            <!-- Opciones Adicionales: Recordar Sesión -->
+            <div class="form-options-promax">
+              <label class="remember-checkbox-promax">
+                <input type="checkbox" id="remember-me" checked />
+                <span class="checkbox-custom-promax"></span>
+                <span>Mantener sesión iniciada</span>
+              </label>
+            </div>
+
+            <!-- Botón de Inicio de Sesión Oficial -->
+            <button type="submit" id="btn-submit-login" class="btn-submit-promax">
+              <span class="btn-text-promax" id="btn-login-text">Iniciar Sesión Institucional</span>
+              <div class="spinner-loader-promax" id="btn-login-spinner" style="display: none;"></div>
             </button>
+
+          </form>
+
+          <!-- Separador Discreto -->
+          <div class="login-divider-promax">
+            <span>Acceso Externo para Dependencias</span>
           </div>
 
-        </form>
-
-        <!-- Separador Discreto -->
-        <div class="login-divider">
-          <span>Acceso Institucional Seguro</span>
-        </div>
-
-        <!-- Banner del Portal Externo de Responsables (Entrega de Anexos) -->
-        <div class="portal-banner">
-          <div class="portal-banner-info">
-            <div class="portal-title">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-                <polyline points="10 17 15 12 10 7"/>
-                <line x1="15" y1="12" x2="3" y2="12"/>
-              </svg>
-              <span>Portal Externo de Responsables</span>
+          <!-- Banner del Portal Externo de Responsables -->
+          <div class="portal-banner-promax">
+            <div class="portal-banner-content">
+              <div class="portal-banner-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                  <polyline points="10 17 15 12 10 7"/>
+                  <line x1="15" y1="12" x2="3" y2="12"/>
+                </svg>
+                <span>Portal de Entrega de Anexos</span>
+              </div>
+              <p class="portal-banner-desc">
+                ¿Tiene un código único temporal para aportar soportes a un radicado?
+              </p>
             </div>
-            <p class="portal-desc">¿Tienes un código de radicado para adjuntar respuesta?</p>
+            <a href="/portal-responsable" class="btn-portal-promax">
+              <span>Ingresar con Código</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </a>
           </div>
-          <a href="/portal-responsable" class="btn-portal-link">
-            Ir al Portal &rarr;
-          </a>
-        </div>
 
-        <!-- Pie de Seguridad Cifrada -->
-        <div class="login-card-footer">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-          </svg>
-          <span>Conexión protegida TLS 1.3 &bull; Supabase Auth &bull; Trazabilidad SHA-256</span>
+          <!-- Pie de Seguridad y Cifrado -->
+          <div class="login-security-notice">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            <span>Supabase Auth &bull; TLS 1.3 &bull; Trazabilidad Inmutable SHA-256</span>
+          </div>
+
         </div>
 
       </div>
+    </main>
 
-      <!-- Pie Institucional -->
-      <div class="login-outer-footer">
-        <p>&copy; {new Date().getFullYear()} Universidad Internacional del Trópico Americano &bull; Yopal, Casanare, Colombia</p>
-      </div>
-    </div>
   </div>
 </AuthLayout>
 
 <style>
-  .login-page-wrapper {
+  /* ==========================================================================
+     CONTENEDOR SPLIT SCREEN PRO MAX (SIN MANCHAS NI RAYONES)
+     ========================================================================== */
+  .login-promax-wrapper {
     width: 100%;
     min-height: 100vh;
     min-height: 100dvh;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-    position: relative;
-    box-sizing: border-box;
+    overflow-x: hidden;
+    background: #f8fafc;
     font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
   }
 
-  .login-bg-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: 
-      radial-gradient(circle at 15% 20%, rgba(212, 175, 55, 0.12) 0%, transparent 45%),
-      radial-gradient(circle at 85% 80%, rgba(0, 89, 78, 0.45) 0%, transparent 50%),
-      linear-gradient(135deg, #00362f 0%, #00594E 60%, #046A5E 100%);
-    pointer-events: none;
-    z-index: 1;
+  /* ==========================================================================
+     PANEL IZQUIERDO: MARCA E IDENTIDAD INSTITUCIONAL
+     ========================================================================== */
+  .login-brand-panel {
+    width: 50%;
+    min-width: 480px;
+    background: linear-gradient(145deg, #052e16 0%, #064e3b 55%, #065f46 100%);
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: clamp(2.5rem, 5vw, 4.5rem);
+    position: relative;
+    box-sizing: border-box;
+    border-right: 1px solid rgba(255, 255, 255, 0.12);
   }
 
-  .login-card-container {
+  .brand-panel-inner {
+    max-width: 490px;
     width: 100%;
-    max-width: 520px;
-    position: relative;
-    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  .brand-logo-card {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.98);
+    padding: 10px 18px;
+    border-radius: 12px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.2);
+    margin-bottom: 8px;
+  }
+
+  .brand-logo-img {
+    height: 48px;
+    width: auto;
+    object-fit: contain;
+  }
+
+  .brand-gold-line {
+    width: 56px;
+    height: 3px;
+    background: linear-gradient(90deg, #b8860b, #d4af37);
+    border-radius: 2px;
+    margin: 12px 0;
+  }
+
+  .brand-gold-line.mobile {
+    margin: 12px auto;
+  }
+
+  .brand-institution-chip {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 750;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #e2e8f0;
+    margin-bottom: 6px;
+  }
+
+  .brand-main-title {
+    font-size: 1.85rem;
+    font-weight: 850;
+    line-height: 1.25;
+    letter-spacing: -0.025em;
+    color: #ffffff;
+    margin: 0 0 12px 0;
+  }
+
+  .brand-subtitle {
+    font-size: 0.88rem;
+    line-height: 1.55;
+    color: rgba(255, 255, 255, 0.85);
+    margin: 0;
+  }
+
+  /* Píldoras de Valor */
+  .brand-features-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .brand-feature-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    padding: 14px 16px;
+    transition: all 0.2s ease;
+  }
+
+  .brand-feature-item:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(212, 175, 55, 0.4);
+    transform: translateX(4px);
+  }
+
+  .feature-icon-box {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .feature-icon-box.gold {
+    background: rgba(184, 134, 11, 0.25);
+    color: #fde047;
+    border: 1px solid rgba(212, 175, 55, 0.35);
+  }
+
+  .feature-icon-box.emerald {
+    background: rgba(5, 150, 105, 0.25);
+    color: #6ee7b7;
+    border: 1px solid rgba(16, 185, 129, 0.35);
+  }
+
+  .feature-icon-box.teal {
+    background: rgba(13, 148, 136, 0.25);
+    color: #5eead4;
+    border: 1px solid rgba(20, 184, 166, 0.35);
+  }
+
+  .feature-text {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .feature-text strong {
+    font-size: 0.84rem;
+    font-weight: 750;
+    color: #ffffff;
+  }
+
+  .feature-text span {
+    font-size: 0.76rem;
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.4;
+  }
+
+  /* Footer del Panel */
+  .brand-panel-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+  }
+
+  .security-seal {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.74rem;
+    font-weight: 650;
+    color: #e2e8f0;
+  }
+
+  .brand-copy {
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.65);
+    margin: 0;
+  }
+
+  /* ==========================================================================
+     PANEL DERECHO: FORMULARIO EJECUTIVO PRO MAX
+     ========================================================================== */
+  .login-form-panel {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(1.5rem, 4vw, 3rem);
+    background: #f8fafc;
+    box-sizing: border-box;
+  }
+
+  .login-form-wrapper {
+    width: 100%;
+    max-width: 480px;
     display: flex;
     flex-direction: column;
     align-items: center;
   }
 
-  .login-card {
-    width: 100%;
-    background: #ffffff;
-    border-radius: 18px;
-    box-shadow: 
-      0 20px 45px -10px rgba(0, 0, 0, 0.35),
-      0 0 0 1px rgba(255, 255, 255, 0.18);
-    padding: 36px 36px 28px 36px;
-    box-sizing: border-box;
-    animation: fadeInCard 0.4s ease-out;
+  .login-mobile-header {
+    display: none;
+    text-align: center;
+    margin-bottom: 16px;
   }
 
-  @keyframes fadeInCard {
+  .login-mobile-logo {
+    height: 48px;
+    width: auto;
+    object-fit: contain;
+  }
+
+  /* Tarjeta con animación Crossfade */
+  .login-card-promax {
+    width: 100%;
+    background: #ffffff;
+    border-radius: 20px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.07), 0 1px 3px rgba(0, 0, 0, 0.02);
+    padding: clamp(28px, 4vw, 40px);
+    box-sizing: border-box;
+    animation: promaxCardCrossfade 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes promaxCardCrossfade {
     from {
       opacity: 0;
-      transform: translateY(12px) scale(0.98);
+      transform: translateY(10px);
     }
     to {
       opacity: 1;
-      transform: translateY(0) scale(1);
+      transform: translateY(0);
     }
   }
 
-  /* Header y Logo */
-  .login-card-header {
-    text-align: center;
+  /* Encabezado */
+  .form-card-header {
     margin-bottom: 24px;
   }
 
-  .logo-wrapper {
-    display: flex;
-    justify-content: center;
+  .form-badge {
+    display: inline-flex;
     align-items: center;
-    margin-bottom: 14px;
-    padding: 4px;
+    gap: 7px;
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    color: #065f46;
+    font-size: 0.72rem;
+    font-weight: 750;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+    letter-spacing: 0.02em;
   }
 
-  .login-logo-img {
-    max-width: 220px;
-    max-height: 85px;
-    width: auto;
-    height: auto;
-    object-fit: contain;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.05));
-    transition: transform 0.25s ease;
+  .badge-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #059669;
   }
 
-  .login-logo-img:hover {
-    transform: scale(1.02);
-  }
-
-  .gold-accent-line {
-    width: 52px;
-    height: 3px;
-    background: linear-gradient(90deg, #B5A160, #D4AF37);
-    margin: 12px auto 14px auto;
-    border-radius: 2px;
-  }
-
-  .system-title {
-    font-size: 1.18rem;
-    font-weight: 800;
+  .form-main-title {
+    font-size: 1.55rem;
+    font-weight: 850;
     color: #0f172a;
-    margin: 0;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.025em;
+    margin: 0 0 6px 0;
   }
 
-  .system-subtitle {
-    font-size: 0.78rem;
+  .form-main-subtitle {
+    font-size: 0.84rem;
     color: #64748b;
-    margin: 5px 0 0 0;
-    font-weight: 500;
+    margin: 0;
+    line-height: 1.5;
   }
 
-  /* Alertas */
-  .login-alert {
+  /* Alerta */
+  .login-alert-promax {
     background: #fef2f2;
     border: 1px solid #fecaca;
     border-left: 4px solid #dc2626;
-    border-radius: 8px;
-    padding: 11px 14px;
+    border-radius: 10px;
+    padding: 12px 14px;
     margin-bottom: 20px;
     display: flex;
     align-items: center;
@@ -289,11 +541,11 @@ import AuthLayout from '@layouts/AuthLayout.astro';
     font-size: 0.82rem;
     color: #991b1b;
     font-weight: 600;
-    line-height: 1.35;
-    animation: shakeAlert 0.3s ease;
+    line-height: 1.4;
+    animation: promaxShake 0.3s ease;
   }
 
-  @keyframes shakeAlert {
+  @keyframes promaxShake {
     0%, 100% { transform: translateX(0); }
     25% { transform: translateX(-4px); }
     75% { transform: translateX(4px); }
@@ -305,33 +557,33 @@ import AuthLayout from '@layouts/AuthLayout.astro';
   }
 
   /* Formulario */
-  .login-form {
+  .login-form-body {
     display: flex;
     flex-direction: column;
     gap: 18px;
   }
 
-  .form-group {
+  .form-group-promax {
     display: flex;
     flex-direction: column;
     gap: 6px;
   }
 
-  .form-label {
-    font-size: 0.80rem;
-    font-weight: 700;
+  .form-label-promax {
+    font-size: 0.78rem;
+    font-weight: 750;
     color: #1e293b;
     text-transform: uppercase;
     letter-spacing: 0.03em;
   }
 
-  .input-with-icon {
+  .input-container-promax {
     position: relative;
     display: flex;
     align-items: center;
   }
 
-  .input-icon {
+  .input-icon-promax {
     position: absolute;
     left: 14px;
     color: #94a3b8;
@@ -339,33 +591,32 @@ import AuthLayout from '@layouts/AuthLayout.astro';
     transition: color 0.2s ease;
   }
 
-  .form-control {
+  .form-input-promax {
     width: 100%;
-    padding: 13px 14px 13px 44px;
+    padding: 12px 14px 12px 42px;
     font-size: 0.90rem;
     color: #0f172a;
     background: #f8fafc;
     border: 1.5px solid #cbd5e1;
-    border-radius: 9px;
+    border-radius: 10px;
     outline: none;
     font-family: inherit;
     font-weight: 500;
     box-sizing: border-box;
-    transition: all 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  .form-control:focus {
+  .form-input-promax:focus {
     background: #ffffff;
-    border-color: #00594E;
-    box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.12);
+    border-color: #006837;
+    box-shadow: 0 0 0 3px rgba(0, 104, 55, 0.12);
   }
 
-  .form-control:focus + .input-icon,
-  .input-with-icon:focus-within .input-icon {
-    color: #00594E;
+  .input-container-promax:focus-within .input-icon-promax {
+    color: #006837;
   }
 
-  .btn-toggle-eye {
+  .btn-toggle-eye-promax {
     position: absolute;
     right: 12px;
     background: transparent;
@@ -380,20 +631,20 @@ import AuthLayout from '@layouts/AuthLayout.astro';
     transition: color 0.15s ease, background 0.15s ease;
   }
 
-  .btn-toggle-eye:hover {
-    color: #00594E;
-    background: rgba(0, 89, 78, 0.06);
+  .btn-toggle-eye-promax:hover {
+    color: #006837;
+    background: rgba(0, 104, 55, 0.08);
   }
 
-  /* Checkbox */
-  .form-options {
+  /* Opciones */
+  .form-options-promax {
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-top: 2px;
   }
 
-  .remember-checkbox-label {
+  .remember-checkbox-promax {
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -401,181 +652,214 @@ import AuthLayout from '@layouts/AuthLayout.astro';
     font-size: 0.82rem;
     color: #475569;
     user-select: none;
+    font-weight: 500;
   }
 
-  .remember-checkbox-label input[type="checkbox"] {
-    accent-color: #00594E;
+  .remember-checkbox-promax input[type="checkbox"] {
+    accent-color: #006837;
     width: 16px;
     height: 16px;
     cursor: pointer;
   }
 
-  /* Botón Principal */
-  .form-submit {
-    margin-top: 6px;
-  }
-
-  .btn-login-primary {
+  /* Botón Submit */
+  .btn-submit-promax {
     width: 100%;
     padding: 13px 20px;
-    background: linear-gradient(135deg, #00594E 0%, #00453C 100%);
+    background: linear-gradient(135deg, #006837 0%, #064e3b 100%);
     color: #ffffff;
     border: none;
-    border-radius: 9px;
+    border-radius: 10px;
     font-size: 0.94rem;
-    font-weight: 700;
+    font-weight: 750;
     font-family: inherit;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
-    box-shadow: 0 4px 12px rgba(0, 89, 78, 0.28);
-    transition: all 0.2s ease;
+    box-shadow: 0 4px 14px rgba(0, 104, 55, 0.28);
+    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    margin-top: 4px;
   }
 
-  .btn-login-primary:hover:not(:disabled) {
-    background: linear-gradient(135deg, #006b5e 0%, #005247 100%);
-    box-shadow: 0 6px 16px rgba(0, 89, 78, 0.38);
-    transform: translateY(-1px);
+  .btn-submit-promax:hover:not(:disabled) {
+    background: linear-gradient(135deg, #047857 0%, #006837 100%);
+    box-shadow: 0 6px 20px rgba(0, 104, 55, 0.38);
+    transform: translateY(-2px);
   }
 
-  .btn-login-primary:active:not(:disabled) {
+  .btn-submit-promax:active:not(:disabled) {
     transform: translateY(1px);
-    box-shadow: 0 2px 6px rgba(0, 89, 78, 0.25);
+    box-shadow: 0 2px 8px rgba(0, 104, 55, 0.25);
   }
 
-  .btn-login-primary:disabled {
-    opacity: 0.85;
+  .btn-submit-promax:disabled {
+    opacity: 0.8;
     cursor: not-allowed;
   }
 
   /* Spinner */
-  .spinner-loader {
+  .spinner-loader-promax {
     width: 20px;
     height: 20px;
     border: 2.5px solid rgba(255, 255, 255, 0.35);
     border-radius: 50%;
     border-top-color: #ffffff;
-    animation: spin 0.8s linear infinite;
+    animation: promaxSpin 0.8s linear infinite;
   }
 
-  @keyframes spin {
+  @keyframes promaxSpin {
     to { transform: rotate(360deg); }
   }
 
   /* Separador */
-  .login-divider {
+  .login-divider-promax {
     display: flex;
     align-items: center;
     text-align: center;
-    margin: 22px 0 16px 0;
+    margin: 24px 0 18px 0;
   }
 
-  .login-divider::before,
-  .login-divider::after {
+  .login-divider-promax::before,
+  .login-divider-promax::after {
     content: '';
     flex: 1;
     border-bottom: 1px solid #e2e8f0;
   }
 
-  .login-divider span {
+  .login-divider-promax span {
     padding: 0 12px;
     font-size: 0.72rem;
-    font-weight: 700;
     color: #94a3b8;
     text-transform: uppercase;
+    font-weight: 700;
     letter-spacing: 0.05em;
   }
 
   /* Banner Portal Externo */
-  .portal-banner {
-    background: #FAF8F0;
-    border: 1px solid #E5DEBF;
-    border-radius: 10px;
-    padding: 12px 14px;
+  .portal-banner-promax {
+    background: #fefce8;
+    border: 1px solid #fef08a;
+    border-radius: 12px;
+    padding: 14px 16px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    box-sizing: border-box;
+    transition: all 0.2s ease;
   }
 
-  .portal-banner-info {
+  .portal-banner-promax:hover {
+    border-color: #fde047;
+    box-shadow: 0 4px 12px rgba(184, 134, 11, 0.1);
+  }
+
+  .portal-banner-content {
     flex: 1;
-    min-width: 170px;
   }
 
-  .portal-title {
-    font-size: 0.80rem;
-    font-weight: 800;
-    color: #8C7320;
+  .portal-banner-title {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 7px;
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #854d0e;
+    margin-bottom: 3px;
   }
 
-  .portal-desc {
-    font-size: 0.71rem;
-    color: #64748b;
-    margin: 3px 0 0 0;
-    line-height: 1.3;
+  .portal-banner-title svg {
+    color: #b8860b;
+    flex-shrink: 0;
   }
 
-  .btn-portal-link {
-    background: #8C7320;
-    color: #ffffff;
-    padding: 7px 12px;
+  .portal-banner-desc {
     font-size: 0.75rem;
-    font-weight: 700;
+    color: #713f12;
+    margin: 0;
+    line-height: 1.35;
+  }
+
+  .btn-portal-promax {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: #ffffff;
+    border: 1px solid #ca8a04;
+    color: #854d0e;
+    font-size: 0.76rem;
+    font-weight: 800;
+    border-radius: 8px;
     text-decoration: none;
-    border-radius: 6px;
     white-space: nowrap;
-    transition: background 0.15s ease;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   }
 
-  .btn-portal-link:hover {
-    background: #735D17;
+  .btn-portal-promax:hover {
+    background: #fef08a;
+    color: #713f12;
+    transform: translateY(-1px);
   }
 
-  /* Footer de Seguridad */
-  .login-card-footer {
+  /* Aviso de Seguridad */
+  .login-security-notice {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    margin-top: 18px;
-    font-size: 0.72rem;
+    margin-top: 20px;
+    font-size: 0.70rem;
     color: #94a3b8;
     text-align: center;
     line-height: 1.4;
   }
 
-  .login-card-footer svg {
-    color: #00594E;
+  .login-security-notice svg {
+    color: #006837;
     flex-shrink: 0;
   }
 
-  .login-outer-footer {
-    margin-top: 18px;
-    text-align: center;
-    color: rgba(255, 255, 255, 0.75);
-    font-size: 0.72rem;
-    letter-spacing: 0.01em;
+  /* ==========================================================================
+     RESPONSIVE BREAKPOINTS (MOBILE & TABLET)
+     ========================================================================== */
+  @media (max-width: 1024px) {
+    .login-brand-panel {
+      display: none;
+    }
+    .login-promax-wrapper {
+      background: linear-gradient(145deg, #052e16 0%, #064e3b 100%);
+      align-items: center;
+      justify-content: center;
+      padding: 20px 16px;
+    }
+    .login-form-panel {
+      background: transparent;
+      padding: 0;
+      width: 100%;
+    }
+    .login-mobile-header {
+      display: block;
+    }
+    .login-card-promax {
+      box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.35);
+    }
   }
 
   @media (max-width: 480px) {
-    .login-card {
-      padding: 24px 20px;
+    .login-card-promax {
+      padding: 24px 18px;
+      border-radius: 16px;
     }
-    .portal-banner {
+    .portal-banner-promax {
       flex-direction: column;
       align-items: flex-start;
     }
-    .btn-portal-link {
+    .btn-portal-promax {
       width: 100%;
-      text-align: center;
-      margin-top: 4px;
+      justify-content: center;
     }
   }
 </style>
@@ -630,7 +914,7 @@ import AuthLayout from '@layouts/AuthLayout.astro';
       if (btnText) btnText.textContent = 'Verificando credenciales...';
       if (btnSpinner) btnSpinner.style.display = 'block';
     } else {
-      if (btnText) btnText.textContent = 'Iniciar Sesión';
+      if (btnText) btnText.textContent = 'Iniciar Sesión Institucional';
       if (btnSpinner) btnSpinner.style.display = 'none';
     }
   }
@@ -688,7 +972,7 @@ import AuthLayout from '@layouts/AuthLayout.astro';
         role: isAdmin ? 'Administrador' : 'Funcionario',
         roleId: roleCode,
         initials: fullName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() || 'FN',
-        avatarColor: isAdmin ? '#00594E' : '#D4AF37',
+        avatarColor: isAdmin ? '#006837' : '#D4AF37',
         avatar_url: profile?.avatar_url || null,
         avatarUrl: profile?.avatar_url || null
       };
