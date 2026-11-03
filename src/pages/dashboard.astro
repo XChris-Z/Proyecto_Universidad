@@ -1,5 +1,6 @@
 ---
 // src/pages/dashboard.astro
+// Panel de Control Rectoral UI/UX Pro Max con Bento Grid, Crossfade y Shared Element Transitions
 import AppLayout from "@layouts/AppLayout.astro";
 import { supabase } from "@lib/supabase";
 import { calculateDeadlineProgress } from "@lib/utils";
@@ -82,742 +83,1841 @@ const slaDangerPct =
 
 const urgentPeticiones = peticiones
   .filter((p: any) => p.estado !== "respondida" && p.estado !== "completada")
-  .slice(0, 4);
+  .slice(0, 6)
+  .map((doc: any) => {
+    const progress = calculateDeadlineProgress(
+      doc.fecha_radicacion,
+      doc.fecha_limite_entrega,
+    );
+    let statusCategory = "danger";
+    if (progress.percentage < 50) {
+      statusCategory = "safe";
+    } else if (progress.percentage <= 80) {
+      statusCategory = "warn";
+    }
+    return {
+      ...doc,
+      progress,
+      statusCategory,
+    };
+  });
 const recentNormas = normas.slice(0, 3);
+
+// Cálculo del medidor circular SVG para tasa de respuesta
+const gaugeRadius = 38;
+const gaugeCircumference = 2 * Math.PI * gaugeRadius;
+const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 100;
 ---
 
-<AppLayout title="Dashboard — Panel de Control" activeNav="dashboard">
-  <!-- Hero Banner Despacho Rectoral (Paleta Sobria Institucional y Datos 100% Reales) -->
-  <div class="hero-banner">
-    <div class="hero-content">
-      <h2><span>Centro de Mando Institucional</span></h2>
-      <p>
-        Monitoreo integral de gobierno universitario: cuerpos colegiados,
-        convenios interinstitucionales, radicación oficial de peticiones y
-        control de términos de la Universidad Internacional del Trópico
-        Americano.
-      </p>
-    </div>
-    <div class="hero-stats-quick">
+<AppLayout title="Dashboard — Panel de Control Rectoral" activeNav="dashboard">
+  <div class="dash-promax-workspace">
+
+    <!-- ================================================================= -->
+    <!-- SECCIÓN A: BENTO HERO EJECUTIVO "CENTRO DE MANDO INSTITUCIONAL"  -->
+    <!-- ================================================================= -->
+    <header class="hero-banner bento-hero-promax">
+      <div class="hero-ambient-glow"></div>
+      
+      <div class="hero-content">
+        <div class="hero-live-badge">
+          <span class="live-radar-dot"></span>
+          <span class="live-badge-text">Sincronización Institucional Activa</span>
+          <span class="live-badge-divider">&bull;</span>
+          <span class="live-badge-sub">Despacho Rectoral Unitrópico</span>
+        </div>
+        <h2 class="hero-title">Centro de Mando Institucional</h2>
+        <p class="hero-desc">
+          Monitoreo integral de gobierno universitario: cuerpos colegiados, convenios interinstitucionales, radicación oficial de peticiones y control de términos de la Universidad Internacional del Trópico Americano.
+        </p>
+      </div>
+
+      <div class="hero-stats-quick bento-hero-capsules">
+        <!-- 1. Peticiones Oficiales -->
+        <a
+          href="/peticiones"
+          class="hero-pill glass-capsule"
+          title="Ver peticiones y radicados oficiales"
+        >
+          <div class="capsule-icon-wrap gold">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+          <div class="number tabular-nums" id="quick-total-peticiones">
+            {totalPeticiones}
+          </div>
+          <div class="label">Peticiones Oficiales</div>
+        </a>
+
+        <!-- 2. Actos Colegiados -->
+        <a
+          href="/normas"
+          class="hero-pill glass-capsule"
+          title="Ver cuerpos colegiados y normas"
+        >
+          <div class="capsule-icon-wrap amber">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+          </div>
+          <div class="number tabular-nums" id="quick-total-normas">
+            {totalNormas}
+          </div>
+          <div class="label">Actos Colegiados</div>
+        </a>
+
+        <!-- 3. Convenios Vigentes -->
+        <a
+          href="/relacionamiento"
+          class="hero-pill glass-capsule"
+          title="Ver convenios y cooperación"
+        >
+          <div class="capsule-icon-wrap emerald">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
+          </div>
+          <div class="number tabular-nums" id="quick-total-convenios">
+            {totalConvenios}
+          </div>
+          <div class="label">Convenios Vigentes</div>
+        </a>
+
+        <!-- 4. Términos en Plazo SLA -->
+        <a
+          href="/calendario"
+          class="hero-pill glass-capsule"
+          title="Ver cumplimiento de términos SLA en Calendario"
+        >
+          <div class="capsule-icon-wrap mint">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          <div class="number tabular-nums" id="quick-sla-compliance">
+            {slaSafePct}%
+          </div>
+          <div class="label">Términos en Plazo</div>
+        </a>
+      </div>
+    </header>
+
+    <!-- ================================================================= -->
+    <!-- SECCIÓN B: GRILLA DE LOS 6 KPIS EJECUTIVOS (BENTO CARDS PRO MAX) -->
+    <!-- ================================================================= -->
+    <section class="kpi-grid-6 bento-kpi-grid" aria-label="Indicadores Clave de Gestión">
+      
+      <!-- 1. Peticiones y Radicados -->
       <a
         href="/peticiones"
-        class="hero-pill"
-        style="cursor: pointer; text-decoration: none;"
-        title="Ver peticiones y radicados oficiales"
+        class="kpi-card bento-kpi-card gold interactive"
+        title="Ir al módulo de Peticiones y Expedientes"
       >
-        <div
-          class="number"
-          id="quick-total-peticiones"
-          style="color: var(--dorado-principal);"
-        >
-          {totalPeticiones}
+        <div class="kpi-accent-bar gold"></div>
+        <div class="kpi-header">
+          <span class="kpi-title">Peticiones / Expedientes</span>
+          <div class="kpi-icon-wrap gold">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
         </div>
-        <div class="label">Peticiones Oficiales</div>
+        <div class="kpi-value-row">
+          <div class="kpi-number tabular-nums" id="kpi-total-docs">{totalPeticiones}</div>
+          <span class="kpi-trend-badge warning" id="kpi-pending-docs">
+            {totalPendientes} Pendientes
+          </span>
+        </div>
+        <div class="kpi-footer">
+          <span class="footer-label">Eficacia Institucional</span>
+          <span class="footer-val gold" id="kpi-response-rate">{responseRate}% Resuelto</span>
+        </div>
       </a>
+
+      <!-- 2. Cuerpos Colegiados -->
       <a
         href="/normas"
-        class="hero-pill"
-        style="cursor: pointer; text-decoration: none;"
-        title="Ver cuerpos colegiados y normas"
+        class="kpi-card bento-kpi-card emerald interactive"
+        title="Ir a Normativa y Cuerpos Colegiados"
       >
-        <div
-          class="number"
-          id="quick-total-normas"
-          style="color: var(--secondary);"
-        >
-          {totalNormas}
+        <div class="kpi-accent-bar emerald"></div>
+        <div class="kpi-header">
+          <span class="kpi-title">Cuerpos Colegiados</span>
+          <div class="kpi-icon-wrap emerald">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+          </div>
         </div>
-        <div class="label">Actos Colegiados</div>
+        <div class="kpi-value-row">
+          <div class="kpi-number tabular-nums" id="kpi-total-normas">{totalNormas}</div>
+          <span class="kpi-trend-badge success">CSU &bull; CA &bull; Rec</span>
+        </div>
+        <div class="kpi-footer">
+          <span class="footer-label">Actos Sistematizados</span>
+          <span class="footer-val emerald">100% Vigentes</span>
+        </div>
       </a>
+
+      <!-- 3. Relacionamiento y Convenios -->
       <a
         href="/relacionamiento"
-        class="hero-pill"
-        style="cursor: pointer; text-decoration: none;"
-        title="Ver convenios y cooperación"
+        class="kpi-card bento-kpi-card teal interactive"
+        title="Ir a Relacionamiento Institucional y Convenios"
       >
-        <div
-          class="number"
-          id="quick-total-convenios"
-          style="color: var(--verde-principal);"
-        >
-          {totalConvenios}
+        <div class="kpi-accent-bar teal"></div>
+        <div class="kpi-header">
+          <span class="kpi-title">Convenios y Cooperación</span>
+          <div class="kpi-icon-wrap teal">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
+          </div>
         </div>
-        <div class="label">Convenios Vigentes</div>
+        <div class="kpi-value-row">
+          <div class="kpi-number tabular-nums" id="kpi-total-convenios">{totalConvenios}</div>
+          <span class="kpi-trend-badge info">Nal &bull; Int &bull; Guber</span>
+        </div>
+        <div class="kpi-footer">
+          <span class="footer-label">Cooperación Oficial</span>
+          <span class="footer-val teal">En Ejecución</span>
+        </div>
       </a>
+
+      <!-- 4. Asuntos Jurídicos -->
       <a
-        href="/calendario"
-        class="hero-pill"
-        style="cursor: pointer; text-decoration: none;"
-        title="Ver cumplimiento de términos SLA"
+        href="/juridicos"
+        class="kpi-card bento-kpi-card blue interactive"
+        title="Ir a Asuntos Jurídicos y Brechas Normativas"
       >
-        <div
-          class="number"
-          id="quick-sla-compliance"
-          style="color: var(--verde-oscuro);"
-        >
-          {slaSafePct}%
+        <div class="kpi-accent-bar blue"></div>
+        <div class="kpi-header">
+          <span class="kpi-title">Asuntos Jurídicos</span>
+          <div class="kpi-icon-wrap blue">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>
+          </div>
         </div>
-        <div class="label">Términos en Plazo</div>
+        <div class="kpi-value-row">
+          <div class="kpi-number tabular-nums" id="kpi-total-juridicos-dash">0</div>
+          <span class="kpi-trend-badge subtle">Expedientes</span>
+        </div>
+        <div class="kpi-footer">
+          <span class="footer-label">Oficina Jurídica</span>
+          <span class="footer-val blue">Al Día</span>
+        </div>
       </a>
-    </div>
-  </div>
 
-  <!-- Métricas KPI Ejecutivas Sobrias (Gama Institucional Verde y Dorado) -->
-  <div class="kpi-grid-6">
-    <!-- 1. Peticiones y Radicados -->
-    <a
-      href="/peticiones"
-      class="kpi-card gold interactive"
-      style="text-decoration: none;"
-      title="Ir al módulo de Peticiones"
-    >
-      <div class="kpi-header">
-        <span class="kpi-title">Peticiones / Expedientes</span>
-        <div
-          class="kpi-icon-wrap"
-          style="color: var(--dorado-oscuro); background: var(--dorado-suave-bg); border-color: var(--dorado-borde);"
-        >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            ><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"
-            ></path><polyline points="14 2 14 8 20 8"></polyline></svg
-          >
-        </div>
-      </div>
-      <div class="kpi-value-row">
-        <div class="kpi-number" id="kpi-total-docs">{totalPeticiones}</div>
-        <span class="kpi-trend positive" id="kpi-pending-docs"
-          >{totalPendientes} Pendientes</span
-        >
-      </div>
-      <div class="kpi-footer">
-        <span>Eficacia Institucional</span>
-        <span
-          style="color: var(--dorado-oscuro); font-weight: 700;"
-          id="kpi-response-rate">{responseRate}% Resuelto</span
-        >
-      </div>
-    </a>
-
-    <!-- 2. Cuerpos Colegiados -->
-    <a
-      href="/normas"
-      class="kpi-card interactive"
-      style="text-decoration: none;"
-      title="Ir a Normativa y Cuerpos Colegiados"
-    >
-      <div class="kpi-header">
-        <span class="kpi-title">Cuerpos Colegiados</span>
-        <div
-          class="kpi-icon-wrap"
-          style="color: var(--verde-principal); background: var(--verde-suave-bg); border-color: var(--verde-borde);"
-        >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            ><path
-              d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-            ></path></svg
-          >
-        </div>
-      </div>
-      <div class="kpi-value-row">
-        <div class="kpi-number" id="kpi-total-normas">{totalNormas}</div>
-        <span class="kpi-trend positive">CSU &bull; CA &bull; Rec</span>
-      </div>
-      <div class="kpi-footer">
-        <span>Actos Sistematizados</span>
-        <span style="color: var(--verde-principal); font-weight: 700;"
-          >100% Vigentes</span
-        >
-      </div>
-    </a>
-
-    <!-- 3. Relacionamiento y Convenios -->
-    <a
-      href="/relacionamiento"
-      class="kpi-card interactive"
-      style="text-decoration: none;"
-      title="Ir a Relacionamiento Institucional y Convenios"
-    >
-      <div class="kpi-header">
-        <span class="kpi-title">Convenios y Cooperación</span>
-        <div
-          class="kpi-icon-wrap"
-          style="color: var(--verde-oscuro); background: var(--verde-suave-bg); border-color: var(--verde-borde);"
-        >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            ><path
-              d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
-            ></path></svg
-          >
-        </div>
-      </div>
-      <div class="kpi-value-row">
-        <div class="kpi-number" id="kpi-total-convenios">{totalConvenios}</div>
-        <span class="kpi-trend positive"
-          >Gubernamental &bull; Nal &bull; Int</span
-        >
-      </div>
-      <div class="kpi-footer">
-        <span>Cooperación Oficial</span>
-        <span style="color: var(--verde-principal); font-weight: 700;"
-          >100% En Ejecución</span
-        >
-      </div>
-    </a>
-
-    <!-- 4. Asuntos Jurídicos -->
-    <a
-      href="/juridicos"
-      class="kpi-card interactive"
-      style="text-decoration: none;"
-      title="Ir a Asuntos Jurídicos y Brechas Normativas"
-    >
-      <div class="kpi-header">
-        <span class="kpi-title">Asuntos Jurídicos</span>
-        <div
-          class="kpi-icon-wrap"
-          style="color: var(--verde-principal); background: var(--verde-suave-bg); border-color: var(--verde-borde);"
-        >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            ><path
-              d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"
-            ></path></svg
-          >
-        </div>
-      </div>
-      <div class="kpi-value-row">
-        <div class="kpi-number" id="kpi-total-juridicos-dash">0</div>
-        <span
-          class="kpi-trend positive"
-          style="background: var(--verde-suave-bg); color: var(--verde-principal);"
-          >0 Conceptos</span
-        >
-      </div>
-      <div class="kpi-footer">
-        <span>Oficina Jurídica</span>
-        <span style="color: var(--verde-principal); font-weight: 700;"
-          >Sin expedientes</span
-        >
-      </div>
-    </a>
-
-    <!-- 5. Juzgamiento Disciplinario -->
-    <a
-      href="/juzgamiento"
-      class="kpi-card interactive"
-      style="text-decoration: none;"
-      title="Ir a Fase de Juzgamiento Disciplinario"
-    >
-      <div class="kpi-header">
-        <span class="kpi-title">Juzgamiento Disciplinario</span>
-        <div
-          class="kpi-icon-wrap"
-          style="color: var(--dorado-oscuro); background: var(--dorado-suave-bg); border-color: var(--dorado-borde);"
-        >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            ><circle cx="12" cy="12" r="10"></circle><line
-              x1="12"
-              y1="8"
-              x2="12"
-              y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"
-            ></line></svg
-          >
-        </div>
-      </div>
-      <div class="kpi-value-row">
-        <div class="kpi-number" id="kpi-total-juzgamiento-dash">0</div>
-        <span
-          class="kpi-trend positive"
-          style="background: var(--dorado-suave-bg); color: var(--dorado-oscuro);"
-          >0 Procesos</span
-        >
-      </div>
-      <div class="kpi-footer">
-        <span>Régimen Disciplinario</span>
-        <span style="color: var(--dorado-oscuro); font-weight: 700;"
-          >Al Día</span
-        >
-      </div>
-    </a>
-
-    <!-- 6. Planeación y CSU -->
-    <a
-      href="/planeacion"
-      class="kpi-card interactive"
-      style="text-decoration: none;"
-      title="Ir a Planeación y Gestión CSU"
-    >
-      <div class="kpi-header">
-        <span class="kpi-title">Planeación y CSU</span>
-        <div
-          class="kpi-icon-wrap"
-          style="color: var(--verde-claro); background: var(--verde-suave-bg); border-color: var(--verde-borde);"
-        >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            ><path
-              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-            ></path></svg
-          >
-        </div>
-      </div>
-      <div class="kpi-value-row">
-        <div
-          class="kpi-number"
-          id="kpi-total-budget-dash"
-          style="font-size: 1.85rem;"
-        >
-          0
-        </div>
-        <span class="kpi-trend positive">0 Informes</span>
-      </div>
-      <div class="kpi-footer">
-        <span>Seguimiento CSU</span>
-        <span style="color: var(--verde-claro); font-weight: 700;"
-          >En Programación</span
-        >
-      </div>
-    </a>
-  </div>
-
-  <!-- Fila 1 de Paneles: Reparto Prioritario & SLA de Peticiones -->
-  <div class="dashboard-split-grid">
-    <!-- Columna Principal: Reparto Rectoral Prioritario -->
-    <div class="panel-box">
-      <div class="panel-header">
-        <div class="panel-title">
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            ><polygon
-              points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
-            ></polygon></svg
-          >
-          <span>Reparto Rectoral Prioritario: Expedientes y Términos</span>
-        </div>
-        <a href="/archivos" class="panel-link" style="text-decoration: none;"
-          >Ver todos los radicados &rarr;</a
-        >
-      </div>
-
-      <div
-        id="dashboard-critical-list"
-        style="display: flex; flex-direction: column; gap: 14px;"
+      <!-- 5. Juzgamiento Disciplinario -->
+      <a
+        href="/juzgamiento"
+        class="kpi-card bento-kpi-card purple interactive"
+        title="Ir a Fase de Juzgamiento Disciplinario"
       >
-        {
-          urgentPeticiones.length > 0 ? (
-            urgentPeticiones.map((doc: any) => {
-              const progress = calculateDeadlineProgress(
-                doc.fecha_radicacion,
-                doc.fecha_limite_entrega,
-              );
-              return (
-                <div
-                  class="critical-doc-card"
-                  style="padding: 14px 18px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--bg-surface); display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;"
-                >
-                  <div style="flex: 1; min-width: 250px;">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
-                      <span
-                        class={`badge ${progress.statusClass}`}
-                        style="font-size: 0.72rem; padding: 2px 8px; border-radius: 4px;"
+        <div class="kpi-accent-bar purple"></div>
+        <div class="kpi-header">
+          <span class="kpi-title">Juzgamiento Disciplinario</span>
+          <div class="kpi-icon-wrap purple">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+        </div>
+        <div class="kpi-value-row">
+          <div class="kpi-number tabular-nums" id="kpi-total-juzgamiento-dash">0</div>
+          <span class="kpi-trend-badge subtle">Procesos</span>
+        </div>
+        <div class="kpi-footer">
+          <span class="footer-label">Régimen Disciplinario</span>
+          <span class="footer-val purple">Control Preventivo</span>
+        </div>
+      </a>
+
+      <!-- 6. Planeación y CSU -->
+      <a
+        href="/planeacion"
+        class="kpi-card bento-kpi-card green interactive"
+        title="Ir a Planeación y Gestión CSU"
+      >
+        <div class="kpi-accent-bar green"></div>
+        <div class="kpi-header">
+          <span class="kpi-title">Planeación y CSU</span>
+          <div class="kpi-icon-wrap green">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          </div>
+        </div>
+        <div class="kpi-value-row">
+          <div class="kpi-number tabular-nums" id="kpi-total-budget-dash">0</div>
+          <span class="kpi-trend-badge subtle">Informes</span>
+        </div>
+        <div class="kpi-footer">
+          <span class="footer-label">Seguimiento CSU</span>
+          <span class="footer-val green">En Programación</span>
+        </div>
+      </a>
+
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- SECCIÓN C: SPLIT GRID PRINCIPAL (REPARTO + EFICACIA Y SEMÁFORO)   -->
+    <!-- ================================================================= -->
+    <div class="dashboard-split-grid bento-split-main">
+      
+      <!-- COLUMNA PRINCIPAL: REPARTO RECTORAL PRIORITARIO CON FILTRO SEGMENTADO -->
+      <section class="panel-box bento-panel-main" aria-labelledby="reparto-main-heading">
+        
+        <div class="panel-header bento-panel-header">
+          <div class="panel-title-wrap">
+            <div class="panel-title">
+              <div class="panel-icon-wrap gold">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              </div>
+              <h3 id="reparto-main-heading" class="panel-heading-text">Reparto Rectoral Prioritario</h3>
+            </div>
+            <p class="panel-subheading-text">Monitoreo y asignación de expedientes oficiales con término legal</p>
+          </div>
+
+          <div class="panel-header-actions">
+            <!-- Segmented Control con Shared Element Pill Slider -->
+            <div class="dash-segmented-filter" id="dash-sla-segmented-filter">
+              <div class="dash-seg-indicator-pill" id="dash-seg-indicator"></div>
+              <button type="button" class="dash-seg-btn active" data-filter="all">Todos</button>
+              <button type="button" class="dash-seg-btn" data-filter="safe">Óptimos</button>
+              <button type="button" class="dash-seg-btn" data-filter="warn">Alerta</button>
+              <button type="button" class="dash-seg-btn" data-filter="danger">Críticos</button>
+            </div>
+
+            <a href="/archivos" class="panel-link-action" title="Explorar todos los radicados">
+              <span>Ver todos</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- LISTADO DE EXPEDIENTES PRIORITARIOS CON MINI BARRAS SLA Y CHIPS MONO -->
+        <div
+          id="dashboard-critical-list"
+          class="critical-docs-flow"
+        >
+          {
+            urgentPeticiones.length > 0 ? (
+              urgentPeticiones.map((doc: any) => {
+                const { progress, statusCategory } = doc;
+
+                return (
+                  <article
+                    class={`critical-doc-card promax-floating-card sem-${statusCategory}`}
+                    data-status-category={statusCategory}
+                    data-doc-id={doc.id}
+                  >
+                    <div class={`card-sla-edge ${statusCategory}`}></div>
+
+                    <div class="doc-card-body">
+                      <!-- Cabecera de la tarjeta: Badges y Radicado Mono -->
+                      <div class="doc-meta-top">
+                        <div class="doc-badge-group">
+                          <span class={`badge promax-badge ${progress.statusClass}`}>
+                            {progress.statusBadge}
+                          </span>
+                          <span class="doc-rad-mono">
+                            {doc.numero_radicado || `RAD-${doc.id.slice(0, 8)}`}
+                          </span>
+                        </div>
+                        <span class="doc-urgency-label tabular-nums">
+                          {progress.percentage}% tiempo transcurrido
+                        </span>
+                      </div>
+
+                      <!-- Asunto principal -->
+                      <h4 class="doc-subject-title" title={doc.asunto}>
+                        {doc.asunto}
+                      </h4>
+
+                      <!-- Metadatos de procedencia y término -->
+                      <div class="doc-meta-row">
+                        <div class="meta-field">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                          <span>Solicitante: <strong>{doc.solicitante_nombre}</strong></span>
+                        </div>
+                        <div class="meta-field">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                          <span>Límite: <strong class="tabular-nums">{doc.fecha_limite_entrega || "En trámite"}</strong></span>
+                        </div>
+                      </div>
+
+                      <!-- Mini Barra de Progreso SLA Pro Max -->
+                      <div class="doc-sla-track">
+                        <div
+                          class={`doc-sla-fill ${statusCategory}`}
+                          style={`width: ${Math.min(100, Math.max(5, progress.percentage))}%;`}
+                        ></div>
+                      </div>
+                    </div>
+
+                    <!-- Botón de acción con micro-animación -->
+                    <div class="doc-action-cell">
+                      <a
+                        href="/peticiones"
+                        class="btn-promax-card-action"
+                        title="Ver detalle del radicado"
                       >
-                        {progress.statusBadge}
-                      </span>
-                      <span style="font-size: 0.78rem; font-family: monospace; color: var(--text-muted);">
-                        {doc.numero_radicado}
-                      </span>
+                        <span>Ver Radicado</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                      </a>
                     </div>
-                    <div style="font-weight: 700; font-size: 0.92rem; color: var(--text-main); margin-bottom: 2px;">
-                      {doc.asunto}
-                    </div>
-                    <div style="font-size: 0.78rem; color: var(--text-muted);">
-                      Solicitante: <strong>{doc.solicitante_nombre}</strong>{" "}
-                      &bull; Vence: {doc.fecha_limite_entrega}
-                    </div>
-                  </div>
-                  <div style="display: flex; align-items: center; gap: 10px;">
-                    <a
-                      href="/peticiones"
-                      class="btn btn-secondary btn-sm"
-                      style="text-decoration: none; font-size: 0.78rem;"
-                    >
-                      Ver Radicado
-                    </a>
+                  </article>
+                );
+              })
+            ) : (
+              <div class="bento-empty-state">
+                <div class="empty-icon-wrap">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <h5 class="empty-title">No hay expedientes prioritarios pendientes</h5>
+                <p class="empty-desc">Todos los términos de peticiones y oficios se encuentran al día en el sistema.</p>
+              </div>
+            )
+          }
+
+          <!-- Estado vacío dinámico al filtrar si no hay coincidencias -->
+          <div id="dash-filter-empty-state" class="bento-empty-state" style="display: none;">
+            <div class="empty-icon-wrap neutral">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
+            <h5 class="empty-title">Sin expedientes en esta categoría</h5>
+            <p class="empty-desc">No se encontraron peticiones con el nivel de urgencia seleccionado.</p>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- COLUMNA DERECHA: EFICACIA INSTITUCIONAL + TÉRMINOS SLA -->
+      <aside class="dashboard-side-column bento-side-column">
+        
+        <!-- WIDGET 1: EFICACIA EN RESPUESTAS A PETICIONES -->
+        <div class="panel-box bento-widget-card">
+          <div class="panel-header widget-header">
+            <div class="panel-title">
+              <div class="panel-icon-wrap emerald">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><polyline points="9 10 12 7 15 10"/><line x1="12" y1="7" x2="12" y2="13"/></svg>
+              </div>
+              <span class="widget-title-text">Eficacia en Peticiones</span>
+            </div>
+            <a
+              href="/peticiones"
+              class="badge-response-status responded promax-efficacy-pill"
+              id="widget-efficacy-badge"
+            >
+              {responseRate}% Resuelto
+            </a>
+          </div>
+
+          <div class="efficacy-card-body bento-efficacy-content">
+            
+            <!-- Medidor Gauge Circular Pro Max + Métricas Clave -->
+            <div class="efficacy-gauge-showcase">
+              <div class="circular-gauge-wrapper">
+                <svg class="circular-gauge-svg" width="96" height="96" viewBox="0 0 96 96">
+                  <!-- Pista de fondo -->
+                  <circle
+                    class="gauge-track"
+                    cx="48"
+                    cy="48"
+                    r={gaugeRadius}
+                    stroke-width="8"
+                  />
+                  <!-- Anillo de progreso -->
+                  <circle
+                    class="gauge-fill"
+                    cx="48"
+                    cy="48"
+                    r={gaugeRadius}
+                    stroke-width="8"
+                    stroke-dasharray={gaugeCircumference}
+                    stroke-dashoffset={gaugeOffset}
+                  />
+                </svg>
+                <div class="gauge-center-content">
+                  <span class="gauge-number tabular-nums">{responseRate}%</span>
+                  <span class="gauge-caption">Eficacia</span>
+                </div>
+              </div>
+
+              <div class="efficacy-stats-col">
+                <div class="efficacy-metric-pill">
+                  <span class="metric-dot green"></span>
+                  <div>
+                    <span class="efficacy-metric-num tabular-nums" id="widget-responded-count">{totalRespondidas}</span>
+                    <span class="efficacy-metric-label">Oficios Emitidos</span>
                   </div>
                 </div>
-              );
-            })
-          ) : (
-            <div style="text-align: center; padding: 32px 16px; color: var(--text-muted); background: var(--bg-surface-elevated); border-radius: var(--radius-md); border: 1px dashed var(--border-color);">
-              <svg
-                width="32"
-                height="32"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-                style="margin-bottom: 8px; color: var(--verde-principal);"
-              >
-                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <div style="font-weight: 700; color: var(--text-main); font-size: 0.95rem;">
-                No hay expedientes prioritarios pendientes
-              </div>
-              <div style="font-size: 0.8rem; margin-top: 4px;">
-                Todos los términos de peticiones y oficios se encuentran al día.
+
+                <div class="efficacy-metric-pill">
+                  <span class="metric-dot gold"></span>
+                  <div>
+                    <span class="efficacy-metric-num tabular-nums" id="widget-pending-count">{totalPendientes}</span>
+                    <span class="efficacy-metric-label">Pendientes de Trámite</span>
+                  </div>
+                </div>
               </div>
             </div>
-          )
-        }
-      </div>
-    </div>
 
-    <!-- Columna Lateral: Eficacia en Peticiones y Distribución SLA -->
-    <div class="dashboard-side-column">
-      <!-- Widget: Eficacia en Respuestas a Peticiones -->
-      <div class="panel-box">
-        <div class="panel-header">
-          <div class="panel-title">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              ><path
-                d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
-              ></path><polyline points="9 10 12 7 15 10"></polyline><line
-                x1="12"
-                y1="7"
-                x2="12"
-                y2="13"></line></svg
+            <!-- Barra de progreso lineal de soporte -->
+            <div class="dist-item efficacy-progress-section">
+              <div class="dist-meta">
+                <span class="progress-legend">Tasa de Respuesta Institucional</span>
+                <span id="widget-response-pct" class="progress-val-accent tabular-nums">{responseRate}%</span>
+              </div>
+              <div class="dist-progress-bg promax-track">
+                <div
+                  class="dist-progress-fill promax-fill"
+                  id="widget-response-bar"
+                  style={`width: ${responseRate}%;`}
+                ></div>
+              </div>
+            </div>
+
+            <!-- Botón de acción rápida con Badge -->
+            <a
+              href="/peticiones"
+              class="btn-manage-petitions promax-cta-button"
+              id="btn-quick-manage-petitions"
             >
-            <span>Eficacia en Peticiones</span>
+              <div class="cta-left">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <span>Atender Peticiones Pendientes</span>
+              </div>
+              <span
+                class="badge-counter promax-counter-badge"
+                id="widget-pending-badge"
+              >
+                {totalPendientes}
+              </span>
+            </a>
           </div>
-          <a
-            href="/peticiones"
-            class="badge-response-status responded"
-            style="text-decoration: none;"
-            id="widget-efficacy-badge">{responseRate}% Resuelto</a
-          >
         </div>
 
-        <div class="efficacy-card-body">
-          <div class="efficacy-stats-row">
-            <div class="efficacy-metric-box">
-              <span
-                class="efficacy-metric-num"
-                id="widget-responded-count"
-                style="color: var(--verde-principal);">{totalRespondidas}</span
-              >
-              <span class="efficacy-metric-label">Oficios Emitidos</span>
+        <!-- WIDGET 2: DISTRIBUCIÓN DE TÉRMINOS SLA (SEMÁFORO INTERACTIVO) -->
+        <div class="panel-box bento-widget-card">
+          <div class="panel-header widget-header">
+            <div class="panel-title">
+              <div class="panel-icon-wrap mint">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0110 10H12V2z"/></svg>
+              </div>
+              <span class="widget-title-text">Términos de Radicación (SLA)</span>
             </div>
-            <div class="efficacy-metric-box">
-              <span
-                class="efficacy-metric-num"
-                id="widget-pending-count"
-                style="color: var(--dorado-oscuro);">{totalPendientes}</span
-              >
-              <span class="efficacy-metric-label">Pendientes de Trámite</span>
-            </div>
+            <span class="widget-header-chip">En Tiempo Real</span>
           </div>
 
-          <div class="dist-item" style="margin-top: 6px;">
-            <div class="dist-meta">
-              <span
-                style="font-size: 0.8rem; font-weight: 600; color: var(--text-main);"
-                >Tasa de Respuesta Institucional</span
-              >
-              <span
-                id="widget-response-pct"
-                style="color: var(--verde-principal); font-weight: 800;"
-                >{responseRate}%</span
-              >
-            </div>
-            <div class="dist-progress-bg" style="height: 10px;">
-              <div
-                class="dist-progress-fill"
-                id="widget-response-bar"
-                style={`width: ${responseRate}%; background: linear-gradient(90deg, var(--dorado-principal) 0%, var(--verde-principal) 100%);`}
-              >
+          <div class="stats-distribution-list bento-sla-interactive-list">
+            
+            <!-- Barra 1: Óptimo (<50%) -->
+            <div class="dist-item dist-card-interactive" data-sla-trigger="safe" title="Clic para filtrar óptimos en el reparto">
+              <div class="dist-meta">
+                <span class="sla-label-group">
+                  <span class="dist-dot green"></span>
+                  <span>En Término Óptimo (&lt;50%)</span>
+                </span>
+                <span id="dist-count-safe" class="sla-count-chip green tabular-nums">
+                  {slaSafe} docs ({slaSafePct}%)
+                </span>
+              </div>
+              <div class="dist-progress-bg promax-track">
+                <div
+                  class="dist-progress-fill safe-fill"
+                  id="dist-bar-safe"
+                  style={`width: ${slaSafePct}%;`}
+                ></div>
               </div>
             </div>
+
+            <!-- Barra 2: Alerta Media (50%-80%) -->
+            <div class="dist-item dist-card-interactive" data-sla-trigger="warn" title="Clic para filtrar en advertencia">
+              <div class="dist-meta">
+                <span class="sla-label-group">
+                  <span class="dist-dot warn"></span>
+                  <span>Advertencia Media (50%-80%)</span>
+                </span>
+                <span id="dist-count-warn" class="sla-count-chip warn tabular-nums">
+                  {slaWarn} docs ({slaWarnPct}%)
+                </span>
+              </div>
+              <div class="dist-progress-bg promax-track">
+                <div
+                  class="dist-progress-fill warn-fill"
+                  id="dist-bar-warn"
+                  style={`width: ${slaWarnPct}%;`}
+                ></div>
+              </div>
+            </div>
+
+            <!-- Barra 3: Alerta Crítica (>80%) -->
+            <div class="dist-item dist-card-interactive" data-sla-trigger="danger" title="Clic para filtrar críticos en el reparto">
+              <div class="dist-meta">
+                <span class="sla-label-group">
+                  <span class="dist-dot danger"></span>
+                  <span>Alerta Crítica (&gt;80%)</span>
+                </span>
+                <span id="dist-count-danger" class="sla-count-chip danger tabular-nums">
+                  {slaDanger} docs ({slaDangerPct}%)
+                </span>
+              </div>
+              <div class="dist-progress-bg promax-track">
+                <div
+                  class="dist-progress-fill danger-fill"
+                  id="dist-bar-danger"
+                  style={`width: ${slaDangerPct}%;`}
+                ></div>
+              </div>
+            </div>
+
           </div>
 
-          <a
-            href="/peticiones"
-            class="btn-manage-petitions"
-            id="btn-quick-manage-petitions"
-            style="text-decoration: none;"
-          >
-            <svg
-              width="15"
-              height="15"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              ><circle cx="12" cy="12" r="10"></circle><line
-                x1="12"
-                y1="8"
-                x2="12"
-                y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"
-              ></line></svg
-            >
-            <span>Atender Peticiones Pendientes</span>
-            <span
-              class="badge-counter"
-              id="widget-pending-badge"
-              style="background: var(--dorado-principal);"
-              >{totalPendientes}</span
-            >
+          <!-- SELLO DE CUMPLIMIENTO INSTITUCIONAL (LEY 1755 DE 2015) -->
+          <div class="institutional-compliance-note bento-compliance-stamp">
+            <div class="stamp-header">
+              <div class="stamp-icon">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </div>
+              <span class="stamp-title">Seguimiento y Cumplimiento Normativo</span>
+            </div>
+            <p class="stamp-text">
+              Semáforo de plazos automatizado conforme a la <strong>Ley 1755 de 2015</strong> y las directrices de archivo y gestión documental de Unitrópico.
+            </p>
+          </div>
+        </div>
+
+      </aside>
+
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- SECCIÓN D: FILA INFERIOR 2x2 (COLEGIADOS RECIENTES & AGENDA)      -->
+    <!-- ================================================================= -->
+    <section class="dashboard-grid-2x2 bento-grid-bottom" aria-label="Resoluciones y Agenda">
+      
+      <!-- Panel Colegiados Recientes -->
+      <div class="panel-box bento-feed-card">
+        <div class="panel-header">
+          <div class="panel-title">
+            <div class="panel-icon-wrap amber">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+            </div>
+            <span>Cuerpos Colegiados: Resoluciones y Acuerdos</span>
+          </div>
+          <a href="/normas" class="panel-link-action" title="Explorar todo el catálogo de normativa">
+            <span>Explorar ({totalNormas})</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </a>
         </div>
+
+        <div
+          class="dashboard-colegiados-mini-list bento-feed-list"
+          id="dashboard-colegiados-recent-list"
+        >
+          {
+            recentNormas.length > 0 ? (
+              recentNormas.map((norma: any) => (
+                <div class="colegiado-mini-item promax-feed-item">
+                  <div class="feed-item-main">
+                    <div class="feed-meta-top">
+                      <span class="colegiado-badge-tag">
+                        {norma.tipo} {norma.numero}
+                      </span>
+                      <span class="feed-date tabular-nums">{norma.fecha}</span>
+                      {norma.organo && <span class="feed-organo-tag">{norma.organo}</span>}
+                    </div>
+                    <div class="feed-title" title={norma.titulo}>
+                      {norma.titulo}
+                    </div>
+                  </div>
+                  <a
+                    href="/normas"
+                    class="btn-promax-feed-action"
+                    title="Ver contenido del acto"
+                  >
+                    <span>Ver</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  </a>
+                </div>
+              ))
+            ) : (
+              <div class="bento-empty-state">
+                <p class="empty-desc">No hay actos colegiados registrados actualmente.</p>
+              </div>
+            )
+          }
+        </div>
       </div>
 
-      <!-- Widget: Distribución de Términos SLA (Semáforo Autorizado) -->
-      <div class="panel-box">
+      <!-- Panel Agenda Rectoral y Google Calendar -->
+      <div class="panel-box bento-feed-card">
         <div class="panel-header">
           <div class="panel-title">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              ><circle cx="12" cy="12" r="10"></circle><path
-                d="M12 2a10 10 0 0110 10H12V2z"></path></svg
-            >
-            <span>Términos de Radicación (SLA)</span>
+            <div class="panel-icon-wrap emerald">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </div>
+            <span>Agenda Institucional & Google Calendar</span>
           </div>
+          <a href="/calendario" class="panel-link-action" title="Abrir calendario interactivo">
+            <span>Ver calendario</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
         </div>
 
-        <div class="stats-distribution-list">
-          <div class="dist-item">
-            <div class="dist-meta">
-              <span
-                ><span class="dist-dot" style="background: #10B981;"></span> En Término
-                Óptimo (&lt;50%)</span
-              >
-              <span id="dist-count-safe">{slaSafe} docs ({slaSafePct}%)</span>
-            </div>
-            <div class="dist-progress-bg">
-              <div
-                class="dist-progress-fill"
-                id="dist-bar-safe"
-                style={`width: ${slaSafePct}%; background: #10B981;`}
-              >
-              </div>
-            </div>
-          </div>
-
-          <div class="dist-item">
-            <div class="dist-meta">
-              <span
-                ><span class="dist-dot" style="background: #F59E0B;"></span> Advertencia
-                Media (50%-80%)</span
-              >
-              <span id="dist-count-warn">{slaWarn} docs ({slaWarnPct}%)</span>
-            </div>
-            <div class="dist-progress-bg">
-              <div
-                class="dist-progress-fill"
-                id="dist-bar-warn"
-                style={`width: ${slaWarnPct}%; background: #F59E0B;`}
-              >
-              </div>
-            </div>
-          </div>
-
-          <div class="dist-item">
-            <div class="dist-meta">
-              <span
-                ><span class="dist-dot" style="background: #EF4444;"></span> Alerta
-                Crítica (&gt;80%)</span
-              >
-              <span id="dist-count-danger"
-                >{slaDanger} docs ({slaDangerPct}%)</span
-              >
-            </div>
-            <div class="dist-progress-bg">
-              <div
-                class="dist-progress-fill"
-                id="dist-bar-danger"
-                style={`width: ${slaDangerPct}%; background: #EF4444;`}
-              >
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="institutional-compliance-note">
-          <div class="note-header">
-            <svg
-              width="15"
-              height="15"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              ><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
-              ></path></svg
-            >
-            <span>Seguimiento y Cumplimiento Normativo</span>
-          </div>
-          <p>
-            Semáforo de plazos automatizado conforme a la <strong
-              >Ley 1755 de 2015</strong
-            > y las políticas de gestión documental de Unitrópico.
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Fila 2 de Paneles: Cuerpos Colegiados Recientes & Agenda de la Semana -->
-  <div class="dashboard-grid-2x2">
-    <!-- Panel Colegiados Recientes -->
-    <div class="panel-box">
-      <div class="panel-header">
-        <div class="panel-title">
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            ><path
-              d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-            ></path></svg
-          >
-          <span>Cuerpos Colegiados: Resoluciones y Acuerdos Recientes</span>
-        </div>
-        <a href="/normas" class="panel-link" style="text-decoration: none;"
-          >Explorar normativa ({totalNormas}) &rarr;</a
+        <div
+          class="dashboard-cal-mini-list bento-feed-list"
+          id="dashboard-calendar-recent-list"
         >
-      </div>
-      <div
-        class="dashboard-colegiados-mini-list"
-        id="dashboard-colegiados-recent-list"
-      >
-        {
-          recentNormas.length > 0 ? (
-            recentNormas.map((norma: any) => (
-              <div
-                class="colegiado-mini-item"
-                style="padding: 10px 0; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;"
-              >
-                <div>
-                  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px;">
-                    <span
-                      class="badge"
-                      style="background: var(--verde-suave-bg); color: var(--verde-principal); font-size: 0.7rem; padding: 2px 6px; border: 1px solid var(--verde-borde);"
-                    >
-                      {norma.tipo} {norma.numero}
-                    </span>
-                    <span style="font-size: 0.75rem; color: var(--text-muted);">
-                      {norma.fecha}
-                    </span>
-                  </div>
-                  <div style="font-weight: 600; font-size: 0.85rem; color: var(--text-main); line-height: 1.3;">
-                    {norma.titulo}
-                  </div>
-                </div>
-                <a
-                  href="/normas"
-                  class="btn btn-ghost btn-sm"
-                  style="text-decoration: none; font-size: 0.75rem;"
-                >
-                  Ver
-                </a>
-              </div>
-            ))
-          ) : (
-            <div style="text-align: center; padding: 24px; color: var(--text-muted); font-size: 0.82rem;">
-              No hay actos colegiados registrados actualmente.
-            </div>
-          )
-        }
-      </div>
-    </div>
-
-    <!-- Panel Agenda Rectoral y Google Calendar -->
-    <div class="panel-box">
-      <div class="panel-header">
-        <div class="panel-title">
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            ><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line
-              x1="16"
-              y1="2"
-              x2="16"
-              y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line
-              x1="3"
-              y1="10"
-              x2="21"
-              y2="10"></line></svg
-          >
-          <span>Agenda Institucional &amp; Google Calendar</span>
+          <!-- Eventos institucionales cargados dinámicamente por initDashboard() -->
         </div>
-        <a href="/calendario" class="panel-link" style="text-decoration: none;"
-          >Ver calendario &rarr;</a
-        >
       </div>
-      <div class="dashboard-cal-mini-list" id="dashboard-calendar-recent-list">
-        <!-- Eventos institucionales -->
-      </div>
-    </div>
+
+    </section>
+
   </div>
 </AppLayout>
 
+<style>
+  /* ==========================================================================
+     ESTILOS UI/UX PRO MAX — BENTO GRID DASHBOARD RECTORAL
+     ========================================================================== */
+
+  .dash-promax-workspace {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+    font-family: inherit;
+  }
+
+  /* ==========================================================================
+     A. BENTO HERO EJECUTIVO
+     ========================================================================== */
+  .bento-hero-promax {
+    position: relative;
+    background: linear-gradient(135deg, #022c22 0%, #004239 60%, #00594E 100%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 24px;
+    padding: 32px 36px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 28px;
+    overflow: hidden;
+    box-shadow: 0 12px 32px -4px rgba(0, 44, 34, 0.35);
+  }
+
+  .hero-ambient-glow {
+    position: absolute;
+    top: -40px;
+    right: 15%;
+    width: 320px;
+    height: 240px;
+    background: radial-gradient(circle, rgba(181, 161, 96, 0.22) 0%, transparent 70%);
+    pointer-events: none;
+    filter: blur(40px);
+  }
+
+  .hero-live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.10);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    padding: 4px 12px;
+    border-radius: 999px;
+    margin-bottom: 12px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: #ffffff;
+  }
+  .live-radar-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #10B981;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
+    animation: radarPulse 1.8s infinite;
+  }
+  @keyframes radarPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(1.2); }
+  }
+  .live-badge-divider {
+    opacity: 0.5;
+  }
+  .live-badge-sub {
+    color: #cbd5e1;
+    font-weight: 600;
+  }
+
+  .hero-title {
+    font-size: 1.85rem;
+    font-weight: 850;
+    color: #ffffff;
+    letter-spacing: -0.03em;
+    margin: 0 0 8px 0;
+    line-height: 1.2;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .hero-desc {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.90rem;
+    line-height: 1.55;
+    max-width: 620px;
+    margin: 0;
+  }
+
+  .bento-hero-capsules {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  .glass-capsule {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 16px;
+    padding: 16px 20px;
+    text-align: center;
+    min-width: 125px;
+    text-decoration: none;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+                background 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .glass-capsule:hover {
+    transform: translateY(-3px) scale(1.02);
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(181, 161, 96, 0.45);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+  }
+
+  .capsule-icon-wrap {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    margin: 0 auto 6px auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .capsule-icon-wrap.gold { background: rgba(245, 158, 11, 0.2); color: #FBBF24; }
+  .capsule-icon-wrap.amber { background: rgba(217, 119, 6, 0.2); color: #F59E0B; }
+  .capsule-icon-wrap.emerald { background: rgba(16, 185, 129, 0.2); color: #34D399; }
+  .capsule-icon-wrap.mint { background: rgba(5, 150, 105, 0.25); color: #6EE7B7; }
+
+  .glass-capsule .number {
+    font-size: 1.75rem;
+    font-weight: 850;
+    line-height: 1.1;
+    margin-bottom: 2px;
+    letter-spacing: -0.03em;
+  }
+  #quick-total-peticiones { color: #FBBF24; }
+  #quick-total-normas { color: #FCD34D; }
+  #quick-total-convenios { color: #6EE7B7; }
+  #quick-sla-compliance { color: #A7F3D0; }
+
+  .glass-capsule .label {
+    font-size: 0.68rem;
+    color: rgba(255, 255, 255, 0.85);
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+  }
+
+  /* ==========================================================================
+     B. BENTO KPIS GRID (6 TARJETAS)
+     ========================================================================== */
+  .bento-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 16px;
+  }
+
+  .bento-kpi-card {
+    position: relative;
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.07);
+    border-radius: 18px;
+    padding: 18px 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 8px 24px -4px rgba(0, 0, 0, 0.04);
+    text-decoration: none;
+    overflow: hidden;
+    transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .bento-kpi-card:hover {
+    transform: translateY(-3px) scale(1.008);
+    box-shadow: 0 12px 28px -4px rgba(0, 89, 78, 0.12);
+    border-color: rgba(0, 89, 78, 0.3);
+  }
+
+  .kpi-accent-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+  }
+  .kpi-accent-bar.gold { background: linear-gradient(90deg, #F59E0B, #B5A160); }
+  .kpi-accent-bar.emerald { background: linear-gradient(90deg, #10B981, #00594E); }
+  .kpi-accent-bar.teal { background: linear-gradient(90deg, #0D9488, #059669); }
+  .kpi-accent-bar.blue { background: linear-gradient(90deg, #3B82F6, #1D4ED8); }
+  .kpi-accent-bar.purple { background: linear-gradient(90deg, #8B5CF6, #6D28D9); }
+  .kpi-accent-bar.green { background: linear-gradient(90deg, #059669, #004239); }
+
+  .kpi-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .kpi-title {
+    font-size: 0.82rem;
+    font-weight: 750;
+    color: #475569;
+  }
+  .kpi-icon-wrap {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .kpi-icon-wrap.gold { background: rgba(245, 158, 11, 0.12); color: #D97706; }
+  .kpi-icon-wrap.emerald { background: rgba(16, 185, 129, 0.12); color: #059669; }
+  .kpi-icon-wrap.teal { background: rgba(13, 148, 136, 0.12); color: #0D9488; }
+  .kpi-icon-wrap.blue { background: rgba(59, 130, 246, 0.12); color: #2563EB; }
+  .kpi-icon-wrap.purple { background: rgba(139, 92, 246, 0.12); color: #7C3AED; }
+  .kpi-icon-wrap.green { background: rgba(5, 150, 105, 0.12); color: #00594E; }
+
+  .kpi-value-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .kpi-number {
+    font-size: 1.95rem;
+    font-weight: 850;
+    color: #0f172a;
+    line-height: 1;
+    letter-spacing: -0.04em;
+  }
+
+  .kpi-trend-badge {
+    font-size: 0.70rem;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.02em;
+  }
+  .kpi-trend-badge.warning { background: #FEF3C7; color: #92400E; }
+  .kpi-trend-badge.success { background: #D1FAE5; color: #065F46; }
+  .kpi-trend-badge.info { background: #CCFBF1; color: #115E59; }
+  .kpi-trend-badge.subtle { background: #F1F5F9; color: #475569; }
+
+  .kpi-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 10px;
+    border-top: 1px solid #f1f5f9;
+    font-size: 0.74rem;
+  }
+  .footer-label {
+    color: #64748b;
+    font-weight: 600;
+  }
+  .footer-val {
+    font-weight: 750;
+  }
+  .footer-val.gold { color: #D97706; }
+  .footer-val.emerald { color: #059669; }
+  .footer-val.teal { color: #0D9488; }
+  .footer-val.blue { color: #2563EB; }
+  .footer-val.purple { color: #7C3AED; }
+  .footer-val.green { color: #00594E; }
+
+  /* ==========================================================================
+     C. SPLIT GRID PRINCIPAL (REPARTO + EFICACIA Y SEMÁFORO)
+     ========================================================================== */
+  .bento-split-main {
+    display: grid;
+    grid-template-columns: 1.65fr 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  .bento-panel-main {
+    background: #ffffff;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.04);
+  }
+
+  .bento-panel-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f1f5f9;
+    flex-wrap: wrap;
+  }
+  .panel-title-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .panel-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .panel-icon-wrap {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .panel-icon-wrap.gold { background: rgba(245, 158, 11, 0.12); color: #D97706; }
+  .panel-icon-wrap.emerald { background: rgba(16, 185, 129, 0.12); color: #059669; }
+  .panel-icon-wrap.mint { background: rgba(13, 148, 136, 0.12); color: #0D9488; }
+  .panel-icon-wrap.amber { background: rgba(217, 119, 6, 0.12); color: #B45309; }
+
+  .panel-heading-text {
+    font-size: 1.15rem;
+    font-weight: 850;
+    color: #0f172a;
+    letter-spacing: -0.02em;
+    margin: 0;
+  }
+  .panel-subheading-text {
+    font-size: 0.80rem;
+    color: #64748b;
+    margin: 0;
+  }
+
+  .panel-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  /* Segmented Filter con Píldora Deslizante */
+  .dash-segmented-filter {
+    position: relative;
+    display: inline-flex;
+    background: #f1f5f9;
+    padding: 3px;
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    gap: 2px;
+  }
+  .dash-seg-indicator-pill {
+    position: absolute;
+    top: 3px;
+    left: 0;
+    bottom: 3px;
+    background: #ffffff;
+    border-radius: 7px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), width 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .dash-seg-btn {
+    position: relative;
+    z-index: 2;
+    background: transparent;
+    border: none;
+    padding: 5px 12px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: #64748b;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: color 0.18s ease;
+  }
+  .dash-seg-btn.active {
+    color: #00594E;
+    font-weight: 850;
+  }
+
+  .panel-link-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #00594E;
+    text-decoration: none;
+    transition: gap 0.15s ease;
+  }
+  .panel-link-action:hover {
+    gap: 8px;
+  }
+
+  /* Listado de expedientes prioritarios */
+  .critical-docs-flow {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .promax-floating-card {
+    position: relative;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 16px 18px 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
+    overflow: hidden;
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .promax-floating-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px -4px rgba(0, 89, 78, 0.08);
+    border-color: #cbd5e1;
+  }
+
+  .card-sla-edge {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+  }
+  .card-sla-edge.danger { background: #EF4444; }
+  .card-sla-edge.warn { background: #F59E0B; }
+  .card-sla-edge.safe { background: #10B981; }
+
+  .doc-card-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .doc-meta-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .doc-badge-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .promax-badge {
+    font-size: 0.70rem;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 5px;
+  }
+
+  .doc-rad-mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: #0f172a;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    padding: 2px 7px;
+    border-radius: 5px;
+  }
+
+  .doc-urgency-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #64748b;
+  }
+
+  .doc-subject-title {
+    font-size: 0.94rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 6px 0;
+    line-height: 1.35;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .doc-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 0.76rem;
+    color: #64748b;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  .meta-field {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  /* Mini Barra de Progreso SLA */
+  .doc-sla-track {
+    width: 100%;
+    height: 5px;
+    background: #e2e8f0;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .doc-sla-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .doc-sla-fill.danger { background: linear-gradient(90deg, #EF4444, #DC2626); }
+  .doc-sla-fill.warn { background: linear-gradient(90deg, #F59E0B, #D97706); }
+  .doc-sla-fill.safe { background: linear-gradient(90deg, #10B981, #059669); }
+
+  .doc-action-cell {
+    flex-shrink: 0;
+  }
+  .btn-promax-card-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    color: #1e293b;
+    font-size: 0.76rem;
+    font-weight: 750;
+    padding: 7px 12px;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all 0.18s ease;
+  }
+  .btn-promax-card-action:hover {
+    background: #00594E;
+    color: #ffffff;
+    border-color: #00594E;
+    box-shadow: 0 4px 10px rgba(0, 89, 78, 0.2);
+  }
+
+  /* Estado vacío */
+  .bento-empty-state {
+    text-align: center;
+    padding: 38px 20px;
+    background: #f8fafc;
+    border-radius: 14px;
+    border: 1px dashed #cbd5e1;
+  }
+  .empty-icon-wrap {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(16, 185, 129, 0.12);
+    color: #059669;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 10px auto;
+  }
+  .empty-icon-wrap.neutral {
+    background: #f1f5f9;
+    color: #94a3b8;
+  }
+  .empty-title {
+    font-size: 0.96rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 4px 0;
+  }
+  .empty-desc {
+    font-size: 0.80rem;
+    color: #64748b;
+    margin: 0;
+  }
+
+  /* ==========================================================================
+     COLUMNA DERECHA: EFICACIA Y TÉRMINOS SLA
+     ========================================================================== */
+  .bento-side-column {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .bento-widget-card {
+    background: #ffffff;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03);
+  }
+
+  .widget-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .widget-title-text {
+    font-size: 0.98rem;
+    font-weight: 850;
+    color: #0f172a;
+    letter-spacing: -0.01em;
+  }
+  .promax-efficacy-pill {
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: rgba(16, 185, 129, 0.12);
+    color: #065f46;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    text-decoration: none;
+  }
+  .widget-header-chip {
+    font-size: 0.68rem;
+    font-weight: 750;
+    color: #00594E;
+    background: rgba(0, 89, 78, 0.08);
+    padding: 2px 7px;
+    border-radius: 4px;
+  }
+
+  /* Showcase de Eficacia con Anillo Gauge */
+  .efficacy-gauge-showcase {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 16px;
+  }
+
+  .circular-gauge-wrapper {
+    position: relative;
+    width: 96px;
+    height: 96px;
+    flex-shrink: 0;
+  }
+  .circular-gauge-svg {
+    transform: rotate(-90deg);
+  }
+  .gauge-track {
+    fill: none;
+    stroke: #f1f5f9;
+  }
+  .gauge-fill {
+    fill: none;
+    stroke: #00594E;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .gauge-center-content {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .gauge-number {
+    font-size: 1.15rem;
+    font-weight: 850;
+    color: #0f172a;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .gauge-caption {
+    font-size: 0.60rem;
+    font-weight: 750;
+    color: #64748b;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .efficacy-stats-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .efficacy-metric-pill {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 8px 12px;
+  }
+  .metric-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .metric-dot.green { background: #10B981; }
+  .metric-dot.gold { background: #F59E0B; }
+
+  .efficacy-metric-num {
+    font-size: 1.15rem;
+    font-weight: 850;
+    color: #0f172a;
+    line-height: 1;
+    display: block;
+  }
+  .efficacy-metric-label {
+    font-size: 0.70rem;
+    font-weight: 600;
+    color: #64748b;
+  }
+
+  .efficacy-progress-section {
+    margin-bottom: 14px;
+  }
+  .progress-legend {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #334155;
+  }
+  .progress-val-accent {
+    font-size: 0.82rem;
+    font-weight: 850;
+    color: #00594E;
+  }
+  .promax-track {
+    height: 8px;
+    background: #f1f5f9;
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 6px;
+  }
+  .promax-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #B5A160 0%, #00594E 100%);
+    transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .promax-cta-button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(135deg, #00594E 0%, #004239 100%);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: 0.80rem;
+    font-weight: 750;
+    text-decoration: none;
+    box-shadow: 0 4px 12px rgba(0, 89, 78, 0.22);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .promax-cta-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0, 89, 78, 0.30);
+    filter: brightness(1.04);
+  }
+  .cta-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .promax-counter-badge {
+    background: #B5A160;
+    color: #ffffff;
+    font-size: 0.72rem;
+    font-weight: 850;
+    padding: 2px 7px;
+    border-radius: 999px;
+  }
+
+  /* Semáforo SLA interactivo */
+  .bento-sla-interactive-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .dist-card-interactive {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+  }
+  .dist-card-interactive:hover {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    transform: translateX(2px);
+  }
+
+  .sla-label-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #334155;
+  }
+  .dist-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  .dist-dot.green { background: #10B981; }
+  .dist-dot.warn { background: #F59E0B; }
+  .dist-dot.danger { background: #EF4444; }
+
+  .sla-count-chip {
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .sla-count-chip.green { background: #D1FAE5; color: #065F46; }
+  .sla-count-chip.warn { background: #FEF3C7; color: #92400E; }
+  .sla-count-chip.danger { background: #FEE2E2; color: #991B1B; }
+
+  .safe-fill { background: #10B981; }
+  .warn-fill { background: #F59E0B; }
+  .danger-fill { background: #EF4444; }
+
+  /* Sello de cumplimiento Ley 1755 */
+  .bento-compliance-stamp {
+    background: linear-gradient(135deg, rgba(248, 250, 252, 0.95) 0%, rgba(241, 245, 249, 0.95) 100%);
+    border: 1px solid rgba(181, 161, 96, 0.35);
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+  .stamp-header {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 4px;
+  }
+  .stamp-icon {
+    color: #B5A160;
+  }
+  .stamp-title {
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: #0f172a;
+  }
+  .stamp-text {
+    font-size: 0.74rem;
+    color: #64748b;
+    margin: 0;
+    line-height: 1.45;
+  }
+
+  /* ==========================================================================
+     D. FILA INFERIOR 2x2: COLEGIADOS Y AGENDA
+     ========================================================================== */
+  .bento-grid-bottom {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+
+  .bento-feed-card {
+    background: #ffffff;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03);
+  }
+
+  .bento-feed-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .promax-feed-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 12px 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    transition: all 0.18s ease;
+  }
+  .promax-feed-item:hover {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  }
+
+  .feed-item-main {
+    flex: 1;
+    min-width: 0;
+  }
+  .feed-meta-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 3px;
+    flex-wrap: wrap;
+  }
+  .colegiado-badge-tag {
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: #00594E;
+    background: rgba(0, 89, 78, 0.1);
+    padding: 2px 6px;
+    border-radius: 5px;
+  }
+  .feed-date {
+    font-size: 0.72rem;
+    color: #64748b;
+  }
+  .feed-organo-tag {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #B45309;
+    background: #FEF3C7;
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+  .feed-title {
+    font-size: 0.84rem;
+    font-weight: 750;
+    color: #0f172a;
+    line-height: 1.35;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .btn-promax-feed-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.74rem;
+    font-weight: 750;
+    color: #00594E;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    padding: 4px 9px;
+    border-radius: 6px;
+    text-decoration: none;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+  }
+  .btn-promax-feed-action:hover {
+    background: #00594E;
+    color: #ffffff;
+    border-color: #00594E;
+  }
+
+  /* ==========================================================================
+     RESPONSIVE BREAKPOINTS
+     ========================================================================== */
+  @media (max-width: 1400px) {
+    .bento-kpi-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  @media (max-width: 1100px) {
+    .bento-hero-promax {
+      flex-direction: column;
+      align-items: flex-start;
+      padding: 24px 20px;
+    }
+    .bento-hero-capsules {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .bento-split-main {
+      grid-template-columns: 1fr;
+    }
+    .bento-grid-bottom {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .bento-kpi-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .bento-hero-capsules {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 520px) {
+    .bento-kpi-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* ==========================================================================
+     ANIMACIONES DE MOVIMIENTO: CROSSFADE & SHARED ELEMENT
+     ========================================================================== */
+  ::view-transition-old(dash-sla-pill),
+  ::view-transition-new(dash-sla-pill) {
+    animation-duration: 260ms;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  :global(.crossfade-enter) {
+    animation: proMaxDashFadeEnter 260ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  :global(.crossfade-leave) {
+    animation: proMaxDashFadeLeave 100ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes proMaxDashFadeEnter {
+    from {
+      opacity: 0;
+      transform: scale(0.98) translateY(3px);
+      filter: blur(4px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+      filter: blur(0px);
+    }
+  }
+
+  @keyframes proMaxDashFadeLeave {
+    from {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+      filter: blur(0px);
+    }
+    to {
+      opacity: 0;
+      transform: scale(0.99) translateY(-2px);
+      filter: blur(2px);
+    }
+  }
+</style>
+
 <script>
   import { initDashboard } from "@scripts/dashboard";
+
+  // 1. Inicializar lógica existente de tiempo real en Dashboard
   initDashboard();
+
+  // 2. Control Segmentado Interactivo con Shared Element Slider & Crossfade
+  const filterBtns = document.querySelectorAll(".dash-seg-btn");
+  const indicator = document.getElementById("dash-seg-indicator");
+  let activeFilter = "all";
+
+  function updateSegmentIndicator(activeBtn: HTMLElement) {
+    if (!indicator || !activeBtn) return;
+    const parent = activeBtn.parentElement;
+    if (!parent) return;
+    const parentRect = parent.getBoundingClientRect();
+    const btnRect = activeBtn.getBoundingClientRect();
+    indicator.style.width = `${btnRect.width}px`;
+    indicator.style.transform = `translateX(${btnRect.left - parentRect.left}px)`;
+  }
+
+  // Inicializar posición de píldora
+  const initialActive = document.querySelector(".dash-seg-btn.active") as HTMLElement | null;
+  if (initialActive) {
+    updateSegmentIndicator(initialActive);
+  }
+
+  function filterRepartoCards(filter: string) {
+    activeFilter = filter;
+    const container = document.getElementById("dashboard-critical-list");
+    if (!container) return;
+
+    const cards = container.querySelectorAll(".critical-doc-card");
+    let visibleCount = 0;
+
+    const applyFilter = () => {
+      cards.forEach((cardEl: Element) => {
+        const card = cardEl as HTMLElement;
+        const cat = card.getAttribute("data-status-category");
+        const show = filter === "all" || cat === filter;
+        if (show) {
+          card.style.display = "flex";
+          visibleCount++;
+        } else {
+          card.style.display = "none";
+        }
+      });
+
+      const emptyMsg = document.getElementById("dash-filter-empty-state");
+      if (emptyMsg) {
+        emptyMsg.style.display = visibleCount === 0 ? "block" : "none";
+      }
+    };
+
+    if (typeof document !== "undefined" && "startViewTransition" in document) {
+      try {
+        (document as any).startViewTransition(() => {
+          applyFilter();
+        });
+        return;
+      } catch {
+        // Fallback
+      }
+    }
+
+    // Fallback CSS Crossfade
+    container.classList.add("crossfade-leave");
+    setTimeout(() => {
+      applyFilter();
+      container.classList.remove("crossfade-leave");
+      container.classList.add("crossfade-enter");
+      setTimeout(() => container.classList.remove("crossfade-enter"), 260);
+    }, 80);
+  }
+
+  filterBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      filterBtns.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      updateSegmentIndicator(btn as HTMLElement);
+      const targetFilter = btn.getAttribute("data-filter") || "all";
+      filterRepartoCards(targetFilter);
+    });
+  });
+
+  // Reposicionar indicador en cambio de tamaño de ventana
+  window.addEventListener("resize", () => {
+    const curActive = document.querySelector(".dash-seg-btn.active") as HTMLElement | null;
+    if (curActive) updateSegmentIndicator(curActive);
+  });
+
+  // 3. Conexión de clic en barras del Semáforo SLA derecho con el Reparto izquierdo
+  const slaTriggerCards = document.querySelectorAll("[data-sla-trigger]");
+  slaTriggerCards.forEach((trigger) => {
+    trigger.addEventListener("click", () => {
+      const targetSla = trigger.getAttribute("data-sla-trigger");
+      if (!targetSla) return;
+
+      const matchingBtn = document.querySelector(`.dash-seg-btn[data-filter="${targetSla}"]`) as HTMLElement | null;
+      const allBtn = document.querySelector('.dash-seg-btn[data-filter="all"]') as HTMLElement | null;
+
+      if (activeFilter === targetSla && allBtn) {
+        // Alternar de vuelta a 'todos'
+        allBtn.click();
+      } else if (matchingBtn) {
+        matchingBtn.click();
+      }
+    });
+  });
 </script>
