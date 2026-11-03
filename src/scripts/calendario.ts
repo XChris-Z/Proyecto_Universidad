@@ -1,5 +1,5 @@
 // src/scripts/calendario.ts
-// Lógica de cliente para el Calendario Institucional tipo Google Calendar en tiempo real
+// Lógica de cliente para el Calendario Institucional UI/UX Pro Max en tiempo real con Crossfade y Shared Element Transitions
 
 import {
   getUnifiedCalendarEvents,
@@ -7,19 +7,21 @@ import {
   connectGoogleCalendar,
 } from '@lib/calendar';
 import { logSystemActivity } from '@lib/audit';
-import type { CalendarioEvent, CalendarioEventType } from '@lib/types';
+import type { CalendarioEvent, CalendarioEventType, EventUrgency } from '@lib/types';
 
 // Estado global de la vista
 let currentDate = new Date();
 let selectedDay = new Date();
 let currentYear = currentDate.getFullYear();
-let currentMonth = currentDate.getMonth(); // 0-indexed (0 = Enero, 9 = Octubre)
+let currentMonth = currentDate.getMonth(); // 0-indexed (0 = Enero)
 let activeView: 'month' | 'week' | 'day' | 'agenda' = 'month';
 
 let allEvents: CalendarioEvent[] = [];
 let isGoogleConnected = false;
 let activeCategories = new Set<string>(['peticion', 'reporte', 'colegiado', 'academica', 'financiero']);
 let searchQuery = '';
+let activeSlaFilter: 'all' | 'danger' | 'warning' | 'safe' = 'all';
+let selectedDayStr = '';
 
 const MONTH_NAMES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -29,45 +31,67 @@ const MONTH_NAMES = [
 const WEEKDAY_NAMES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const WEEKDAY_FULL = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
-export async function initCalendario() {
-  const monthTitle = document.getElementById('gcal-current-label');
-  const miniTitle = document.getElementById('gcal-mini-title');
-  const viewButtons = document.querySelectorAll('#gcal-view-switcher .gcal-view-btn');
-  const syncBtn = document.getElementById('btn-gcal-sync');
-  const syncBadge = document.getElementById('gcal-sync-badge');
-  const searchInput = document.getElementById('gcal-search-input') as HTMLInputElement | null;
-  const categoryContainer = document.getElementById('gcal-category-filters');
+/**
+ * Transición de DOM suave con soporte para View Transitions API y fallback CSS/WAAPI
+ */
+export async function transitionDOMUpdate(updateFn: () => void | Promise<void>) {
+  if (typeof document !== 'undefined' && 'startViewTransition' in document) {
+    try {
+      (document as any).startViewTransition(async () => {
+        await updateFn();
+      });
+      return;
+    } catch {
+      // Fallback si falla la promesa interna
+    }
+  }
 
+  // Fallback CSS Crossfade
+  const targets = [
+    document.getElementById('gcal-month-grid-cells'),
+    document.getElementById('gcal-week-container'),
+    document.getElementById('gcal-day-container'),
+    document.getElementById('gcal-agenda-view'),
+    document.getElementById('timeline-items-container')
+  ].filter(Boolean) as HTMLElement[];
+
+  targets.forEach((el) => el.classList.add('crossfade-leave'));
+  await new Promise((resolve) => setTimeout(resolve, 90));
+  await updateFn();
+  targets.forEach((el) => {
+    el.classList.remove('crossfade-leave');
+    el.classList.add('crossfade-enter');
+    setTimeout(() => el.classList.remove('crossfade-enter'), 280);
+  });
+}
+
+export async function initCalendario() {
   // Inicializar títulos
   updateHeaderTitles();
+
+  // Inicializar indicador del View Switcher
+  initViewSwitcher();
+
+  // Inicializar Bento Header Cards como filtros interactivos
+  initBentoFilters();
 
   // Cargar eventos iniciales
   await loadEvents();
 
-  // Escuchar cambio de vistas (Mes, Semana, Día, Agenda)
-  viewButtons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      viewButtons.forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active');
-      const view = btn.getAttribute('data-gview') as 'month' | 'week' | 'day' | 'agenda';
-      if (view) {
-        switchView(view);
-      }
-    });
-  });
-
   // Botón Sincronizar
+  const syncBtn = document.getElementById('btn-gcal-sync') || document.getElementById('btn-force-sync');
   syncBtn?.addEventListener('click', async () => {
-    const icon = document.getElementById('sync-icon-spin');
-    if (icon) icon.style.animation = 'spin 1s linear infinite';
+    const icon = document.getElementById('sync-spinner-icon') || document.getElementById('sync-icon-spin');
+    if (icon) icon.style.animation = 'spin 0.8s linear infinite';
     await loadEvents();
     if (icon) icon.style.animation = 'none';
     if ((window as any).showToast) {
-      (window as any).showToast('Calendario sincronizado con éxito');
+      (window as any).showToast('Calendario y Semáforo SLA sincronizados en tiempo real', 'success');
     }
   });
 
   // Badge de Estado Google Calendar
+  const syncBadge = document.getElementById('gcal-sync-badge');
   syncBadge?.addEventListener('click', async () => {
     if (!isGoogleConnected) {
       const confirmed = typeof (window as any).showConfirm === 'function'
@@ -80,7 +104,7 @@ export async function initCalendario() {
       if (confirmed) {
         try {
           await connectGoogleCalendar();
-        } catch (err: any) {
+        } catch {
           if ((window as any).showToast) {
             (window as any).showToast('Aviso: La agenda opera sincronizada con la base de datos en tiempo real.', 'info');
           }
@@ -90,12 +114,17 @@ export async function initCalendario() {
   });
 
   // Búsqueda en tiempo real
+  const searchInput = document.getElementById('gcal-search-input') as HTMLInputElement | null;
   searchInput?.addEventListener('input', (e) => {
     searchQuery = (e.target as HTMLInputElement).value.trim().toLowerCase();
-    renderCurrentView();
+    transitionDOMUpdate(() => {
+      renderCurrentView();
+      renderTimelineMonitor();
+    });
   });
 
   // Filtros de categoría
+  const categoryContainer = document.getElementById('gcal-category-filters');
   categoryContainer?.addEventListener('change', (e) => {
     const target = e.target as HTMLInputElement;
     if (target && target.type === 'checkbox') {
@@ -104,7 +133,10 @@ export async function initCalendario() {
       } else {
         activeCategories.delete(target.value);
       }
-      renderCurrentView();
+      transitionDOMUpdate(() => {
+        renderCurrentView();
+        renderTimelineMonitor();
+      });
     }
   });
 
@@ -123,39 +155,131 @@ export async function initCalendario() {
     selectedDay = new Date(today);
     currentYear = today.getFullYear();
     currentMonth = today.getMonth();
+    selectedDayStr = '';
     updateHeaderTitles();
-    renderCurrentView();
-    renderMiniCal();
+    transitionDOMUpdate(() => {
+      renderCurrentView();
+      renderTimelineMonitor();
+      renderMiniCal();
+    });
   });
 
-  // Navegación en Mini Calendario
-  document.getElementById('gcal-mini-prev')?.addEventListener('click', () => {
-    currentMonth--;
-    if (currentMonth < 0) {
-      currentMonth = 11;
-      currentYear--;
-    }
-    updateHeaderTitles();
-    renderCurrentView();
-    renderMiniCal();
+  // Botón Limpiar Selección de Día en Timeline
+  document.getElementById('btn-clear-day-filter')?.addEventListener('click', () => {
+    selectedDayStr = '';
+    document.querySelectorAll('.gcal-cell.is-selected').forEach((c) => c.classList.remove('is-selected'));
+    const clearBtn = document.getElementById('btn-clear-day-filter');
+    if (clearBtn) clearBtn.style.display = 'none';
+    transitionDOMUpdate(() => {
+      renderTimelineMonitor();
+    });
   });
 
-  document.getElementById('gcal-mini-next')?.addEventListener('click', () => {
-    currentMonth++;
-    if (currentMonth > 11) {
-      currentMonth = 0;
-      currentYear++;
-    }
-    updateHeaderTitles();
-    renderCurrentView();
-    renderMiniCal();
-  });
-
-  // Modal Crear Evento
+  // Modales
   setupCreateEventModal();
-
-  // Modal Detalle del Día
   setupDayDetailModal();
+
+  // Redimensionamiento de ventana para reposicionar indicador deslizante
+  window.addEventListener('resize', () => {
+    const activeBtn = document.querySelector('#gcal-view-switcher .gcal-view-btn.active') as HTMLElement | null;
+    if (activeBtn) updateViewSwitcherIndicator(activeBtn);
+  });
+}
+
+/**
+ * Inicializa el View Switcher con píldora deslizante (Shared Element)
+ */
+function initViewSwitcher() {
+  const viewButtons = document.querySelectorAll('#gcal-view-switcher .gcal-view-btn');
+  const initialActive = document.querySelector('#gcal-view-switcher .gcal-view-btn.active') as HTMLElement | null;
+  if (initialActive) {
+    updateViewSwitcherIndicator(initialActive);
+  }
+
+  viewButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      viewButtons.forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      updateViewSwitcherIndicator(btn as HTMLElement);
+      const view = btn.getAttribute('data-gview') as 'month' | 'week' | 'day' | 'agenda';
+      if (view) {
+        transitionDOMUpdate(() => {
+          switchView(view);
+        });
+      }
+    });
+  });
+}
+
+/**
+ * Actualiza la posición y ancho del indicador deslizante del selector de vista
+ */
+function updateViewSwitcherIndicator(activeBtn: HTMLElement) {
+  const indicator = document.getElementById('view-switcher-indicator');
+  const parent = activeBtn.parentElement;
+  if (!indicator || !parent) return;
+
+  const parentRect = parent.getBoundingClientRect();
+  const btnRect = activeBtn.getBoundingClientRect();
+  const left = btnRect.left - parentRect.left;
+
+  indicator.style.width = `${btnRect.width}px`;
+  indicator.style.transform = `translateX(${left}px)`;
+}
+
+/**
+ * Inicializa las tarjetas Bento como filtros interactivos SLA con Crossfade
+ */
+function initBentoFilters() {
+  const bentoCards = document.querySelectorAll('.bento-sla-card');
+  bentoCards.forEach((card) => {
+    card.addEventListener('click', () => {
+      const filter = card.getAttribute('data-sla-filter') as 'danger' | 'warning' | 'safe';
+      if (activeSlaFilter === filter) {
+        activeSlaFilter = 'all';
+      } else {
+        activeSlaFilter = filter;
+      }
+      updateBentoActiveIndicator();
+      transitionDOMUpdate(() => {
+        renderCurrentView();
+        renderTimelineMonitor();
+      });
+    });
+  });
+}
+
+/**
+ * Actualiza el indicador visual de tarjeta Bento activa
+ */
+function updateBentoActiveIndicator() {
+  const bentoCards = document.querySelectorAll('.bento-sla-card');
+  bentoCards.forEach((card) => {
+    const filter = card.getAttribute('data-sla-filter');
+    const badge = card.querySelector('.bento-active-badge') as HTMLElement | null;
+    if (activeSlaFilter === filter) {
+      card.classList.add('active-filter');
+      if (badge) badge.style.display = 'inline-flex';
+    } else {
+      card.classList.remove('active-filter');
+      if (badge) badge.style.display = 'none';
+    }
+  });
+
+  const timelineSubtitle = document.getElementById('timeline-current-filter-desc');
+  if (timelineSubtitle) {
+    if (activeSlaFilter === 'danger') {
+      timelineSubtitle.textContent = 'Filtrando: Compromisos Críticos (≤ 2 días)';
+    } else if (activeSlaFilter === 'warning') {
+      timelineSubtitle.textContent = 'Filtrando: Compromisos en Alerta (3 a 7 días)';
+    } else if (activeSlaFilter === 'safe') {
+      timelineSubtitle.textContent = 'Filtrando: Compromisos en Término SLA (> 7 días)';
+    } else if (selectedDayStr) {
+      timelineSubtitle.textContent = `Compromisos del día ${selectedDayStr}`;
+    } else {
+      timelineSubtitle.textContent = 'Compromisos Oficiales en Tiempo Real';
+    }
+  }
 }
 
 /**
@@ -164,9 +288,7 @@ export async function initCalendario() {
 async function loadEvents() {
   const syncBadge = document.getElementById('gcal-sync-badge');
   if (syncBadge) {
-    syncBadge.textContent = 'Consultando...';
-    syncBadge.style.background = 'var(--bg-surface-elevated)';
-    syncBadge.style.color = 'var(--text-muted)';
+    syncBadge.textContent = 'Sincronizando...';
   }
 
   // Rango de consulta: 1 mes antes y 3 meses después del mes visible
@@ -178,7 +300,7 @@ async function loadEvents() {
     allEvents = res.events;
     isGoogleConnected = res.isGoogleConnected;
 
-    // Actualizar badges de semáforo
+    // Actualizar badges del Bento Header
     const critEl = document.getElementById('gcal-crit-count');
     const warnEl = document.getElementById('gcal-warn-count');
     const safeEl = document.getElementById('gcal-safe-count');
@@ -190,28 +312,26 @@ async function loadEvents() {
     // Actualizar badge de sincronización con Google
     if (syncBadge) {
       if (isGoogleConnected) {
-        syncBadge.textContent = '● Google Calendar Activo';
-        syncBadge.style.background = '#ecfdf5';
-        syncBadge.style.color = '#065f46';
-        syncBadge.style.border = '1px solid #a7f3d0';
+        syncBadge.innerHTML = `<span class="badge-dot-live"></span> Google Calendar Activo`;
+        syncBadge.classList.add('connected');
+        syncBadge.classList.remove('disconnected');
       } else {
-        syncBadge.textContent = '+ Conectar Google Calendar';
-        syncBadge.style.background = '#fffbeb';
-        syncBadge.style.color = '#92400e';
-        syncBadge.style.border = '1px solid #fde68a';
+        syncBadge.innerHTML = `<span class="badge-dot-local"></span> Base de Datos en Tiempo Real`;
+        syncBadge.classList.add('disconnected');
+        syncBadge.classList.remove('connected');
       }
     }
 
     renderCurrentView();
+    renderTimelineMonitor();
     renderMiniCal();
   } catch (err) {
     console.error('Error cargando eventos:', err);
     if (syncBadge) {
-      syncBadge.textContent = 'Modo Local (Sin Google)';
-      syncBadge.style.background = '#fef2f2';
-      syncBadge.style.color = '#991b1b';
+      syncBadge.innerHTML = `<span class="badge-dot-local"></span> Base de Datos Local`;
     }
     renderCurrentView();
+    renderTimelineMonitor();
     renderMiniCal();
   }
 }
@@ -240,32 +360,35 @@ function updateHeaderTitles() {
 }
 
 /**
- * Navega según la vista activa
+ * Navega según la vista activa con Crossfade
  */
 function navigate(step: number) {
-  if (activeView === 'month' || activeView === 'agenda') {
-    currentMonth += step;
-    if (currentMonth < 0) {
-      currentMonth = 11;
-      currentYear--;
-    } else if (currentMonth > 11) {
-      currentMonth = 0;
-      currentYear++;
+  transitionDOMUpdate(() => {
+    if (activeView === 'month' || activeView === 'agenda') {
+      currentMonth += step;
+      if (currentMonth < 0) {
+        currentMonth = 11;
+        currentYear--;
+      } else if (currentMonth > 11) {
+        currentMonth = 0;
+        currentYear++;
+      }
+      currentDate = new Date(currentYear, currentMonth, 1);
+    } else if (activeView === 'week') {
+      selectedDay.setDate(selectedDay.getDate() + step * 7);
+      currentMonth = selectedDay.getMonth();
+      currentYear = selectedDay.getFullYear();
+    } else if (activeView === 'day') {
+      selectedDay.setDate(selectedDay.getDate() + step);
+      currentMonth = selectedDay.getMonth();
+      currentYear = selectedDay.getFullYear();
     }
-    currentDate = new Date(currentYear, currentMonth, 1);
-  } else if (activeView === 'week') {
-    selectedDay.setDate(selectedDay.getDate() + step * 7);
-    currentMonth = selectedDay.getMonth();
-    currentYear = selectedDay.getFullYear();
-  } else if (activeView === 'day') {
-    selectedDay.setDate(selectedDay.getDate() + step);
-    currentMonth = selectedDay.getMonth();
-    currentYear = selectedDay.getFullYear();
-  }
 
-  updateHeaderTitles();
-  renderCurrentView();
-  renderMiniCal();
+    updateHeaderTitles();
+    renderCurrentView();
+    renderTimelineMonitor();
+    renderMiniCal();
+  });
 }
 
 /**
@@ -278,25 +401,40 @@ function switchView(view: 'month' | 'week' | 'day' | 'agenda') {
   const weekV = document.getElementById('gcal-week-view');
   const dayV = document.getElementById('gcal-day-view');
   const agendaV = document.getElementById('gcal-agenda-view');
+  const timelinePanel = document.getElementById('gcal-timeline-monitor');
 
   if (monthV) monthV.style.display = view === 'month' ? 'block' : 'none';
   if (weekV) weekV.style.display = view === 'week' ? 'block' : 'none';
   if (dayV) dayV.style.display = view === 'day' ? 'block' : 'none';
-  if (agendaV) agendaV.style.display = view === 'agenda' ? 'block' : 'none';
+
+  if (view === 'agenda') {
+    if (agendaV) agendaV.style.display = 'block';
+    if (monthV) monthV.style.display = 'none';
+    if (weekV) weekV.style.display = 'none';
+    if (dayV) dayV.style.display = 'none';
+  } else {
+    if (agendaV) agendaV.style.display = 'none';
+  }
 
   updateHeaderTitles();
   renderCurrentView();
+  renderTimelineMonitor();
 }
 
 /**
- * Retorna eventos filtrados por categorías y búsqueda
+ * Retorna eventos filtrados por categorías, búsqueda y SLA
  */
 function getFilteredEvents(): CalendarioEvent[] {
   return allEvents.filter((ev) => {
-    // Filtro por categoría
+    // 1. Filtro por categoría
     if (!activeCategories.has(ev.tipo)) return false;
 
-    // Filtro por búsqueda
+    // 2. Filtro SLA (desde Bento Header)
+    if (activeSlaFilter !== 'all') {
+      if (ev.urgencia !== activeSlaFilter) return false;
+    }
+
+    // 3. Filtro por búsqueda
     if (searchQuery) {
       const matchTitle = ev.titulo.toLowerCase().includes(searchQuery);
       const matchDesc = ev.descripcion.toLowerCase().includes(searchQuery);
@@ -324,7 +462,34 @@ function renderCurrentView() {
 }
 
 /**
- * Renderiza la vista Mes
+ * Extrae o formatea un identificador de radicado limpio para presentación monoespaciada
+ */
+function getRadicadoCode(ev: CalendarioEvent): string {
+  const match = ev.titulo.match(/RAD-\d{4}-\d+/i) || ev.descripcion.match(/RAD-\d{4}-\d+/i);
+  if (match) return match[0];
+  if (ev.tipo === 'peticion') return `PQRS-${ev.id.slice(0, 6)}`;
+  if (ev.tipo === 'reporte') return `REP-${ev.id.slice(0, 6)}`;
+  if (ev.tipo === 'colegiado') return `CSU-${ev.id.slice(0, 6)}`;
+  return `ACT-${ev.id.slice(0, 6)}`;
+}
+
+/**
+ * Calcula porcentaje de tiempo consumido para la barra de progreso SLA Pro Max
+ */
+function getSlaConsumption(diasRestantes: number, tipo: string): number {
+  if (diasRestantes <= 0) return 100;
+  let term = 15;
+  if (tipo === 'tutela') term = 2;
+  else if (tipo === 'colegiado') term = 10;
+  else if (tipo === 'reporte') term = 30;
+
+  if (diasRestantes >= term) return 5;
+  const consumed = Math.round(((term - diasRestantes) / term) * 100);
+  return Math.min(95, Math.max(5, consumed));
+}
+
+/**
+ * Renderiza la vista Mes con Cápsulas Flotantes Pro Max y Shared Element Ring
  */
 function renderMonthView() {
   const monthGrid = document.getElementById('gcal-month-grid-cells');
@@ -357,11 +522,13 @@ function renderMonthView() {
     const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     const dayEvents = events.filter((e) => e.fecha === dateStr);
     const isToday = dateStr === todayStr;
+    const isSelected = dateStr === selectedDayStr;
 
     const cell = document.createElement('div');
-    cell.className = `gcal-cell ${isToday ? 'today' : ''}`;
+    cell.className = `gcal-cell ${isToday ? 'today' : ''} ${isSelected ? 'is-selected' : ''}`;
+    cell.setAttribute('data-day', dateStr);
 
-    // Vista previa de puntos de semáforo
+    // Indicador visual de puntos de semáforo
     let dotsHtml = '';
     dayEvents.slice(0, 3).forEach((ev) => {
       dotsHtml += `<span class="gcal-sem-dot ${ev.urgencia}"></span>`;
@@ -370,18 +537,20 @@ function renderMonthView() {
     const header = `
       <div class="gcal-cell-header">
         <div class="gcal-cell-dots-preview">${dotsHtml}</div>
-        <span class="gcal-day-num">${d}</span>
+        <span class="gcal-day-num ${isToday ? 'is-today-badge' : ''}">${d}</span>
       </div>
     `;
 
-    // Stack de eventos
+    // Stack de micro-tarjetas con código monoespaciado y barra lateral
     let eventsHtml = '<div class="gcal-events-stack">';
     const displayEvents = dayEvents.slice(0, 2);
     displayEvents.forEach((ev) => {
+      const radCode = getRadicadoCode(ev);
       eventsHtml += `
-        <div class="gcal-sem-chip sem-${ev.urgencia}" title="${ev.titulo} (${ev.diasRestantes} días)">
-          <span class="gcal-sem-dot ${ev.urgencia}"></span>
-          <span class="gcal-sem-text">${ev.titulo}</span>
+        <div class="gcal-sem-chip sem-${ev.urgencia}" data-radicado-id="${ev.id}" style="view-transition-name: radicado-card-${ev.id.replace(/[^a-zA-Z0-9_-]/g, '')};" title="${ev.titulo} (${ev.diasRestantes <= 0 ? 'Vencido' : `${ev.diasRestantes}d`})">
+          <span class="chip-sla-bar ${ev.urgencia}"></span>
+          <span class="chip-rad-code">${radCode}</span>
+          <span class="chip-days-badge ${ev.urgencia}">${ev.diasRestantes <= 0 ? 'Vencido' : `${ev.diasRestantes}d`}</span>
         </div>
       `;
     });
@@ -395,12 +564,201 @@ function renderMonthView() {
 
     cell.innerHTML = header + eventsHtml;
 
-    // Al hacer clic en la celda del día
+    // Al hacer clic en un radicado específico dentro del día: Shared Element transition hacia la timeline
+    cell.querySelectorAll('.gcal-sem-chip').forEach((chip) => {
+      chip.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const radId = chip.getAttribute('data-radicado-id');
+        selectedDay = new Date(currentYear, currentMonth, d);
+        selectedDayStr = dateStr;
+        updateSelectedDayCells(dateStr);
+        transitionDOMUpdate(() => {
+          renderTimelineMonitor(radId || undefined);
+        });
+      });
+    });
+
+    // Al hacer clic en la celda del día: migra el Shared Element Ring y filtra la timeline
     cell.addEventListener('click', () => {
+      selectedDay = new Date(currentYear, currentMonth, d);
+      selectedDayStr = dateStr;
+      updateSelectedDayCells(dateStr);
+      transitionDOMUpdate(() => {
+        renderTimelineMonitor();
+      });
+    });
+
+    // Doble clic abre el modal detallado
+    cell.addEventListener('dblclick', () => {
       openDayModal(dateStr, dayEvents);
     });
 
     monthGrid.appendChild(cell);
+  }
+}
+
+/**
+ * Actualiza el Shared Element Ring en las celdas del calendario
+ */
+function updateSelectedDayCells(activeDateStr: string) {
+  document.querySelectorAll('.gcal-cell').forEach((cell) => {
+    if (cell.getAttribute('data-day') === activeDateStr) {
+      cell.classList.add('is-selected');
+    } else {
+      cell.classList.remove('is-selected');
+    }
+  });
+
+  const clearBtn = document.getElementById('btn-clear-day-filter');
+  if (clearBtn) {
+    clearBtn.style.display = activeDateStr ? 'inline-flex' : 'none';
+  }
+}
+
+/**
+ * Renderiza el Panel Derecho: "Agenda & Monitor SLA" (Timeline Vertical Interactivo)
+ */
+function renderTimelineMonitor(focusEventId?: string) {
+  const container = document.getElementById('timeline-items-container');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const events = getFilteredEvents();
+
+  // Filtrar por día seleccionado si está activo
+  let targetEvents = events;
+  if (selectedDayStr) {
+    targetEvents = events.filter((e) => e.fecha === selectedDayStr);
+  }
+
+  // Ordenar cronológicamente y por urgencia
+  targetEvents.sort((a, b) => {
+    if (a.diasRestantes !== b.diasRestantes) {
+      return a.diasRestantes - b.diasRestantes;
+    }
+    return a.fecha.localeCompare(b.fecha);
+  });
+
+  const subtitleEl = document.getElementById('timeline-current-filter-desc');
+  const clearBtn = document.getElementById('btn-clear-day-filter');
+
+  if (subtitleEl) {
+    if (selectedDayStr) {
+      subtitleEl.textContent = `Compromisos del ${selectedDayStr} (${targetEvents.length})`;
+      if (clearBtn) clearBtn.style.display = 'inline-flex';
+    } else if (activeSlaFilter !== 'all') {
+      const label = activeSlaFilter === 'danger' ? 'Críticos' : activeSlaFilter === 'warning' ? 'En Alerta' : 'En Término';
+      subtitleEl.textContent = `Filtrando: Compromisos ${label} (${targetEvents.length})`;
+      if (clearBtn) clearBtn.style.display = 'inline-flex';
+    } else {
+      subtitleEl.textContent = `Monitoreando ${targetEvents.length} compromisos oficiales`;
+      if (clearBtn) clearBtn.style.display = 'none';
+    }
+  }
+
+  if (targetEvents.length === 0) {
+    container.innerHTML = `
+      <div class="timeline-empty-card">
+        <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <h5>Sin compromisos registrados</h5>
+        <p>${selectedDayStr ? 'No hay actividades agendadas para esta fecha.' : 'No hay actividades con los filtros actuales.'}</p>
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-timeline-create-trigger">+ Agendar Compromiso</button>
+      </div>
+    `;
+    document.getElementById('btn-timeline-create-trigger')?.addEventListener('click', () => {
+      openCreateModal(selectedDayStr);
+    });
+    return;
+  }
+
+  let focusedCardElement: HTMLElement | null = null;
+
+  targetEvents.forEach((ev) => {
+    const radCode = getRadicadoCode(ev);
+    const consumedPercent = getSlaConsumption(ev.diasRestantes, ev.tipo);
+    const isFocused = focusEventId === ev.id;
+
+    const card = document.createElement('div');
+    card.className = `pro-timeline-card sem-${ev.urgencia} ${isFocused ? 'focused-card' : ''}`;
+    card.setAttribute('data-id', ev.id);
+    card.setAttribute('id', `timeline-card-${ev.id}`);
+    card.style.setProperty('view-transition-name', `radicado-card-${ev.id.replace(/[^a-zA-Z0-9_-]/g, '')}`);
+
+    const urgencyLabel = ev.diasRestantes <= 0
+      ? 'Vencido'
+      : ev.diasRestantes <= 2
+      ? `${ev.diasRestantes}d (Atención Inmediata)`
+      : `${ev.diasRestantes} días restantes`;
+
+    card.innerHTML = `
+      <div class="timeline-node-pin ${ev.urgencia}"></div>
+      <div class="timeline-card-inner">
+        <div class="timeline-card-header">
+          <div class="timeline-rad-badge-wrap">
+            <span class="timeline-rad-mono">${radCode}</span>
+            <span class="timeline-sla-badge badge-${ev.urgencia}">${urgencyLabel}</span>
+          </div>
+          <span class="timeline-type-pill">${ev.tipo.toUpperCase()}</span>
+        </div>
+        
+        <h5 class="timeline-card-title">${ev.titulo}</h5>
+        
+        ${ev.descripcion ? `<p class="timeline-card-desc">${ev.descripcion}</p>` : ''}
+        
+        <div class="timeline-card-meta">
+          <div class="meta-item" title="Dependencia / Destino">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 7v14M21 7v14M6 7V3h12v4M10 11v2M14 11v2M10 16v2M14 16v2"/></svg>
+            <span>${ev.destino}</span>
+          </div>
+          <div class="meta-item" title="Funcionario Responsable">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span>${ev.responsable}</span>
+          </div>
+          <div class="meta-item" title="Fecha y Hora">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span>${ev.fecha} ${ev.hora ? `(${ev.hora})` : ''}</span>
+          </div>
+        </div>
+        
+        <!-- Barra de Progreso SLA Pro Max -->
+        <div class="timeline-sla-progress-wrap">
+          <div class="timeline-sla-progress-track">
+            <div class="timeline-sla-progress-fill ${ev.urgencia}" style="width: ${consumedPercent}%;"></div>
+          </div>
+          <div class="timeline-sla-progress-labels">
+            <span class="progress-percent">${consumedPercent}% consumido</span>
+            <span class="progress-remaining">${ev.diasRestantes <= 0 ? 'Término Vencido' : `${ev.diasRestantes} días`}</span>
+          </div>
+        </div>
+        
+        ${ev.link ? `
+          <div class="timeline-card-actions">
+            <a href="${ev.link}" target="_blank" rel="noopener noreferrer" class="timeline-action-link">
+              <span>Abrir en Google Calendar</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+            </a>
+          </div>
+        ` : ''}
+      </div>
+    `;
+
+    card.addEventListener('click', () => {
+      openDayModal(ev.fecha, [ev]);
+    });
+
+    container.appendChild(card);
+
+    if (isFocused) {
+      focusedCardElement = card;
+    }
+  });
+
+  if (focusedCardElement) {
+    (focusedCardElement as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 }
 
@@ -416,7 +774,6 @@ function renderWeekView() {
   const today = new Date();
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-  // Encontrar el domingo de la semana de selectedDay
   const startOfWeek = new Date(selectedDay);
   startOfWeek.setDate(selectedDay.getDate() - selectedDay.getDay());
 
@@ -498,9 +855,9 @@ function renderDayView() {
         <p>${dayEvents.length} compromisos registrados en tiempo real</p>
       </div>
       <div class="gcal-day-stats-pills">
-        <div class="gcal-day-stat-chip"><span style="color:#fecaca;">●</span> ${critCount} Críticos</div>
-        <div class="gcal-day-stat-chip"><span style="color:#fde68a;">●</span> ${warnCount} Alerta</div>
-        <div class="gcal-day-stat-chip"><span style="color:#a7f3d0;">●</span> ${safeCount} En Término</div>
+        <div class="gcal-day-stat-chip"><span style="color:#ef4444;">●</span> ${critCount} Críticos</div>
+        <div class="gcal-day-stat-chip"><span style="color:#f59e0b;">●</span> ${warnCount} Alerta</div>
+        <div class="gcal-day-stat-chip"><span style="color:#10b981;">●</span> ${safeCount} En Término</div>
       </div>
     </div>
   `;
@@ -508,19 +865,19 @@ function renderDayView() {
   let eventsListHtml = '<div class="gcal-day-events-list">';
   if (dayEvents.length === 0) {
     eventsListHtml += `
-      <div class="gcal-day-empty-state" style="text-align: center; padding: 48px 20px; background: #fff; border-radius: var(--radius-md); border: 1px dashed var(--border-color);">
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--text-muted); margin-bottom: 12px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        <h4 style="font-size: 1rem; font-weight: 700; color: var(--text-main); margin: 0 0 4px 0;">No hay compromisos agendados para este día</h4>
-        <p style="font-size: 0.82rem; color: var(--text-muted); margin: 0;">Puedes agendar una nueva actividad con el botón "Crear" de la barra superior.</p>
+      <div class="gcal-day-empty-state">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <h4>No hay compromisos agendados para este día</h4>
+        <p>Puedes agendar una nueva actividad con el botón "+ Compromiso" de la barra superior.</p>
       </div>
     `;
   } else {
     dayEvents.forEach((ev) => {
       eventsListHtml += `
-        <div class="gcal-day-event-card sem-${ev.urgencia}" style="background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 18px 20px; display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;">
+        <div class="gcal-day-event-card sem-${ev.urgencia}">
           <div style="flex: 1;">
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-              <span class="badge ${ev.urgencia === 'danger' ? 'status-critico' : ev.urgencia === 'warning' ? 'status-alerta' : 'status-exito'}" style="font-size: 0.72rem;">
+              <span class="badge ${ev.urgencia === 'danger' ? 'status-critico' : ev.urgencia === 'warning' ? 'status-alerta' : 'status-exito'}">
                 ${ev.diasRestantes <= 0 ? 'Término Vencido' : `${ev.diasRestantes} días restantes`}
               </span>
               <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">${ev.hora || 'Todo el día'}</span>
@@ -549,7 +906,7 @@ function renderDayView() {
 }
 
 /**
- * Renderiza la vista Agenda
+ * Renderiza la vista Agenda completa
  */
 function renderAgendaView() {
   const agendaV = document.getElementById('gcal-agenda-view');
@@ -560,7 +917,7 @@ function renderAgendaView() {
 
   if (events.length === 0) {
     agendaV.innerHTML = `
-      <div style="text-align: center; padding: 60px 20px; background: #fff; border-radius: var(--radius-md); border: 1px dashed var(--border-color);">
+      <div style="text-align: center; padding: 60px 20px; background: #fff; border-radius: 16px; border: 1px dashed var(--border-color);">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--text-muted); margin-bottom: 12px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         <h4 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin: 0 0 6px 0;">No hay compromisos ni reportes en la agenda</h4>
         <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0 0 16px 0;">No se encontraron eventos programados para los filtros seleccionados.</p>
@@ -586,7 +943,7 @@ function renderAgendaView() {
     const dayEvents = groups[dateStr] || [];
     const groupEl = document.createElement('div');
     groupEl.className = 'gcal-agenda-group';
-    groupEl.style.cssText = 'margin-bottom: 20px; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden;';
+    groupEl.style.cssText = 'margin-bottom: 16px; background: #fff; border: 1px solid var(--border-color); border-radius: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.02);';
 
     const parts = dateStr.split('-');
     const y = parseInt(parts[0] || '2026', 10);
@@ -596,20 +953,24 @@ function renderAgendaView() {
     const formattedHeader = `${WEEKDAY_FULL[dObj.getDay()] || ''}, ${dObj.getDate()} de ${MONTH_NAMES[dObj.getMonth()] || ''} de ${dObj.getFullYear()}`;
 
     let rowsHtml = `
-      <div class="gcal-agenda-date-header" style="background: #f8fafc; padding: 10px 16px; border-bottom: 1px solid var(--border-color); font-weight: 800; font-size: 0.85rem; color: var(--text-main); display: flex; justify-content: space-between;">
+      <div class="gcal-agenda-date-header" style="background: #f8fafc; padding: 12px 18px; border-bottom: 1px solid var(--border-color); font-weight: 800; font-size: 0.88rem; color: var(--text-main); display: flex; justify-content: space-between; align-items: center;">
         <span>${formattedHeader}</span>
-        <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">${dayEvents.length} actividad(es)</span>
+        <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; background: #e2e8f0; padding: 2px 8px; border-radius: 12px;">${dayEvents.length} actividad(es)</span>
       </div>
     `;
 
     dayEvents.forEach((ev) => {
+      const radCode = getRadicadoCode(ev);
       rowsHtml += `
-        <div class="gcal-agenda-row" style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; gap: 12px;">
-          <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
-            <div style="width: 10px; height: 10px; border-radius: 50%; background: ${ev.urgencia === 'danger' ? '#dc2626' : ev.urgencia === 'warning' ? '#f59e0b' : '#10b981'}; flex-shrink: 0;"></div>
+        <div class="gcal-agenda-row" style="padding: 14px 18px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; gap: 14px;">
+          <div style="display: flex; align-items: center; gap: 14px; flex: 1;">
+            <div style="width: 10px; height: 10px; border-radius: 50%; background: ${ev.urgencia === 'danger' ? '#dc2626' : ev.urgencia === 'warning' ? '#f59e0b' : '#10b981'}; flex-shrink: 0; box-shadow: 0 0 6px ${ev.urgencia === 'danger' ? 'rgba(220,38,38,0.5)' : ev.urgencia === 'warning' ? 'rgba(245,158,11,0.5)' : 'rgba(16,185,129,0.5)'};"></div>
             <div>
-              <div style="font-weight: 700; color: var(--text-main); font-size: 0.88rem;">${ev.titulo}</div>
-              <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 2px;">
+              <div style="font-weight: 800; color: var(--text-main); font-size: 0.90rem;">
+                <span style="font-family: ui-monospace, monospace; font-size: 0.8rem; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; margin-right: 6px; border: 1px solid #cbd5e1;">${radCode}</span>
+                ${ev.titulo}
+              </div>
+              <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 3px;">
                 ${ev.hora || 'Todo el día'} &bull; Destino: ${ev.destino} &bull; Resp: ${ev.responsable}
               </div>
             </div>
@@ -735,7 +1096,7 @@ function openDayModal(dateStr: string, dayEvents: CalendarioEvent[]) {
       let listHtml = '<div style="display: flex; flex-direction: column; gap: 12px;">';
       dayEvents.forEach((ev) => {
         listHtml += `
-          <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px; border-left: 4px solid ${ev.urgencia === 'danger' ? '#dc2626' : ev.urgencia === 'warning' ? '#f59e0b' : '#10b981'};">
+          <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; border-left: 4px solid ${ev.urgencia === 'danger' ? '#dc2626' : ev.urgencia === 'warning' ? '#f59e0b' : '#10b981'};">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
               <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin: 0 0 4px 0;">${ev.titulo}</h4>
               <span class="badge ${ev.urgencia === 'danger' ? 'status-critico' : ev.urgencia === 'warning' ? 'status-alerta' : 'status-exito'}" style="font-size: 0.7rem;">
@@ -840,7 +1201,6 @@ function setupCreateEventModal() {
       const cleanDate = fecha.replace(/-/g, "");
       const gcalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(titulo)}&dates=${cleanDate}/${cleanDate}&details=${encodeURIComponent(destino + " - " + titulo)}&location=${encodeURIComponent("Unitrópico")}`;
       
-      // Si no hubo token API directo, abrir la ventana oficial de Google Calendar para confirmar guardado con 1 clic
       if (!result.success) {
         window.open(gcalUrl, "_blank");
       }
