@@ -132,6 +132,9 @@ function formatBytes(bytes?: number | null): string {
   const unit = sizes[i] ?? 'Bytes';
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + unit;
 }
+
+const peticionesJson = JSON.stringify(peticiones);
+const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64');
 ---
 
 <AppLayout title="Gestor de Archivos y Carpetas de Radicados" activeNav="archivos">
@@ -153,7 +156,7 @@ function formatBytes(bytes?: number | null): string {
           </div>
           <div>
             <div style="font-weight: 800; font-size: 0.95rem; color: var(--text-main);">Gestor de Archivos y Expedientes</div>
-            <div style="font-size: 0.72rem; color: var(--text-muted);">Directorio raíz de expedientes virtuales en Supabase Storage</div>
+            <div style="font-size: 0.72rem; color: var(--text-muted);">Directorio raíz de expedientes virtuales</div>
           </div>
         </div>
 
@@ -179,7 +182,7 @@ function formatBytes(bytes?: number | null): string {
 
           <a href="/peticiones/subir" class="btn btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 0.82rem; height: 38px;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-            <span>+ Nueva Carpeta / Radicación</span>
+            <span>Nueva Carpeta / Radicación</span>
           </a>
         </div>
       </div>
@@ -313,9 +316,10 @@ function formatBytes(bytes?: number | null): string {
                   <button 
                     type="button" 
                     class="btn-open-folder btn-abrir-carpeta btn btn-primary btn-sm" 
-                    style="flex: 1; justify-content: center; gap: 6px; font-weight: 800; font-size: 0.8rem;" 
+                    style="flex: 1; justify-content: center; gap: 6px; font-weight: 800; font-size: 0.8rem; cursor: pointer;" 
                     data-folder-id={doc.id} 
                     data-radicado={doc.numero_radicado}
+                    onclick={`window.openFolderDetail && window.openFolderDetail('${doc.id || doc.numero_radicado}')`}
                   >
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                     <span>Abrir Carpeta</span>
@@ -372,7 +376,7 @@ function formatBytes(bytes?: number | null): string {
             </div>
             <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--text-main); margin: 0 0 6px 0;">No hay carpetas de expedientes creadas</h3>
             <p style="font-size: 0.85rem; color: var(--text-muted); max-width: 480px; margin: 0 auto 16px auto;">
-              Al radicar una nueva petición se creará automáticamente su carpeta virtual en Supabase Storage con su documento inicial y las subcarpetas de las dependencias asignadas.
+              Al radicar una nueva petición se creará automáticamente su carpeta virtual con su documento inicial y las subcarpetas de las dependencias asignadas.
             </p>
             <a href="/peticiones/subir" class="btn btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
               <span>+ Radicar Primera Petición</span>
@@ -454,7 +458,7 @@ function formatBytes(bytes?: number | null): string {
                     </td>
                     <td style="text-align: right; white-space: nowrap;">
                       <div style="display: inline-flex; align-items: center; gap: 6px;">
-                        <button type="button" class="btn btn-primary btn-sm btn-open-folder btn-abrir-carpeta" data-folder-id={doc.id} data-radicado={doc.numero_radicado} style="font-size: 0.75rem; font-weight: 700;">
+                        <button type="button" class="btn btn-primary btn-sm btn-open-folder btn-abrir-carpeta" data-folder-id={doc.id} data-radicado={doc.numero_radicado} onclick={`window.openFolderDetail && window.openFolderDetail('${doc.id || doc.numero_radicado}')`} style="font-size: 0.75rem; font-weight: 700; cursor: pointer;">
                           Abrir
                         </button>
 
@@ -588,6 +592,7 @@ function formatBytes(bytes?: number | null): string {
       display: flex;
       flex-direction: column;
       box-shadow: var(--shadow-sm);
+      cursor: pointer;
     }
     .drive-folder-card:hover {
       border-color: var(--verde-principal);
@@ -650,8 +655,9 @@ function formatBytes(bytes?: number | null): string {
     }
   </style>
 
-  <!-- Datos Seguros de Peticiones Incrustados en el DOM -->
-  <script id="peticiones-data" type="application/json" is:inline set:html={JSON.stringify(peticiones)}></script>
+  <!-- Datos Seguros de Peticiones Incrustados en el DOM (Dual: Base64 blindado + JSON Script) -->
+  <div id="peticiones-b64-payload" data-payload={peticionesBase64} style="display: none;" aria-hidden="true"></div>
+  <script id="peticiones-data" type="application/json" is:inline set:html={peticionesJson}></script>
 
   <!-- Lógica Interactiva del Explorador de Carpetas -->
   <script>
@@ -679,7 +685,7 @@ function formatBytes(bytes?: number | null): string {
       estado_entrega?: string | null;
       fecha_entrega?: string | null;
       storage_subfolder_path?: string | null;
-      oficinas?: OficinaInfo | null;
+      oficinas?: OficinaInfo | OficinaInfo[] | null;
     }
 
     interface PeticionExpediente {
@@ -704,14 +710,57 @@ function formatBytes(bytes?: number | null): string {
     }
 
     let allPeticiones: PeticionExpediente[] = [];
+    const peticionesMap = new Map<string, PeticionExpediente>();
+
+    function decodeBase64Utf8(b64: string): PeticionExpediente[] {
+      try {
+        const bin = atob(b64);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) {
+          bytes[i] = bin.charCodeAt(i);
+        }
+        return JSON.parse(new TextDecoder('utf-8').decode(bytes));
+      } catch (e) {
+        return [];
+      }
+    }
+
+    // 1. Decodificar desde Base64 (inmune a escapes de HTML)
     try {
-      const dataEl = document.getElementById('peticiones-data');
-      if (dataEl && dataEl.textContent) {
-        allPeticiones = JSON.parse(dataEl.textContent);
+      const b64El = document.getElementById('peticiones-b64-payload');
+      const payload = b64El?.getAttribute('data-payload');
+      if (payload) {
+        allPeticiones = decodeBase64Utf8(payload);
       }
     } catch (err) {
-      console.error('Error parseando peticiones-data:', err);
+      console.warn('Fallback base64 error:', err);
     }
+
+    // 2. Fallback textContent
+    if (!allPeticiones || allPeticiones.length === 0) {
+      try {
+        const dataEl = document.getElementById('peticiones-data');
+        if (dataEl && dataEl.textContent) {
+          allPeticiones = JSON.parse(dataEl.textContent);
+        }
+      } catch (err) {
+        console.warn('Fallback peticiones-data error:', err);
+      }
+    }
+
+    function indexPeticion(p: PeticionExpediente) {
+      if (p.id) {
+        peticionesMap.set(p.id, p);
+        peticionesMap.set(p.id.toLowerCase(), p);
+      }
+      if (p.numero_radicado) {
+        peticionesMap.set(p.numero_radicado, p);
+        peticionesMap.set(p.numero_radicado.toUpperCase(), p);
+        peticionesMap.set(p.numero_radicado.toLowerCase(), p);
+      }
+    }
+
+    allPeticiones.forEach(indexPeticion);
 
     let currentView: 'grid' | 'table' = 'grid';
     let currentActiveFolderId: string | null = null;
@@ -768,314 +817,377 @@ function formatBytes(bytes?: number | null): string {
       return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + unit;
     }
 
+    function escapeHtml(text: string | null | undefined): string {
+      if (!text) return '';
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function safeFormatDate(dateStr: string | null | undefined): string {
+      if (!dateStr) return '--';
+      try {
+        const d = new Date(dateStr);
+        return isNaN(d.getTime()) ? dateStr : d.toLocaleDateString('es-CO');
+      } catch {
+        return dateStr;
+      }
+    }
+
     // 2. ABRIR CARPETA VIRTUAL (VISTA EXCLUSIVA DEDICADA ESTILO GOOGLE DRIVE)
     function openFolderDetail(folderId: string | null) {
-      if (!folderId) return;
-      const cleanTarget = String(folderId).trim();
-      let peticion = allPeticiones.find((p) => 
-        String(p.id).trim().toLowerCase() === cleanTarget.toLowerCase() || 
-        String(p.numero_radicado || '').trim().toUpperCase() === cleanTarget.toUpperCase()
-      );
+      try {
+        if (!folderId) return;
+        const cleanTarget = String(folderId).trim();
 
-      // Rescate si no estuviera en memoria
-      if (!peticion) {
-        const card = document.getElementById(`card-folder-${cleanTarget}`) || 
-                     document.querySelector(`[data-radicado="${cleanTarget}" i]`) || 
-                     document.querySelector(`[data-id="${cleanTarget}"]`) ||
-                     document.querySelector(`[data-folder-id="${cleanTarget}"]`);
-        if (card) {
-          peticion = {
-            id: card.getAttribute('data-folder-id') || card.getAttribute('data-id') || cleanTarget,
-            numero_radicado: card.getAttribute('data-radicado') || cleanTarget,
-            asunto: card.getAttribute('data-asunto') || 'Expediente Documental',
-            solicitante_nombre: card.getAttribute('data-solicitante') || 'Ciudadano',
-            solicitante_tipo: 'Ciudadano',
-            fecha_radicacion: new Date().toISOString().slice(0, 10),
-            fecha_limite_entrega: '--',
-            fecha_limite_responsable: '--',
-            estado: card.getAttribute('data-status') === 'responded' ? 'respondida' : 'en_tramite',
-            prioridad: 'Media',
-            created_at: new Date().toISOString(),
-            peticion_anexos: [],
-            peticion_responsables: []
-          };
+        // 1. Búsqueda instantánea O(1) en Mapa
+        let peticion: PeticionExpediente | undefined = 
+          peticionesMap.get(cleanTarget) ||
+          peticionesMap.get(cleanTarget.toUpperCase()) ||
+          peticionesMap.get(cleanTarget.toLowerCase());
+
+        // 2. Búsqueda en lista en memoria
+        if (!peticion) {
+          peticion = allPeticiones.find((p) => 
+            String(p.id).trim().toLowerCase() === cleanTarget.toLowerCase() || 
+            String(p.numero_radicado || '').trim().toUpperCase() === cleanTarget.toUpperCase()
+          );
         }
-      }
 
-      if (!peticion || !explorerFolderView || !explorerRootView) {
-        console.warn('Expediente no encontrado para el identificador:', cleanTarget);
-        return;
-      }
-
-      currentActiveFolderId = folderId;
-
-      // OCULTAR POR COMPLETO LA VISTA GENERAL DE CARPETAS Y MOSTRAR ÚNICAMENTE LA VISTA DEDICADA
-      explorerRootView.style.display = 'none';
-      explorerFolderView.style.display = 'flex';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-
-      // Actualizar URL sin recargar la página
-      try {
-        const url = new URL(window.location.href);
-        url.searchParams.set('radicado', peticion.numero_radicado);
-        window.history.replaceState({}, '', url.toString());
-      } catch (e) {}
-
-      const anexos = peticion.peticion_anexos || [];
-      const anexoPrincipal = anexos.find((a) => !a.es_anexo_oficina) || anexos[0];
-      const anexosOficinas = anexos.filter((a) => a.es_anexo_oficina);
-      const responsables = peticion.peticion_responsables || [];
-
-      // Calcular SLA
-      let slaPct = 0;
-      let daysRemaining = 0;
-      let slaColor = '#16a34a';
-      let slaBadge = 'Plazo Seguro';
-      try {
-        const startStr = peticion.fecha_radicacion || peticion.created_at || '';
-        const endStr = peticion.fecha_limite_entrega || '';
-        const start = startStr ? new Date(startStr).getTime() : NaN;
-        const end = endStr ? new Date(endStr).getTime() : NaN;
-        const now = Date.now();
-        if (!isNaN(start) && !isNaN(end) && end > start) {
-          const totalDays = Math.max(1, Math.round((end - start) / 86400000));
-          const elapsed = Math.max(0, Math.round((now - start) / 86400000));
-          daysRemaining = Math.max(0, Math.round((end - now) / 86400000));
-          slaPct = Math.min(100, Math.round((elapsed / totalDays) * 100));
-          if (daysRemaining <= 2) {
-            slaColor = '#dc2626';
-            slaBadge = 'Crítico / Por Vencer';
-          } else if (daysRemaining <= 7) {
-            slaColor = '#d97706';
-            slaBadge = 'Próximo a Vencer';
+        // 3. Rescate desde el DOM iterando tarjetas de forma segura (sin selectores frágiles)
+        if (!peticion) {
+          const cards = document.querySelectorAll('.drive-folder-card');
+          for (let i = 0; i < cards.length; i++) {
+            const card = cards[i] as HTMLElement;
+            const cId = card.getAttribute('data-folder-id') || card.getAttribute('data-id') || '';
+            const cRad = card.getAttribute('data-radicado') || '';
+            if (
+              (cId && cId.toLowerCase() === cleanTarget.toLowerCase()) ||
+              (cRad && cRad.toUpperCase() === cleanTarget.toUpperCase())
+            ) {
+              peticion = {
+                id: cId || cleanTarget,
+                numero_radicado: cRad || cleanTarget,
+                asunto: card.getAttribute('data-asunto') || 'Expediente Documental',
+                solicitante_nombre: card.getAttribute('data-solicitante') || 'Ciudadano',
+                solicitante_tipo: 'Ciudadano',
+                fecha_radicacion: new Date().toISOString().slice(0, 10),
+                fecha_limite_entrega: '--',
+                fecha_limite_responsable: '--',
+                estado: card.getAttribute('data-status') === 'responded' ? 'respondida' : 'en_tramite',
+                prioridad: 'Media',
+                created_at: new Date().toISOString(),
+                peticion_anexos: [],
+                peticion_responsables: []
+              };
+              indexPeticion(peticion);
+              break;
+            }
           }
         }
-      } catch (err) {}
 
-      explorerFolderView.innerHTML = `
-        <!-- CABECERA DE NAVEGACIÓN Y BREADCRUMB DEDICADO -->
-        <div class="card" style="padding: 16px 22px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
-          
-          <!-- Botón Volver y Ruta -->
-          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-            <button type="button" id="btn-back-to-explorer" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 800; font-size: 0.84rem; padding: 8px 16px; border: 1px solid var(--verde-borde); background: var(--verde-suave-bg); color: var(--verde-principal); cursor: pointer;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-              <span>&larr; Volver a todas las carpetas</span>
-            </button>
+        const explorerRoot = document.getElementById('explorer-root-view') || explorerRootView;
+        const explorerFolder = document.getElementById('explorer-folder-view') || explorerFolderView;
 
-            <div style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem;">
-              <span style="color: var(--text-muted); font-weight: 600;">Módulo de Archivos</span>
-              <span style="color: var(--text-muted);">&rsaquo;</span>
-              <span style="color: var(--verde-principal); font-weight: 800; font-family: monospace;">Carpeta ${peticion.numero_radicado}</span>
+        if (!explorerRoot || !explorerFolder) {
+          console.error('Contenedores de explorador no encontrados en el DOM');
+          return;
+        }
+
+        if (!peticion) {
+          console.warn('Expediente no encontrado para el identificador:', cleanTarget);
+          if (typeof (window as any).showToast === 'function') {
+            (window as any).showToast(`No se encontró el expediente ${cleanTarget}`, 'warn');
+          }
+          return;
+        }
+
+        currentActiveFolderId = peticion.id || folderId;
+
+        // OCULTAR POR COMPLETO LA VISTA GENERAL DE CARPETAS Y MOSTRAR ÚNICAMENTE LA VISTA DEDICADA
+        explorerRoot.style.setProperty('display', 'none', 'important');
+        explorerFolder.style.setProperty('display', 'flex', 'important');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        // Actualizar URL sin recargar la página
+        try {
+          const url = new URL(window.location.href);
+          url.searchParams.set('radicado', peticion.numero_radicado);
+          window.history.replaceState({}, '', url.toString());
+        } catch (e) {}
+
+        const anexos = Array.isArray(peticion.peticion_anexos) ? peticion.peticion_anexos : [];
+        const anexoPrincipal = anexos.find((a) => a && !a.es_anexo_oficina) || anexos[0];
+        const anexosOficinas = anexos.filter((a) => a && a.es_anexo_oficina);
+        const responsables = Array.isArray(peticion.peticion_responsables) ? peticion.peticion_responsables : [];
+
+        // Calcular SLA
+        let slaPct = 0;
+        let daysRemaining = 0;
+        let slaColor = '#16a34a';
+        let slaBadge = 'Plazo Seguro';
+        try {
+          const startStr = peticion.fecha_radicacion || peticion.created_at || '';
+          const endStr = peticion.fecha_limite_entrega || '';
+          const start = startStr ? new Date(startStr).getTime() : NaN;
+          const end = endStr ? new Date(endStr).getTime() : NaN;
+          const now = Date.now();
+          if (!isNaN(start) && !isNaN(end) && end > start) {
+            const totalDays = Math.max(1, Math.round((end - start) / 86400000));
+            const elapsed = Math.max(0, Math.round((now - start) / 86400000));
+            daysRemaining = Math.max(0, Math.round((end - now) / 86400000));
+            slaPct = Math.min(100, Math.round((elapsed / totalDays) * 100));
+            if (daysRemaining <= 2) {
+              slaColor = '#dc2626';
+              slaBadge = 'Crítico / Por Vencer';
+            } else if (daysRemaining <= 7) {
+              slaColor = '#d97706';
+              slaBadge = 'Próximo a Vencer';
+            }
+          }
+        } catch (err) {}
+
+        explorerFolder.innerHTML = `
+          <!-- CABECERA DE NAVEGACIÓN Y BREADCRUMB DEDICADO -->
+          <div class="card" style="padding: 16px 22px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+            
+            <!-- Botón Volver y Ruta -->
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+              <button type="button" id="btn-back-to-explorer" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 800; font-size: 0.84rem; padding: 8px 16px; border: 1px solid var(--verde-borde); background: var(--verde-suave-bg); color: var(--verde-principal); cursor: pointer;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                <span>&larr; Volver a todas las carpetas</span>
+              </button>
+
+              <div style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem;">
+                <span style="color: var(--text-muted); font-weight: 600;">Módulo de Archivos</span>
+                <span style="color: var(--text-muted);">&rsaquo;</span>
+                <span style="color: var(--verde-principal); font-weight: 800; font-family: monospace;">Carpeta ${escapeHtml(peticion.numero_radicado)}</span>
+              </div>
+            </div>
+
+            <!-- Acciones de Cabecera -->
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <button 
+                type="button" 
+                class="btn btn-secondary btn-sm btn-edit-pet" 
+                data-id="${escapeHtml(peticion.id)}"
+                data-radicado="${escapeHtml(peticion.numero_radicado)}"
+                data-asunto="${escapeHtml(peticion.asunto)}"
+                data-solicitante="${escapeHtml(peticion.solicitante_nombre)}"
+                data-tipo="${escapeHtml(peticion.solicitante_tipo || 'Ciudadano')}"
+                data-prioridad="${escapeHtml(peticion.prioridad || 'Media')}"
+                data-entrega="${escapeHtml(peticion.fecha_limite_entrega || '')}"
+                data-estado="${escapeHtml(peticion.estado || 'en_tramite')}"
+                style="display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 0.8rem; border-color: var(--dorado-borde); background: var(--dorado-suave-bg); color: var(--dorado-oscuro);"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                <span>Editar Expediente</span>
+              </button>
             </div>
           </div>
 
-          <!-- Acciones de Cabecera -->
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <button 
-              type="button" 
-              class="btn btn-secondary btn-sm btn-edit-pet" 
-              data-id="${peticion.id}"
-              data-radicado="${peticion.numero_radicado}"
-              data-asunto="${peticion.asunto}"
-              data-solicitante="${peticion.solicitante_nombre}"
-              data-tipo="${peticion.solicitante_tipo || 'Ciudadano'}"
-              data-prioridad="${peticion.prioridad || 'Media'}"
-              data-entrega="${peticion.fecha_limite_entrega}"
-              data-estado="${peticion.estado || 'en_tramite'}"
-              style="display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 0.8rem; border-color: var(--dorado-borde); background: var(--dorado-suave-bg); color: var(--dorado-oscuro);"
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              <span>Editar Expediente</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- RESUMEN DEL RADICADO Y METADATOS -->
-        <div class="card" style="padding: 24px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); border-left: 5px solid var(--verde-principal); display: flex; flex-direction: column; gap: 16px;">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px;">
-            <div>
-              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-                <span class="radicado-chip" style="font-size: 1.05rem; padding: 4px 12px;">${peticion.numero_radicado}</span>
-                <span style="font-size: 0.74rem; font-weight: 800; padding: 4px 10px; border-radius: 4px; ${peticion.estado === 'respondida' ? 'background: #DCFCE7; color: #15803D;' : 'background: #FEF3C7; color: #92400E;'}">
-                  ${peticion.estado === 'respondida' ? 'Respondida' : 'En Trámite'}
-                </span>
-                <span style="font-size: 0.74rem; font-weight: 700; color: var(--dorado-oscuro); background: var(--dorado-suave-bg); border: 1px solid var(--dorado-borde); padding: 4px 10px; border-radius: 4px;">
-                  Prioridad: ${peticion.prioridad || 'Media'}
-                </span>
-              </div>
-              <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--text-main); margin: 0 0 8px 0; line-height: 1.35;">${peticion.asunto}</h2>
-              <div style="font-size: 0.84rem; color: var(--text-muted); line-height: 1.6;">
-                <strong>Solicitante:</strong> <span style="color: var(--text-main); font-weight: 700;">${peticion.solicitante_nombre}</span> (${peticion.solicitante_tipo || 'Ciudadano'}) &bull;
-                <strong>Correo:</strong> ${peticion.solicitante_email || 'Sin correo registrado'} &bull;
-                <strong>Categoría:</strong> ${peticion.categoria || 'Petición General'} &bull;
-                <strong>Radicado:</strong> ${peticion.fecha_radicacion || 'Reciente'}
-              </div>
-            </div>
-
-            <!-- Semáforo SLA -->
-            <div style="background: #FAF9F5; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px 18px; min-width: 250px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.74rem; margin-bottom: 6px;">
-                <span style="color: var(--text-muted); font-weight: 700;">Plazo General:</span>
-                <span style="font-weight: 800; color: ${slaColor};">${slaPct}% consumido</span>
-              </div>
-              <div style="width: 100%; height: 7px; background: #E2E8F0; border-radius: 9999px; overflow: hidden; margin-bottom: 8px;">
-                <div style="width: ${slaPct}%; height: 100%; background: ${slaColor}; border-radius: 9999px;"></div>
-              </div>
-              <div style="font-size: 0.72rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 3px;">
-                <div>Término Legal: <strong style="color: var(--text-main); font-family: monospace;">${peticion.fecha_limite_entrega}</strong></div>
-                <div>Límite Oficinas: <strong style="color: var(--dorado-oscuro); font-family: monospace;">${peticion.fecha_limite_responsable}</strong></div>
-                <div style="color: ${slaColor}; font-weight: 700;">${daysRemaining} días restantes</div>
-              </div>
-            </div>
-          </div>
-
-          ${peticion.instrucciones_anexos ? `
-            <div style="background: #FAF9F5; border-left: 4px solid var(--dorado-principal); padding: 12px 16px; border-radius: 4px; font-size: 0.82rem; color: #475569;">
-              <strong style="color: var(--dorado-oscuro);">Instrucciones remitidas a las dependencias:</strong>
-              <p style="margin: 4px 0 0 0;">"${peticion.instrucciones_anexos}"</p>
-            </div>
-          ` : ''}
-        </div>
-
-        <!-- SECCIÓN 1: DOCUMENTO ORIGINAL RADICADO (ARCHIVO BASE DEL EXPEDIENTE) -->
-        <div class="card" style="padding: 22px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
-          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle);">
-            <div style="width: 34px; height: 34px; border-radius: 6px; background: var(--verde-suave-bg); color: var(--verde-principal); display: flex; align-items: center; justify-content: center;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            </div>
-            <div>
-              <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin: 0;">Documento Original Radicado</h3>
-              <span style="font-size: 0.74rem; color: var(--text-muted);">Archivo oficial cargado al momento de la radicación en Supabase Storage</span>
-            </div>
-          </div>
-
-          ${anexoPrincipal ? `
-            <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-              <div style="display: flex; align-items: center; gap: 12px;">
-                <div style="width: 44px; height: 44px; border-radius: 8px; background: #ffffff; border: 1px solid var(--verde-borde); color: var(--verde-principal); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem;">
-                  PDF
+          <!-- RESUMEN DEL RADICADO Y METADATOS -->
+          <div class="card" style="padding: 24px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); border-left: 5px solid var(--verde-principal); display: flex; flex-direction: column; gap: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px;">
+              <div>
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                  <span class="radicado-chip" style="font-size: 1.05rem; padding: 4px 12px;">${escapeHtml(peticion.numero_radicado)}</span>
+                  <span style="font-size: 0.74rem; font-weight: 800; padding: 4px 10px; border-radius: 4px; ${peticion.estado === 'respondida' ? 'background: #DCFCE7; color: #15803D;' : 'background: #FEF3C7; color: #92400E;'}">
+                    ${peticion.estado === 'respondida' ? 'Respondida' : 'En Trámite'}
+                  </span>
+                  <span style="font-size: 0.74rem; font-weight: 700; color: var(--dorado-oscuro); background: var(--dorado-suave-bg); border: 1px solid var(--dorado-borde); padding: 4px 10px; border-radius: 4px;">
+                    Prioridad: ${escapeHtml(peticion.prioridad || 'Media')}
+                  </span>
                 </div>
-                <div>
-                  <strong style="color: var(--text-main); font-size: 0.94rem;">${anexoPrincipal.nombre_archivo}</strong>
-                  <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 3px;">
-                    Tamaño: <strong>${formatFileSize(anexoPrincipal.tamano_bytes)}</strong> &bull; Subido: ${new Date(anexoPrincipal.created_at).toLocaleDateString('es-CO')}
-                  </div>
-                  <code style="font-size: 0.70rem; color: var(--verde-principal);">${anexoPrincipal.storage_path}</code>
+                <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--text-main); margin: 0 0 8px 0; line-height: 1.35;">${escapeHtml(peticion.asunto)}</h2>
+                <div style="font-size: 0.84rem; color: var(--text-muted); line-height: 1.6;">
+                  <strong>Solicitante:</strong> <span style="color: var(--text-main); font-weight: 700;">${escapeHtml(peticion.solicitante_nombre)}</span> (${escapeHtml(peticion.solicitante_tipo || 'Ciudadano')}) &bull;
+                  <strong>Correo:</strong> ${escapeHtml(peticion.solicitante_email || 'Sin correo registrado')} &bull;
+                  <strong>Categoría:</strong> ${escapeHtml(peticion.categoria || 'Petición General')} &bull;
+                  <strong>Radicado:</strong> ${escapeHtml(peticion.fecha_radicacion || 'Reciente')}
                 </div>
               </div>
 
-              <div style="display: flex; gap: 8px;">
-                <a href="${getPublicStorageUrl(anexoPrincipal.storage_path)}" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 800;">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                  <span>Descargar Archivo</span>
-                </a>
+              <!-- Semáforo SLA -->
+              <div style="background: #FAF9F5; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px 18px; min-width: 250px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.74rem; margin-bottom: 6px;">
+                  <span style="color: var(--text-muted); font-weight: 700;">Plazo General:</span>
+                  <span style="font-weight: 800; color: ${slaColor};">${slaPct}% consumido</span>
+                </div>
+                <div style="width: 100%; height: 7px; background: #E2E8F0; border-radius: 9999px; overflow: hidden; margin-bottom: 8px;">
+                  <div style="width: ${slaPct}%; height: 100%; background: ${slaColor}; border-radius: 9999px;"></div>
+                </div>
+                <div style="font-size: 0.72rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 3px;">
+                  <div>Término Legal: <strong style="color: var(--text-main); font-family: monospace;">${escapeHtml(peticion.fecha_limite_entrega || '--')}</strong></div>
+                  <div>Límite Oficinas: <strong style="color: var(--dorado-oscuro); font-family: monospace;">${escapeHtml(peticion.fecha_limite_responsable || '--')}</strong></div>
+                  <div style="color: ${slaColor}; font-weight: 700;">${daysRemaining} días restantes</div>
+                </div>
               </div>
             </div>
-          ` : `
-            <div style="text-align: center; padding: 24px; color: var(--text-muted); font-size: 0.84rem; background: var(--bg-surface-elevated); border-radius: var(--radius-sm);">
-              No se adjuntó un archivo físico al radicar esta petición.
-            </div>
-          `}
-        </div>
 
-        <!-- SECCIÓN 2: SUBCARPETAS Y ANEXOS DE OFICINAS RESPONSABLES -->
-        <div class="card" style="padding: 22px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle); flex-wrap: wrap; gap: 10px;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <div style="width: 34px; height: 34px; border-radius: 6px; background: var(--dorado-suave-bg); color: var(--dorado-oscuro); display: flex; align-items: center; justify-content: center;">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            ${peticion.instrucciones_anexos ? `
+              <div style="background: #FAF9F5; border-left: 4px solid var(--dorado-principal); padding: 12px 16px; border-radius: 4px; font-size: 0.82rem; color: #475569;">
+                <strong style="color: var(--dorado-oscuro);">Instrucciones remitidas a las dependencias:</strong>
+                <p style="margin: 4px 0 0 0;">"${escapeHtml(peticion.instrucciones_anexos)}"</p>
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- SECCIÓN 1: DOCUMENTO ORIGINAL RADICADO (ARCHIVO BASE DEL EXPEDIENTE) -->
+          <div class="card" style="padding: 22px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle);">
+              <div style="width: 34px; height: 34px; border-radius: 6px; background: var(--verde-suave-bg); color: var(--verde-principal); display: flex; align-items: center; justify-content: center;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
               </div>
               <div>
-                <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin: 0;">Subcarpetas de Oficinas Responsables</h3>
-                <span style="font-size: 0.74rem; color: var(--text-muted);">Espacio virtual asignado para la entrega de anexos de cada dependencia</span>
+                <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin: 0;">Documento Original Radicado</h3>
+                <span style="font-size: 0.74rem; color: var(--text-muted);">Archivo oficial cargado al momento de la radicación en Supabase Storage</span>
               </div>
             </div>
 
-            <span style="font-size: 0.78rem; font-weight: 800; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 4px 12px; border-radius: 4px;">
-              ${responsables.length} dependencias requeridas
-            </span>
-          </div>
-
-          <div style="display: flex; flex-direction: column; gap: 14px;">
-            ${responsables.length > 0 ? responsables.map((r) => {
-              const ofiAnexos = anexosOficinas.filter((a) => a.peticion_responsable_id === r.id);
-              const isDelivered = r.estado_entrega === 'Entregado' || ofiAnexos.length > 0;
-
-              return `
-                <div class="subfolder-box">
-                  <div style="background: var(--bg-surface-elevated); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--border-subtle);">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="color: ${isDelivered ? 'var(--verde-principal)' : 'var(--dorado-oscuro)'};"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg>
-                      <div>
-                        <strong style="font-size: 0.90rem; color: var(--text-main);">${r.oficinas?.nombre || 'Oficina Responsable'}</strong>
-                        ${r.oficinas?.codigo ? `<span style="font-size: 0.72rem; color: var(--text-muted); margin-left: 6px;">(${r.oficinas.codigo})</span>` : ''}
-                      </div>
-                    </div>
-
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                      <span style="font-family: monospace; font-size: 0.76rem; font-weight: 800; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 3px 8px; border-radius: 4px; border: 1px solid var(--verde-borde);" title="Código Único de Acceso">${r.codigo_acceso}</span>
-                      <span style="font-size: 0.72rem; font-weight: 800; padding: 3px 8px; border-radius: 4px; background: ${isDelivered ? '#DCFCE7' : '#FEF3C7'}; color: ${isDelivered ? '#15803D' : '#92400E'};">
-                        ${isDelivered ? 'Anexos Aportados' : 'Pendiente de Respuesta'}
-                      </span>
-                    </div>
+            ${anexoPrincipal ? `
+              <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <div style="width: 44px; height: 44px; border-radius: 8px; background: #ffffff; border: 1px solid var(--verde-borde); color: var(--verde-principal); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem;">
+                    PDF
                   </div>
-
-                  <!-- Contenido de la Subcarpeta -->
-                  <div style="padding: 14px 16px;">
-                    ${ofiAnexos.length > 0 ? `
-                      <div style="display: flex; flex-direction: column; gap: 8px;">
-                        ${ofiAnexos.map((oa) => `
-                          <div style="background: #ffffff; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem;">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--verde-principal)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                              <div>
-                                <strong style="color: var(--text-main);">${oa.nombre_archivo}</strong>
-                                <span style="font-size: 0.72rem; color: var(--text-muted); margin-left: 6px;">(${formatFileSize(oa.tamano_bytes)})</span>
-                              </div>
-                            </div>
-                            <a href="${getPublicStorageUrl(oa.storage_path)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="text-decoration: none; font-size: 0.74rem; padding: 4px 10px;">
-                              Descargar
-                            </a>
-                          </div>
-                        `).join('')}
-                      </div>
-                    ` : `
-                      <div style="color: var(--text-muted); font-size: 0.78rem; font-style: italic;">
-                        Esta dependencia aún no ha cargado documentos de soporte en su subcarpeta virtual. Plazo máximo de entrega: ${peticion.fecha_limite_responsable}.
-                      </div>
-                    `}
+                  <div>
+                    <strong style="color: var(--text-main); font-size: 0.94rem;">${escapeHtml(anexoPrincipal.nombre_archivo)}</strong>
+                    <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 3px;">
+                      Tamaño: <strong>${formatFileSize(anexoPrincipal.tamano_bytes)}</strong> &bull; Subido: ${safeFormatDate(anexoPrincipal.created_at)}
+                    </div>
+                    <code style="font-size: 0.70rem; color: var(--verde-principal);">${escapeHtml(anexoPrincipal.storage_path)}</code>
                   </div>
                 </div>
-              `;
-            }).join('') : `
-              <div style="text-align: center; padding: 18px; color: var(--text-muted); font-size: 0.82rem;">
-                No se asignaron dependencias para esta petición.
+
+                <div style="display: flex; gap: 8px;">
+                  <a href="${getPublicStorageUrl(anexoPrincipal.storage_path)}" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 800;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <span>Descargar Archivo</span>
+                  </a>
+                </div>
+              </div>
+            ` : `
+              <div style="text-align: center; padding: 24px; color: var(--text-muted); font-size: 0.84rem; background: var(--bg-surface-elevated); border-radius: var(--radius-sm);">
+                No se adjuntó un archivo físico al radicar esta petición.
               </div>
             `}
           </div>
-        </div>
-      `;
 
-      // Registrar listener para el botón volver de la cabecera
-      document.getElementById('btn-back-to-explorer')?.addEventListener('click', closeFolderDetail);
+          <!-- SECCIÓN 2: SUBCARPETAS Y ANEXOS DE OFICINAS RESPONSABLES -->
+          <div class="card" style="padding: 22px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle); flex-wrap: wrap; gap: 10px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 34px; height: 34px; border-radius: 6px; background: var(--dorado-suave-bg); color: var(--dorado-oscuro); display: flex; align-items: center; justify-content: center;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                </div>
+                <div>
+                  <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin: 0;">Subcarpetas de Oficinas Responsables</h3>
+                  <span style="font-size: 0.74rem; color: var(--text-muted);">Espacio virtual asignado para la entrega de anexos de cada dependencia</span>
+                </div>
+              </div>
+
+              <span style="font-size: 0.78rem; font-weight: 800; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 4px 12px; border-radius: 4px;">
+                ${responsables.length} dependencias requeridas
+              </span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 14px;">
+              ${responsables.length > 0 ? responsables.map((r) => {
+                if (!r) return '';
+                const ofiAnexos = anexosOficinas.filter((a) => a && a.peticion_responsable_id === r.id);
+                const isDelivered = r.estado_entrega === 'Entregado' || ofiAnexos.length > 0;
+                const ofiNombre = Array.isArray(r.oficinas) ? (r.oficinas[0]?.nombre || 'Oficina Responsable') : (r.oficinas?.nombre || 'Oficina Responsable');
+                const ofiCodigo = Array.isArray(r.oficinas) ? (r.oficinas[0]?.codigo || '') : (r.oficinas?.codigo || '');
+
+                return `
+                  <div class="subfolder-box">
+                    <div style="background: var(--bg-surface-elevated); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--border-subtle);">
+                      <div style="display: flex; align-items: center; gap: 10px;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="color: ${isDelivered ? 'var(--verde-principal)' : 'var(--dorado-oscuro)'};"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg>
+                        <div>
+                          <strong style="font-size: 0.90rem; color: var(--text-main);">${escapeHtml(ofiNombre)}</strong>
+                          ${ofiCodigo ? `<span style="font-size: 0.72rem; color: var(--text-muted); margin-left: 6px;">(${escapeHtml(ofiCodigo)})</span>` : ''}
+                        </div>
+                      </div>
+
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-family: monospace; font-size: 0.76rem; font-weight: 800; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 3px 8px; border-radius: 4px; border: 1px solid var(--verde-borde);" title="Código Único de Acceso">${escapeHtml(r.codigo_acceso || 'UPQ')}</span>
+                        <span style="font-size: 0.72rem; font-weight: 800; padding: 3px 8px; border-radius: 4px; background: ${isDelivered ? '#DCFCE7' : '#FEF3C7'}; color: ${isDelivered ? '#15803D' : '#92400E'};">
+                          ${isDelivered ? 'Anexos Aportados' : 'Pendiente de Respuesta'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- Contenido de la Subcarpeta -->
+                    <div style="padding: 14px 16px;">
+                      ${ofiAnexos.length > 0 ? `
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                          ${ofiAnexos.map((oa) => `
+                            <div style="background: #ffffff; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem;">
+                              <div style="display: flex; align-items: center; gap: 8px;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--verde-principal)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                <div>
+                                  <strong style="color: var(--text-main);">${escapeHtml(oa.nombre_archivo)}</strong>
+                                  <span style="font-size: 0.72rem; color: var(--text-muted); margin-left: 6px;">(${formatFileSize(oa.tamano_bytes)})</span>
+                                </div>
+                              </div>
+                              <a href="${getPublicStorageUrl(oa.storage_path)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="text-decoration: none; font-size: 0.74rem; padding: 4px 10px;">
+                                Descargar
+                              </a>
+                            </div>
+                          `).join('')}
+                        </div>
+                      ` : `
+                        <div style="color: var(--text-muted); font-size: 0.78rem; font-style: italic;">
+                          Esta dependencia aún no ha cargado documentos de soporte en su subcarpeta virtual. Plazo máximo de entrega: ${escapeHtml(peticion.fecha_limite_responsable || '--')}.
+                        </div>
+                      `}
+                    </div>
+                  </div>
+                `;
+              }).join('') : `
+                <div style="text-align: center; padding: 18px; color: var(--text-muted); font-size: 0.82rem;">
+                  No se asignaron dependencias para esta petición.
+                </div>
+              `}
+            </div>
+          </div>
+        `;
+
+        // Registrar listener para el botón volver de la cabecera
+        document.getElementById('btn-back-to-explorer')?.addEventListener('click', closeFolderDetail);
+      } catch (err) {
+        console.error('Error detallado en openFolderDetail:', err);
+        if (typeof (window as any).showToast === 'function') {
+          (window as any).showToast('Ocurrió un error al abrir la carpeta.', 'error');
+        }
+      }
     }
 
-    // Exponer globalmente para permitir apertura desde cualquier enlace
+    // Exponer globalmente para permitir apertura desde cualquier botón o enlace
     (window as any).openFolderDetail = openFolderDetail;
 
     // 3. CERRAR DETALLE DE CARPETA Y RESTAURAR VISTA PRINCIPAL
     function closeFolderDetail() {
       currentActiveFolderId = null;
-      if (explorerFolderView) explorerFolderView.style.display = 'none';
-      if (explorerRootView) explorerRootView.style.display = 'flex';
+      const explorerRoot = document.getElementById('explorer-root-view') || explorerRootView;
+      const explorerFolder = document.getElementById('explorer-folder-view') || explorerFolderView;
+      const grid = document.getElementById('drive-grid-container') || gridContainer;
+      const table = document.getElementById('drive-table-container') || tableContainer;
+
+      if (explorerFolder) explorerFolder.style.setProperty('display', 'none', 'important');
+      if (explorerRoot) explorerRoot.style.setProperty('display', 'flex', 'important');
 
       if (currentView === 'grid') {
-        if (gridContainer) gridContainer.style.setProperty('display', 'grid', 'important');
-        if (tableContainer) tableContainer.style.setProperty('display', 'none', 'important');
+        if (grid) grid.style.setProperty('display', 'grid', 'important');
+        if (table) table.style.setProperty('display', 'none', 'important');
       } else {
-        if (gridContainer) gridContainer.style.setProperty('display', 'none', 'important');
-        if (tableContainer) tableContainer.style.setProperty('display', 'block', 'important');
+        if (grid) grid.style.setProperty('display', 'none', 'important');
+        if (table) table.style.setProperty('display', 'block', 'important');
       }
 
       // Restaurar URL limpia
