@@ -1,6 +1,7 @@
 // src/lib/security.ts
 // Utilidad Criptográfica y Blindaje de Seguridad — SGD Unitrópico
 import crypto from 'node:crypto';
+import { Buffer } from 'node:buffer';
 
 // Derivar llave estable de 32 bytes para AES-256-GCM
 const MASTER_KEY_SEED =
@@ -43,11 +44,13 @@ export function decryptData(cipherPackage: string, customKey?: string): string {
   if (!cipherPackage || !cipherPackage.includes(':')) return cipherPackage;
   try {
     const parts = cipherPackage.split(':');
-    if (parts.length !== 3) return cipherPackage;
     const ivHex = parts[0];
     const authTagHex = parts[1];
     const encryptedHex = parts[2];
-    if (!ivHex || !authTagHex || !encryptedHex) return cipherPackage;
+
+    if (!ivHex || !authTagHex || !encryptedHex) {
+      return cipherPackage;
+    }
 
     const key = customKey ? crypto.createHash('sha256').update(customKey).digest() : getDerivedMasterKey();
     const iv = Buffer.from(ivHex, 'hex');
@@ -56,9 +59,9 @@ export function decryptData(cipherPackage: string, customKey?: string): string {
     const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
     decipher.setAuthTag(authTag);
 
-    const decryptedPart1 = decipher.update(encryptedHex, 'hex', 'utf8');
-    const decryptedPart2 = decipher.final('utf8');
-    return `${decryptedPart1}${decryptedPart2}`;
+    const decrypted1 = decipher.update(encryptedHex, 'hex', 'utf8');
+    const decrypted2 = decipher.final('utf8');
+    return `${decrypted1}${decrypted2}`;
   } catch (err) {
     console.error('Error al desencriptar dato confidencial:', err);
     return '';
@@ -140,3 +143,4 @@ export function validateUploadedFile(
 
   return { valid: true, cleanName };
 }
+

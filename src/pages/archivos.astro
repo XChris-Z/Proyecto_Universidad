@@ -5,6 +5,7 @@ export const prerender = false;
 import AppLayout from '@layouts/AppLayout.astro';
 import { supabase } from '@lib/supabase';
 import { calculateDeadlineProgress } from '@lib/utils';
+import { Buffer } from 'node:buffer';
 
 // Interfaces estrictas para TypeScript
 export interface PeticionAnexo {
@@ -240,6 +241,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                 data-folder-id={doc.id}
                 data-id={doc.id}
                 data-radicado={doc.numero_radicado}
+                data-pin={doc.pin_acceso || '849201'}
                 data-asunto={doc.asunto}
                 data-solicitante={doc.solicitante_nombre}
                 data-status={isResponded ? 'responded' : 'pending'} 
@@ -324,8 +326,8 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                       <button
                         type="button"
                         class="btn-copy-pin"
+                        data-pin={doc.pin_acceso || '849201'}
                         title="Copiar PIN de 6 dígitos"
-                        onclick={`event.stopPropagation(); navigator.clipboard.writeText('${doc.pin_acceso || '849201'}'); alert('PIN copiado: ${doc.pin_acceso || '849201'}');`}
                         style="border: 1px solid var(--border-subtle); background: #ffffff; border-radius: 4px; padding: 2px 5px; font-size: 0.65rem; cursor: pointer; color: var(--text-muted); display: inline-flex; align-items: center; gap: 2px;"
                       >
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
@@ -434,7 +436,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                 const filterSla = prog.daysRemaining <= 2 ? 'critical' : prog.daysRemaining <= 7 ? 'warn' : 'safe';
 
                 return (
-                  <tr class="doc-row" id={`row-folder-${doc.id}`} data-id={doc.id} data-radicado={doc.numero_radicado} data-asunto={doc.asunto} data-solicitante={doc.solicitante_nombre} data-status={isResponded ? 'responded' : 'pending'} data-sla={filterSla}>
+                  <tr class="doc-row" id={`row-folder-${doc.id}`} data-id={doc.id} data-radicado={doc.numero_radicado} data-pin={doc.pin_acceso || '849201'} data-asunto={doc.asunto} data-solicitante={doc.solicitante_nombre} data-status={isResponded ? 'responded' : 'pending'} data-sla={filterSla}>
                     <td>
                       <div style="display: flex; align-items: center; gap: 10px;">
                         <div class="doc-icon-badge pdf" style="width: 34px; height: 34px; font-size: 0.68rem; background: var(--verde-suave-bg); color: var(--verde-principal); border: 1px solid var(--verde-borde); display: flex; align-items: center; justify-content: center; border-radius: 6px;">
@@ -459,8 +461,9 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                         <span style="font-family: monospace; font-size: 0.68rem; font-weight: 800; color: #b45309;">PIN {doc.pin_acceso || '849201'}</span>
                         <button 
                           type="button" 
-                          title="Copiar PIN" 
-                          onclick={`event.stopPropagation(); navigator.clipboard.writeText('${doc.pin_acceso || '849201'}'); alert('PIN copiado: ${doc.pin_acceso || '849201'}');`}
+                          class="btn-copy-pin"
+                          data-pin={doc.pin_acceso || '849201'}
+                          title="Copiar PIN de 6 dígitos" 
                           style="border: none; background: transparent; cursor: pointer; color: #b45309; padding: 0; display: inline-flex; align-items: center;"
                         >
                           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
@@ -730,6 +733,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       descripcion?: string | null;
       categoria?: string | null;
       instrucciones_anexos?: string | null;
+      pin_acceso?: string | null;
       solicitante_nombre: string;
       solicitante_tipo?: string | null;
       solicitante_email?: string | null;
@@ -783,15 +787,18 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       }
     }
 
-    function indexPeticion(p: PeticionExpediente) {
+    function indexPeticion(p: PeticionExpediente | null | undefined) {
+      if (!p || typeof p !== 'object') return;
       if (p.id) {
-        peticionesMap.set(p.id, p);
-        peticionesMap.set(p.id.toLowerCase(), p);
+        const idStr = String(p.id).trim();
+        peticionesMap.set(idStr, p);
+        peticionesMap.set(idStr.toLowerCase(), p);
       }
       if (p.numero_radicado) {
-        peticionesMap.set(p.numero_radicado, p);
-        peticionesMap.set(p.numero_radicado.toUpperCase(), p);
-        peticionesMap.set(p.numero_radicado.toLowerCase(), p);
+        const radStr = String(p.numero_radicado).trim();
+        peticionesMap.set(radStr, p);
+        peticionesMap.set(radStr.toUpperCase(), p);
+        peticionesMap.set(radStr.toLowerCase(), p);
       }
     }
 
@@ -823,7 +830,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
     // 1. Alternador de Vistas (Carpetas vs Tabla) - Estrictamente Excluyentes
     btnGrid?.addEventListener('click', () => {
       currentView = 'grid';
-      btnGrid.classList.add('active');
+      btnGrid?.classList.add('active');
       btnTable?.classList.remove('active');
       if (gridContainer) gridContainer.style.setProperty('display', 'grid', 'important');
       if (tableContainer) tableContainer.style.setProperty('display', 'none', 'important');
@@ -831,7 +838,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
 
     btnTable?.addEventListener('click', () => {
       currentView = 'table';
-      btnTable.classList.add('active');
+      btnTable?.classList.add('active');
       btnGrid?.classList.remove('active');
       if (gridContainer) gridContainer.style.setProperty('display', 'none', 'important');
       if (tableContainer) tableContainer.style.setProperty('display', 'block', 'important');
@@ -844,7 +851,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
     }
 
     function formatFileSize(bytes: number | null | undefined): string {
-      if (!bytes || bytes === 0) return '0 KB';
+      if (!bytes || bytes <= 0 || isNaN(bytes)) return '0 KB';
       const k = 1024;
       const sizes = ['Bytes', 'KB', 'MB', 'GB'];
       const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -907,6 +914,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                 id: cId || cleanTarget,
                 numero_radicado: cRad || cleanTarget,
                 asunto: card.getAttribute('data-asunto') || 'Expediente Documental',
+                pin_acceso: card.getAttribute('data-pin') || '849201',
                 solicitante_nombre: card.getAttribute('data-solicitante') || 'Ciudadano',
                 solicitante_tipo: 'Ciudadano',
                 fecha_radicacion: new Date().toISOString().slice(0, 10),
@@ -1039,7 +1047,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                   <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.74rem; font-weight: 700; color: #b45309; background: rgba(217, 119, 6, 0.12); border: 1px solid rgba(217, 119, 6, 0.25); padding: 4px 10px; border-radius: 4px;">
                     <span>PIN Acceso:</span>
                     <strong style="font-family: monospace; letter-spacing: 0.05em;">${escapeHtml(peticion.pin_acceso || '849201')}</strong>
-                    <button type="button" title="Copiar PIN" onclick="navigator.clipboard.writeText('${escapeHtml(peticion.pin_acceso || '849201')}'); alert('PIN copiado al portapapeles: ${escapeHtml(peticion.pin_acceso || '849201')}');" style="border: none; background: transparent; cursor: pointer; color: #b45309; display: inline-flex; align-items: center; padding: 0 2px;">
+                    <button type="button" class="btn-copy-pin" data-pin="${escapeHtml(peticion.pin_acceso || '849201')}" title="Copiar PIN de 6 dígitos" style="border: none; background: transparent; cursor: pointer; color: #b45309; display: inline-flex; align-items: center; padding: 0 2px;">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                     </button>
                   </span>
@@ -1349,6 +1357,27 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       if (tableRow && !target.closest('td:last-child, a, button')) {
         const id = tableRow.getAttribute('data-radicado') || tableRow.getAttribute('data-folder-id') || tableRow.getAttribute('data-id');
         if (id) openFolderDetail(id);
+        return;
+      }
+
+      // F. Botón Copiar PIN
+      const copyPinBtn = target.closest('.btn-copy-pin') as HTMLElement | null;
+      if (copyPinBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const pin = copyPinBtn.getAttribute('data-pin') || '849201';
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(pin);
+          }
+          if (typeof (window as any).showToast === 'function') {
+            (window as any).showToast(`PIN de acceso ${pin} copiado al portapapeles.`, 'info');
+          } else {
+            alert(`PIN copiado: ${pin}`);
+          }
+        } catch {
+          alert(`PIN copiado: ${pin}`);
+        }
         return;
       }
     });

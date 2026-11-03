@@ -151,3 +151,4 @@ DROP POLICY IF EXISTS "Permitir lectura de auditoria a funcionarios" ON public.a
 CREATE POLICY "Permitir lectura de auditoria a funcionarios"
 ON public.auditoria_logs FOR SELECT
 USING (true);
+
