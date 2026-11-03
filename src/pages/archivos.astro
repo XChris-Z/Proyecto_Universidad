@@ -232,6 +232,7 @@ function formatBytes(bytes?: number | null): string {
               <div 
                 class="drive-folder-card" 
                 id={`card-folder-${doc.id}`}
+                data-folder-id={doc.id}
                 data-id={doc.id}
                 data-radicado={doc.numero_radicado}
                 data-asunto={doc.asunto}
@@ -772,18 +773,19 @@ function formatBytes(bytes?: number | null): string {
       if (!folderId) return;
       const cleanTarget = String(folderId).trim();
       let peticion = allPeticiones.find((p) => 
-        String(p.id) === cleanTarget || 
-        String(p.numero_radicado || '').toUpperCase() === cleanTarget.toUpperCase()
+        String(p.id).trim().toLowerCase() === cleanTarget.toLowerCase() || 
+        String(p.numero_radicado || '').trim().toUpperCase() === cleanTarget.toUpperCase()
       );
 
       // Rescate si no estuviera en memoria
       if (!peticion) {
         const card = document.getElementById(`card-folder-${cleanTarget}`) || 
-                     document.querySelector(`[data-radicado="${cleanTarget}"]`) || 
-                     document.querySelector(`[data-id="${cleanTarget}"]`);
+                     document.querySelector(`[data-radicado="${cleanTarget}" i]`) || 
+                     document.querySelector(`[data-id="${cleanTarget}"]`) ||
+                     document.querySelector(`[data-folder-id="${cleanTarget}"]`);
         if (card) {
           peticion = {
-            id: card.getAttribute('data-id') || cleanTarget,
+            id: card.getAttribute('data-folder-id') || card.getAttribute('data-id') || cleanTarget,
             numero_radicado: card.getAttribute('data-radicado') || cleanTarget,
             asunto: card.getAttribute('data-asunto') || 'Expediente Documental',
             solicitante_nombre: card.getAttribute('data-solicitante') || 'Ciudadano',
@@ -1175,7 +1177,7 @@ function formatBytes(bytes?: number | null): string {
       if (openBtn) {
         e.preventDefault();
         e.stopPropagation();
-        const id = openBtn.getAttribute('data-folder-id') || openBtn.getAttribute('data-id') || openBtn.getAttribute('data-radicado');
+        const id = openBtn.getAttribute('data-radicado') || openBtn.getAttribute('data-folder-id') || openBtn.getAttribute('data-id');
         if (id) openFolderDetail(id);
         return;
       }
@@ -1183,7 +1185,7 @@ function formatBytes(bytes?: number | null): string {
       // D. Clic en la tarjeta de carpeta (sin tocar botones secundarios)
       const folderCard = target.closest('.drive-folder-card') as HTMLElement | null;
       if (folderCard && !target.closest('.btn-edit-pet, .btn-delete-pet, a, button')) {
-        const id = folderCard.getAttribute('data-folder-id') || folderCard.getAttribute('data-id') || folderCard.getAttribute('data-radicado');
+        const id = folderCard.getAttribute('data-radicado') || folderCard.getAttribute('data-folder-id') || folderCard.getAttribute('data-id');
         if (id) openFolderDetail(id);
         return;
       }
@@ -1191,7 +1193,7 @@ function formatBytes(bytes?: number | null): string {
       // E. Clic en la fila de tabla (sin tocar la columna de acciones)
       const tableRow = target.closest('.doc-row') as HTMLElement | null;
       if (tableRow && !target.closest('td:last-child, a, button')) {
-        const id = tableRow.getAttribute('data-folder-id') || tableRow.getAttribute('data-id') || tableRow.getAttribute('data-radicado');
+        const id = tableRow.getAttribute('data-radicado') || tableRow.getAttribute('data-folder-id') || tableRow.getAttribute('data-id');
         if (id) openFolderDetail(id);
         return;
       }
