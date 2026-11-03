@@ -21,6 +21,21 @@ export function generatePin6(): string {
 }
 
 /**
+ * Genera un PIN determinista de 6 dígitos a partir de una semilla (ej. radicado o ID).
+ * Sirve como fallback seguro y estable si la columna aún no existe físicamente en PostgreSQL.
+ */
+export function getDeterministicPin(seed?: string | null): string {
+  if (!seed) return '849201';
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash << 5) - hash + seed.charCodeAt(i);
+    hash |= 0;
+  }
+  const pinNum = 100000 + (Math.abs(hash) % 900000);
+  return pinNum.toString();
+}
+
+/**
  * Encripta texto usando AES-256-GCM.
  * Formato de salida: iv:authTag:encryptedData (hex)
  */

@@ -152,3 +152,6 @@ CREATE POLICY "Permitir lectura de auditoria a funcionarios"
 ON public.auditoria_logs FOR SELECT
 USING (true);
 
+-- 8. Recargar la caché de PostgREST para exponer de inmediato las nuevas columnas y funciones
+NOTIFY pgrst, 'reload schema';
+

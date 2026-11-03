@@ -5,6 +5,7 @@ export const prerender = false;
 import AppLayout from '@layouts/AppLayout.astro';
 import { supabase } from '@lib/supabase';
 import { calculateDeadlineProgress } from '@lib/utils';
+import { getDeterministicPin } from '@lib/security';
 
 // Consultar peticiones reales en base de datos PostgreSQL
 const { data: dbPeticiones } = await (supabase
@@ -14,7 +15,6 @@ const { data: dbPeticiones } = await (supabase
     numero_radicado,
     asunto,
     descripcion,
-    pin_acceso,
     solicitante_nombre,
     solicitante_tipo,
     solicitante_email,
@@ -40,7 +40,10 @@ const { data: dbPeticiones } = await (supabase
   `)
   .order('created_at', { ascending: false }) as any);
 
-const peticionesList = dbPeticiones || [];
+const peticionesList = ((dbPeticiones as any[]) || []).map((p: any) => ({
+  ...p,
+  pin_acceso: p.pin_acceso || getDeterministicPin(p.numero_radicado || p.id),
+}));
 const pendientesCount = peticionesList.filter((p: any) => p.estado !== 'respondida' && p.estado !== 'completada').length;
 ---
 

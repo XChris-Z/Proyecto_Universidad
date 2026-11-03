@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { supabase } from '@lib/supabase';
 import { sendPeticionAssignmentEmail, type EmailAttachment } from '@lib/email';
 import { logSystemActivity } from '@lib/audit';
+import { getDeterministicPin } from '@lib/security';
 
 export const POST: APIRoute = async ({ request, url }) => {
   try {
@@ -31,7 +32,6 @@ export const POST: APIRoute = async ({ request, url }) => {
         categoria,
         fecha_limite_entrega,
         fecha_limite_responsable,
-        pin_acceso,
         peticion_anexos (
           id,
           nombre_archivo,
@@ -116,7 +116,7 @@ export const POST: APIRoute = async ({ request, url }) => {
         continue;
       }
 
-      const effectivePin = peticion.pin_acceso || '849201';
+      const effectivePin = peticion.pin_acceso || getDeterministicPin(peticion.numero_radicado || peticion.id);
       const portalUrl = `${baseUrl}/portal-responsable?codigo=${encodeURIComponent(resp.codigo_acceso)}&email=${encodeURIComponent(email)}&pin=${encodeURIComponent(effectivePin)}`;
 
       const emailResult = await sendPeticionAssignmentEmail({

@@ -6,6 +6,7 @@ import AppLayout from '@layouts/AppLayout.astro';
 import { supabase } from '@lib/supabase';
 import { calculateDeadlineProgress } from '@lib/utils';
 import { Buffer } from 'node:buffer';
+import { getDeterministicPin } from '@lib/security';
 
 // Interfaces estrictas para TypeScript
 export interface PeticionAnexo {
@@ -67,7 +68,6 @@ const { data: dbPeticiones } = await (supabase
     descripcion,
     categoria,
     instrucciones_anexos,
-    pin_acceso,
     solicitante_nombre,
     solicitante_tipo,
     solicitante_email,
@@ -104,7 +104,11 @@ const { data: dbPeticiones } = await (supabase
   `)
   .order('created_at', { ascending: false }) as any);
 
-const peticiones: PeticionExpediente[] = (dbPeticiones as unknown as PeticionExpediente[]) || [];
+const rawPeticiones = (dbPeticiones as any[]) || [];
+const peticiones: PeticionExpediente[] = rawPeticiones.map((p) => ({
+  ...p,
+  pin_acceso: p.pin_acceso || getDeterministicPin(p.numero_radicado || p.id),
+}));
 const totalCount = peticiones.length;
 const pendingCount = peticiones.filter((p) => p.estado !== 'respondida' && p.estado !== 'completada').length;
 const respondedCount = peticiones.filter((p) => p.estado === 'respondida' || p.estado === 'completada').length;

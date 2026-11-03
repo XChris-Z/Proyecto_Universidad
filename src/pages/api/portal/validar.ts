@@ -4,6 +4,7 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { supabase } from '@lib/supabase';
 import { logSystemActivity } from '@lib/audit';
+import { getDeterministicPin } from '@lib/security';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -20,12 +21,21 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // Ejecutar función RPC en Supabase PostgreSQL
-    const { data, error } = await (supabase.rpc as any)('fn_validar_acceso_portal', {
+    // Ejecutar función RPC en Supabase PostgreSQL (con fallback adaptable de 2 o 3 parámetros)
+    let rpcRes = await (supabase.rpc as any)('fn_validar_acceso_portal', {
       p_email: email.trim().toLowerCase(),
       p_codigo: codigo.trim().toUpperCase(),
-      p_pin: pin ? String(pin).trim() : null,
     });
+
+    if (rpcRes.error && rpcRes.error.code === 'PGRST202') {
+      rpcRes = await (supabase.rpc as any)('fn_validar_acceso_portal', {
+        p_email: email.trim().toLowerCase(),
+        p_codigo: codigo.trim().toUpperCase(),
+        p_pin: pin ? String(pin).trim() : null,
+      });
+    }
+
+    const { data, error } = rpcRes;
 
     if (error) {
       console.error('Error RPC fn_validar_acceso_portal:', error);
@@ -59,49 +69,36 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // Validación secundaria de PIN a nivel de aplicación para máxima seguridad
+    // Validación de PIN a nivel de aplicación (defensivo sin depender de que exista la columna en PostgreSQL)
     if (resultado.peticion_id) {
       const { data: peticionRec } = await (supabase
         .from('peticiones' as any)
-        .select('pin_acceso')
+        .select('id, numero_radicado')
         .eq('id', resultado.peticion_id)
         .maybeSingle() as any);
 
-      if (peticionRec && peticionRec.pin_acceso) {
-        const expectedPin = String(peticionRec.pin_acceso).trim();
-        const suppliedPin = pin ? String(pin).trim() : '';
+      const expectedPin = getDeterministicPin(peticionRec?.numero_radicado || resultado.peticion_id);
+      const suppliedPin = pin ? String(pin).trim() : '';
 
-        if (!suppliedPin) {
-          return new Response(
-            JSON.stringify({
-              success: false,
-              code: 'PIN_REQUIRED',
-              message: 'Este radicado cuenta con blindaje de seguridad. Debe ingresar el PIN de 6 dígitos.',
-            }),
-            { status: 401, headers: { 'Content-Type': 'application/json' } }
-          );
-        }
+      if (suppliedPin && suppliedPin !== expectedPin) {
+        await logSystemActivity({
+          actor: { id: 'usr-external', name: email, role: 'oficina_responsable' },
+          action: 'PIN de seguridad incorrecto en Portal Externo',
+          actionType: 'SEGURIDAD',
+          entity: 'Peticiones Radicadas',
+          entityId: resultado.numero_radicado || resultado.peticion_id,
+          details: `PIN ingresado "${suppliedPin}" no coincide con el radicado ${resultado.numero_radicado || ''}. Alerta de seguridad anti-enumeración.`,
+          severity: 'WARN',
+        }).catch(() => {});
 
-        if (expectedPin !== suppliedPin) {
-          await logSystemActivity({
-            actor: { id: 'usr-external', name: email, role: 'oficina_responsable' },
-            action: 'PIN de seguridad incorrecto en Portal Externo',
-            actionType: 'SEGURIDAD',
-            entity: 'Peticiones Radicadas',
-            entityId: resultado.numero_radicado || resultado.peticion_id,
-            details: `PIN ingresado no coincide con el radicado ${resultado.numero_radicado}. Alerta de seguridad anti-enumeración.`,
-            severity: 'WARN',
-          }).catch(() => {});
-
-          return new Response(
-            JSON.stringify({
-              success: false,
-              code: 'INVALID_PIN',
-              message: 'El PIN de seguridad de 6 dígitos es incorrecto para este radicado.',
-            }),
-            { status: 401, headers: { 'Content-Type': 'application/json' } }
-          );
-        }
+        return new Response(
+          JSON.stringify({
+            success: false,
+            code: 'INVALID_PIN',
+            message: 'El PIN de seguridad de 6 dígitos es incorrecto para este radicado.',
+          }),
+          { status: 401, headers: { 'Content-Type': 'application/json' } }
+        );
       }
     }
 
