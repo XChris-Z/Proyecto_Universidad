@@ -2,80 +2,163 @@
 // src/pages/calendario.astro
 // Módulo de Calendario Institucional UI/UX Pro Max: Agenda y Semáforo SLA
 // Crossfade y Shared Element Transitions
-import AppLayout from '@layouts/AppLayout.astro';
-import { supabase } from '@lib/supabase';
-import { SESSION_COOKIE_KEY } from '@lib/constants';
+import AppLayout from "@layouts/AppLayout.astro";
+import { supabase } from "@lib/supabase";
+import { SESSION_COOKIE_KEY } from "@lib/constants";
 
 // Obtener usuario autenticado desde la cookie de sesión del middleware
-const sessionUserId = Astro.cookies.get(SESSION_COOKIE_KEY)?.value || 'usr-root';
+const sessionUserId =
+  Astro.cookies.get(SESSION_COOKIE_KEY)?.value || "usr-root";
 
 // Consultar perfil del usuario en Supabase PostgreSQL
 const { data: userProfile } = await supabase
-  .from('profiles')
-  .select('id, email, full_name, google_calendar_connected, google_calendar_id')
+  .from("profiles")
+  .select("id, email, full_name, google_calendar_connected, google_calendar_id")
   .or(`id.eq.${sessionUserId},email.eq.${sessionUserId}`)
   .maybeSingle();
 
 const isConnected = !!userProfile?.google_calendar_connected;
-const userEmail = userProfile?.email || 'christianlemus.es@unitropico.edu.co';
+const userEmail = userProfile?.email || "christianlemus.es@unitropico.edu.co";
 const userId = userProfile?.id || sessionUserId;
 
 // URL parametrizada para el componente embebido seguro de Google Calendar
 const calendarEmbedUrl = `https://calendar.google.com/calendar/embed?src=${encodeURIComponent(userEmail)}&ctz=America/Bogota&showTitle=0&showNav=1&showDate=1&showPrint=0&showTabs=1&showCalendars=0&showTz=1&mode=MONTH`;
 
 // Manejo de parámetros de retorno de la sincronización
-const isJustConnected = Astro.url.searchParams.get('connected') === 'true';
-const errorParam = Astro.url.searchParams.get('error');
+const isJustConnected = Astro.url.searchParams.get("connected") === "true";
+const errorParam = Astro.url.searchParams.get("error");
 ---
 
-<AppLayout title="Calendario Institucional y Semáforo SLA" activeNav="calendario">
+<AppLayout
+  title="Calendario Institucional y Semáforo SLA"
+  activeNav="calendario"
+>
   <div class="calendario-promax-workspace">
-
     <!-- Notificaciones visuales de estado -->
-    {isJustConnected && (
-      <div class="promax-banner success" id="alert-connect-success">
-        <div class="banner-content">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-          <span>Google Calendar institucional sincronizado correctamente para <strong>{userEmail}</strong>.</span>
+    {
+      isJustConnected && (
+        <div class="promax-banner success" id="alert-connect-success">
+          <div class="banner-content">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <>
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </>
+            </svg>
+            <span>
+              Google Calendar institucional sincronizado correctamente para{" "}
+              <strong>{userEmail}</strong>.
+            </span>
+          </div>
+          <button
+            type="button"
+            class="banner-close"
+            onclick="this.parentElement.style.display='none'"
+          >
+            &times;
+          </button>
         </div>
-        <button type="button" class="banner-close" onclick="this.parentElement.style.display='none'">&times;</button>
-      </div>
-    )}
+      )
+    }
 
-    {errorParam && (
-      <div class="promax-banner warning" id="alert-connect-error">
-        <div class="banner-content">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <span>
-            {errorParam === 'cancelled' 
-              ? 'Se canceló la autorización de Google Calendar.' 
-              : 'No se pudo completar la sincronización con Google. La agenda opera con la base de datos en tiempo real.'}
-          </span>
+    {
+      errorParam && (
+        <div class="promax-banner warning" id="alert-connect-error">
+          <div class="banner-content">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <>
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </>
+            </svg>
+            <span>
+              {errorParam === "cancelled"
+                ? "Se canceló la autorización de Google Calendar."
+                : "No se pudo completar la sincronización con Google. La agenda opera con la base de datos en tiempo real."}
+            </span>
+          </div>
+          <button
+            type="button"
+            class="banner-close"
+            onclick="this.parentElement.style.display='none'"
+          >
+            &times;
+          </button>
         </div>
-        <button type="button" class="banner-close" onclick="this.parentElement.style.display='none'">&times;</button>
-      </div>
-    )}
+      )
+    }
 
     <!-- ================================================================= -->
     <!-- ESTADO 1: BANNER INFORMATIVO SI NO ESTÁ CONECTADO A GOOGLE        -->
     <!-- ================================================================= -->
-    <div id="state-disconnected" style={`display: ${isConnected ? 'none' : 'block'};`}>
+    <div
+      id="state-disconnected"
+      style={`display: ${isConnected ? "none" : "block"};`}
+    >
       <div class="google-connect-pill-card">
         <div class="connect-left">
           <div class="connect-icon-wrap">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              ><rect x="3" y="4" width="18" height="18" rx="2" ry="2"
+              ></rect><line x1="16" y1="2" x2="16" y2="6"></line><line
+                x1="8"
+                y1="2"
+                x2="8"
+                y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg
+            >
           </div>
           <div>
             <div class="connect-title">Google Calendar Institucional</div>
-            <div class="connect-subtitle">Conecta tu cuenta ({userEmail}) para sincronización bidireccional automática</div>
+            <div class="connect-subtitle">
+              Conecta tu cuenta ({userEmail}) para sincronización bidireccional
+              automática
+            </div>
           </div>
         </div>
-        <button type="button" id="btn-connect-google" class="btn-connect-google-pill" data-user-id={userId}>
+        <button
+          type="button"
+          id="btn-connect-google"
+          class="btn-connect-google-pill"
+          data-user-id={userId}
+        >
           <svg width="16" height="16" viewBox="0 0 24 24">
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+            <path
+              fill="#4285F4"
+              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+            ></path>
+            <path
+              fill="#34A853"
+              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+            ></path>
+            <path
+              fill="#FBBC05"
+              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+            ></path>
+            <path
+              fill="#EA4335"
+              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+            ></path>
           </svg>
           <span id="btn-connect-label">Vincular Google Calendar</span>
         </button>
@@ -86,55 +169,150 @@ const errorParam = Astro.url.searchParams.get('error');
     <!-- ESTADO 2: CONTENEDOR PRINCIPAL CALENDARIO PRO MAX                -->
     <!-- ================================================================= -->
     <div id="state-connected" style="display: block;">
-
       <!-- CABECERA INSTITUCIONAL Y ACCIONES DE NAVEGACIÓN -->
       <header class="promax-module-header">
         <div class="header-titles">
           <div class="header-pretitle">
             <span class="live-status-pill" id="gcal-sync-badge">
               <span class="badge-dot-live"></span>
-              {isConnected ? 'Google Calendar Activo' : 'Base de Datos en Tiempo Real'}
+              {
+                isConnected
+                  ? "Google Calendar Activo"
+                  : "Base de Datos en Tiempo Real"
+              }
             </span>
             <span class="account-chip" title={userEmail}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                ><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"
+                ></path><circle cx="12" cy="7" r="4"></circle></svg
+              >
               <span>{userEmail}</span>
             </span>
           </div>
-          <h2 class="module-main-title">Calendario Institucional & Semáforo SLA</h2>
-          <p class="module-subtitle">Agenda ejecutiva unificada, monitor de vencimientos y semáforo de términos legales en tiempo real</p>
+          <h2 class="module-main-title">Calendario Institucional</h2>
+          <p class="module-subtitle">
+            Agenda ejecutiva unificada, monitor de vencimientos y semáforo de
+            términos legales en tiempo real
+          </p>
         </div>
 
         <div class="header-actions">
           <!-- Alternador de Pestaña: Agenda y Semáforo SLA vs Visor Google Calendar -->
           <div class="promax-tab-switcher">
             <button type="button" class="tab-pill active" id="tab-btn-semaforo">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                ><rect x="3" y="4" width="18" height="18" rx="2" ry="2"
+                ></rect><line x1="16" y1="2" x2="16" y2="6"></line><line
+                  x1="8"
+                  y1="2"
+                  x2="8"
+                  y2="6"></line><line x1="3" y1="10" x2="21" y2="10"
+                ></line></svg
+              >
               <span>Agenda & Semáforo SLA</span>
             </button>
             <button type="button" class="tab-pill" id="tab-btn-google-embed">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                ><circle cx="12" cy="12" r="10"></circle><line
+                  x1="2"
+                  y1="12"
+                  x2="22"
+                  y2="12"></line><path
+                  d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
+                ></path></svg
+              >
               <span>Visor Google Workspace</span>
             </button>
           </div>
 
           <!-- Botón Sincronizar -->
-          <button type="button" class="btn-promax-secondary" id="btn-force-sync" title="Actualizar eventos de base de datos y Google">
-            <svg id="sync-spinner-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+          <button
+            type="button"
+            class="btn-promax-secondary"
+            id="btn-force-sync"
+            title="Actualizar eventos de base de datos y Google"
+          >
+            <svg
+              id="sync-spinner-icon"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+              ><path
+                d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+              ></path></svg
+            >
             <span>Sincronizar</span>
           </button>
 
           <!-- Botón Crear Evento -->
-          <button type="button" class="btn-promax-primary" id="btn-gcal-create-event">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            <span>+ Agendar Compromiso</span>
+          <button
+            type="button"
+            class="btn-promax-primary"
+            id="btn-gcal-create-event"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              ><line x1="12" y1="5" x2="12" y2="19"></line><line
+                x1="5"
+                y1="12"
+                x2="19"
+                y2="12"></line></svg
+            >
+            <span> Agendar Compromiso</span>
           </button>
 
           <!-- Botón Desvincular (discreto) -->
-          {isConnected && (
-            <button type="button" class="btn-promax-ghost-danger" id="btn-disconnect-calendar" data-user-id={userId} title="Desconectar cuenta de Google">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
-            </button>
-          )}
+          {
+            isConnected && (
+              <button
+                type="button"
+                class="btn-promax-ghost-danger"
+                id="btn-disconnect-calendar"
+                data-user-id={userId}
+                title="Desconectar cuenta de Google"
+              >
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <>
+                    <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+                    <line x1="12" y1="2" x2="12" y2="12" />
+                  </>
+                </svg>
+              </button>
+            )
+          }
         </div>
       </header>
 
@@ -142,19 +320,37 @@ const errorParam = Astro.url.searchParams.get('error');
       <!-- VISTA 1: AGENDA Y SEMÁFORO SLA (VISTA PRINCIPAL)                -->
       <!-- =============================================================== -->
       <main id="container-semaforo-view" class="promax-calendar-surface">
-
         <!-- 1. BENTO HEADER INTELIGENTE (RESUMEN SEMÁFORO SLA & FILTROS) -->
         <section class="bento-header-grid" aria-label="Resumen de Semáforo SLA">
-          
           <!-- Card 1: Críticos / Vencidos -->
-          <article class="bento-sla-card danger" data-sla-filter="danger" title="Clic para filtrar compromisos críticos">
+          <article
+            class="bento-sla-card danger"
+            data-sla-filter="danger"
+            title="Clic para filtrar compromisos críticos"
+          >
             <div class="bento-card-top">
               <div class="bento-icon-badge danger">
                 <span class="live-radar-pulse"></span>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.2"
+                  ><path
+                    d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+                  ></path><line x1="12" y1="9" x2="12" y2="13"></line><line
+                    x1="12"
+                    y1="17"
+                    x2="12.01"
+                    y2="17"></line></svg
+                >
               </div>
               <span class="bento-tag danger">Término Inmediato</span>
-              <span class="bento-active-badge" style="display: none;">Filtro Activo &times;</span>
+              <span class="bento-active-badge" style="display: none;"
+                >Filtro Activo &times;</span
+              >
             </div>
             <div class="bento-card-kpi-row">
               <span class="bento-kpi tabular-nums" id="gcal-crit-count">0</span>
@@ -162,18 +358,35 @@ const errorParam = Astro.url.searchParams.get('error');
             </div>
             <div class="bento-card-bottom">
               <h4 class="bento-card-title">Críticos / Vencidos</h4>
-              <p class="bento-card-desc">Atención inmediata (≤ 2 días restantes)</p>
+              <p class="bento-card-desc">
+                Atención inmediata (≤ 2 días restantes)
+              </p>
             </div>
           </article>
 
           <!-- Card 2: Próximos a Vencer -->
-          <article class="bento-sla-card warning" data-sla-filter="warning" title="Clic para filtrar compromisos en alerta">
+          <article
+            class="bento-sla-card warning"
+            data-sla-filter="warning"
+            title="Clic para filtrar compromisos en alerta"
+          >
             <div class="bento-card-top">
               <div class="bento-icon-badge warning">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.2"
+                  ><circle cx="12" cy="12" r="10"></circle><polyline
+                    points="12 6 12 12 16 14"></polyline></svg
+                >
               </div>
               <span class="bento-tag warning">Alerta SLA</span>
-              <span class="bento-active-badge" style="display: none;">Filtro Activo &times;</span>
+              <span class="bento-active-badge" style="display: none;"
+                >Filtro Activo &times;</span
+              >
             </div>
             <div class="bento-card-kpi-row">
               <span class="bento-kpi tabular-nums" id="gcal-warn-count">0</span>
@@ -181,18 +394,35 @@ const errorParam = Astro.url.searchParams.get('error');
             </div>
             <div class="bento-card-bottom">
               <h4 class="bento-card-title">Próximos a Vencer</h4>
-              <p class="bento-card-desc">Ventana de alerta (3 a 7 días restantes)</p>
+              <p class="bento-card-desc">
+                Ventana de alerta (3 a 7 días restantes)
+              </p>
             </div>
           </article>
 
           <!-- Card 3: En Tiempo / Saludables -->
-          <article class="bento-sla-card safe" data-sla-filter="safe" title="Clic para filtrar compromisos en término seguro">
+          <article
+            class="bento-sla-card safe"
+            data-sla-filter="safe"
+            title="Clic para filtrar compromisos en término seguro"
+          >
             <div class="bento-card-top">
               <div class="bento-icon-badge safe">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.2"
+                  ><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline
+                    points="22 4 12 14.01 9 11.01"></polyline></svg
+                >
               </div>
               <span class="bento-tag safe">SLA Cumplido</span>
-              <span class="bento-active-badge" style="display: none;">Filtro Activo &times;</span>
+              <span class="bento-active-badge" style="display: none;"
+                >Filtro Activo &times;</span
+              >
             </div>
             <div class="bento-card-kpi-row">
               <span class="bento-kpi tabular-nums" id="gcal-safe-count">0</span>
@@ -200,34 +430,86 @@ const errorParam = Astro.url.searchParams.get('error');
             </div>
             <div class="bento-card-bottom">
               <h4 class="bento-card-title">En Término Seguro</h4>
-              <p class="bento-card-desc">Dentro del plazo SLA (&gt; 7 días restantes)</p>
+              <p class="bento-card-desc">
+                Dentro del plazo SLA (&gt; 7 días restantes)
+              </p>
             </div>
           </article>
-
         </section>
 
         <!-- 2. BARRA DE CONTROL Y NAVEGACIÓN EJECUTIVA -->
-        <nav class="promax-executive-nav" aria-label="Navegación del Calendario">
-          
+        <nav
+          class="promax-executive-nav"
+          aria-label="Navegación del Calendario"
+        >
           <!-- Izquierda: Navegación de Fecha -->
           <div class="nav-date-group">
-            <button type="button" class="btn-today-pill" id="gcal-btn-today">Hoy</button>
+            <button type="button" class="btn-today-pill" id="gcal-btn-today"
+              >Hoy</button
+            >
             <div class="nav-arrows-capsule">
-              <button type="button" class="btn-nav-arrow" id="gcal-btn-prev" title="Período anterior" aria-label="Anterior">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+              <button
+                type="button"
+                class="btn-nav-arrow"
+                id="gcal-btn-prev"
+                title="Período anterior"
+                aria-label="Anterior"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  ><polyline points="15 18 9 12 15 6"></polyline></svg
+                >
               </button>
-              <button type="button" class="btn-nav-arrow" id="gcal-btn-next" title="Período siguiente" aria-label="Siguiente">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+              <button
+                type="button"
+                class="btn-nav-arrow"
+                id="gcal-btn-next"
+                title="Período siguiente"
+                aria-label="Siguiente"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  ><polyline points="9 18 15 12 9 6"></polyline></svg
+                >
               </button>
             </div>
-            <h3 class="current-period-heading" id="gcal-current-label">Mes Actual</h3>
+            <h3 class="current-period-heading" id="gcal-current-label">
+              Mes Actual
+            </h3>
           </div>
 
           <!-- Centro: Buscador en tiempo real -->
           <div class="nav-search-group">
             <div class="search-glass-field">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <input type="text" id="gcal-search-input" placeholder="Buscar radicado, asunto, responsable..." autocomplete="off" />
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.2"
+                ><circle cx="11" cy="11" r="8"></circle><line
+                  x1="21"
+                  y1="21"
+                  x2="16.65"
+                  y2="16.65"></line></svg
+              >
+              <input
+                type="text"
+                id="gcal-search-input"
+                placeholder="Buscar radicado, asunto, responsable..."
+                autocomplete="off"
+              />
             </div>
           </div>
 
@@ -254,22 +536,30 @@ const errorParam = Astro.url.searchParams.get('error');
 
             <!-- Selector de Vista Segmentado -->
             <div class="view-segmented-control" id="gcal-view-switcher">
-              <div class="view-indicator-pill" id="view-switcher-indicator"></div>
-              <button type="button" class="gcal-view-btn active" data-gview="month">Mes</button>
-              <button type="button" class="gcal-view-btn" data-gview="week">Semana</button>
-              <button type="button" class="gcal-view-btn" data-gview="day">Día</button>
-              <button type="button" class="gcal-view-btn" data-gview="agenda">Agenda</button>
+              <div class="view-indicator-pill" id="view-switcher-indicator">
+              </div>
+              <button
+                type="button"
+                class="gcal-view-btn active"
+                data-gview="month">Mes</button
+              >
+              <button type="button" class="gcal-view-btn" data-gview="week"
+                >Semana</button
+              >
+              <button type="button" class="gcal-view-btn" data-gview="day"
+                >Día</button
+              >
+              <button type="button" class="gcal-view-btn" data-gview="agenda"
+                >Agenda</button
+              >
             </div>
           </div>
-
         </nav>
 
         <!-- 3. CUERPO PRINCIPAL ASIMÉTRICO (1.6fr 1fr en Desktop) -->
         <div class="promax-calendar-workspace-split">
-          
           <!-- PANEL IZQUIERDO: LIENZO DE CALENDARIO EJECUTIVO (1.6fr) -->
           <section class="promax-canvas-column">
-            
             <!-- Vista 1: Mes (Cápsulas Flotantes Pro Max) -->
             <div class="canvas-view-card" id="gcal-month-view">
               <div class="month-weekdays-header">
@@ -287,18 +577,30 @@ const errorParam = Astro.url.searchParams.get('error');
             </div>
 
             <!-- Vista 2: Semana -->
-            <div class="canvas-view-card" id="gcal-week-view" style="display: none;">
+            <div
+              class="canvas-view-card"
+              id="gcal-week-view"
+              style="display: none;"
+            >
               <div class="week-grid-container" id="gcal-week-container"></div>
             </div>
 
             <!-- Vista 3: Día -->
-            <div class="canvas-view-card" id="gcal-day-view" style="display: none;">
+            <div
+              class="canvas-view-card"
+              id="gcal-day-view"
+              style="display: none;"
+            >
               <div id="gcal-day-container"></div>
             </div>
 
             <!-- Vista 4: Agenda Completa (cuando se selecciona vista agenda) -->
-            <div class="canvas-view-card" id="gcal-agenda-view" style="display: none;"></div>
-
+            <div
+              class="canvas-view-card"
+              id="gcal-agenda-view"
+              style="display: none;"
+            >
+            </div>
           </section>
 
           <!-- PANEL DERECHO: AGENDA & MONITOR SLA (TIMELINE VERTICAL 1fr) -->
@@ -310,11 +612,34 @@ const errorParam = Astro.url.searchParams.get('error');
                     <span class="timeline-live-node"></span>
                     <h3 class="timeline-heading">Agenda & Monitor SLA</h3>
                   </div>
-                  <p class="timeline-subheading" id="timeline-current-filter-desc">Compromisos Oficiales en Tiempo Real</p>
+                  <p
+                    class="timeline-subheading"
+                    id="timeline-current-filter-desc"
+                  >
+                    Compromisos Oficiales en Tiempo Real
+                  </p>
                 </div>
-                <button type="button" class="btn-clear-selection-pill" id="btn-clear-day-filter" style="display: none;" title="Mostrar todos los compromisos">
+                <button
+                  type="button"
+                  class="btn-clear-selection-pill"
+                  id="btn-clear-day-filter"
+                  style="display: none;"
+                  title="Mostrar todos los compromisos"
+                >
                   <span>Ver Todos</span>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    ><line x1="18" y1="6" x2="6" y2="18"></line><line
+                      x1="6"
+                      y1="6"
+                      x2="18"
+                      y2="18"></line></svg
+                  >
                 </button>
               </div>
 
@@ -324,60 +649,97 @@ const errorParam = Astro.url.searchParams.get('error');
               </div>
             </div>
           </aside>
-
         </div>
-
       </main>
 
       <!-- =============================================================== -->
       <!-- VISTA 2: VISOR GOOGLE WORKSPACE EMBEBIDO                        -->
       <!-- =============================================================== -->
-      <section id="container-google-embed" class="promax-calendar-surface" style="display: none;">
+      <section
+        id="container-google-embed"
+        class="promax-calendar-surface"
+        style="display: none;"
+      >
         <div class="google-iframe-card">
           <div class="iframe-toolbar">
             <div class="iframe-meta">
               <span class="badge-dot-live"></span>
               <span>Visor Oficial Google Calendar (Cuenta: {userEmail})</span>
             </div>
-            <button type="button" class="btn-promax-secondary btn-sm" id="btn-activate-cookies">
+            <button
+              type="button"
+              class="btn-promax-secondary btn-sm"
+              id="btn-activate-cookies"
+            >
               Permitir Cookies / Abrir en Ventana
             </button>
           </div>
-          <iframe 
+          <iframe
             id="google-calendar-iframe"
-            src={calendarEmbedUrl} 
+            src={calendarEmbedUrl}
             class="google-calendar-frame"
-            frameborder="0" 
+            frameborder="0"
             scrolling="no"
             loading="lazy"
-            title="Google Calendar Oficial Unitrópico"
-          ></iframe>
+            title="Google Calendar Oficial Unitrópico"></iframe>
         </div>
       </section>
-
     </div>
-
   </div>
 
   <!-- ================================================================= -->
   <!-- MODAL 1: AGENDAR COMPROMISO / EVENTO EN CALENDARIO Y PLATAFORMA   -->
   <!-- ================================================================= -->
-  <div class="modal-backdrop" id="new-calendario-modal" style="display: none; z-index: 9999;">
+  <div
+    class="modal-backdrop"
+    id="new-calendario-modal"
+    style="display: none; z-index: 9999;"
+  >
     <div class="modal-card promax-glass-modal">
       <div class="modal-header">
         <h3 class="modal-title-pro">
           <div class="modal-icon-wrap">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="10" y1="16" x2="14" y2="16"/></svg>
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              ><rect x="3" y="4" width="18" height="18" rx="2" ry="2"
+              ></rect><line x1="16" y1="2" x2="16" y2="6"></line><line
+                x1="8"
+                y1="2"
+                x2="8"
+                y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line><line
+                x1="12"
+                y1="14"
+                x2="12"
+                y2="18"></line><line x1="10" y1="16" x2="14" y2="16"
+              ></line></svg
+            >
           </div>
           <span>Agendar Compromiso Oficial</span>
         </h3>
-        <button type="button" class="btn-close-modal" id="btn-close-new-cal-modal">&times;</button>
+        <button
+          type="button"
+          class="btn-close-modal"
+          id="btn-close-new-cal-modal">&times;</button
+        >
       </div>
 
       <form id="new-calendario-form" class="modal-body promax-form">
         <div class="form-group">
-          <label class="form-label-pro">Título del Compromiso o Actividad *</label>
-          <input type="text" id="input-cal-titulo" required placeholder="Ej: Sustentación CSU / Sesión de Trabajo" class="form-control-pro" />
+          <label class="form-label-pro"
+            >Título del Compromiso o Actividad *</label
+          >
+          <input
+            type="text"
+            id="input-cal-titulo"
+            required
+            placeholder="Ej: Sustentación CSU / Sesión de Trabajo"
+            class="form-control-pro"
+          />
         </div>
 
         <div class="form-row-2col">
@@ -394,31 +756,58 @@ const errorParam = Astro.url.searchParams.get('error');
 
           <div class="form-group">
             <label class="form-label-pro">Fecha del Término / Evento *</label>
-            <input type="date" id="input-cal-fecha" required class="form-control-pro" />
+            <input
+              type="date"
+              id="input-cal-fecha"
+              required
+              class="form-control-pro"
+            />
           </div>
         </div>
 
         <div class="form-row-2col">
           <div class="form-group">
             <label class="form-label-pro">Dependencia o Destino</label>
-            <input type="text" id="input-cal-destino" placeholder="Ej: Rectoría / Secretaría General" class="form-control-pro" />
+            <input
+              type="text"
+              id="input-cal-destino"
+              placeholder="Ej: Rectoría / Secretaría General"
+              class="form-control-pro"
+            />
           </div>
 
           <div class="form-group">
             <label class="form-label-pro">Funcionario Responsable</label>
-            <input type="text" id="input-cal-responsable" placeholder="Ej: ING. Christian Lemus" class="form-control-pro" />
+            <input
+              type="text"
+              id="input-cal-responsable"
+              placeholder="Ej: ING. Christian Lemus"
+              class="form-control-pro"
+            />
           </div>
         </div>
 
         <div class="form-group">
           <label class="form-label-pro">Descripción o Notas de Radicado</label>
-          <textarea id="input-cal-descripcion" rows="2" placeholder="Detalles o radicado asociado..." class="form-control-pro resize-y"></textarea>
+          <textarea
+            id="input-cal-descripcion"
+            rows="2"
+            placeholder="Detalles o radicado asociado..."
+            class="form-control-pro resize-y"></textarea>
         </div>
 
         <div class="modal-footer-pro">
-          <button type="button" class="btn-promax-secondary" id="btn-cancel-new-cal">Cancelar</button>
-          <button type="submit" class="btn-promax-primary" id="btn-submit-new-cal">
-            Agendar en Semáforo SLA
+          <button
+            type="button"
+            class="btn-promax-secondary"
+            id="btn-cancel-new-cal">Cancelar</button
+          >
+          <button
+            type="submit"
+            class="btn-promax-primary"
+            id="btn-submit-new-cal"
+          >
+            Agendar en Calendario
           </button>
         </div>
       </form>
@@ -428,24 +817,43 @@ const errorParam = Astro.url.searchParams.get('error');
   <!-- ================================================================= -->
   <!-- MODAL 2: DETALLE DE COMPROMISOS DEL DÍA                           -->
   <!-- ================================================================= -->
-  <div class="modal-backdrop" id="cal-day-events-modal" style="display: none; z-index: 9999;">
+  <div
+    class="modal-backdrop"
+    id="cal-day-events-modal"
+    style="display: none; z-index: 9999;"
+  >
     <div class="modal-card promax-glass-modal">
       <div class="modal-header">
         <h3 id="cal-day-modal-title" class="modal-title-pro">
           Compromisos del Día
         </h3>
-        <button type="button" class="btn-close-modal" id="btn-close-cal-day-modal">&times;</button>
+        <button
+          type="button"
+          class="btn-close-modal"
+          id="btn-close-cal-day-modal">&times;</button
+        >
       </div>
-      <div class="modal-body" id="cal-day-modal-body" style="max-height: 420px; overflow-y: auto;">
+      <div
+        class="modal-body"
+        id="cal-day-modal-body"
+        style="max-height: 420px; overflow-y: auto;"
+      >
         <!-- Lista de compromisos del día -->
       </div>
       <div class="modal-footer-pro" style="justify-content: space-between;">
-        <button type="button" class="btn-promax-secondary btn-sm" id="btn-cal-day-switch-to-day">Ver en Vista Día</button>
-        <button type="button" class="btn-promax-ghost btn-sm" id="btn-close-cal-day-modal-footer">Cerrar</button>
+        <button
+          type="button"
+          class="btn-promax-secondary btn-sm"
+          id="btn-cal-day-switch-to-day">Ver en Vista Día</button
+        >
+        <button
+          type="button"
+          class="btn-promax-ghost btn-sm"
+          id="btn-close-cal-day-modal-footer">Cerrar</button
+        >
       </div>
     </div>
   </div>
-
 </AppLayout>
 
 <style>
@@ -522,7 +930,7 @@ const errorParam = Astro.url.searchParams.get('error');
     height: 40px;
     border-radius: 10px;
     background: rgba(0, 89, 78, 0.08);
-    color: #00594E;
+    color: #00594e;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -533,7 +941,7 @@ const errorParam = Astro.url.searchParams.get('error');
     color: #0f172a;
   }
   .connect-subtitle {
-    font-size: 0.80rem;
+    font-size: 0.8rem;
     color: #64748b;
   }
   .btn-connect-google-pill {
@@ -603,11 +1011,18 @@ const errorParam = Astro.url.searchParams.get('error');
     width: 7px;
     height: 7px;
     border-radius: 50%;
-    background: #00594E;
+    background: #00594e;
   }
   @keyframes livePulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.6; transform: scale(1.15); }
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.6;
+      transform: scale(1.15);
+    }
   }
   .account-chip {
     display: inline-flex;
@@ -666,7 +1081,7 @@ const errorParam = Astro.url.searchParams.get('error');
   }
   .tab-pill.active {
     background: #ffffff;
-    color: #00594E;
+    color: #00594e;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   }
 
@@ -675,7 +1090,7 @@ const errorParam = Astro.url.searchParams.get('error');
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    background: linear-gradient(135deg, #00594E 0%, #004239 100%);
+    background: linear-gradient(135deg, #00594e 0%, #004239 100%);
     color: #ffffff;
     border: 1px solid rgba(255, 255, 255, 0.15);
     padding: 8px 16px;
@@ -700,7 +1115,7 @@ const errorParam = Astro.url.searchParams.get('error');
     border: 1px solid #cbd5e1;
     padding: 8px 14px;
     border-radius: 10px;
-    font-size: 0.80rem;
+    font-size: 0.8rem;
     font-weight: 700;
     cursor: pointer;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
@@ -747,9 +1162,10 @@ const errorParam = Astro.url.searchParams.get('error');
     backdrop-filter: blur(16px);
     border: 1px solid rgba(255, 255, 255, 0.4);
     box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.04);
-    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
-                box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1),
-                border-color 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    transition:
+      transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+      border-color 0.28s cubic-bezier(0.16, 1, 0.3, 1);
     overflow: hidden;
   }
 
@@ -759,7 +1175,11 @@ const errorParam = Astro.url.searchParams.get('error');
 
   /* Card Críticos (Rojo Rubí) */
   .bento-sla-card.danger {
-    background: linear-gradient(135deg, rgba(254, 242, 242, 0.75) 0%, rgba(255, 255, 255, 0.85) 100%);
+    background: linear-gradient(
+      135deg,
+      rgba(254, 242, 242, 0.75) 0%,
+      rgba(255, 255, 255, 0.85) 100%
+    );
     border-color: rgba(254, 202, 202, 0.9);
   }
   .bento-sla-card.danger:hover {
@@ -768,13 +1188,19 @@ const errorParam = Astro.url.searchParams.get('error');
   }
   .bento-sla-card.danger.active-filter {
     border-color: #dc2626;
-    box-shadow: 0 0 0 2px #dc2626, 0 14px 32px -4px rgba(220, 38, 38, 0.25);
+    box-shadow:
+      0 0 0 2px #dc2626,
+      0 14px 32px -4px rgba(220, 38, 38, 0.25);
     transform: translateY(-3px) scale(1.015);
   }
 
   /* Card Próximos (Ámbar / Dorado) */
   .bento-sla-card.warning {
-    background: linear-gradient(135deg, rgba(255, 251, 235, 0.75) 0%, rgba(255, 255, 255, 0.85) 100%);
+    background: linear-gradient(
+      135deg,
+      rgba(255, 251, 235, 0.75) 0%,
+      rgba(255, 255, 255, 0.85) 100%
+    );
     border-color: rgba(253, 230, 138, 0.9);
   }
   .bento-sla-card.warning:hover {
@@ -783,13 +1209,19 @@ const errorParam = Astro.url.searchParams.get('error');
   }
   .bento-sla-card.warning.active-filter {
     border-color: #d97706;
-    box-shadow: 0 0 0 2px #d97706, 0 14px 32px -4px rgba(217, 119, 6, 0.25);
+    box-shadow:
+      0 0 0 2px #d97706,
+      0 14px 32px -4px rgba(217, 119, 6, 0.25);
     transform: translateY(-3px) scale(1.015);
   }
 
   /* Card En Tiempo (Verde Esmeralda) */
   .bento-sla-card.safe {
-    background: linear-gradient(135deg, rgba(236, 253, 245, 0.75) 0%, rgba(255, 255, 255, 0.85) 100%);
+    background: linear-gradient(
+      135deg,
+      rgba(236, 253, 245, 0.75) 0%,
+      rgba(255, 255, 255, 0.85) 100%
+    );
     border-color: rgba(167, 243, 208, 0.9);
   }
   .bento-sla-card.safe:hover {
@@ -798,7 +1230,9 @@ const errorParam = Astro.url.searchParams.get('error');
   }
   .bento-sla-card.safe.active-filter {
     border-color: #059669;
-    box-shadow: 0 0 0 2px #059669, 0 14px 32px -4px rgba(5, 150, 105, 0.25);
+    box-shadow:
+      0 0 0 2px #059669,
+      0 14px 32px -4px rgba(5, 150, 105, 0.25);
     transform: translateY(-3px) scale(1.015);
   }
 
@@ -843,9 +1277,18 @@ const errorParam = Astro.url.searchParams.get('error');
     animation: pulseRing 1.6s cubic-bezier(0.24, 0, 0.38, 1) infinite;
   }
   @keyframes pulseRing {
-    0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
-    70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
-    100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+    0% {
+      transform: scale(0.9);
+      box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
+    }
+    70% {
+      transform: scale(1);
+      box-shadow: 0 0 0 8px rgba(220, 38, 38, 0);
+    }
+    100% {
+      transform: scale(0.9);
+      box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+    }
   }
 
   .bento-tag {
@@ -856,9 +1299,18 @@ const errorParam = Astro.url.searchParams.get('error');
     padding: 3px 8px;
     border-radius: 6px;
   }
-  .bento-tag.danger { background: #fee2e2; color: #991b1b; }
-  .bento-tag.warning { background: #fef3c7; color: #92400e; }
-  .bento-tag.safe { background: #d1fae5; color: #065f46; }
+  .bento-tag.danger {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+  .bento-tag.warning {
+    background: #fef3c7;
+    color: #92400e;
+  }
+  .bento-tag.safe {
+    background: #d1fae5;
+    color: #065f46;
+  }
 
   .bento-active-badge {
     font-size: 0.68rem;
@@ -884,12 +1336,18 @@ const errorParam = Astro.url.searchParams.get('error');
     letter-spacing: -0.04em;
     font-variant-numeric: tabular-nums;
   }
-  .bento-sla-card.danger .bento-kpi { color: #dc2626; }
-  .bento-sla-card.warning .bento-kpi { color: #d97706; }
-  .bento-sla-card.safe .bento-kpi { color: #059669; }
+  .bento-sla-card.danger .bento-kpi {
+    color: #dc2626;
+  }
+  .bento-sla-card.warning .bento-kpi {
+    color: #d97706;
+  }
+  .bento-sla-card.safe .bento-kpi {
+    color: #059669;
+  }
 
   .bento-kpi-label {
-    font-size: 0.80rem;
+    font-size: 0.8rem;
     font-weight: 600;
     color: #64748b;
   }
@@ -932,7 +1390,7 @@ const errorParam = Astro.url.searchParams.get('error');
     background: #f1f5f9;
     border: 1px solid #cbd5e1;
     color: #1e293b;
-    font-size: 0.80rem;
+    font-size: 0.8rem;
     font-weight: 700;
     padding: 6px 14px;
     border-radius: 8px;
@@ -963,7 +1421,9 @@ const errorParam = Astro.url.searchParams.get('error');
     border-radius: 6px;
     color: #475569;
     cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease;
+    transition:
+      background 0.15s ease,
+      color 0.15s ease;
   }
   .btn-nav-arrow:hover {
     background: #ffffff;
@@ -992,11 +1452,14 @@ const errorParam = Astro.url.searchParams.get('error');
     border: 1px solid #cbd5e1;
     border-radius: 10px;
     padding: 6px 12px;
-    transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+    transition:
+      border-color 0.2s ease,
+      background 0.2s ease,
+      box-shadow 0.2s ease;
   }
   .search-glass-field:focus-within {
     background: #ffffff;
-    border-color: #00594E;
+    border-color: #00594e;
     box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.12);
   }
   .search-glass-field input {
@@ -1044,7 +1507,7 @@ const errorParam = Astro.url.searchParams.get('error');
     border-color: #cbd5e1;
   }
   .filter-chip-toggle input {
-    accent-color: #00594E;
+    accent-color: #00594e;
     width: 13px;
     height: 13px;
     margin: 0;
@@ -1054,9 +1517,15 @@ const errorParam = Astro.url.searchParams.get('error');
     height: 7px;
     border-radius: 50%;
   }
-  .chip-color-dot.peticion { background: #dc2626; }
-  .chip-color-dot.reporte { background: #f59e0b; }
-  .chip-color-dot.colegiado { background: #10b981; }
+  .chip-color-dot.peticion {
+    background: #dc2626;
+  }
+  .chip-color-dot.reporte {
+    background: #f59e0b;
+  }
+  .chip-color-dot.colegiado {
+    background: #10b981;
+  }
 
   /* Selector de vista con píldora deslizante */
   .view-segmented-control {
@@ -1075,8 +1544,12 @@ const errorParam = Astro.url.searchParams.get('error');
     bottom: 3px;
     background: #ffffff;
     border-radius: 7px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
-    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), width 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    box-shadow:
+      0 1px 4px rgba(0, 0, 0, 0.08),
+      0 0 0 1px rgba(0, 0, 0, 0.04);
+    transition:
+      transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+      width 0.28s cubic-bezier(0.22, 1, 0.36, 1);
     pointer-events: none;
     z-index: 1;
   }
@@ -1094,7 +1567,7 @@ const errorParam = Astro.url.searchParams.get('error');
     transition: color 0.18s ease;
   }
   .gcal-view-btn.active {
-    color: #00594E;
+    color: #00594e;
     font-weight: 800;
   }
 
@@ -1168,19 +1641,22 @@ const errorParam = Astro.url.searchParams.get('error');
     cursor: pointer;
     overflow: hidden;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), 
-                box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1), 
-                border-color 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    transition:
+      transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+      border-color 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   }
   :global(.gcal-cell:hover) {
     transform: translateY(-2px) scale(1.015);
-    box-shadow: 0 10px 24px -4px rgba(0, 89, 78, 0.10);
+    box-shadow: 0 10px 24px -4px rgba(0, 89, 78, 0.1);
     border-color: rgba(0, 89, 78, 0.35);
     z-index: 5;
   }
   :global(.gcal-cell.is-selected) {
-    border-color: #00594E !important;
-    box-shadow: 0 0 0 2px #00594E, 0 10px 26px -4px rgba(0, 89, 78, 0.20) !important;
+    border-color: #00594e !important;
+    box-shadow:
+      0 0 0 2px #00594e,
+      0 10px 26px -4px rgba(0, 89, 78, 0.2) !important;
     transform: translateY(-2px);
     z-index: 6;
   }
@@ -1206,9 +1682,18 @@ const errorParam = Astro.url.searchParams.get('error');
     height: 6px;
     border-radius: 50%;
   }
-  :global(.gcal-sem-dot.danger) { background: #dc2626; box-shadow: 0 0 4px rgba(220, 38, 38, 0.6); }
-  :global(.gcal-sem-dot.warning) { background: #f59e0b; box-shadow: 0 0 4px rgba(245, 158, 11, 0.6); }
-  :global(.gcal-sem-dot.safe) { background: #10b981; box-shadow: 0 0 4px rgba(16, 185, 129, 0.6); }
+  :global(.gcal-sem-dot.danger) {
+    background: #dc2626;
+    box-shadow: 0 0 4px rgba(220, 38, 38, 0.6);
+  }
+  :global(.gcal-sem-dot.warning) {
+    background: #f59e0b;
+    box-shadow: 0 0 4px rgba(245, 158, 11, 0.6);
+  }
+  :global(.gcal-sem-dot.safe) {
+    background: #10b981;
+    box-shadow: 0 0 4px rgba(16, 185, 129, 0.6);
+  }
 
   :global(.gcal-day-num) {
     font-size: 0.78rem;
@@ -1223,7 +1708,7 @@ const errorParam = Astro.url.searchParams.get('error');
     margin-left: auto;
   }
   :global(.gcal-day-num.is-today-badge) {
-    background: #00594E;
+    background: #00594e;
     color: #ffffff;
     font-weight: 850;
     box-shadow: 0 2px 6px rgba(0, 89, 78, 0.4);
@@ -1277,9 +1762,15 @@ const errorParam = Astro.url.searchParams.get('error');
     border-radius: 2px;
     flex-shrink: 0;
   }
-  :global(.chip-sla-bar.danger) { background: #dc2626; }
-  :global(.chip-sla-bar.warning) { background: #f59e0b; }
-  :global(.chip-sla-bar.safe) { background: #10b981; }
+  :global(.chip-sla-bar.danger) {
+    background: #dc2626;
+  }
+  :global(.chip-sla-bar.warning) {
+    background: #f59e0b;
+  }
+  :global(.chip-sla-bar.safe) {
+    background: #10b981;
+  }
 
   :global(.chip-rad-code) {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -1296,14 +1787,23 @@ const errorParam = Astro.url.searchParams.get('error');
     padding: 1px 4px;
     border-radius: 4px;
   }
-  :global(.chip-days-badge.danger) { background: #fee2e2; color: #991b1b; }
-  :global(.chip-days-badge.warning) { background: #fef3c7; color: #92400e; }
-  :global(.chip-days-badge.safe) { background: #d1fae5; color: #065f46; }
+  :global(.chip-days-badge.danger) {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+  :global(.chip-days-badge.warning) {
+    background: #fef3c7;
+    color: #92400e;
+  }
+  :global(.chip-days-badge.safe) {
+    background: #d1fae5;
+    color: #065f46;
+  }
 
   :global(.gcal-more-chip) {
     font-size: 0.65rem;
     font-weight: 750;
-    color: #00594E;
+    color: #00594e;
     background: rgba(0, 89, 78, 0.08);
     padding: 2px 5px;
     border-radius: 4px;
@@ -1342,7 +1842,7 @@ const errorParam = Astro.url.searchParams.get('error');
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #00594E;
+    background: #00594e;
     box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.2);
   }
   .timeline-heading {
@@ -1364,7 +1864,7 @@ const errorParam = Astro.url.searchParams.get('error');
     gap: 4px;
     font-size: 0.72rem;
     font-weight: 700;
-    color: #00594E;
+    color: #00594e;
     background: rgba(0, 89, 78, 0.08);
     border: 1px solid rgba(0, 89, 78, 0.2);
     padding: 3px 9px;
@@ -1388,13 +1888,19 @@ const errorParam = Astro.url.searchParams.get('error');
     padding-right: 4px;
   }
   .timeline-items-flow::before {
-    content: '';
+    content: "";
     position: absolute;
     left: 7px;
     top: 10px;
     bottom: 10px;
     width: 2px;
-    background: repeating-linear-gradient(to bottom, #cbd5e1 0, #cbd5e1 4px, transparent 4px, transparent 8px);
+    background: repeating-linear-gradient(
+      to bottom,
+      #cbd5e1 0,
+      #cbd5e1 4px,
+      transparent 4px,
+      transparent 8px
+    );
   }
 
   /* Tarjeta de la línea de tiempo */
@@ -1406,9 +1912,10 @@ const errorParam = Astro.url.searchParams.get('error');
     padding: 14px 16px;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
     cursor: pointer;
-    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
-                box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1),
-                border-color 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    transition:
+      transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+      border-color 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   }
   :global(.pro-timeline-card:hover) {
     transform: translateY(-2px);
@@ -1416,8 +1923,10 @@ const errorParam = Astro.url.searchParams.get('error');
     border-color: #cbd5e1;
   }
   :global(.pro-timeline-card.focused-card) {
-    border-color: #00594E !important;
-    box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.18), 0 8px 24px -4px rgba(0, 89, 78, 0.15) !important;
+    border-color: #00594e !important;
+    box-shadow:
+      0 0 0 3px rgba(0, 89, 78, 0.18),
+      0 8px 24px -4px rgba(0, 89, 78, 0.15) !important;
   }
 
   :global(.timeline-node-pin) {
@@ -1469,19 +1978,28 @@ const errorParam = Astro.url.searchParams.get('error');
     border-radius: 6px;
   }
   :global(.timeline-sla-badge) {
-    font-size: 0.70rem;
+    font-size: 0.7rem;
     font-weight: 800;
     padding: 2px 8px;
     border-radius: 6px;
   }
-  :global(.timeline-sla-badge.badge-danger) { background: #fee2e2; color: #991b1b; }
-  :global(.timeline-sla-badge.badge-warning) { background: #fef3c7; color: #92400e; }
-  :global(.timeline-sla-badge.badge-safe) { background: #d1fae5; color: #065f46; }
+  :global(.timeline-sla-badge.badge-danger) {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+  :global(.timeline-sla-badge.badge-warning) {
+    background: #fef3c7;
+    color: #92400e;
+  }
+  :global(.timeline-sla-badge.badge-safe) {
+    background: #d1fae5;
+    color: #065f46;
+  }
 
   :global(.timeline-type-pill) {
     font-size: 0.65rem;
     font-weight: 800;
-    color: #00594E;
+    color: #00594e;
     background: rgba(0, 89, 78, 0.08);
     padding: 2px 6px;
     border-radius: 4px;
@@ -1496,7 +2014,7 @@ const errorParam = Astro.url.searchParams.get('error');
     line-height: 1.35;
   }
   :global(.timeline-card-desc) {
-    font-size: 0.80rem;
+    font-size: 0.8rem;
     color: #64748b;
     margin: 0 0 8px 0;
     line-height: 1.4;
@@ -1554,13 +2072,18 @@ const errorParam = Astro.url.searchParams.get('error');
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 0.70rem;
+    font-size: 0.7rem;
     font-weight: 750;
     margin-top: 5px;
     font-variant-numeric: tabular-nums;
   }
-  :global(.progress-percent) { color: #475569; }
-  :global(.progress-remaining) { color: #0f172a; font-weight: 800; }
+  :global(.progress-percent) {
+    color: #475569;
+  }
+  :global(.progress-remaining) {
+    color: #0f172a;
+    font-weight: 800;
+  }
 
   :global(.timeline-card-actions) {
     margin-top: 10px;
@@ -1575,7 +2098,7 @@ const errorParam = Astro.url.searchParams.get('error');
     gap: 5px;
     font-size: 0.74rem;
     font-weight: 700;
-    color: #00594E;
+    color: #00594e;
     text-decoration: none;
   }
   :global(.timeline-action-link:hover) {
@@ -1602,7 +2125,7 @@ const errorParam = Astro.url.searchParams.get('error');
     margin: 0 0 4px 0;
   }
   :global(.timeline-empty-card p) {
-    font-size: 0.80rem;
+    font-size: 0.8rem;
     margin: 0 0 12px 0;
   }
 
@@ -1664,7 +2187,7 @@ const errorParam = Astro.url.searchParams.get('error');
     height: 32px;
     border-radius: 8px;
     background: rgba(0, 89, 78, 0.1);
-    color: #00594E;
+    color: #00594e;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1682,7 +2205,7 @@ const errorParam = Astro.url.searchParams.get('error');
     gap: 12px;
   }
   .form-label-pro {
-    font-size: 0.80rem;
+    font-size: 0.8rem;
     font-weight: 750;
     color: #334155;
     margin-bottom: 4px;
@@ -1701,7 +2224,7 @@ const errorParam = Astro.url.searchParams.get('error');
   }
   .form-control-pro:focus {
     outline: none;
-    border-color: #00594E;
+    border-color: #00594e;
     box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.14);
   }
   .resize-y {
@@ -1759,64 +2282,83 @@ const errorParam = Astro.url.searchParams.get('error');
   }
 
   @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+      transform: rotate(360deg);
+    }
   }
 </style>
 
 <script>
-  import { connectGoogleCalendar, disconnectGoogleCalendar } from '@lib/calendar';
-  import { initCalendario } from '@scripts/calendario';
+  import {
+    connectGoogleCalendar,
+    disconnectGoogleCalendar,
+  } from "@lib/calendar";
+  import { initCalendario } from "@scripts/calendario";
 
   // 1. Manejo del Botón Conectar con Google Calendar
-  const btnConnect = document.getElementById('btn-connect-google');
-  const btnLabel = document.getElementById('btn-connect-label');
+  const btnConnect = document.getElementById("btn-connect-google") as HTMLButtonElement | null;
+  const btnLabel = document.getElementById("btn-connect-label");
 
   if (btnConnect) {
-    btnConnect.addEventListener('click', async () => {
-      if (btnLabel) btnLabel.textContent = 'Conectando con Google...';
-      (btnConnect as HTMLButtonElement).disabled = true;
+    btnConnect.addEventListener("click", async () => {
+      if (btnLabel) btnLabel.textContent = "Conectando con Google...";
+      btnConnect.disabled = true;
 
       try {
-        const userId = btnConnect.dataset.userId || 'usr-root';
+        const userId = btnConnect.dataset.userId || "usr-root";
         await connectGoogleCalendar(userId);
       } catch (err: any) {
-        console.error('Error conectando Google Calendar:', err);
+        console.error("Error conectando Google Calendar:", err);
         if ((window as any).showToast) {
-          (window as any).showToast('No se pudo conectar: ' + (err.message || 'Error de red'), 'error');
+          (window as any).showToast(
+            "No se pudo conectar: " + (err.message || "Error de red"),
+            "error",
+          );
         }
-        if (btnLabel) btnLabel.textContent = 'Vincular Google Calendar';
-        (btnConnect as HTMLButtonElement).disabled = false;
+        if (btnLabel) btnLabel.textContent = "Vincular Google Calendar";
+        btnConnect.disabled = false;
       }
     });
   }
 
   // 2. Manejo de Desvincular Cuenta
-  const btnDisconnect = document.getElementById('btn-disconnect-calendar');
+  const btnDisconnect = document.getElementById("btn-disconnect-calendar") as HTMLButtonElement | null;
   if (btnDisconnect) {
-    btnDisconnect.addEventListener('click', async () => {
-      const confirmed = typeof (window as any).showConfirm === 'function'
-        ? await (window as any).showConfirm('¿Estás seguro de que deseas desvincular tu cuenta de Google Calendar institucional?', 'Desvincular Google Calendar')
-        : true;
+    btnDisconnect.addEventListener("click", async () => {
+      const confirmed =
+        typeof (window as any).showConfirm === "function"
+          ? await (window as any).showConfirm(
+              "¿Estás seguro de que deseas desvincular tu cuenta de Google Calendar institucional?",
+              "Desvincular Google Calendar",
+            )
+          : true;
 
       if (!confirmed) return;
 
       btnDisconnect.disabled = true;
 
       try {
-        const userId = btnDisconnect.dataset.userId || 'usr-root';
+        const userId = btnDisconnect.dataset.userId || "usr-root";
         const ok = await disconnectGoogleCalendar(userId);
 
         if (ok) {
-          const stateDisconnected = document.getElementById('state-disconnected');
-          if (stateDisconnected) stateDisconnected.style.display = 'block';
+          const stateDisconnected =
+            document.getElementById("state-disconnected");
+          if (stateDisconnected) stateDisconnected.style.display = "block";
 
           if ((window as any).showToast) {
-            (window as any).showToast('Cuenta de Google Calendar desvinculada correctamente.', 'success');
+            (window as any).showToast(
+              "Cuenta de Google Calendar desvinculada correctamente.",
+              "success",
+            );
           }
         }
       } catch (err: any) {
         if ((window as any).showToast) {
-          (window as any).showToast('Error al desvincular: ' + err.message, 'error');
+          (window as any).showToast(
+            "Error al desvincular: " + err.message,
+            "error",
+          );
         }
       } finally {
         btnDisconnect.disabled = false;
@@ -1825,55 +2367,68 @@ const errorParam = Astro.url.searchParams.get('error');
   }
 
   // 3. Forzar Sincronización / Refrescar
-  const btnForceSync = document.getElementById('btn-force-sync');
-  const syncIcon = document.getElementById('sync-spinner-icon');
-  const iframe = document.getElementById('google-calendar-iframe') as HTMLIFrameElement;
+  const btnForceSync = document.getElementById("btn-force-sync");
+  const syncIcon = document.getElementById("sync-spinner-icon");
+  const iframe = document.getElementById(
+    "google-calendar-iframe",
+  ) as HTMLIFrameElement;
 
   if (btnForceSync) {
-    btnForceSync.addEventListener('click', () => {
-      if (syncIcon) syncIcon.style.animation = 'spin 0.8s linear infinite';
+    btnForceSync.addEventListener("click", () => {
+      if (syncIcon) syncIcon.style.animation = "spin 0.8s linear infinite";
       if (iframe) {
         const currentSrc = iframe.src;
-        iframe.src = '';
-        setTimeout(() => { iframe.src = currentSrc; }, 100);
+        iframe.src = "";
+        setTimeout(() => {
+          iframe.src = currentSrc;
+        }, 100);
       }
 
       setTimeout(() => {
-        if (syncIcon) syncIcon.style.animation = 'none';
+        if (syncIcon) syncIcon.style.animation = "none";
         if ((window as any).showToast) {
-          (window as any).showToast('Calendario y Semáforo SLA sincronizados en tiempo real.', 'success');
+          (window as any).showToast(
+            "Calendario y Semáforo SLA sincronizados en tiempo real.",
+            "success",
+          );
         }
       }, 800);
     });
   }
 
   // 4. Alternador de Pestañas: Agenda y Semáforo SLA vs Google Workspace Embed
-  const tabBtnGoogle = document.getElementById('tab-btn-google-embed');
-  const tabBtnSemaforo = document.getElementById('tab-btn-semaforo');
-  const containerGoogle = document.getElementById('container-google-embed');
-  const containerSemaforo = document.getElementById('container-semaforo-view');
+  const tabBtnGoogle = document.getElementById("tab-btn-google-embed");
+  const tabBtnSemaforo = document.getElementById("tab-btn-semaforo");
+  const containerGoogle = document.getElementById("container-google-embed");
+  const containerSemaforo = document.getElementById("container-semaforo-view");
 
   function switchCalendarTab(showSemaforo: boolean) {
     if (showSemaforo) {
-      tabBtnSemaforo?.classList.add('active');
-      tabBtnGoogle?.classList.remove('active');
-      if (containerGoogle) containerGoogle.style.display = 'none';
-      if (containerSemaforo) containerSemaforo.style.display = 'block';
+      tabBtnSemaforo?.classList.add("active");
+      tabBtnGoogle?.classList.remove("active");
+      if (containerGoogle) containerGoogle.style.display = "none";
+      if (containerSemaforo) containerSemaforo.style.display = "block";
     } else {
-      tabBtnGoogle?.classList.add('active');
-      tabBtnSemaforo?.classList.remove('active');
-      if (containerGoogle) containerGoogle.style.display = 'block';
-      if (containerSemaforo) containerSemaforo.style.display = 'none';
+      tabBtnGoogle?.classList.add("active");
+      tabBtnSemaforo?.classList.remove("active");
+      if (containerGoogle) containerGoogle.style.display = "block";
+      if (containerSemaforo) containerSemaforo.style.display = "none";
     }
   }
 
-  tabBtnGoogle?.addEventListener('click', () => switchCalendarTab(false));
-  tabBtnSemaforo?.addEventListener('click', () => switchCalendarTab(true));
+  tabBtnGoogle?.addEventListener("click", () => switchCalendarTab(false));
+  tabBtnSemaforo?.addEventListener("click", () => switchCalendarTab(true));
 
   // 4.1 Activar cookies de Google si se requiere
-  document.getElementById('btn-activate-cookies')?.addEventListener('click', () => {
-    window.open('https://calendar.google.com/calendar/u/0/embed?ctz=America/Bogota', 'gcal_auth', 'width=660,height=640');
-  });
+  document
+    .getElementById("btn-activate-cookies")
+    ?.addEventListener("click", () => {
+      window.open(
+        "https://calendar.google.com/calendar/u/0/embed?ctz=America/Bogota",
+        "gcal_auth",
+        "width=660,height=640",
+      );
+    });
 
   // 5. Inicializar la agenda interactiva Pro Max inmediatamente
   initCalendario();
