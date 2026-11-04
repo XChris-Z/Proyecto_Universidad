@@ -63,7 +63,7 @@ const pendientesCount = peticionesList.filter((p: any) => p.estado !== 'respondi
       <span class="badge-right-origin cp23">Constitución Art. 23</span>
       <span class="badge-right-origin ley1755">Ley 1755 / 2015</span>
       <span class="badge-right-origin ley1712">Regla -5 Días Activa</span>
-      <span class="badge-right-origin interno">Storage Virtualizado</span>
+      <span class="badge-right-origin interno">Expediente Virtualizado</span>
     </div>
   </div>
 
@@ -153,7 +153,7 @@ const pendientesCount = peticionesList.filter((p: any) => p.estado !== 'respondi
 
                   <td style="padding: 12px 8px;">
                     <div class="pet-solicitante-text" style="font-weight: 600; color: var(--text-main);">{pet.solicitante_nombre}</div>
-                    <div style="font-size: 0.72rem; color: var(--text-muted);">{pet.solicitante_tipo || 'Ciudadano'}</div>
+                    <div style="font-size: 0.72rem; color: var(--text-muted);">{pet.solicitante_tipo === 'Docente' ? 'Profesor' : (pet.solicitante_tipo || 'Ciudadano')}</div>
                   </td>
 
                   <!-- REEMPLAZO: Columna de Semáforo SLA -->
@@ -309,7 +309,7 @@ const pendientesCount = peticionesList.filter((p: any) => p.estado !== 'respondi
             <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Tipo de Solicitante</label>
             <select id="edit-pet-tipo" class="form-select">
               <option value="Estudiante">Estudiante</option>
-              <option value="Docente">Docente</option>
+              <option value="Docente">Profesor</option>
               <option value="Egresado">Egresado</option>
               <option value="Ciudadano">Ciudadano</option>
               <option value="Ente de Control">Ente de Control</option>
@@ -453,7 +453,7 @@ const pendientesCount = peticionesList.filter((p: any) => p.estado !== 'respondi
 
         const confirmed = typeof (window as any).showConfirm === 'function'
           ? await (window as any).showConfirm(
-              `¿Está seguro de que desea eliminar definitivamente el radicado ${radicado}?\n\nEsta acción purgará los registros de oficinas asignadas, archivos en storage y registrará el evento de eliminación en la Auditoría institucional.`,
+              `¿Está seguro de que desea eliminar definitivamente el radicado ${radicado}?\n\nEsta acción purgará los registros de oficinas asignadas, archivos en el repositorio y registrará el evento de eliminación en la Auditoría institucional.`,
               'Confirmar Eliminación'
             )
           : true;

@@ -61,7 +61,7 @@ const criticalLogs = dbLogs?.filter(l => l.severity === 'CRITICAL' || l.action_t
       </div>
       <div class="kpi-footer">
         <span>Pista de Auditoría Activa</span>
-        <span style="color: var(--primary); font-weight: 700;">En PostgreSQL Real</span>
+        <span style="color: var(--primary); font-weight: 700;">Registro Certificado</span>
       </div>
     </div>
 
@@ -177,7 +177,7 @@ const criticalLogs = dbLogs?.filter(l => l.severity === 'CRITICAL' || l.action_t
     <div class="audit-empty-state" id="audit-empty-state" style="display: none;">
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="8"/></svg>
       <h4>No hay registros de auditoría disponibles actualmente</h4>
-      <p>Cualquier acción de login, creación, modificación o baja de registros se registrará automáticamente en tiempo real en Supabase.</p>
+      <p>Cualquier acción de inicio de sesión, creación, modificación o baja de registros se registrará automáticamente en tiempo real en la bitácora institucional.</p>
     </div>
   </div>
 

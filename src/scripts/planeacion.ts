@@ -305,14 +305,14 @@ export async function initPlaneacion() {
     } catch (err: any) {
       console.error('Error guardando informe:', err);
       if (typeof (window as any).showToast === 'function') {
-        (window as any).showToast('Error al radicar en Supabase: ' + (err.message || 'Error de base de datos'), 'error');
+        (window as any).showToast('Error al radicar informe: ' + (err.message || 'Error en el servidor'), 'error');
       } else {
         alert('Error: ' + err.message);
       }
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Radicar en Supabase';
+        submitBtn.textContent = 'Radicar Informe';
       }
     }
   });

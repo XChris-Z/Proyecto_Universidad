@@ -282,7 +282,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
 
                 <!-- Solicitante -->
                 <div style="font-size: 0.76rem; color: var(--text-muted); margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                  <span style="font-weight: 700; color: var(--text-main);">{doc.solicitante_nombre}</span> ({doc.solicitante_tipo || 'Ciudadano'})
+                  <span style="font-weight: 700; color: var(--text-main);">{doc.solicitante_nombre}</span> ({doc.solicitante_tipo === 'Docente' ? 'Profesor' : (doc.solicitante_tipo || 'Ciudadano')})
                 </div>
 
                 <!-- Barra de Semáforo SLA en la Tarjeta -->
@@ -456,7 +456,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                         <div>
                           <div style="font-weight: 700; font-size: 0.88rem; color: var(--text-main);">{doc.asunto}</div>
                           <div style="font-size: 0.74rem; color: var(--text-muted);">
-                            {doc.solicitante_tipo || 'Peticionario'} &bull; {doc.solicitante_nombre}
+                            {(doc.solicitante_tipo === 'Docente' ? 'Profesor' : doc.solicitante_tipo) || 'Peticionario'} &bull; {doc.solicitante_nombre}
                             {anexoPrincipal && (
                               <span style="color: var(--verde-principal); font-weight: 600; margin-left: 6px;">
                                 ({anexoPrincipal.nombre_archivo})
@@ -589,7 +589,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
             <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Tipo</label>
             <select id="edit-pet-tipo" class="form-select">
               <option value="Estudiante">Estudiante</option>
-              <option value="Docente">Docente</option>
+              <option value="Docente">Profesor</option>
               <option value="Egresado">Egresado</option>
               <option value="Ciudadano">Ciudadano</option>
               <option value="Ente de Control">Ente de Control</option>
@@ -1065,7 +1065,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                 </div>
                 <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--text-main); margin: 0 0 8px 0; line-height: 1.35;">${escapeHtml(peticion.asunto)}</h2>
                 <div style="font-size: 0.84rem; color: var(--text-muted); line-height: 1.6;">
-                  <strong>Solicitante:</strong> <span style="color: var(--text-main); font-weight: 700;">${escapeHtml(peticion.solicitante_nombre)}</span> (${escapeHtml(peticion.solicitante_tipo || 'Ciudadano')}) &bull;
+                  <strong>Solicitante:</strong> <span style="color: var(--text-main); font-weight: 700;">${escapeHtml(peticion.solicitante_nombre)}</span> (${escapeHtml(peticion.solicitante_tipo === 'Docente' ? 'Profesor' : (peticion.solicitante_tipo || 'Ciudadano'))}) &bull;
                   <strong>Correo:</strong> ${escapeHtml(peticion.solicitante_email || 'Sin correo registrado')} &bull;
                   <strong>Categoría:</strong> ${escapeHtml(peticion.categoria || 'Petición General')} &bull;
                   <strong>Radicado:</strong> ${escapeHtml(peticion.fecha_radicacion || 'Reciente')}
@@ -1105,7 +1105,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
               </div>
               <div>
                 <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin: 0;">Documento Original Radicado</h3>
-                <span style="font-size: 0.74rem; color: var(--text-muted);">Archivo oficial cargado al momento de la radicación en Supabase Storage</span>
+                <span style="font-size: 0.74rem; color: var(--text-muted);">Archivo oficial cargado al momento de la radicación en el repositorio institucional</span>
               </div>
             </div>
 

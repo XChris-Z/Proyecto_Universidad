@@ -200,17 +200,17 @@ export async function initJuzgamiento() {
         severity: 'WARN'
       });
 
-      (window as any).showToast(`Expediente procesal "${radicado}" incorporado exitosamente a Supabase.`);
+      (window as any).showToast(`Expediente procesal "${radicado}" incorporado exitosamente.`);
       closeModal();
       form.reset();
       await loadProcesos();
     } catch (err: any) {
       console.error('Error guardando proceso disciplinario:', err);
-      (window as any).showToast('Error guardando en Supabase: ' + (err.message || 'Error de base de datos'));
+      (window as any).showToast('Error al incorporar expediente: ' + (err.message || 'Error en el servidor'));
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Incorporar a Supabase';
+        submitBtn.textContent = 'Incorporar Expediente';
       }
     }
   });

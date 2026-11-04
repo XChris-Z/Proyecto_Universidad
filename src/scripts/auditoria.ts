@@ -197,8 +197,8 @@ export async function initAuditoria() {
     let allValid = true;
     const verificationLogs: string[] = [];
 
-    verificationLogs.push(`[SISTEMA SGD UNITRÓPICO] Iniciando auditoría criptográfica SHA-256 / AES-256 en Supabase...`);
-    verificationLogs.push(`[CONFIGURACIÓN] Algoritmo de integridad: SHA-256 AEAD. Servidor: PostgreSQL Activo.`);
+    verificationLogs.push(`[SISTEMA SGD UNITRÓPICO] Iniciando verificación criptográfica SHA-256 / AES-256 en el registro institucional...`);
+    verificationLogs.push(`[CONFIGURACIÓN] Algoritmo de integridad: SHA-256 AEAD. Servidor Institucional: Activo.`);
     verificationLogs.push(`--------------------------------------------------------------------------------`);
 
     for (let i = 0; i < logs.length; i++) {
@@ -219,7 +219,7 @@ export async function initAuditoria() {
           </div>
           <div class="verify-chain-info">
             <h4 style="margin: 0; color: var(--verde-principal); font-weight: 800;">Integridad Criptográfica Verificada: 100% Válida</h4>
-            <p style="margin: 4px 0 0 0; font-size: 0.84rem; color: var(--text-main);">Se auditó la totalidad de la bitácora cronológica (${logs.length} eventos). Todos los sellos digitales coinciden con su registro en Supabase.</p>
+            <p style="margin: 4px 0 0 0; font-size: 0.84rem; color: var(--text-main);">Se auditó la totalidad de la bitácora cronológica (${logs.length} eventos). Todos los sellos digitales coinciden con el registro institucional certificado.</p>
           </div>
         </div>
 

@@ -369,7 +369,7 @@ export async function initProgramas() {
     if (!selectedProgram) return;
 
     const confirmDelete = window.confirm(
-      `¿Está seguro de eliminar formalmente el programa académico "${selectedProgram.nombre}"?\n\nEsta acción eliminará el registro de Supabase y sus documentos asociados.`
+      `¿Está seguro de eliminar formalmente el programa académico "${selectedProgram.nombre}"?\n\nEsta acción eliminará el registro institucional y sus documentos asociados.`
     );
     if (!confirmDelete) return;
 
@@ -531,7 +531,7 @@ export async function initProgramas() {
       });
 
       if (typeof (window as any).showToast === 'function') {
-        (window as any).showToast(`Programa "${nombre}" registrado exitosamente en Supabase.`);
+        (window as any).showToast(`Programa "${nombre}" registrado exitosamente.`);
       }
       closeModal();
       form.reset();
@@ -539,14 +539,14 @@ export async function initProgramas() {
     } catch (err: any) {
       console.error('Error guardando programa académico:', err);
       if (typeof (window as any).showToast === 'function') {
-        (window as any).showToast('Error guardando en Supabase: ' + (err.message || 'Error de base de datos'), 'error');
+        (window as any).showToast('Error al guardar programa: ' + (err.message || 'Error en el servidor'), 'error');
       } else {
         alert('Error: ' + err.message);
       }
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Guardar en Supabase';
+        submitBtn.textContent = 'Guardar Programa';
       }
     }
   });

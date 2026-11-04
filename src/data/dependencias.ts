@@ -66,7 +66,7 @@ export const DEPENDENCIAS_DATA: Dependencia[] = [
     correo: 'vicerrectoria@unitropico.edu.co',
     ext: 'Ext. 120',
     color: '#0284c7',
-    competencias: 'Gestión curricular y docente, registros calificados SACES, acreditación de alta calidad CNA, evaluación de programas académicos.',
+    competencias: 'Gestión curricular y profesoral, registros calificados SACES, acreditación de alta calidad CNA, evaluación de programas académicos.',
     archivosActivos: 7,
     funcionarios: [
       { id: 'usr-1', nombre: 'Dra. Carmen Rosa Vargas', cargo: 'Vicerrectora Académica', email: 'vicerrectoria@unitropico.edu.co', ext: '120' },

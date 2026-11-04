@@ -78,7 +78,7 @@ export function initRelacionamiento() {
 
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Guardando en Supabase...';
+      submitBtn.textContent = 'Guardando Convenio...';
     }
 
     try {
@@ -114,7 +114,7 @@ export function initRelacionamiento() {
         severity: 'INFO'
       });
 
-      (window as any).showToast(`Convenio "${numero}" registrado exitosamente en Supabase.`);
+      (window as any).showToast(`Convenio "${numero}" registrado exitosamente.`);
       closeModal();
       window.location.reload();
     } catch (err: any) {

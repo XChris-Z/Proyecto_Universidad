@@ -114,7 +114,7 @@ export async function initJuridicos() {
               </p>
             </div>
             <div style="border-top: 1px solid var(--border-subtle); padding-top: 10px; font-size: 0.72rem; color: var(--text-muted); display: flex; justify-content: space-between;">
-              <span>Registrado en Supabase</span>
+              <span>Registrado en Plataforma</span>
               <span>${new Date(c.created_at).toLocaleDateString('es-CO')}</span>
             </div>
           </div>
@@ -196,17 +196,17 @@ export async function initJuridicos() {
         severity: 'INFO'
       });
 
-      (window as any).showToast(`Asunto jurídico "${titulo}" registrado exitosamente en Supabase.`);
+      (window as any).showToast(`Asunto jurídico "${titulo}" registrado exitosamente.`);
       closeModal();
       form.reset();
       await loadCasos();
     } catch (err: any) {
       console.error('Error guardando caso jurídico:', err);
-      (window as any).showToast('Error guardando en Supabase: ' + (err.message || 'Error de base de datos'));
+      (window as any).showToast('Error al guardar asunto: ' + (err.message || 'Error en el servidor'));
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Guardar en Supabase';
+        submitBtn.textContent = 'Guardar Asunto';
       }
     }
   });

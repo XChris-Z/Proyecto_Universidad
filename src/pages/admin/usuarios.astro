@@ -60,7 +60,7 @@ const permissionsByCategory = categories.map(cat => ({
             <span class="role-badge admin" style="font-size: 0.70rem; padding: 3px 8px;">Panel de Control RBAC</span>
           </div>
           <p style="font-size: 0.84rem; color: var(--text-muted); margin: 6px 0 0 0;">
-            Administración centralizada de funcionarios, credenciales protegidas y concesión granular de permisos dinámicos con trazabilidad en PostgreSQL.
+            Administración centralizada de funcionarios, credenciales protegidas y concesión granular de permisos dinámicos con trazabilidad oficial.
           </p>
         </div>
 
@@ -363,7 +363,7 @@ const permissionsByCategory = categories.map(cat => ({
           <div style="display: flex; gap: 10px; margin-top: 10px;">
             <button type="button" class="btn btn-secondary" id="btn-cancel-create-user" style="flex: 1; justify-content: center;">Cancelar</button>
             <button type="submit" id="btn-submit-create-user" class="btn btn-primary" style="flex: 1; justify-content: center; font-weight: 800;">
-              Crear en Supabase
+              Crear Funcionario
             </button>
           </div>
         </form>
@@ -632,7 +632,7 @@ const permissionsByCategory = categories.map(cat => ({
         if (cb.dataset.permId) newPerms.push(cb.dataset.permId);
       });
 
-      btnSavePerms.textContent = 'Guardando en Supabase...';
+      btnSavePerms.textContent = 'Guardando cambios...';
       (btnSavePerms as HTMLButtonElement).disabled = true;
 
       try {
@@ -755,7 +755,7 @@ const permissionsByCategory = categories.map(cat => ({
         closeEditModal();
         setTimeout(() => window.location.reload(), 500);
       } catch (err: any) {
-        (window as any).showToast('Error al modificar usuario: ' + (err.message || 'Error en Supabase'), 'error');
+        (window as any).showToast('Error al modificar usuario: ' + (err.message || 'Error en el servidor'), 'error');
       } finally {
         if (submitBtn) {
           submitBtn.disabled = false;
@@ -807,7 +807,7 @@ const permissionsByCategory = categories.map(cat => ({
       const submitBtn = document.getElementById('btn-submit-create-user') as HTMLButtonElement | null;
       if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Creando en Supabase...';
+        submitBtn.textContent = 'Creando funcionario...';
       }
 
       try {
@@ -841,7 +841,7 @@ const permissionsByCategory = categories.map(cat => ({
       } finally {
         if (submitBtn) {
           submitBtn.disabled = false;
-          submitBtn.textContent = 'Crear en Supabase';
+          submitBtn.textContent = 'Crear Funcionario';
         }
       }
     });
@@ -889,7 +889,7 @@ const permissionsByCategory = categories.map(cat => ({
         (window as any).showToast(`El funcionario ${userToDelete.name} fue eliminado.`, 'success');
         closeDeleteModal();
       } catch (err: any) {
-        (window as any).showToast('Error eliminando usuario: ' + (err.message || 'Error en Supabase'), 'error');
+        (window as any).showToast('Error eliminando usuario: ' + (err.message || 'Error en el servidor'), 'error');
       } finally {
         btnConfirmDelete.textContent = 'Confirmar Eliminación';
         (btnConfirmDelete as HTMLButtonElement).disabled = false;

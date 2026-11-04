@@ -87,7 +87,7 @@ export function initNormas() {
     const newId = `norma-${Date.now().toString(36)}`;
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Guardando en Supabase...';
+      submitBtn.textContent = 'Guardando Acto...';
     }
 
     try {
@@ -119,11 +119,11 @@ export function initNormas() {
         severity: 'INFO'
       });
 
-      (window as any).showToast(`Acto "${tipo} ${numero}" radicado exitosamente en Supabase.`);
+      (window as any).showToast(`Acto "${tipo} ${numero}" radicado exitosamente.`);
       window.location.reload();
     } catch (err: any) {
       console.error('Error guardando norma:', err);
-      (window as any).showToast('Error al guardar en Supabase: ' + (err.message || 'Error de base de datos'));
+      (window as any).showToast('Error al guardar acto: ' + (err.message || 'Error en el servidor'));
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;
