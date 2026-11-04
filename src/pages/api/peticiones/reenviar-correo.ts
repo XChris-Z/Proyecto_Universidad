@@ -97,12 +97,22 @@ export const POST: APIRoute = async ({ request, url }) => {
       }
     }
 
+    // 3. Consultar subcarpetas asociadas si existen
+    let subcarpetasData: any[] = [];
+    try {
+      const { data: subs } = await (supabase
+        .from('peticion_subcarpetas' as any)
+        .select('*')
+        .eq('peticion_id', peticion.id) as any);
+      if (subs) subcarpetasData = subs;
+    } catch {}
+
     const baseUrl = url.origin;
     const resultados: any[] = [];
     let exitosos = 0;
     let fallidos = 0;
 
-    // 3. Reenviar correo a cada oficina asignada que tenga correo institucional configurado
+    // 4. Reenviar correo a cada oficina asignada que tenga correo institucional configurado
     for (const resp of responsables) {
       const ofi = resp.oficinas;
       const email = ofi?.email_institucional?.trim();
@@ -117,6 +127,17 @@ export const POST: APIRoute = async ({ request, url }) => {
         continue;
       }
 
+      let assignedSubs: any[] = [];
+      if (resp.subcarpeta_id) {
+        const matched = subcarpetasData.find((s: any) => s.id === resp.subcarpeta_id);
+        if (matched) {
+          assignedSubs = [{ nombre: matched.nombre, descripcion: matched.descripcion }];
+        }
+      }
+      if (assignedSubs.length === 0 && subcarpetasData.length > 0) {
+        assignedSubs = subcarpetasData.map((s: any) => ({ nombre: s.nombre, descripcion: s.descripcion }));
+      }
+
       const storedPin = resp.observaciones_entrega?.startsWith('PIN:') ? resp.observaciones_entrega.replace('PIN:', '').trim() : null;
       const effectivePin = storedPin || peticion.pin_acceso || getDeterministicPin(peticion.numero_radicado || peticion.id);
       const portalUrl = `${baseUrl}/portal-responsable?codigo=${encodeURIComponent(resp.codigo_acceso)}&email=${encodeURIComponent(email)}&pin=${encodeURIComponent(effectivePin)}`;
@@ -128,6 +149,7 @@ export const POST: APIRoute = async ({ request, url }) => {
         asunto: peticion.asunto,
         categoria: peticion.categoria,
         prioridad: peticion.prioridad,
+        subcarpetas: assignedSubs.length > 0 ? assignedSubs : undefined,
         instruccionesAnexos: peticion.instrucciones_anexos || peticion.descripcion,
         fechaLimiteEntrega: peticion.fecha_limite_entrega,
         fechaLimiteResponsable: peticion.fecha_limite_responsable,

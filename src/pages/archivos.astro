@@ -17,6 +17,7 @@ export interface PeticionAnexo {
   mime_type?: string | null;
   es_anexo_oficina?: boolean | null;
   peticion_responsable_id?: string | null;
+  subcarpeta_id?: string | null;
   created_at: string;
 }
 
@@ -30,11 +31,20 @@ export interface OficinaInfo {
 export interface PeticionResponsable {
   id: string;
   codigo_acceso: string;
+  subcarpeta_id?: string | null;
   estado_entrega?: string | null;
   fecha_entrega?: string | null;
   observaciones_entrega?: string | null;
   storage_subfolder_path?: string | null;
   oficinas?: OficinaInfo | null;
+}
+
+export interface PeticionSubcarpeta {
+  id: string;
+  peticion_id: string;
+  nombre: string;
+  descripcion?: string | null;
+  created_at?: string;
 }
 
 export interface PeticionExpediente {
@@ -57,6 +67,7 @@ export interface PeticionExpediente {
   created_at: string;
   peticion_anexos?: PeticionAnexo[];
   peticion_responsables?: PeticionResponsable[];
+  subcarpetas?: PeticionSubcarpeta[];
 }
 
 // Consultar peticiones, archivo principal y anexos reales en PostgreSQL
@@ -92,6 +103,7 @@ const { data: dbPeticiones } = await (supabase
     peticion_responsables (
       id,
       codigo_acceso,
+      subcarpeta_id,
       estado_entrega,
       fecha_entrega,
       observaciones_entrega,
@@ -106,6 +118,35 @@ const { data: dbPeticiones } = await (supabase
   `)
   .order('created_at', { ascending: false }) as any);
 
+// Consultar catálogo de oficinas para modal de asignación de subcarpetas
+const { data: oficinasCatalogoDb } = await (supabase
+  .from('oficinas' as any)
+  .select('id, codigo, nombre, email_institucional')
+  .eq('activo', true)
+  .order('nombre') as any);
+
+const oficinasCatalogo = (oficinasCatalogoDb as any[]) || [];
+
+// Consultar subcarpetas asociadas de forma segura y defensiva
+const subcarpetasPorPeticion: Record<string, any[]> = {};
+try {
+  const { data: allSubcarpetas } = await (supabase
+    .from('peticion_subcarpetas' as any)
+    .select('id, peticion_id, nombre, descripcion, created_at')
+    .order('created_at', { ascending: true }) as any);
+
+  if (allSubcarpetas && allSubcarpetas.length > 0) {
+    allSubcarpetas.forEach((sub: any) => {
+      if (!subcarpetasPorPeticion[sub.peticion_id]) {
+        subcarpetasPorPeticion[sub.peticion_id] = [];
+      }
+      subcarpetasPorPeticion[sub.peticion_id].push(sub);
+    });
+  }
+} catch {
+  // Ignorar si la tabla física aún no existe
+}
+
 const rawPeticiones = (dbPeticiones as any[]) || [];
 const peticiones: PeticionExpediente[] = rawPeticiones.map((p) => {
   const respObs = p.peticion_responsables?.find((r: any) => r?.observaciones_entrega?.includes('PIN:'))?.observaciones_entrega;
@@ -113,6 +154,7 @@ const peticiones: PeticionExpediente[] = rawPeticiones.map((p) => {
   const storedPin = pinMatch ? pinMatch[1] : null;
   return {
     ...p,
+    subcarpetas: subcarpetasPorPeticion[p.id] || [],
     pin_acceso: storedPin || p.pin_acceso || getDeterministicPin(p.numero_radicado || p.id),
   };
 });
@@ -631,6 +673,56 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
     </div>
   </div>
 
+  <!-- Modal: Crear Subcarpeta y Asignar Dependencias desde Expediente -->
+  <div class="modal-backdrop" id="modal-crear-subcarpeta" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 2000; align-items: center; justify-content: center; padding: 16px;">
+    <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 660px; border-radius: var(--radius-md); box-shadow: var(--shadow-md); overflow: hidden; max-height: 90vh; display: flex; flex-direction: column;">
+      <div style="background: var(--verde-principal); color: #ffffff; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-size: 1.1rem; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 8px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <span>Nueva Subcarpeta de Expediente</span>
+        </h3>
+        <button type="button" id="btn-close-subcarpeta-modal" style="background: transparent; border: none; font-size: 1.5rem; color: #ffffff; cursor: pointer;">&times;</button>
+      </div>
+
+      <form id="form-crear-subcarpeta" style="padding: 24px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto;">
+        <input type="hidden" id="subcarpeta-target-pet-id" />
+
+        <div style="background: var(--verde-suave-bg); border: 1px solid var(--verde-borde); border-radius: 6px; padding: 10px 14px; font-size: 0.82rem; color: var(--verde-oscuro);">
+          Radicado: <strong id="subcarpeta-target-radicado" style="font-family: monospace;">RAD-2026-XXXXX</strong> &bull; Creación de espacio virtual de anexos
+        </div>
+
+        <div class="form-group">
+          <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-main); text-transform: uppercase;">Nombre de la Subcarpeta *</label>
+          <input type="text" id="subcarpeta-nombre-input" required class="form-input" placeholder="Ej. Soportes Financieros, Concepto Jurídico..." style="font-size: 0.88rem; font-weight: 700;" />
+        </div>
+
+        <div class="form-group">
+          <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Instrucciones o Requerimiento de Anexos</label>
+          <textarea id="subcarpeta-desc-input" rows="2" class="form-input" placeholder="Detalle qué documentos o soportes deben remitir las dependencias..." style="font-size: 0.82rem; resize: vertical;"></textarea>
+        </div>
+
+        <div class="form-group">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label style="font-size: 0.78rem; font-weight: 700; color: var(--dorado-oscuro); text-transform: uppercase;">Dependencias Responsables a Asignar *</label>
+            <span id="subcarpeta-modal-selected-count" style="font-size: 0.70rem; font-weight: 700; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 2px 8px; border-radius: 4px;">0 seleccionadas</span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 8px; max-height: 220px; overflow-y: auto; padding: 6px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: #FAF9F5;" id="subcarpeta-modal-oficinas-list">
+            <!-- Oficinas generadas vía JS -->
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; border-top: 1px solid var(--border-subtle); padding-top: 16px;">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-crear-subcarpeta">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-crear-subcarpeta" style="font-weight: 800;">
+            Crear Subcarpeta y Notificar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script id="data-archivos-oficinas" type="application/json" set:html={JSON.stringify(oficinasCatalogo)} />
+
   <style>
     .drive-folder-card {
       background: #ffffff;
@@ -1146,91 +1238,209 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                 </div>
                 <div>
-                  <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin: 0;">Subcarpetas de Oficinas Responsables</h3>
-                  <span style="font-size: 0.74rem; color: var(--text-muted);">Espacio virtual asignado para la entrega de anexos de cada dependencia</span>
+                  <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin: 0;">Subcarpetas y Requerimientos de Dependencias</h3>
+                  <span style="font-size: 0.74rem; color: var(--text-muted);">Estructura virtual de subcarpetas asignadas a dependencias con sus respectivos anexos y soportes</span>
                 </div>
               </div>
 
-              <span style="font-size: 0.78rem; font-weight: 800; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 4px 12px; border-radius: 4px;">
-                ${responsables.length} dependencias requeridas
-              </span>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <button 
+                  type="button" 
+                  class="btn btn-primary btn-sm btn-open-modal-subcarpeta" 
+                  data-peticion-id="${escapeHtml(peticion.id)}" 
+                  data-radicado="${escapeHtml(peticion.numero_radicado)}" 
+                  style="display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 0.78rem; background: var(--verde-principal); color: #ffffff;"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  <span>+ Crear Subcarpeta y Asignar Responsables</span>
+                </button>
+                <span style="font-size: 0.78rem; font-weight: 800; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 4px 12px; border-radius: 4px;">
+                  ${responsables.length} asignaciones
+                </span>
+              </div>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 14px;">
-              ${responsables.length > 0 ? responsables.map((r) => {
-                if (!r) return '';
-                const ofiAnexos = anexosOficinas.filter((a) => a && a.peticion_responsable_id === r.id);
-                const isDelivered = r.estado_entrega === 'Entregado' || ofiAnexos.length > 0;
-                const ofiNombre = Array.isArray(r.oficinas) ? (r.oficinas[0]?.nombre || 'Oficina Responsable') : (r.oficinas?.nombre || 'Oficina Responsable');
-                const ofiCodigo = Array.isArray(r.oficinas) ? (r.oficinas[0]?.codigo || '') : (r.oficinas?.codigo || '');
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+              ${(() => {
+                const subcarpetas = peticion.subcarpetas || [];
+                const subcarpetaBlocks = [];
 
-                const rawObs = (r as any).observaciones_entrega || '';
-                const cleanObs = rawObs.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '').trim();
+                if (subcarpetas.length > 0) {
+                  subcarpetas.forEach((sub: any) => {
+                    const subResps = responsables.filter((r) => r && r.subcarpeta_id === sub.id);
+                    const subAnexos = anexosOficinas.filter((a) => {
+                      if (a && a.subcarpeta_id && a.subcarpeta_id === sub.id) return true;
+                      return a && subResps.some((r) => r && r.id === a.peticion_responsable_id);
+                    });
 
-                return `
-                  <div class="subfolder-box">
-                    <div style="background: var(--bg-surface-elevated); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--border-subtle);">
-                      <div style="display: flex; align-items: center; gap: 10px;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="color: ${isDelivered ? 'var(--verde-principal)' : 'var(--dorado-oscuro)'};"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg>
-                        <div>
-                          <strong style="font-size: 0.90rem; color: var(--text-main);">${escapeHtml(ofiNombre)}</strong>
-                          ${ofiCodigo ? `<span style="font-size: 0.72rem; color: var(--text-muted); margin-left: 6px;">(${escapeHtml(ofiCodigo)})</span>` : ''}
+                    subcarpetaBlocks.push(`
+                      <div class="subfolder-box" style="border: 1px solid var(--verde-borde); border-radius: 8px; overflow: hidden; background: #ffffff;">
+                        <div style="background: var(--verde-suave-bg); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--verde-borde);">
+                          <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 1.2rem;">📁</span>
+                            <div>
+                              <strong style="font-size: 0.94rem; color: var(--verde-oscuro);">${escapeHtml(sub.nombre)}</strong>
+                              ${sub.descripcion ? `<div style="font-size: 0.74rem; color: #475569; margin-top: 2px; font-style: italic;">"${escapeHtml(sub.descripcion)}"</div>` : ''}
+                            </div>
+                          </div>
+                          <span style="font-size: 0.72rem; font-weight: 800; color: var(--verde-principal); background: #ffffff; padding: 3px 10px; border-radius: 4px; border: 1px solid var(--verde-borde);">
+                            ${subResps.length} dependencia${subResps.length === 1 ? '' : 's'} asignada${subResps.length === 1 ? '' : 's'}
+                          </span>
+                        </div>
+
+                        <div style="padding: 14px 16px; display: flex; flex-direction: column; gap: 12px;">
+                          ${subResps.length > 0 ? subResps.map((r) => {
+                            const ofiAnexos = subAnexos.filter((a) => a && a.peticion_responsable_id === r.id);
+                            const isDelivered = r.estado_entrega === 'Entregado' || ofiAnexos.length > 0;
+                            const ofiNombre = Array.isArray(r.oficinas) ? (r.oficinas[0]?.nombre || 'Oficina Responsable') : (r.oficinas?.nombre || 'Oficina Responsable');
+                            const ofiCodigo = Array.isArray(r.oficinas) ? (r.oficinas[0]?.codigo || '') : (r.oficinas?.codigo || '');
+                            const rawObs = (r as any).observaciones_entrega || '';
+                            const cleanObs = rawObs.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '').trim();
+
+                            return `
+                              <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px 14px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                                  <div style="display: flex; align-items: center; gap: 8px;">
+                                    <strong style="font-size: 0.88rem; color: var(--text-main);">${escapeHtml(ofiNombre)}</strong>
+                                    ${ofiCodigo ? `<span style="font-size: 0.70rem; color: var(--text-muted);">(${escapeHtml(ofiCodigo)})</span>` : ''}
+                                  </div>
+                                  <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span style="font-family: monospace; font-size: 0.74rem; font-weight: 800; color: var(--verde-principal); background: #ffffff; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--verde-borde);">${escapeHtml(r.codigo_acceso || 'UPQ')}</span>
+                                    <span style="font-size: 0.70rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; ${isDelivered ? 'background: #DCFCE7; color: #15803D;' : 'background: #FEF3C7; color: #92400E;'}">
+                                      ${isDelivered ? 'Anexos Aportados' : 'Pendiente'}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                ${ofiAnexos.length > 0 ? `
+                                  <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
+                                    ${ofiAnexos.map((oa) => `
+                                      <div style="background: #ffffff; border: 1px solid var(--border-subtle); border-radius: 4px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem;">
+                                        <div style="display: flex; align-items: center; gap: 6px;">
+                                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--verde-principal)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                          <strong>${escapeHtml(oa.nombre_archivo)}</strong>
+                                          <span style="font-size: 0.68rem; color: var(--text-muted);">(${formatFileSize(oa.tamano_bytes)})</span>
+                                        </div>
+                                        <a href="${getPublicStorageUrl(oa.storage_path)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="text-decoration: none; font-size: 0.70rem; padding: 3px 8px;">
+                                          Descargar
+                                        </a>
+                                      </div>
+                                    `).join('')}
+                                  </div>
+                                ` : `
+                                  <div style="font-size: 0.74rem; color: var(--text-muted); font-style: italic;">
+                                    Pendiente de entrega de anexos.
+                                  </div>
+                                `}
+
+                                ${cleanObs ? `
+                                  <div style="margin-top: 8px; background: #FFFBEB; border: 1px solid #FCD34D; border-left: 3px solid #D97706; border-radius: 4px; padding: 8px 10px; font-size: 0.78rem; color: #451A03;">
+                                    <strong>Observación de la oficina:</strong> "${escapeHtml(cleanObs)}"
+                                  </div>
+                                ` : ''}
+                              </div>
+                            `;
+                          }).join('') : `
+                            <div style="font-size: 0.78rem; color: var(--text-muted); font-style: italic;">
+                              No hay dependencias asignadas en esta subcarpeta.
+                            </div>
+                          `}
                         </div>
                       </div>
+                    `);
+                  });
+                }
 
-                      <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-family: monospace; font-size: 0.76rem; font-weight: 800; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 3px 8px; border-radius: 4px; border: 1px solid var(--verde-borde);" title="Código Único de Acceso">${escapeHtml(r.codigo_acceso || 'UPQ')}</span>
-                        <span style="font-size: 0.72rem; font-weight: 800; padding: 3px 8px; border-radius: 4px; background: ${isDelivered ? '#DCFCE7' : '#FEF3C7'}; color: ${isDelivered ? '#15803D' : '#92400E'};">
-                          ${isDelivered ? 'Anexos Aportados' : 'Pendiente de Respuesta'}
+                // Asignaciones sin subcarpeta_id asignada (retrocompatibilidad)
+                const unassignedResps = subcarpetas.length > 0 
+                  ? responsables.filter((r) => r && (!r.subcarpeta_id || !subcarpetas.some((s: any) => s.id === r.subcarpeta_id)))
+                  : responsables;
+
+                if (unassignedResps.length > 0) {
+                  subcarpetaBlocks.push(`
+                    <div class="subfolder-box" style="border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; background: #ffffff;">
+                      <div style="background: var(--bg-surface-elevated); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--border-subtle);">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                          <span style="font-size: 1.2rem;">📁</span>
+                          <div>
+                            <strong style="font-size: 0.94rem; color: var(--text-main);">Expediente General</strong>
+                            <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 2px;">Dependencias requeridas directamente para el radicado</div>
+                          </div>
+                        </div>
+                        <span style="font-size: 0.72rem; font-weight: 800; color: var(--dorado-oscuro); background: var(--dorado-suave-bg); padding: 3px 10px; border-radius: 4px; border: 1px solid var(--dorado-borde);">
+                          ${unassignedResps.length} dependencia${unassignedResps.length === 1 ? '' : 's'}
                         </span>
                       </div>
-                    </div>
 
-                    <!-- Contenido de la Subcarpeta -->
-                    <div style="padding: 14px 16px;">
-                      ${ofiAnexos.length > 0 ? `
-                        <div style="display: flex; flex-direction: column; gap: 8px;">
-                          ${ofiAnexos.map((oa) => `
-                            <div style="background: #ffffff; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem;">
-                              <div style="display: flex; align-items: center; gap: 8px;">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--verde-principal)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                                <div>
-                                  <strong style="color: var(--text-main);">${escapeHtml(oa.nombre_archivo)}</strong>
-                                  <span style="font-size: 0.72rem; color: var(--text-muted); margin-left: 6px;">(${formatFileSize(oa.tamano_bytes)})</span>
+                      <div style="padding: 14px 16px; display: flex; flex-direction: column; gap: 12px;">
+                        ${unassignedResps.map((r) => {
+                          if (!r) return '';
+                          const ofiAnexos = anexosOficinas.filter((a) => a && a.peticion_responsable_id === r.id);
+                          const isDelivered = r.estado_entrega === 'Entregado' || ofiAnexos.length > 0;
+                          const ofiNombre = Array.isArray(r.oficinas) ? (r.oficinas[0]?.nombre || 'Oficina Responsable') : (r.oficinas?.nombre || 'Oficina Responsable');
+                          const ofiCodigo = Array.isArray(r.oficinas) ? (r.oficinas[0]?.codigo || '') : (r.oficinas?.codigo || '');
+                          const rawObs = (r as any).observaciones_entrega || '';
+                          const cleanObs = rawObs.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '').trim();
+
+                          return `
+                            <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px 14px;">
+                              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                  <strong style="font-size: 0.88rem; color: var(--text-main);">${escapeHtml(ofiNombre)}</strong>
+                                  ${ofiCodigo ? `<span style="font-size: 0.70rem; color: var(--text-muted);">(${escapeHtml(ofiCodigo)})</span>` : ''}
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                  <span style="font-family: monospace; font-size: 0.74rem; font-weight: 800; color: var(--verde-principal); background: #ffffff; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--verde-borde);">${escapeHtml(r.codigo_acceso || 'UPQ')}</span>
+                                  <span style="font-size: 0.70rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; ${isDelivered ? 'background: #DCFCE7; color: #15803D;' : 'background: #FEF3C7; color: #92400E;'}">
+                                    ${isDelivered ? 'Anexos Aportados' : 'Pendiente'}
+                                  </span>
                                 </div>
                               </div>
-                              <a href="${getPublicStorageUrl(oa.storage_path)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="text-decoration: none; font-size: 0.74rem; padding: 4px 10px;">
-                                Descargar
-                              </a>
-                            </div>
-                          `).join('')}
-                        </div>
-                      ` : `
-                        <div style="color: var(--text-muted); font-size: 0.78rem; font-style: italic;">
-                          Esta dependencia aún no ha cargado documentos de soporte en su subcarpeta virtual. Plazo máximo de entrega: ${escapeHtml(peticion.fecha_limite_responsable || '--')}.
-                        </div>
-                      `}
 
-                      ${cleanObs ? `
-                        <div style="margin-top: 12px; background: #FFFBEB; border: 1px solid #FCD34D; border-left: 4px solid #D97706; border-radius: 6px; padding: 12px 14px; font-size: 0.82rem;">
-                          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                            <strong style="color: #92400E; display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem;">
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                              Observación / Aclaración de la Oficina:
-                            </strong>
-                            ${r.fecha_entrega ? `<span style="font-size: 0.70rem; color: #B45309; font-weight: 600;">Entregado: ${new Date(r.fecha_entrega).toLocaleDateString('es-CO')}</span>` : ''}
-                          </div>
-                          <div style="color: #451A03; font-style: italic; white-space: pre-wrap; line-height: 1.45; font-size: 0.82rem;">"${escapeHtml(cleanObs)}"</div>
-                        </div>
-                      ` : ''}
+                              ${ofiAnexos.length > 0 ? `
+                                <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
+                                  ${ofiAnexos.map((oa) => `
+                                    <div style="background: #ffffff; border: 1px solid var(--border-subtle); border-radius: 4px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem;">
+                                      <div style="display: flex; align-items: center; gap: 6px;">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--verde-principal)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                        <strong>${escapeHtml(oa.nombre_archivo)}</strong>
+                                        <span style="font-size: 0.68rem; color: var(--text-muted);">(${formatFileSize(oa.tamano_bytes)})</span>
+                                      </div>
+                                      <a href="${getPublicStorageUrl(oa.storage_path)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="text-decoration: none; font-size: 0.70rem; padding: 3px 8px;">
+                                        Descargar
+                                      </a>
+                                    </div>
+                                  `).join('')}
+                                </div>
+                              ` : `
+                                <div style="font-size: 0.74rem; color: var(--text-muted); font-style: italic;">
+                                  Esta dependencia aún no ha cargado anexos en el radicado.
+                                </div>
+                              `}
+
+                              ${cleanObs ? `
+                                <div style="margin-top: 8px; background: #FFFBEB; border: 1px solid #FCD34D; border-left: 3px solid #D97706; border-radius: 4px; padding: 8px 10px; font-size: 0.78rem; color: #451A03;">
+                                  <strong>Observación de la oficina:</strong> "${escapeHtml(cleanObs)}"
+                                </div>
+                              ` : ''}
+                            </div>
+                          `;
+                        }).join('')}
+                      </div>
                     </div>
-                  </div>
-                `;
-              }).join('') : `
-                <div style="text-align: center; padding: 18px; color: var(--text-muted); font-size: 0.82rem;">
-                  No se asignaron dependencias para esta petición.
-                </div>
-              `}
+                  `);
+                }
+
+                if (subcarpetaBlocks.length === 0) {
+                  return `
+                    <div style="text-align: center; padding: 24px; color: var(--text-muted); font-size: 0.82rem;">
+                      No se han asignado subcarpetas ni dependencias a este expediente. Utilice el botón "+ Crear Subcarpeta" para estructurarlo.
+                    </div>
+                  `;
+                }
+
+                return subcarpetaBlocks.join('');
+              })()}
             </div>
           </div>
         `;
@@ -1310,6 +1520,17 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         if (inputEntrega) inputEntrega.value = entrega;
 
         if (editModal) editModal.style.display = 'flex';
+        return;
+      }
+
+      // B. Botón Crear Subcarpeta en Expediente
+      const subcarpetaBtn = target.closest('.btn-open-modal-subcarpeta') as HTMLElement | null;
+      if (subcarpetaBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const petId = subcarpetaBtn.getAttribute('data-peticion-id') || '';
+        const radicado = subcarpetaBtn.getAttribute('data-radicado') || '';
+        openModalCrearSubcarpeta(petId, radicado);
         return;
       }
 
@@ -1519,6 +1740,147 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         if (saveBtn) {
           saveBtn.disabled = false;
           saveBtn.textContent = 'Guardar Cambios';
+        }
+      }
+    });
+
+    // 7.1 Modal Crear Subcarpeta y Asignar Dependencias
+    const subcarpetaModal = document.getElementById('modal-crear-subcarpeta');
+    const formCrearSubcarpeta = document.getElementById('form-crear-subcarpeta');
+    const closeSubModal = () => { if (subcarpetaModal) subcarpetaModal.style.display = 'none'; };
+    document.getElementById('btn-close-subcarpeta-modal')?.addEventListener('click', closeSubModal);
+    document.getElementById('btn-cancel-crear-subcarpeta')?.addEventListener('click', closeSubModal);
+
+    let archivosOficinasCatalog: any[] = [];
+    try {
+      const ofiEl = document.getElementById('data-archivos-oficinas');
+      if (ofiEl && ofiEl.textContent) {
+        archivosOficinasCatalog = JSON.parse(ofiEl.textContent);
+      }
+    } catch {}
+
+    function openModalCrearSubcarpeta(petId: string, radicado: string) {
+      const petIdInput = document.getElementById('subcarpeta-target-pet-id') as HTMLInputElement | null;
+      const radicadoLabel = document.getElementById('subcarpeta-target-radicado');
+      const nombreInput = document.getElementById('subcarpeta-nombre-input') as HTMLInputElement | null;
+      const descInput = document.getElementById('subcarpeta-desc-input') as HTMLTextAreaElement | null;
+      const ofisContainer = document.getElementById('subcarpeta-modal-oficinas-list');
+      const countLabel = document.getElementById('subcarpeta-modal-selected-count');
+
+      if (petIdInput) petIdInput.value = petId;
+      if (radicadoLabel) radicadoLabel.textContent = radicado;
+      if (nombreInput) nombreInput.value = '';
+      if (descInput) descInput.value = '';
+      if (countLabel) countLabel.textContent = '0 seleccionadas';
+
+      if (ofisContainer) {
+        ofisContainer.innerHTML = archivosOficinasCatalog.map((ofi: any) => {
+          const isTest = (ofi.codigo || '').toUpperCase().includes('PRUEBA') || (ofi.nombre || '').toLowerCase().includes('prueba');
+          return `
+            <label style="display: flex; align-items: flex-start; gap: 8px; padding: 6px 8px; background: #ffffff; border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; font-size: 0.78rem;">
+              <input type="checkbox" name="subcarpeta_modal_ofi" value="${ofi.id}" style="accent-color: var(--verde-principal); margin-top: 2px;" />
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                  ${ofi.nombre}
+                </div>
+                ${isTest ? `<span style="font-size: 0.60rem; color: #b45309; font-weight: 800;">PRUEBA</span>` : ''}
+              </div>
+            </label>
+          `;
+        }).join('');
+
+        const cbs = ofisContainer.querySelectorAll('input[name="subcarpeta_modal_ofi"]');
+        cbs.forEach((cb) => {
+          cb.addEventListener('change', () => {
+            const checkedCount = ofisContainer.querySelectorAll('input[name="subcarpeta_modal_ofi"]:checked').length;
+            if (countLabel) countLabel.textContent = `${checkedCount} seleccionada${checkedCount === 1 ? '' : 's'}`;
+          });
+        });
+      }
+
+      if (subcarpetaModal) subcarpetaModal.style.display = 'flex';
+    }
+
+    formCrearSubcarpeta?.addEventListener('submit', async (e: Event) => {
+      e.preventDefault();
+      const petIdInput = document.getElementById('subcarpeta-target-pet-id') as HTMLInputElement | null;
+      const nombreInput = document.getElementById('subcarpeta-nombre-input') as HTMLInputElement | null;
+      const descInput = document.getElementById('subcarpeta-desc-input') as HTMLTextAreaElement | null;
+      const submitBtn = document.getElementById('btn-submit-crear-subcarpeta') as HTMLButtonElement | null;
+
+      const petId = petIdInput?.value || '';
+      const nombre = nombreInput?.value.trim() || '';
+      const descripcion = descInput?.value.trim() || '';
+
+      const checkedOffices: string[] = [];
+      document.querySelectorAll('input[name="subcarpeta_modal_ofi"]:checked').forEach((el) => {
+        checkedOffices.push((el as HTMLInputElement).value);
+      });
+
+      if (!nombre) {
+        alert('Por favor ingrese el nombre de la subcarpeta.');
+        return;
+      }
+      if (checkedOffices.length === 0) {
+        alert('Por favor seleccione al menos una dependencia responsable.');
+        return;
+      }
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Creando y notificando...';
+      }
+
+      try {
+        const res = await fetch('/api/peticiones/subcarpetas/crear', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            peticion_id: petId,
+            nombre,
+            descripcion,
+            oficina_ids: checkedOffices,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          (window as any).showToast('Error: ' + (data.error || 'No se pudo crear la subcarpeta'), 'error');
+          return;
+        }
+
+        (window as any).showToast('Subcarpeta creada exitosamente y dependencias notificadas vía correo.', 'success');
+        closeSubModal();
+
+        // Actualizar peticion en el array local y re-renderizar
+        const pet = peticiones.find((p) => p.id === petId);
+        if (pet) {
+          if (!pet.subcarpetas) pet.subcarpetas = [];
+          pet.subcarpetas.push(data.subcarpeta);
+          if (Array.isArray(data.responsables)) {
+            if (!pet.peticion_responsables) pet.peticion_responsables = [];
+            data.responsables.forEach((r: any) => {
+              const matchedOfi = archivosOficinasCatalog.find((o: any) => o.id === r.oficina_id);
+              pet.peticion_responsables!.push({
+                id: r.id,
+                codigo_acceso: r.codigo_acceso,
+                subcarpeta_id: data.subcarpeta.id,
+                estado_entrega: 'Pendiente',
+                oficinas: matchedOfi,
+              });
+            });
+          }
+          openFolderDetail(petId);
+        } else {
+          setTimeout(() => window.location.reload(), 600);
+        }
+      } catch (err: any) {
+        console.error(err);
+        (window as any).showToast('Error de red al crear la subcarpeta.', 'error');
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Crear Subcarpeta y Notificar';
         }
       }
     });

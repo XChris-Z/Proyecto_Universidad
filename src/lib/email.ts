@@ -10,6 +10,11 @@ export interface EmailAttachment {
   contentType?: string;
 }
 
+export interface EmailSubcarpetaItem {
+  nombre: string;
+  descripcion?: string | null;
+}
+
 export interface EmailPeticionNotificationParams {
   toEmail: string;
   oficinaNombre: string;
@@ -18,6 +23,7 @@ export interface EmailPeticionNotificationParams {
   categoria?: string | null;
   prioridad?: string | null;
   instruccionesAnexos?: string | null;
+  subcarpetas?: EmailSubcarpetaItem[];
   fechaLimiteEntrega: string;
   fechaLimiteResponsable: string;
   codigoAcceso: string;
@@ -282,11 +288,27 @@ export async function sendPeticionAssignmentEmail(
             </div>
           ` : ''}
 
-          <!-- SECCIÓN DESTACADA: REQUERIMIENTO Y ANEXOS SOLICITADOS -->
-          <div class="instrucciones-box">
-            <div class="instrucciones-title">Requerimiento y anexos solicitados:</div>
-            <div class="instrucciones-text">"${instrucciones}"</div>
-          </div>
+          <!-- SECCIÓN DESTACADA: REQUERIMIENTO Y SUBCARPETAS SOLICITADAS -->
+          ${params.subcarpetas && params.subcarpetas.length > 0 ? `
+            <div class="instrucciones-box">
+              <div class="instrucciones-title">Subcarpetas asignadas a su dependencia (${params.subcarpetas.length}):</div>
+              <div style="margin-top: 10px;">
+                ${params.subcarpetas.map(sub => `
+                  <div style="background: #ffffff; border: 1px solid #cbd5e1; border-left: 4px solid #00594E; border-radius: 6px; padding: 10px 14px; margin-bottom: 8px;">
+                    <div style="font-weight: 800; font-size: 13px; color: #00594E;">
+                      📁 ${sub.nombre}
+                    </div>
+                    ${sub.descripcion ? `<div style="font-size: 12px; color: #475569; margin-top: 4px; line-height: 1.4;">${sub.descripcion}</div>` : ''}
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          ` : `
+            <div class="instrucciones-box">
+              <div class="instrucciones-title">Requerimiento y anexos solicitados:</div>
+              <div class="instrucciones-text">"${instrucciones}"</div>
+            </div>
+          `}
 
           <!-- CREDENCIALES DE ACCESO TEMPORAL Y PIN DE SEGURIDAD -->
           <div class="credentials-card">

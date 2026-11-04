@@ -9,6 +9,7 @@ export const POST: APIRoute = async ({ request }) => {
     const contentType = request.headers.get('content-type') || '';
     let peticionId = '';
     let responsableId = '';
+    let subcarpetaId = '';
     let numeroRadicado = '';
     let emailInstitucional = '';
     let storageSubfolder = '';
@@ -23,6 +24,7 @@ export const POST: APIRoute = async ({ request }) => {
       const file = formData.get('archivo') as File | null;
       peticionId = (formData.get('peticion_id') as string) || '';
       responsableId = (formData.get('responsable_id') as string) || '';
+      subcarpetaId = (formData.get('subcarpeta_id') as string) || '';
       numeroRadicado = (formData.get('numero_radicado') as string) || '';
       emailInstitucional = (formData.get('email_institucional') as string) || '';
       storageSubfolder = (formData.get('storage_subfolder_path') as string) || '';
@@ -39,6 +41,7 @@ export const POST: APIRoute = async ({ request }) => {
       const body = await request.json().catch(() => ({}));
       peticionId = body.peticion_id || '';
       responsableId = body.responsable_id || '';
+      subcarpetaId = body.subcarpeta_id || '';
       numeroRadicado = body.numero_radicado || '';
       emailInstitucional = body.email_institucional || '';
       storageSubfolder = body.storage_subfolder_path || '';
@@ -86,7 +89,6 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // 2. Subir archivo a Supabase Storage bucket 'peticiones'
-    // Ruta: peticiones/{numero_radicado}/{nombre_oficina_slug}/{timestamp}_{filename}
     const cleanFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
     const relativeStoragePath = `${storageSubfolder.replace(/^peticiones\//, '')}${Date.now()}_${cleanFileName}`;
     const fullStoragePath = `peticiones/${relativeStoragePath}`;
@@ -99,24 +101,48 @@ export const POST: APIRoute = async ({ request }) => {
       });
 
     if (uploadError) {
-      console.warn('Advertencia subiendo a Supabase Storage (se registrará anexo):', uploadError.message);
+      console.warn('Advertencia subiendo al repositorio (se registrará anexo):', uploadError.message);
     }
 
-    // 3. Registrar en public.peticion_anexos
-    const { data: anexoData, error: anexoError } = await (supabase
+    // 3. Registrar en public.peticion_anexos con subcarpeta_id si está disponible
+    const anexoPayload: any = {
+      peticion_id: peticionId,
+      peticion_responsable_id: responsableId,
+      nombre_archivo: fileName,
+      storage_path: fullStoragePath,
+      tamano_bytes: fileSize,
+      mime_type: fileMime,
+      subido_por_email: emailInstitucional || 'oficina@unitropico.edu.co',
+      es_anexo_oficina: true,
+    };
+
+    if (subcarpetaId && !subcarpetaId.startsWith('sub-')) {
+      anexoPayload.subcarpeta_id = subcarpetaId;
+    }
+
+    let anexoData: any = null;
+    let anexoError: any = null;
+
+    const resAnexo = await (supabase
       .from('peticion_anexos' as any)
-      .insert({
-        peticion_id: peticionId,
-        peticion_responsable_id: responsableId,
-        nombre_archivo: fileName,
-        storage_path: fullStoragePath,
-        tamano_bytes: fileSize,
-        mime_type: fileMime,
-        subido_por_email: emailInstitucional || 'oficina@unitropico.edu.co',
-        es_anexo_oficina: true,
-      } as any)
+      .insert(anexoPayload as any)
       .select()
       .single() as any);
+
+    if (resAnexo.error && (resAnexo.error.message?.includes('subcarpeta_id') || resAnexo.error.code === 'PGRST204')) {
+      // Reintentar sin subcarpeta_id si la columna física aún no existe
+      delete anexoPayload.subcarpeta_id;
+      const retryRes = await (supabase
+        .from('peticion_anexos' as any)
+        .insert(anexoPayload as any)
+        .select()
+        .single() as any);
+      anexoData = retryRes.data;
+      anexoError = retryRes.error;
+    } else {
+      anexoData = resAnexo.data;
+      anexoError = resAnexo.error;
+    }
 
     if (anexoError) {
       console.error('Error insertando registro de anexo:', anexoError);
@@ -140,14 +166,27 @@ export const POST: APIRoute = async ({ request }) => {
       finalObservaciones = cleanUserObs;
     }
 
-    await (supabase
-      .from('peticion_responsables' as any)
-      .update({
-        estado_entrega: 'Entregado',
-        fecha_entrega: new Date().toISOString(),
-        observaciones_entrega: finalObservaciones || null,
-      } as any)
-      .eq('id', responsableId) as any);
+    // Actualizar de forma defensiva
+    try {
+      await (supabase
+        .from('peticion_responsables' as any)
+        .update({
+          estado_entrega: 'Entregado',
+          fecha_entrega: new Date().toISOString(),
+          observaciones_entrega: finalObservaciones || null,
+          observaciones: cleanUserObs || null,
+        } as any)
+        .eq('id', responsableId) as any);
+    } catch {
+      await (supabase
+        .from('peticion_responsables' as any)
+        .update({
+          estado_entrega: 'Entregado',
+          fecha_entrega: new Date().toISOString(),
+          observaciones_entrega: finalObservaciones || null,
+        } as any)
+        .eq('id', responsableId) as any);
+    }
 
     return new Response(
       JSON.stringify({
@@ -156,6 +195,7 @@ export const POST: APIRoute = async ({ request }) => {
           nombre_archivo: fileName,
           storage_path: fullStoragePath,
           tamano_bytes: fileSize,
+          subcarpeta_id: subcarpetaId || null,
         },
         message: 'Anexo recibido y registrado correctamente en la subcarpeta del radicado.',
       }),
@@ -169,4 +209,3 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 };
-

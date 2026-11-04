@@ -7,6 +7,12 @@ import { sendPeticionAssignmentEmail } from '@lib/email';
 import { logSystemActivity } from '@lib/audit';
 import { generatePin6 } from '@lib/security';
 
+export interface SubcarpetaInput {
+  nombre: string;
+  descripcion?: string;
+  oficina_ids: string[];
+}
+
 export const POST: APIRoute = async ({ request, url }) => {
   try {
     const contentType = request.headers.get('content-type') || '';
@@ -21,6 +27,7 @@ export const POST: APIRoute = async ({ request, url }) => {
     let prioridad = 'Media';
     let fecha_limite_entrega = '';
     let oficina_ids: string[] = [];
+    let subcarpetas: SubcarpetaInput[] = [];
     let primaryFile: File | null = null;
 
     let rawBase64File: { buffer: Buffer; name: string; mime: string } | null = null;
@@ -37,6 +44,11 @@ export const POST: APIRoute = async ({ request, url }) => {
       prioridad = (formData.get('prioridad') as string) || 'Media';
       fecha_limite_entrega = (formData.get('fecha_limite_entrega') as string) || '';
       
+      const rawSubcarpetasJson = formData.get('subcarpetas_json') as string;
+      if (rawSubcarpetasJson) {
+        try { subcarpetas = JSON.parse(rawSubcarpetasJson); } catch (e) {}
+      }
+
       const rawOficinas = formData.getAll('oficina_ids');
       if (rawOficinas.length > 0) {
         oficina_ids = rawOficinas.map(o => String(o));
@@ -52,7 +64,7 @@ export const POST: APIRoute = async ({ request, url }) => {
         primaryFile = null;
       }
     } else {
-      const body = await request.json();
+      const body = await request.json().catch(() => ({}));
       asunto = body.asunto;
       descripcion = body.descripcion || '';
       instrucciones_anexos = body.instrucciones_anexos || body.descripcion || '';
@@ -63,6 +75,9 @@ export const POST: APIRoute = async ({ request, url }) => {
       prioridad = body.prioridad || 'Media';
       fecha_limite_entrega = body.fecha_limite_entrega;
       oficina_ids = body.oficina_ids || [];
+      if (Array.isArray(body.subcarpetas)) {
+        subcarpetas = body.subcarpetas;
+      }
 
       if (body.archivo_base64 && body.archivo_nombre) {
         try {
@@ -87,17 +102,41 @@ export const POST: APIRoute = async ({ request, url }) => {
       );
     }
 
-    if (!Array.isArray(oficina_ids) || oficina_ids.length === 0) {
+    // Normalizar Subcarpetas y Oficinas Responsables
+    if (!subcarpetas || subcarpetas.length === 0) {
+      if (Array.isArray(oficina_ids) && oficina_ids.length > 0) {
+        subcarpetas = [{
+          nombre: 'Expediente General',
+          descripcion: instrucciones_anexos || descripcion || 'Anexos requeridos para el radicado oficial.',
+          oficina_ids: oficina_ids,
+        }];
+      } else {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'Debe configurar al menos una subcarpeta con dependencias responsables asignadas.',
+          }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // Extraer todas las oficinas únicas asignadas
+    const allUniqueOfficeIds = Array.from(
+      new Set(subcarpetas.flatMap((s) => s.oficina_ids || []).filter(Boolean))
+    );
+
+    if (allUniqueOfficeIds.length === 0) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: 'Debe seleccionar al menos una oficina responsable del catálogo.',
+          error: 'Debe asignar al menos una dependencia responsable a las subcarpetas del expediente.',
         }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    // Convertir archivo a Buffer para storage y adjunto en correo
+    // Convertir archivo principal a Buffer para storage y adjunto en correo
     let fileBuffer: Buffer | null = null;
     let fileName = '';
     let fileMime = 'application/pdf';
@@ -112,10 +151,11 @@ export const POST: APIRoute = async ({ request, url }) => {
       fileMime = rawBase64File.mime;
     }
 
-    // 1. Insertar Petición en Base de Datos (Disparador PL/pgSQL calcula Radicado, margen de 5 días y carpeta)
+    // 1. Insertar Petición en Base de Datos
     const finalInstrucciones = instrucciones_anexos || descripcion || null;
     const pinAcceso = generatePin6();
 
+    // Payload base sin columna pin_acceso para blindaje contra errores de schema cache si aún no existe físicamente
     const basePayload: any = {
       asunto,
       descripcion: finalInstrucciones,
@@ -142,8 +182,18 @@ export const POST: APIRoute = async ({ request, url }) => {
       );
     }
 
-    // Asignar el PIN de 6 dígitos en memoria para notificaciones y entrega
+    // Asignar el PIN de 6 dígitos en memoria para notificaciones y trazabilidad
     peticionData.pin_acceso = pinAcceso;
+
+    // Intentar actualizar la columna pin_acceso de forma no bloqueante si ya fue creada en PostgreSQL
+    try {
+      await (supabase
+        .from('peticiones' as any)
+        .update({ pin_acceso: pinAcceso } as any)
+        .eq('id', peticionData.id) as any);
+    } catch (pinUpdateErr) {
+      // Silencioso si la columna física aún no existe
+    }
 
     // 2. Subir Archivo Principal al Storage y registrar en peticion_anexos (Carpeta del Radicado)
     let savedPrimaryFile = null;
@@ -192,11 +242,46 @@ export const POST: APIRoute = async ({ request, url }) => {
       }
     }
 
-    // 3. Obtener información de las oficinas seleccionadas
+    // 3. Crear Subcarpetas en public.peticion_subcarpetas
+    const createdSubcarpetasMap: Record<number, string> = {}; // índice -> subcarpeta.id
+    const createdSubcarpetasInfo: Array<{ id: string; nombre: string; descripcion?: string | null }> = [];
+
+    for (let i = 0; i < subcarpetas.length; i++) {
+      const sub = subcarpetas[i]!;
+      const cleanSubName = (sub.nombre || `Subcarpeta ${i + 1}`).trim();
+      const cleanSubDesc = (sub.descripcion || '').trim();
+
+      try {
+        const { data: subData, error: subErr } = await (supabase
+          .from('peticion_subcarpetas' as any)
+          .insert({
+            peticion_id: peticionData.id,
+            nombre: cleanSubName,
+            descripcion: cleanSubDesc || null,
+          } as any)
+          .select()
+          .single() as any);
+
+        if (!subErr && subData?.id) {
+          createdSubcarpetasMap[i] = subData.id;
+          createdSubcarpetasInfo.push({ id: subData.id, nombre: cleanSubName, descripcion: cleanSubDesc });
+        }
+      } catch (subException: any) {
+        console.warn('Aviso insertando peticion_subcarpetas (tabla posiblemente no migrada aún):', subException.message);
+      }
+
+      if (!createdSubcarpetasMap[i]) {
+        const fallbackId = `sub-local-${i + 1}`;
+        createdSubcarpetasMap[i] = fallbackId;
+        createdSubcarpetasInfo.push({ id: fallbackId, nombre: cleanSubName, descripcion: cleanSubDesc });
+      }
+    }
+
+    // 4. Obtener información de las dependencias asignadas
     const { data: oficinasData, error: oficinasError } = await (supabase
       .from('oficinas' as any)
-      .select('id, nombre, email_institucional')
-      .in('id', oficina_ids) as any);
+      .select('id, codigo, nombre, email_institucional')
+      .in('id', allUniqueOfficeIds) as any);
 
     if (oficinasError || !oficinasData || oficinasData.length === 0) {
       return new Response(
@@ -205,28 +290,38 @@ export const POST: APIRoute = async ({ request, url }) => {
       );
     }
 
-    // 4. Crear asignaciones en peticion_responsables (Trigger genera código único y subcarpeta Drive)
-    const asignacionesToInsert = oficinasData.map((ofi: any) => ({
-      peticion_id: peticionData.id,
-      oficina_id: ofi.id,
-      estado_entrega: 'Pendiente',
-      observaciones_entrega: `PIN:${pinAcceso}`,
-    }));
+    // 5. Crear asignaciones en peticion_responsables vinculando la subcarpeta
+    const asignacionesToInsert: any[] = [];
+    for (let i = 0; i < subcarpetas.length; i++) {
+      const sub = subcarpetas[i]!;
+      const subId = createdSubcarpetasMap[i];
+      const validSubUuid = subId && !subId.startsWith('sub-local-') ? subId : null;
+
+      for (const ofiId of sub.oficina_ids || []) {
+        asignacionesToInsert.push({
+          peticion_id: peticionData.id,
+          oficina_id: ofiId,
+          subcarpeta_id: validSubUuid,
+          estado_entrega: 'Pendiente',
+          observaciones_entrega: `PIN:${pinAcceso}${sub.descripcion ? ` | [${sub.nombre}] ${sub.descripcion}` : ''}`,
+        });
+      }
+    }
 
     const { data: responsablesData, error: respError } = await (supabase
       .from('peticion_responsables' as any)
       .insert(asignacionesToInsert as any)
-      .select('id, oficina_id, codigo_acceso, fecha_expiracion_codigo, storage_subfolder_path, estado_entrega') as any);
+      .select('id, oficina_id, subcarpeta_id, codigo_acceso, fecha_expiracion_codigo, storage_subfolder_path, estado_entrega') as any);
 
     if (respError || !responsablesData) {
       console.error('Error asignando responsables:', respError);
       return new Response(
-        JSON.stringify({ success: false, error: respError?.message || 'Error asignando oficinas responsables' }),
+        JSON.stringify({ success: false, error: respError?.message || 'Error asignando oficinas responsables a las subcarpetas.' }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    // 5. Preparar adjunto físico de Nodemailer con el archivo original subido
+    // 6. Preparar adjunto físico de Nodemailer con el archivo original subido
     const emailAttachments = (fileBuffer && fileName) ? [
       {
         filename: fileName,
@@ -235,19 +330,30 @@ export const POST: APIRoute = async ({ request, url }) => {
       }
     ] : undefined;
 
-    // 6. Enviar correos automáticos institucionales solo a oficinas de prueba (o que tengan correo válido asignado)
+    // 7. Enviar Notificación SMTP Inteligente y Consolidada por Dependencia
+    // Si una oficina está asignada a 2 o más subcarpetas, recibe UN SOLO CORREO con el desglose de todas sus subcarpetas
     const baseUrl = url.origin;
-
     const emailNotifications = [];
-    for (const resp of responsablesData) {
-      const oficina = oficinasData.find((o: any) => o.id === resp.oficina_id);
-      const isTestOffice = oficina?.codigo?.toUpperCase().includes('PRUEBA') || oficina?.nombre?.toLowerCase().includes('prueba');
-      const targetEmail = isTestOffice ? (oficina?.email_institucional || null) : null;
 
-      if (oficina && targetEmail) {
-        const effectivePin = peticionData.pin_acceso || pinAcceso;
-        const portalUrl = `${baseUrl}/portal-responsable?codigo=${encodeURIComponent(resp.codigo_acceso)}&email=${encodeURIComponent(targetEmail)}&pin=${encodeURIComponent(effectivePin)}`;
-        
+    for (const oficina of oficinasData) {
+      const isTestOffice = oficina.codigo?.toUpperCase().includes('PRUEBA') || oficina.nombre?.toLowerCase().includes('prueba');
+      const targetEmail = isTestOffice ? (oficina.email_institucional || null) : null;
+
+      if (targetEmail) {
+        // Encontrar asignación representativa para el código de acceso
+        const repAssignment = responsablesData.find((r: any) => r.oficina_id === oficina.id);
+        const accessCode = repAssignment?.codigo_acceso || 'UPQ';
+
+        // Obtener la lista de subcarpetas asignadas a esta oficina específica
+        const assignedSubcarpetas = subcarpetas
+          .filter((s) => s.oficina_ids.includes(oficina.id))
+          .map((s) => ({
+            nombre: s.nombre,
+            descripcion: s.descripcion || 'Entrega de anexos oficiales para esta subcarpeta.',
+          }));
+
+        const portalUrl = `${baseUrl}/portal-responsable?codigo=${encodeURIComponent(accessCode)}&email=${encodeURIComponent(targetEmail)}&pin=${encodeURIComponent(pinAcceso)}`;
+
         const emailPromise = sendPeticionAssignmentEmail({
           toEmail: targetEmail,
           oficinaNombre: oficina.nombre,
@@ -255,11 +361,12 @@ export const POST: APIRoute = async ({ request, url }) => {
           asunto: peticionData.asunto,
           categoria: peticionData.categoria,
           prioridad: peticionData.prioridad,
+          subcarpetas: assignedSubcarpetas,
           instruccionesAnexos: peticionData.instrucciones_anexos || peticionData.descripcion,
           fechaLimiteEntrega: peticionData.fecha_limite_entrega,
           fechaLimiteResponsable: peticionData.fecha_limite_responsable,
-          codigoAcceso: resp.codigo_acceso,
-          pinAcceso: effectivePin,
+          codigoAcceso: accessCode,
+          pinAcceso: pinAcceso,
           portalUrl,
           attachments: emailAttachments,
         }).catch((err: any) => {
@@ -272,16 +379,16 @@ export const POST: APIRoute = async ({ request, url }) => {
     }
 
     await Promise.allSettled(emailNotifications);
-    console.log(`[PETICIÓN CREADA] Radicado: ${peticionData.numero_radicado} - Carpeta: ${peticionData.storage_folder_path} - Correos con adjunto disparados: ${emailNotifications.length}`);
+    console.log(`[PETICIÓN CREADA] Radicado: ${peticionData.numero_radicado} - Subcarpetas: ${subcarpetas.length} - Dependencias únicas: ${oficinasData.length} - Notificaciones enviadas: ${emailNotifications.length}`);
 
-    // Registrar en auditoría con el número de radicado visible
+    // Registrar en auditoría
     await logSystemActivity({
       actor: { id: 'usr-root', name: solicitante_nombre || 'Funcionario Radicador', role: 'funcionario' },
       action: `Radicación de petición ${peticionData.numero_radicado}`,
       actionType: 'SUBIDA_ARCHIVO',
       entity: 'Peticiones Radicadas',
       entityId: peticionData.numero_radicado,
-      details: `Radicación oficial de la solicitud "${asunto}". Solicitante: ${solicitante_nombre}. Vencimiento: ${fecha_limite_entrega}.`,
+      details: `Radicación oficial de la solicitud "${asunto}" con ${subcarpetas.length} subcarpeta(s) y ${oficinasData.length} dependencia(s) requerida(s).`,
       severity: 'INFO',
     }).catch((auditErr) => console.warn('Aviso registrando auditoría de radicación:', auditErr));
 
@@ -296,15 +403,17 @@ export const POST: APIRoute = async ({ request, url }) => {
           fecha_limite_entrega: peticionData.fecha_limite_entrega,
           fecha_limite_responsable: peticionData.fecha_limite_responsable,
           storage_folder_path: peticionData.storage_folder_path,
-          pin_acceso: peticionData.pin_acceso || pinAcceso,
+          pin_acceso: pinAcceso,
           archivo_principal: savedPrimaryFile,
         },
+        subcarpetas: createdSubcarpetasInfo,
         responsables: responsablesData.map((r: any) => {
           const ofi = oficinasData.find((o: any) => o.id === r.oficina_id);
           const isTestOffice = ofi?.codigo?.toUpperCase().includes('PRUEBA') || ofi?.nombre?.toLowerCase().includes('prueba');
           return {
             id: r.id,
             oficina_nombre: ofi?.nombre,
+            subcarpeta_id: r.subcarpeta_id,
             email_institucional: isTestOffice ? (ofi?.email_institucional || null) : null,
             codigo_acceso: r.codigo_acceso,
             storage_subfolder_path: r.storage_subfolder_path,
