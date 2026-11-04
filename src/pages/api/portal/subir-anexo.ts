@@ -122,13 +122,30 @@ export const POST: APIRoute = async ({ request }) => {
       console.error('Error insertando registro de anexo:', anexoError);
     }
 
-    // 4. Actualizar estado de entrega en peticion_responsables
+    // 4. Actualizar estado de entrega en peticion_responsables preservando el PIN
+    const { data: currentResp } = await (supabase
+      .from('peticion_responsables' as any)
+      .select('observaciones_entrega')
+      .eq('id', responsableId)
+      .maybeSingle() as any);
+
+    const rawExisting = currentResp?.observaciones_entrega || '';
+    const pinMatch = rawExisting.match(/PIN:\s*([0-9A-Z]{6})/i);
+    const cleanUserObs = String(observaciones || '').trim();
+
+    let finalObservaciones = '';
+    if (pinMatch) {
+      finalObservaciones = cleanUserObs ? `${pinMatch[0]} | ${cleanUserObs}` : pinMatch[0];
+    } else {
+      finalObservaciones = cleanUserObs;
+    }
+
     await (supabase
       .from('peticion_responsables' as any)
       .update({
         estado_entrega: 'Entregado',
         fecha_entrega: new Date().toISOString(),
-        observaciones_entrega: observaciones,
+        observaciones_entrega: finalObservaciones || null,
       } as any)
       .eq('id', responsableId) as any);
 

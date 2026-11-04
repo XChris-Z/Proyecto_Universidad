@@ -42,8 +42,9 @@ const { data: dbPeticiones } = await (supabase
   .order('created_at', { ascending: false }) as any);
 
 const peticionesList = ((dbPeticiones as any[]) || []).map((p: any) => {
-  const respObs = p.peticion_responsables?.find((r: any) => r?.observaciones_entrega?.startsWith('PIN:'))?.observaciones_entrega;
-  const storedPin = respObs ? respObs.replace('PIN:', '').trim() : null;
+  const respObs = p.peticion_responsables?.find((r: any) => r?.observaciones_entrega?.includes('PIN:'))?.observaciones_entrega;
+  const pinMatch = respObs?.match(/PIN:\s*([0-9A-Z]{6})/i);
+  const storedPin = pinMatch ? pinMatch[1] : null;
   return {
     ...p,
     pin_acceso: storedPin || p.pin_acceso || getDeterministicPin(p.numero_radicado || p.id),
@@ -183,6 +184,8 @@ const pendientesCount = peticionesList.filter((p: any) => p.estado !== 'respondi
                       {responsables.map((r: any) => {
                         const ofiNombre = r.oficinas?.nombre || 'Oficina';
                         const isDelivered = r.estado_entrega === 'Entregado';
+                        const rawObs = r.observaciones_entrega || '';
+                        const cleanObs = rawObs.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '').trim();
                         return (
                           <div style="display: flex; align-items: center; gap: 6px; font-size: 0.74rem;">
                             <span style={`width: 7px; height: 7px; border-radius: 50%; background: ${isDelivered ? '#059669' : 'var(--dorado-principal)'};`}></span>
@@ -190,6 +193,11 @@ const pendientesCount = peticionesList.filter((p: any) => p.estado !== 'respondi
                             <span style={`font-size: 0.65rem; padding: 1px 6px; border-radius: 3px; font-weight: 700; ${isDelivered ? 'background: #ecfdf5; color: #047857;' : 'background: #fffbeb; color: #b45309;'}`}>
                               {r.estado_entrega || 'Pendiente'}
                             </span>
+                            {cleanObs ? (
+                              <span title={`Observación de la oficina: "${cleanObs}"`} style="display: inline-flex; align-items: center; color: #d97706; cursor: help;">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                              </span>
+                            ) : null}
                           </div>
                         );
                       })}

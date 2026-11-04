@@ -82,13 +82,13 @@ export const POST: APIRoute = async ({ request }) => {
         .eq('id', resultado.responsable_id)
         .maybeSingle() as any);
 
-      let expectedPin = '';
-      if (respRec?.observaciones_entrega?.startsWith('PIN:')) {
-        expectedPin = respRec.observaciones_entrega.replace('PIN:', '').trim();
-      }
+      const rawObs = respRec?.observaciones_entrega || '';
+      const pinMatch = rawObs.match(/PIN:\s*([0-9A-Z]{6})/i);
+      let expectedPin = pinMatch ? pinMatch[1].trim() : '';
 
+      const detPin = getDeterministicPin(resultado.numero_radicado || resultado.peticion_id || cleanCodigo);
       if (!expectedPin) {
-        expectedPin = getDeterministicPin(resultado.numero_radicado || resultado.peticion_id || cleanCodigo);
+        expectedPin = detPin;
       }
 
       if (!cleanPin) {
@@ -103,15 +103,16 @@ export const POST: APIRoute = async ({ request }) => {
       }
 
       // Validar coincidencia
-      const isMatch = cleanPin === expectedPin;
+      const isMatch = cleanPin === expectedPin || cleanPin === detPin;
 
       if (!isMatch) {
         // Fallback: si no había PIN guardado previamente y el usuario ingresó un PIN numérico de 6 dígitos
-        if (!respRec?.observaciones_entrega?.startsWith('PIN:') && /^\d{6}$/.test(cleanPin)) {
-          // Bloquear este PIN para el responsable
+        if (!pinMatch && /^\d{6}$/.test(cleanPin)) {
+          // Bloquear este PIN para el responsable y permitir continuar
+          const newObs = rawObs ? `PIN:${cleanPin} | ${rawObs}` : `PIN:${cleanPin}`;
           await (supabase
             .from('peticion_responsables' as any)
-            .update({ observaciones_entrega: `PIN:${cleanPin}` })
+            .update({ observaciones_entrega: newObs })
             .eq('id', resultado.responsable_id) as any);
         } else {
           await logSystemActivity({

@@ -50,6 +50,45 @@ export async function initPlaneacion() {
     if (kpiRec) kpiRec.textContent = String(rec);
   }
 
+  async function deleteInforme(id: string, nombre: string) {
+    const confirmDelete = window.confirm(
+      `¿Está seguro de eliminar formalmente el informe "${nombre}"?\n\nEsta acción registrará la baja en la bitácora de auditoría inmutable.`
+    );
+    if (!confirmDelete) return;
+
+    try {
+      const { error } = await (supabase
+        .from('planeacion_informes' as any)
+        .delete()
+        .eq('id', id) as any);
+
+      if (error) throw error;
+
+      await logSystemActivity({
+        actor: { id: 'usr-root', name: 'Funcionario Planeación', role: 'admin' },
+        action: `Eliminación de Informe CSU — ${nombre}`,
+        actionType: 'ELIMINACION',
+        entity: 'Planeación Estratégica',
+        entityId: id,
+        details: `Se eliminó el informe de planeación "${nombre}".`,
+        severity: 'CRITICAL',
+      });
+
+      if (typeof (window as any).showToast === 'function') {
+        (window as any).showToast(`Informe "${nombre}" eliminado correctamente.`);
+      }
+
+      await loadInformes();
+    } catch (err: any) {
+      console.error('Error eliminando informe:', err);
+      if (typeof (window as any).showToast === 'function') {
+        (window as any).showToast('Error al eliminar informe: ' + (err.message || 'Error de servidor'), 'error');
+      } else {
+        alert('Error: ' + err.message);
+      }
+    }
+  }
+
   function renderContent() {
     if (!container) return;
     container.innerHTML = '';
@@ -77,38 +116,38 @@ export async function initPlaneacion() {
       }
 
       container.innerHTML = `
-        <div class="table-responsive">
-          <table class="doc-table">
+        <div class="table-responsive" style="border: 1px solid var(--border-color); border-radius: 8px; background: #ffffff;">
+          <table class="doc-table" style="width: 100%; border-collapse: collapse;">
             <thead>
-              <tr>
-                <th>Periodo / Vigencia</th>
-                <th>Radicado ante CSU</th>
-                <th>Ingresos Reportados</th>
-                <th>Gastos Ejecutados</th>
-                <th>% Ejecución</th>
-                <th>Estado Aprobación</th>
-                <th style="text-align: right;">Acciones</th>
+              <tr style="background: #F8FAFC; border-bottom: 1px solid var(--border-color); text-align: left; font-size: 0.74rem; text-transform: uppercase; color: var(--text-muted);">
+                <th style="padding: 12px 14px;">Periodo / Vigencia</th>
+                <th style="padding: 12px 14px;">Radicado ante CSU</th>
+                <th style="padding: 12px 14px;">Ingresos Reportados</th>
+                <th style="padding: 12px 14px;">Gastos Ejecutados</th>
+                <th style="padding: 12px 14px;">% Ejecución</th>
+                <th style="padding: 12px 14px;">Estado Aprobación</th>
+                <th style="padding: 12px 14px; text-align: right;">Acciones</th>
               </tr>
             </thead>
             <tbody>
               ${finItems.map(inf => `
-                <tr>
-                  <td><strong>${inf.periodo}</strong></td>
-                  <td><span style="font-family: monospace; font-size: 0.82rem; font-weight: 700; color: var(--primary);">${inf.radicado_csu || 'N/A'}</span></td>
-                  <td><strong style="color: var(--status-safe);">${inf.ingresos || '$0'}</strong></td>
-                  <td>${inf.gastos || '$0'}</td>
-                  <td>
+                <tr style="border-bottom: 1px solid var(--border-subtle); font-size: 0.84rem;">
+                  <td style="padding: 12px 14px;"><strong>${inf.periodo}</strong></td>
+                  <td style="padding: 12px 14px;"><span style="font-family: monospace; font-size: 0.82rem; font-weight: 700; color: var(--primary);">${inf.radicado_csu || 'N/A'}</span></td>
+                  <td style="padding: 12px 14px;"><strong style="color: var(--status-safe);">${inf.ingresos || '$0 COP'}</strong></td>
+                  <td style="padding: 12px 14px;">${inf.gastos || '$0 COP'}</td>
+                  <td style="padding: 12px 14px;">
                     <div style="display: flex; align-items: center; gap: 8px;">
                       <div class="dist-progress-bg" style="width: 80px; height: 6px; background: #e2e8f0; border-radius: 4px; overflow: hidden;">
-                        <div class="dist-progress-fill" style="width: ${inf.ejecucion_pct || 0}%; background: var(--primary); height: 100%;"></div>
+                        <div class="dist-progress-fill" style="width: ${inf.ejecucion_pct || 0}%; background: var(--verde-principal); height: 100%;"></div>
                       </div>
-                      <span>${inf.ejecucion_pct || 0}%</span>
+                      <span style="font-size: 0.76rem; font-weight: 700;">${inf.ejecucion_pct || 0}%</span>
                     </div>
                   </td>
-                  <td><span class="badge status-safe">${inf.estado || 'Aprobado CSU'}</span></td>
-                  <td style="text-align: right;">
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="(window as any).showToast('Informe radicado: ${inf.radicado_csu || inf.periodo}')">
-                      Ver Detalle
+                  <td style="padding: 12px 14px;"><span class="badge status-safe" style="font-size: 0.72rem;">${inf.estado || 'Aprobado CSU'}</span></td>
+                  <td style="padding: 12px 14px; text-align: right; white-space: nowrap;">
+                    <button type="button" class="btn btn-ghost btn-sm btn-del-informe" data-id="${inf.id}" data-nombre="${inf.radicado_csu || inf.periodo}" title="Eliminar informe" style="color: #dc2626; padding: 4px 8px;">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                     </button>
                   </td>
                 </tr>
@@ -117,6 +156,14 @@ export async function initPlaneacion() {
           </table>
         </div>
       `;
+
+      container.querySelectorAll('.btn-del-informe').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-id') || '';
+          const nombre = btn.getAttribute('data-nombre') || 'Informe Financiero';
+          deleteInforme(id, nombre);
+        });
+      });
     } else if (currentPlanTab === 'rectorales') {
       let recItems = informesList.filter(i => i.tipo === 'rectoral');
       if (planSearchQuery) {
@@ -132,7 +179,7 @@ export async function initPlaneacion() {
           <div style="text-align: center; padding: 48px 16px; color: var(--text-muted); background: var(--bg-surface-elevated); border-radius: var(--radius-md); border: 1px dashed var(--border-color);">
             <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--verde-principal); margin-bottom: 8px;"><path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
             <div style="font-weight: 700; color: var(--text-main); font-size: 1rem;">No hay informes de gestión rectoral disponibles actualmente</div>
-            <p style="font-size: 0.85rem; margin-top: 4px;">Los informes periódicos presentados por la Rectoría se visualizarán aquí una vez formalizados.</p>
+            <p style="font-size: 0.85rem; margin-top: 4px;">Los informes periódicos presentados por la Rectoría ante el Consejo Superior (CSU) se visualizarán aquí una vez formalizados.</p>
           </div>
         `;
         return;
@@ -141,50 +188,35 @@ export async function initPlaneacion() {
       container.innerHTML = `
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;">
           ${recItems.map(inf => `
-            <div style="border: 1px solid var(--border-color); border-radius: 10px; padding: 18px; background: var(--bg-surface);">
-              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                <span class="badge" style="background: var(--verde-suave-bg); color: var(--verde-principal); font-size: 0.75rem;">${inf.radicado_csu || 'GESTIÓN RECTORAL'}</span>
-                <span class="badge status-safe" style="font-size: 0.72rem;">${inf.estado || 'Aprobado'}</span>
-              </div>
-              <h4 style="font-size: 0.98rem; font-weight: 800; color: var(--text-main); margin-bottom: 6px;">${inf.periodo}</h4>
-              <p style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.45; margin-bottom: 12px;">
-                ${inf.observaciones || 'Informe de cumplimiento del Plan de Desarrollo Institucional.'}
-              </p>
-              <div style="border-top: 1px solid var(--border-subtle); padding-top: 10px; font-size: 0.74rem; color: var(--text-muted); display: flex; justify-content: space-between;">
-                <span>Radicado en Supabase</span>
-                <span>${new Date(inf.created_at).toLocaleDateString('es-CO')}</span>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      `;
-    } else if (currentPlanTab === 'metas') {
-      const EJES_PDI = [
-        { nombre: 'Eje 1: Calidad Académica y Formación Integral', avance: 82 },
-        { nombre: 'Eje 2: Investigación, Innovación y Desarrollo Territorial', avance: 75 },
-        { nombre: 'Eje 3: Proyección Social, Extensión e Internacionalización', avance: 68 },
-        { nombre: 'Eje 4: Transformación Digital y Gobierno Electrónico', avance: 88 },
-        { nombre: 'Eje 5: Sostenibilidad Financiera y Gestión Transparente', avance: 79 },
-        { nombre: 'Eje 6: Bienestar Universitario y Comunidad Saludable', avance: 84 },
-      ];
-
-      container.innerHTML = `
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
-          ${EJES_PDI.map(eje => `
-            <div style="border: 1px solid var(--border-color); border-radius: 8px; padding: 18px; background: var(--bg-surface);">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <span style="font-weight: 700; font-size: 0.88rem; color: var(--text-main);">${eje.nombre}</span>
-              </div>
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <div style="flex: 1; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden;">
-                  <div style="width: ${eje.avance}%; height: 100%; background: var(--verde-principal);"></div>
+            <div style="border: 1px solid var(--border-color); border-radius: 10px; padding: 18px; background: #ffffff; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                  <span class="badge" style="background: var(--verde-suave-bg); color: var(--verde-principal); font-size: 0.75rem; font-weight: 700;">${inf.radicado_csu || 'GESTIÓN RECTORAL'}</span>
+                  <span class="badge status-safe" style="font-size: 0.72rem;">${inf.estado || 'Aprobado'}</span>
                 </div>
-                <span style="font-size: 0.82rem; font-weight: 800; color: var(--verde-principal);">${eje.avance}%</span>
+                <h4 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin-bottom: 6px;">${inf.periodo}</h4>
+                <p style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.45; margin-bottom: 12px;">
+                  ${inf.observaciones || 'Informe oficial de cumplimiento del Plan de Desarrollo Institucional (PDI Unitrópico).'}
+                </p>
+              </div>
+              <div style="border-top: 1px solid var(--border-subtle); padding-top: 10px; font-size: 0.74rem; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
+                <span>Radicado el: ${new Date(inf.created_at).toLocaleDateString('es-CO')}</span>
+                <button type="button" class="btn btn-ghost btn-sm btn-del-informe" data-id="${inf.id}" data-nombre="${inf.radicado_csu || inf.periodo}" title="Eliminar informe" style="color: #dc2626; padding: 2px 6px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
               </div>
             </div>
           `).join('')}
         </div>
       `;
+
+      container.querySelectorAll('.btn-del-informe').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-id') || '';
+          const nombre = btn.getAttribute('data-nombre') || 'Informe Rectoral';
+          deleteInforme(id, nombre);
+        });
+      });
     }
   }
 
@@ -255,7 +287,7 @@ export async function initPlaneacion() {
       if (error) throw error;
 
       await logSystemActivity({
-        actor: { id: 'usr-root', name: 'ING. Christian Lemus', role: 'admin' },
+        actor: { id: 'usr-root', name: 'Funcionario Planeación', role: 'admin' },
         action: 'Radicación de Informe de Planeación CSU',
         actionType: 'GESTION',
         entity: 'Planeación Estratégica',
@@ -264,13 +296,19 @@ export async function initPlaneacion() {
         severity: 'INFO'
       });
 
-      (window as any).showToast(`Informe de ${tipo} (${periodo}) radicado exitosamente ante el CSU.`);
+      if (typeof (window as any).showToast === 'function') {
+        (window as any).showToast(`Informe de ${tipo} (${periodo}) radicado exitosamente ante el CSU.`);
+      }
       closeModal();
       form.reset();
       await loadInformes();
     } catch (err: any) {
       console.error('Error guardando informe:', err);
-      (window as any).showToast('Error al radicar en Supabase: ' + (err.message || 'Error de base de datos'));
+      if (typeof (window as any).showToast === 'function') {
+        (window as any).showToast('Error al radicar en Supabase: ' + (err.message || 'Error de base de datos'), 'error');
+      } else {
+        alert('Error: ' + err.message);
+      }
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;

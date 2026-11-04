@@ -123,6 +123,18 @@ const countAcred = programasList.filter((p: any) => p.categoria === 'acreditacio
           </div>
         </div>
 
+        <!-- Carga de Documento de Soporte (Acto MEN / Evidencia SACES) -->
+        <div class="form-group">
+          <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; display: flex; justify-content: space-between;">
+            <span>Documento de Soporte / Acto Administrativo (PDF, DOC, DOCX)</span>
+            <span style="font-size: 0.70rem; color: var(--verde-principal); font-weight: 600;">Opcional</span>
+          </label>
+          <input type="file" id="new-prog-archivo" class="form-input" accept=".pdf,.doc,.docx" style="padding: 7px 10px; font-size: 0.82rem;" />
+          <span style="font-size: 0.72rem; color: var(--text-muted); margin-top: 3px;">
+            El archivo se archivará automáticamente en el repositorio digital seguro de Supabase Storage.
+          </span>
+        </div>
+
         <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px;">
           <button type="button" class="btn btn-secondary" id="btn-cancel-new-prog">Cancelar</button>
           <button type="submit" class="btn btn-primary" id="btn-submit-prog" style="font-weight: 700;">
@@ -130,6 +142,90 @@ const countAcred = programasList.filter((p: any) => p.categoria === 'acreditacio
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal: Detalle y Gestión del Programa Académico -->
+  <div class="modal-backdrop" id="detail-programa-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1050; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(4px);">
+    <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 680px; border-radius: var(--radius-md); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04); overflow: hidden; max-height: 90vh; display: flex; flex-direction: column;">
+      <div class="modal-header" style="background: var(--verde-suave-bg); border-bottom: 1px solid var(--verde-borde); padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 38px; height: 38px; border-radius: 8px; background: var(--verde-principal); color: #ffffff; display: flex; align-items: center; justify-content: center;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222"/></svg>
+          </div>
+          <div>
+            <h3 id="modal-detail-prog-title" style="font-size: 1.15rem; font-weight: 800; color: var(--verde-principal); margin: 0;">Detalle del Programa</h3>
+            <span id="modal-detail-prog-nivel" style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600;">Pregrado Universitario</span>
+          </div>
+        </div>
+        <button type="button" class="btn-close-modal" id="btn-close-detail-modal" style="background: transparent; border: none; font-size: 1.6rem; color: var(--text-muted); cursor: pointer; line-height: 1;">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 18px;">
+        <!-- Ficha de Identificación -->
+        <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; font-size: 0.84rem;">
+          <div>
+            <span style="font-size: 0.70rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block;">Código SNIES:</span>
+            <strong id="detail-snies" style="color: var(--text-main); font-family: monospace; font-size: 0.92rem;">--</strong>
+          </div>
+          <div>
+            <span style="font-size: 0.70rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block;">Facultad:</span>
+            <span id="detail-facultad" style="color: var(--text-main); font-weight: 600;">--</span>
+          </div>
+          <div>
+            <span style="font-size: 0.70rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block;">Estado de Vigencia:</span>
+            <span id="detail-estado-badge" style="display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 800; background: #DCFCE7; color: #15803D;">Activo</span>
+          </div>
+          <div>
+            <span style="font-size: 0.70rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block;">Resolución MEN / Radicado:</span>
+            <span id="detail-resolucion" style="color: var(--primary); font-weight: 700;">--</span>
+          </div>
+          <div>
+            <span style="font-size: 0.70rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block;">Fecha de Expedición:</span>
+            <span id="detail-fecha" style="color: var(--text-main);">--</span>
+          </div>
+          <div>
+            <span style="font-size: 0.70rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block;">Vigencia:</span>
+            <span id="detail-vigencia" style="color: var(--text-main);">7 Años</span>
+          </div>
+        </div>
+
+        <!-- Sección de Documento de Soporte -->
+        <div style="border: 1px solid var(--border-color); border-radius: 8px; padding: 18px; background: #ffffff;">
+          <h4 style="margin: 0 0 10px 0; font-size: 0.88rem; font-weight: 800; color: var(--verde-principal); display: flex; align-items: center; gap: 8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span>Expediente Documental de Soporte</span>
+          </h4>
+
+          <div id="detail-document-container">
+            <!-- Dinámico desde JS: Si tiene documento muestra botón ver/descargar, si no muestra aviso y opción de subir -->
+          </div>
+
+          <!-- Formulario rápido para adjuntar o reemplazar documento -->
+          <div style="margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--border-color);">
+            <label style="font-size: 0.74rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; display: block; margin-bottom: 6px;">
+              Adjuntar / Reemplazar Documento de Soporte (PDF, DOC, DOCX):
+            </label>
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+              <input type="file" id="detail-upload-file-input" accept=".pdf,.doc,.docx" class="form-input" style="flex: 1; min-width: 200px; padding: 6px 10px; font-size: 0.80rem;" />
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-detail-upload-doc" style="white-space: nowrap; font-weight: 700;">
+                Subir Documento
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="padding: 16px 24px; background: var(--bg-surface); border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <button type="button" class="btn btn-danger btn-sm" id="btn-detail-delete-prog" style="display: inline-flex; align-items: center; gap: 6px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          <span>Eliminar Programa</span>
+        </button>
+
+        <div style="display: flex; gap: 10px;">
+          <button type="button" class="btn btn-secondary" id="btn-detail-close">Cerrar</button>
+        </div>
+      </div>
     </div>
   </div>
 </AppLayout>

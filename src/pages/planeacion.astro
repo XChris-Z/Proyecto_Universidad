@@ -35,27 +35,17 @@ const countRec = informesList.filter((i: any) => i.tipo === 'rectoral').length;
       </div>
     </div>
 
-    <!-- KPIs Financieros Globales Dinámicos -->
-    <div class="financial-kpi-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px;">
-      <div class="financial-stat-card" style="padding: 16px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-surface);">
-        <div class="label" style="font-size: 0.78rem; color: var(--text-muted);">Informes Financieros Radicados</div>
-        <div class="value" style="font-size: 1.4rem; font-weight: 800; color: var(--text-main);" id="plan-kpi-count-fin">{countFin}</div>
-        <div class="subtext" style="font-size: 0.72rem; color: var(--text-muted);">Verificados por Revisoría/CSU</div>
+    <!-- KPIs de Informes y Rendición de Cuentas CSU -->
+    <div class="financial-kpi-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 20px;">
+      <div class="financial-stat-card" style="padding: 18px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-surface);">
+        <div class="label" style="font-size: 0.78rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Informes Financieros Mensuales</div>
+        <div class="value" style="font-size: 1.6rem; font-weight: 800; color: var(--verde-principal); margin: 4px 0;" id="plan-kpi-count-fin">{countFin}</div>
+        <div class="subtext" style="font-size: 0.72rem; color: var(--text-muted);">Radicados y verificados ante el Consejo Superior (CSU)</div>
       </div>
-      <div class="financial-stat-card" style="padding: 16px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-surface);">
-        <div class="label" style="font-size: 0.78rem; color: var(--text-muted);">Informes de Gestión Rectoral</div>
-        <div class="value" style="font-size: 1.4rem; font-weight: 800; color: var(--primary);" id="plan-kpi-count-rec">{countRec}</div>
-        <div class="subtext" style="font-size: 0.72rem; color: var(--text-muted);">Rendición oficial de cuentas</div>
-      </div>
-      <div class="financial-stat-card" style="padding: 16px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-surface);">
-        <div class="label" style="font-size: 0.78rem; color: var(--text-muted);">Aportes Casanare / Nación</div>
-        <div class="value" style="font-size: 1.4rem; font-weight: 800; color: var(--text-main);">$0 COP</div>
-        <div class="subtext" style="font-size: 0.72rem; color: var(--text-muted);">En trámite de conciliación contable</div>
-      </div>
-      <div class="financial-stat-card" style="padding: 16px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-surface);">
-        <div class="label" style="font-size: 0.78rem; color: var(--text-muted);">Ejes Estratégicos PDI</div>
-        <div class="value" style="font-size: 1.4rem; font-weight: 800; color: var(--secondary);">6 Ejes</div>
-        <div class="subtext" style="font-size: 0.72rem; color: var(--text-muted);">Vigencia 2020-2030</div>
+      <div class="financial-stat-card" style="padding: 18px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-surface);">
+        <div class="label" style="font-size: 0.78rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Informes de Gestión Rectoral</div>
+        <div class="value" style="font-size: 1.6rem; font-weight: 800; color: var(--dorado-oscuro); margin: 4px 0;" id="plan-kpi-count-rec">{countRec}</div>
+        <div class="subtext" style="font-size: 0.72rem; color: var(--text-muted);">Rendición periódica oficial del Plan de Desarrollo (PDI)</div>
       </div>
     </div>
 
@@ -67,10 +57,6 @@ const countRec = informesList.filter((i: any) => i.tipo === 'rectoral').length;
       <button class="module-tab-btn" data-ptab="rectorales">
         <span>Informes de Gestión Rectoral CSU</span>
         <span class="tab-count" id="plan-count-rec">{countRec}</span>
-      </button>
-      <button class="module-tab-btn" data-ptab="metas">
-        <span>Ejes Estratégicos PDI 2020-2030</span>
-        <span class="tab-count">6</span>
       </button>
     </div>
 

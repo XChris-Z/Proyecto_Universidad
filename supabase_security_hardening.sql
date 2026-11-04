@@ -6,9 +6,13 @@
 -- 1. Habilitar extensión pgcrypto para operaciones criptográficas avanzadas
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
--- 2. Asegurar columna pin_acceso (PIN criptográfico de 6 dígitos) en tabla peticiones
+-- 2. Asegurar columna pin_acceso (PIN criptográfico de 6 dígitos) en tabla peticiones y columnas en programas_academicos
 ALTER TABLE public.peticiones 
 ADD COLUMN IF NOT EXISTS pin_acceso TEXT;
+
+ALTER TABLE public.programas_academicos
+ADD COLUMN IF NOT EXISTS archivo_url TEXT,
+ADD COLUMN IF NOT EXISTS archivo_nombre TEXT;
 
 -- 3. Crear índice para acelerar validaciones de PIN en el portal externo
 CREATE INDEX IF NOT EXISTS idx_peticiones_pin_acceso ON public.peticiones(pin_acceso);

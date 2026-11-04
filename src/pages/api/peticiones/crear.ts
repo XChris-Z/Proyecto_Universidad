@@ -128,36 +128,11 @@ export const POST: APIRoute = async ({ request, url }) => {
       fecha_limite_entrega,
     };
 
-    let peticionData: any = null;
-    let peticionError: any = null;
-
-    // Intento 1: Guardar con pin_acceso si la columna existe en PostgreSQL
-    const resWithPin = await (supabase
+    const { data: peticionData, error: peticionError } = await (supabase
       .from('peticiones' as any)
-      .insert({ ...basePayload, pin_acceso: pinAcceso } as any)
+      .insert(basePayload as any)
       .select()
       .single() as any);
-
-    if (
-      resWithPin.error &&
-      (String(resWithPin.error.message || '').includes('pin_acceso') ||
-        String(resWithPin.error.message || '').includes('schema cache') ||
-        resWithPin.error.code === '42703' ||
-        resWithPin.error.code === 'PGRST204')
-    ) {
-      console.warn('Columna pin_acceso no encontrada en PostgREST. Reintentando radicación sin columna pin_acceso...');
-      const resWithoutPin = await (supabase
-        .from('peticiones' as any)
-        .insert(basePayload as any)
-        .select()
-        .single() as any);
-
-      peticionData = resWithoutPin.data;
-      peticionError = resWithoutPin.error;
-    } else {
-      peticionData = resWithPin.data;
-      peticionError = resWithPin.error;
-    }
 
     if (peticionError || !peticionData) {
       console.error('Error insertando petición:', peticionError);
@@ -167,10 +142,8 @@ export const POST: APIRoute = async ({ request, url }) => {
       );
     }
 
-    // Asegurar que peticionData tenga el pin_acceso para el envío de correo y respuesta
-    if (!peticionData.pin_acceso) {
-      peticionData.pin_acceso = pinAcceso;
-    }
+    // Asignar el PIN de 6 dígitos en memoria para notificaciones y entrega
+    peticionData.pin_acceso = pinAcceso;
 
     // 2. Subir Archivo Principal al Storage y registrar en peticion_anexos (Carpeta del Radicado)
     let savedPrimaryFile = null;
