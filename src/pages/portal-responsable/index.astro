@@ -1519,9 +1519,9 @@ import Layout from '@layouts/Layout.astro';
       descText.textContent = currentSub.descripcion || 'Cargue los documentos de soporte requeridos para esta subcarpeta.';
     }
 
-    // Observaciones específicas de esta subcarpeta
+    // Observaciones de entrega (campo limpio para nuevos aportes)
     if (obsTextarea) {
-      obsTextarea.value = currentSub.observaciones || '';
+      obsTextarea.value = '';
     }
 
     // Tarjetas Grandes y Numeradas Pro Max con Indicador de Selección
@@ -1805,12 +1805,15 @@ import Layout from '@layouts/Layout.astro';
             if (!currentSub.anexos) currentSub.anexos = [];
             currentSub.anexos.unshift(resData.anexo);
             currentSub.estado_entrega = 'Entregado';
-            currentSub.observaciones = obs;
+            currentSub.observaciones = '';
           }
         }
 
         showPortalToast('Todos los anexos se subieron y radicaron correctamente.', 'success');
         selectedFilesToUpload = [];
+        if (fileInput) fileInput.value = '';
+        const obsEl = document.getElementById('portal-observaciones') as HTMLTextAreaElement | null;
+        if (obsEl) obsEl.value = '';
         if (dropZone) {
           dropZone.innerHTML = `
             <div class="drop-icon-box">
