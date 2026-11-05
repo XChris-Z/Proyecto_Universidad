@@ -174,8 +174,10 @@ try {
 const rawPeticiones = (dbPeticiones as any[]) || [];
 
 // Helper robusto para inferir subcarpetas virtuales si la tabla física aún no tiene registros (retrocompatibilidad)
-function inferSubcarpetas(p: any, dbSubs: any[] = []): any[] {
-  if (dbSubs && dbSubs.length > 0) return dbSubs;
+function combineSubcarpetas(p: any, dbSubs: any[] = []): any[] {
+  const mapByName: Record<string, any> = {};
+  (dbSubs || []).forEach(s => { if (s && s.nombre) mapByName[s.nombre.trim().toUpperCase()] = s; });
+
 
   const foundSubs: Record<string, { id: string; peticion_id: string; nombre: string; descripcion?: string | null }> = {};
 
@@ -237,8 +239,10 @@ function inferSubcarpetas(p: any, dbSubs: any[] = []): any[] {
     }
   }
 
-  return Object.values(foundSubs);
+  Object.values(foundSubs).forEach(s => { const k = s.nombre.trim().toUpperCase(); if (!mapByName[k]) mapByName[k] = s; });
+  return Object.values(mapByName);
 }
+const inferSubcarpetas = combineSubcarpetas;
 
 const peticiones: PeticionExpediente[] = rawPeticiones.map((p) => {
   const respObs = p.peticion_responsables?.find((r: any) => r?.observaciones_entrega?.includes('PIN:'))?.observaciones_entrega;

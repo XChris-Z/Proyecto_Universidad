@@ -131,7 +131,7 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
               <select id="solicitante-tipo" class="form-input">
                 <option value="Ciudadano" selected>Ciudadano / Particular</option>
                 <option value="Estudiante">Estudiante / Graduado</option>
-                <option value="Docente">Profesor / Investigador</option>
+                <option value="Profesor">Profesor / Investigador</option>
                 <option value="Entidad Pública">Entidad Pública / Órgano de Control</option>
                 <option value="Empresa Privada">Empresa / Convenio</option>
               </select>
@@ -405,12 +405,14 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
     const inputFechaEntrega = document.getElementById('fecha-limite-entrega') as HTMLInputElement;
     const previewFechaResp = document.getElementById('preview-fecha-responsable');
 
-    // Por defecto sugerir fecha a 15 días calendario a partir de hoy
+    // Por defecto sugerir fecha a 15 días calendario a partir de hoy (en zona horaria local)
     const today = new Date();
-    const defaultEntrega = new Date(today);
-    defaultEntrega.setDate(today.getDate() + 15);
+    const defaultEntrega = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 15);
+    const yyyy = defaultEntrega.getFullYear();
+    const mm = String(defaultEntrega.getMonth() + 1).padStart(2, '0');
+    const dd = String(defaultEntrega.getDate()).padStart(2, '0');
     if (inputFechaEntrega) {
-      inputFechaEntrega.value = String(defaultEntrega.toISOString().split('T')[0] ?? '');
+      inputFechaEntrega.value = `${yyyy}-${mm}-${dd}`;
       calculateFiveDaysRule();
       inputFechaEntrega.addEventListener('change', calculateFiveDaysRule);
       inputFechaEntrega.addEventListener('input', calculateFiveDaysRule);
@@ -465,7 +467,20 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
     const subcarpetasCountBadge = document.getElementById('subcarpetas-count-badge');
     const btnAddSubcarpeta = document.getElementById('btn-add-subcarpeta');
 
+    function syncCurrentInputsToState() {
+      subcarpetasContainer?.querySelectorAll('.subcarpeta-card').forEach((card) => {
+        const uid = Number(card.getAttribute('data-sub-uid'));
+        const sub = subcarpetasState.find((s) => s.uid === uid);
+        if (!sub) return;
+        const nameInput = card.querySelector('.sub-input-nombre') as HTMLInputElement | null;
+        const descInput = card.querySelector('.sub-input-desc') as HTMLTextAreaElement | null;
+        if (nameInput) sub.nombre = nameInput.value;
+        if (descInput) sub.descripcion = descInput.value;
+      });
+    }
+
     function renderSubcarpetas() {
+      syncCurrentInputsToState();
       if (!subcarpetasContainer) return;
       if (subcarpetasCountBadge) {
         subcarpetasCountBadge.textContent = `${subcarpetasState.length} Subcarpeta${subcarpetasState.length === 1 ? '' : 's'}`;
@@ -646,6 +661,7 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
     }
 
     btnAddSubcarpeta?.addEventListener('click', () => {
+      syncCurrentInputsToState();
       subcarpetasState.push({
         uid: Date.now(),
         nombre: `Subcarpeta ${subcarpetasState.length + 1}`,
@@ -668,9 +684,13 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
     const submitBtn = document.getElementById('btn-submit-peticion') as HTMLButtonElement;
     const modalSuccess = document.getElementById('modal-radicado-success');
 
+    let isSubmitting = false;
     if (form) {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
+        syncCurrentInputsToState();
+        isSubmitting = true;
 
         // Validaciones de arquitectura de subcarpetas
         if (subcarpetasState.length === 0) {
@@ -819,8 +839,12 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
               (window as any).showToast(uploadException.message || 'Error al cargar el documento adjunto.', 'error');
             }
             if (submitBtn) {
+              isSubmitting = false;
               submitBtn.disabled = false;
-              submitBtn.innerHTML = `<span>Radicar y Generar Notificaciones</span>`;
+              submitBtn.innerHTML = `
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                <span>Radicar Petición y Notificar Oficinas</span>
+              `;
             }
             return;
           }
@@ -946,6 +970,7 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
             (window as any).showAlert(errMsg, 'Error de Conexión');
           }
         } finally {
+          isSubmitting = false;
           if (submitBtn) {
             submitBtn.disabled = false;
             submitBtn.innerHTML = `
