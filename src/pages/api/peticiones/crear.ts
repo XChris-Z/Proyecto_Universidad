@@ -370,20 +370,42 @@ export const POST: APIRoute = async ({ request, url }) => {
     }
 
     // 5. Crear asignaciones en peticion_responsables vinculando la subcarpeta
+    // 5.1 Detectar si la columna subcarpeta_id existe en el schema cache de peticion_responsables
+    let hasSubcarpetaCol = true;
+    try {
+      const probeRes = await (supabase
+        .from('peticion_responsables' as any)
+        .select('id, subcarpeta_id')
+        .limit(1) as any);
+      if (
+        probeRes.error &&
+        (String(probeRes.error.message || '').includes('subcarpeta_id') ||
+         probeRes.error.code === '42703' ||
+         probeRes.error.code === 'PGRST204')
+      ) {
+        hasSubcarpetaCol = false;
+      }
+    } catch {
+      hasSubcarpetaCol = false;
+    }
+
     const asignacionesToInsert: any[] = [];
     for (let i = 0; i < subcarpetas.length; i++) {
       const sub = subcarpetas[i]!;
       const subId = createdSubcarpetasMap[i];
-      const validSubUuid = subId && !subId.startsWith('sub-local-') ? subId : null;
+      const validSubUuid = (hasSubcarpetaCol && subId && !subId.startsWith('sub-local-')) ? subId : null;
 
       for (const ofiId of sub.oficina_ids || []) {
-        asignacionesToInsert.push({
+        const item: any = {
           peticion_id: peticionData.id,
           oficina_id: ofiId,
-          subcarpeta_id: validSubUuid,
           estado_entrega: 'Pendiente',
           observaciones_entrega: `PIN:${finalPinAcceso} | [${sub.nombre}]${sub.descripcion ? ` ${sub.descripcion}` : ''}`,
-        });
+        };
+        if (hasSubcarpetaCol && validSubUuid) {
+          item.subcarpeta_id = validSubUuid;
+        }
+        asignacionesToInsert.push(item);
       }
     }
 
@@ -404,6 +426,7 @@ export const POST: APIRoute = async ({ request, url }) => {
          res.error.code === '42703' ||
          res.error.code === 'PGRST204')
       ) {
+        hasSubcarpetaCol = false;
         console.warn('Aviso: Columna subcarpeta_id no encontrada en schema cache. Reintentando inserción sin subcarpeta_id...');
         const withoutSub = list.map((item) => {
           const c = { ...item };
@@ -426,7 +449,8 @@ export const POST: APIRoute = async ({ request, url }) => {
       insertAttempt.error &&
       (insertAttempt.error.code === '23505' ||
        String(insertAttempt.error.message || '').includes('unique_peticion_oficina') ||
-       String(insertAttempt.error.message || '').includes('duplicate key'))
+       String(insertAttempt.error.message || '').includes('duplicate key') ||
+       String(insertAttempt.error.message || '').includes('peticion_responsables_peticion_id_oficina_id_key'))
     ) {
       console.warn('Restricción única unique_peticion_oficina detectada en PostgreSQL. Consolidando dependencias asignadas a múltiples subcarpetas...');
       const uniqueOfficeMap: Record<string, any> = {};
@@ -438,19 +462,23 @@ export const POST: APIRoute = async ({ request, url }) => {
           .join(' | ');
 
         let singleSubUuid: string | null = null;
-        if (matchingSubs.length === 1) {
+        if (hasSubcarpetaCol && matchingSubs.length === 1) {
           const subIdx = subcarpetas.indexOf(matchingSubs[0]!);
           const sId = createdSubcarpetasMap[subIdx];
           if (sId && !sId.startsWith('sub-local-')) singleSubUuid = sId;
         }
 
-        uniqueOfficeMap[ofiId] = {
+        const consolidatedItem: any = {
           peticion_id: peticionData.id,
           oficina_id: ofiId,
-          subcarpeta_id: singleSubUuid,
           estado_entrega: 'Pendiente',
           observaciones_entrega: `PIN:${finalPinAcceso} | ${subNotes}`,
         };
+        if (hasSubcarpetaCol && singleSubUuid) {
+          consolidatedItem.subcarpeta_id = singleSubUuid;
+        }
+
+        uniqueOfficeMap[ofiId] = consolidatedItem;
       }
 
       insertAttempt = await tryInsertSafe(Object.values(uniqueOfficeMap));

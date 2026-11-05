@@ -720,9 +720,28 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
         let archivoTamano: number = 0;
         let archivoBase64: string | null = null;
 
+        const detectSafeMime = (file: File): string => {
+          if (file.type && file.type.trim() && file.type !== 'application/octet-stream') {
+            return file.type;
+          }
+          const ext = file.name.split('.').pop()?.toLowerCase() || '';
+          switch (ext) {
+            case 'pdf': return 'application/pdf';
+            case 'doc': return 'application/msword';
+            case 'docx': return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+            case 'xls': return 'application/vnd.ms-excel';
+            case 'xlsx': return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+            case 'jpg':
+            case 'jpeg': return 'image/jpeg';
+            case 'png': return 'image/png';
+            case 'zip': return 'application/zip';
+            default: return 'application/pdf';
+          }
+        };
+
         if (primaryFile) {
           archivoNombre = primaryFile.name;
-          archivoMime = primaryFile.type || 'application/pdf';
+          archivoMime = detectSafeMime(primaryFile);
           archivoTamano = primaryFile.size;
 
           if (submitBtn) {
@@ -778,9 +797,9 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
               }
             }
 
-            // 3. Fallback a Base64 SOLO para archivos menores a 2 MB si falla la subida directa
+            // 3. Fallback a Base64 ESTRICTAMENTE para archivos menores a 1.5 MB para evitar 413 Payload Too Large
             if (!uploadedSuccessfully) {
-              if (primaryFile.size < 2 * 1024 * 1024) {
+              if (primaryFile.size < 1.5 * 1024 * 1024) {
                 archivoBase64 = await new Promise<string>((resolve, reject) => {
                   const reader = new FileReader();
                   reader.onload = () => {
@@ -791,7 +810,7 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
                   reader.readAsDataURL(primaryFile!);
                 });
               } else {
-                throw new Error('No se pudo subir el archivo grande al servidor de almacenamiento. Intente nuevamente o verifique su conexión.');
+                throw new Error('No se pudo subir el archivo adjunto (' + (primaryFile.size / (1024 * 1024)).toFixed(1) + ' MB) al almacenamiento institucional. Verifique su conexión a internet e intente nuevamente.');
               }
             }
           } catch (uploadException: any) {

@@ -25,7 +25,7 @@ export const POST: APIRoute = async ({ request }) => {
     // Intentar crear URL firmada de subida con el cliente administrativo (Service Role)
     const { data, error } = await supabase.storage
       .from(bucket)
-      .createSignedUploadUrl(cleanPath);
+      .createSignedUploadUrl(cleanPath, { upsert: true } as any);
 
     if (error || !data) {
       console.warn('Aviso generando signed upload URL:', error?.message);

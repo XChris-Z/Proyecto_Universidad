@@ -47,37 +47,26 @@ export const POST: APIRoute = async ({ request, url }) => {
     // 2. Obtener o generar PIN de 6 dígitos seguro para el radicado
     const pinAcceso = peticion.pin_acceso || getDeterministicPin(peticion.numero_radicado || peticion.id);
 
-    // 3. Crear el registro en public.peticion_subcarpetas
-    let createdSubcarpeta: any = null;
-    try {
-      const { data: subData, error: subErr } = await (supabase
-        .from('peticion_subcarpetas' as any)
-        .insert({
-          peticion_id: peticion.id,
-          nombre: cleanNombre,
-          descripcion: cleanDescripcion || null,
-        } as any)
-        .select()
-        .single() as any);
-
-      if (subErr) {
-        console.warn('Aviso insertando en peticion_subcarpetas:', subErr.message);
-      } else {
-        createdSubcarpeta = subData;
-      }
-    } catch (e: any) {
-      console.warn('Excepción insertando subcarpeta (tabla posiblemente no migrada aún):', e.message);
-    }
-
-    // Fallback en memoria si la tabla aún no existe físicamente en PostgreSQL
-    if (!createdSubcarpeta) {
-      createdSubcarpeta = {
-        id: crypto.randomUUID ? crypto.randomUUID() : `sub-${Date.now()}`,
+    // 3. PASO 1 OBLIGATORIO: Validar datos e insertar primero en public.peticion_subcarpetas
+    const { data: nuevaSub, error: errSub } = await (supabase
+      .from('peticion_subcarpetas' as any)
+      .insert({
         peticion_id: peticion.id,
         nombre: cleanNombre,
         descripcion: cleanDescripcion || null,
-        created_at: new Date().toISOString(),
-      };
+      } as any)
+      .select('*')
+      .single() as any);
+
+    if (errSub || !nuevaSub) {
+      console.error('Error estricto guardando subcarpeta en base de datos:', errSub);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `No se pudo registrar la subcarpeta en la base de datos: ${errSub?.message || 'Error en tabla peticion_subcarpetas'}. Verifique la ejecución del script supabase_subcarpetas.sql en Supabase.`,
+        }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
     // 4. Consultar catálogo de oficinas seleccionadas
@@ -87,104 +76,80 @@ export const POST: APIRoute = async ({ request, url }) => {
       .in('id', cleanOfficeIds) as any);
 
     if (ofisErr || !oficinasData || oficinasData.length === 0) {
+      // Revertir inserción de subcarpeta por consistencia
+      await (supabase.from('peticion_subcarpetas' as any).delete().eq('id', nuevaSub.id) as any);
       return new Response(
         JSON.stringify({ success: false, error: 'No se encontraron las dependencias seleccionadas.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    // 5. Insertar asignaciones en public.peticion_responsables
-    const asignacionesToInsert = oficinasData.map((ofi: any) => {
-      const payload: any = {
-        peticion_id: peticion.id,
-        oficina_id: ofi.id,
-        estado_entrega: 'Pendiente',
-        observaciones_entrega: `PIN:${pinAcceso} | [${cleanNombre}]${cleanDescripcion ? ` ${cleanDescripcion}` : ''}`,
-      };
-      if (createdSubcarpeta?.id && !createdSubcarpeta.id.startsWith('sub-')) {
-        payload.subcarpeta_id = createdSubcarpeta.id;
-      }
-      return payload;
-    });
+    // 5. PASO 2 OBLIGATORIO: Insertar las dependencias asignadas en public.peticion_responsables con subcarpeta_id real
+    const filasResponsables = oficinasData.map((ofi: any) => ({
+      peticion_id: peticion.id,
+      subcarpeta_id: nuevaSub.id,
+      oficina_id: ofi.id,
+      estado_entrega: 'Pendiente',
+      observaciones_entrega: `PIN:${pinAcceso} | [${cleanNombre}]${cleanDescripcion ? ` ${cleanDescripcion}` : ''}`,
+    }));
 
-    let respData: any = null;
-    let respErr: any = null;
+    let { data: respInsertados, error: errResp } = await (supabase
+      .from('peticion_responsables' as any)
+      .insert(filasResponsables as any)
+      .select('id, oficina_id, codigo_acceso, fecha_expiracion_codigo, storage_subfolder_path, estado_entrega, observaciones_entrega') as any);
 
-    const tryInsertSubResp = async (list: any[]) => {
-      return await (supabase
-        .from('peticion_responsables' as any)
-        .insert(list as any)
-        .select('id, oficina_id, codigo_acceso, fecha_expiracion_codigo, storage_subfolder_path, estado_entrega') as any);
-    };
-
-    let res = await tryInsertSubResp(asignacionesToInsert);
-
-    // Si falla por columna subcarpeta_id inexistente:
+    // Si falla por restricción unique_peticion_oficina (la dependencia ya estaba vinculada a la petición):
     if (
-      res.error &&
-      (String(res.error.message || '').includes('subcarpeta_id') ||
-       String(res.error.message || '').includes('schema cache') ||
-       res.error.code === '42703' ||
-       res.error.code === 'PGRST204')
+      errResp &&
+      (errResp.code === '23505' ||
+       String(errResp.message || '').includes('unique_peticion_oficina') ||
+       String(errResp.message || '').includes('duplicate key'))
     ) {
-      console.warn('Columna subcarpeta_id no encontrada en peticion_responsables. Reintentando sin subcarpeta_id...');
-      const fallbackAsignaciones = asignacionesToInsert.map((a: any) => {
-        const copy = { ...a };
-        delete copy.subcarpeta_id;
-        return copy;
-      });
-      res = await tryInsertSubResp(fallbackAsignaciones);
-    }
-
-    // Si falla por restricción unique_peticion_oficina (la dependencia ya estaba en la petición):
-    if (
-      res.error &&
-      (res.error.code === '23505' ||
-       String(res.error.message || '').includes('unique_peticion_oficina') ||
-       String(res.error.message || '').includes('duplicate key'))
-    ) {
-      console.warn('Dependencia ya vinculada a la petición. Actualizando asignación existente con la nueva subcarpeta...');
-      const { data: existingRows } = await (supabase
+      console.warn('Dependencia ya vinculada a la petición. Actualizando asignación existente con subcarpeta_id y observaciones...');
+      const { data: existingRows, error: errExisting } = await (supabase
         .from('peticion_responsables' as any)
         .select('id, oficina_id, codigo_acceso, fecha_expiracion_codigo, storage_subfolder_path, estado_entrega, observaciones_entrega')
         .eq('peticion_id', peticion.id)
         .in('oficina_id', cleanOfficeIds) as any);
 
-      if (existingRows && existingRows.length > 0) {
+      if (!errExisting && existingRows && existingRows.length > 0) {
         for (const row of existingRows) {
           const prevObs = row.observaciones_entrega || '';
-          if (!prevObs.includes(`[${cleanNombre}]`)) {
-            const updatedObs = `${prevObs} | [${cleanNombre}]${cleanDescripcion ? ` ${cleanDescripcion}` : ''}`;
-            await (supabase
-              .from('peticion_responsables' as any)
-              .update({ observaciones_entrega: updatedObs })
-              .eq('id', row.id) as any);
-          }
+          const updatedObs = prevObs.includes(`[${cleanNombre}]`)
+            ? prevObs
+            : `${prevObs} | [${cleanNombre}]${cleanDescripcion ? ` ${cleanDescripcion}` : ''}`;
+
+          await (supabase
+            .from('peticion_responsables' as any)
+            .update({
+              subcarpeta_id: nuevaSub.id,
+              observaciones_entrega: updatedObs,
+            } as any)
+            .eq('id', row.id) as any);
         }
-        respData = existingRows;
-        respErr = null;
-      } else {
-        respData = res.data;
-        respErr = res.error;
+        respInsertados = existingRows;
+        errResp = null;
       }
-    } else {
-      respData = res.data;
-      respErr = res.error;
     }
 
-    if (respErr || !respData) {
-      console.error('Error insertando responsables para subcarpeta:', respErr);
+    if (errResp || !respInsertados || respInsertados.length === 0) {
+      console.error('Error estricto guardando responsables de subcarpeta:', errResp);
+      // Revertir inserción de subcarpeta para mantener atomicidad
+      await (supabase.from('peticion_subcarpetas' as any).delete().eq('id', nuevaSub.id) as any);
       return new Response(
-        JSON.stringify({ success: false, error: respErr?.message || 'Error asignando dependencias a la subcarpeta.' }),
+        JSON.stringify({
+          success: false,
+          error: `Error asignando dependencias a la subcarpeta: ${errResp?.message || 'No se pudieron registrar las asignaciones en la base de datos.'}`,
+        }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    // 6. Enviar notificaciones por correo consolidadas
+    // 6. PASO 4 OBLIGATORIO: Enviar notificaciones por correo SOLO tras confirmar persistencia en pasos 1 y 2
     const baseUrl = url.origin;
     const emailPromises = [];
 
-    for (const resp of respData) {
+    for (const resp of respInsertados) {
       const ofi = oficinasData.find((o: any) => o.id === resp.oficina_id);
       const isTestOffice = ofi?.codigo?.toUpperCase().includes('PRUEBA') || ofi?.nombre?.toLowerCase().includes('prueba');
       const targetEmail = isTestOffice ? (ofi?.email_institucional || null) : null;
@@ -229,20 +194,24 @@ export const POST: APIRoute = async ({ request, url }) => {
       actionType: 'MODIFICACION',
       entity: 'Peticiones Radicadas',
       entityId: peticion.numero_radicado,
-      details: `Se agregó la subcarpeta "${cleanNombre}" con ${oficinasData.length} dependencias asignadas.`,
+      details: `Se registró en base de datos la subcarpeta "${cleanNombre}" con ${oficinasData.length} dependencias asignadas.`,
       severity: 'INFO',
     }).catch(() => {});
 
     return new Response(
       JSON.stringify({
         success: true,
-        subcarpeta: createdSubcarpeta,
-        responsables: respData.map((r: any) => {
+        subcarpeta: nuevaSub,
+        responsables: respInsertados.map((r: any) => {
           const ofi = oficinasData.find((o: any) => o.id === r.oficina_id);
           return {
             id: r.id,
+            oficina_id: r.oficina_id,
             oficina_nombre: ofi?.nombre,
             codigo_acceso: r.codigo_acceso,
+            subcarpeta_id: nuevaSub.id,
+            estado_entrega: r.estado_entrega || 'Pendiente',
+            observaciones_entrega: r.observaciones_entrega,
           };
         }),
       }),

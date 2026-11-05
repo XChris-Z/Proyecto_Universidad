@@ -256,7 +256,7 @@ const peticiones: PeticionExpediente[] = rawPeticiones.map((p) => {
   }));
 
   const initialSubs = subcarpetasPorPeticion[p.id] || [];
-  const finalSubs = inferSubcarpetas(p, initialSubs);
+  const finalSubs = combineSubcarpetas(p, initialSubs);
 
   return {
     ...p,
@@ -1514,9 +1514,9 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                     const allDeliveredInSub = subResps.length > 0 && deliveredCount >= subResps.length;
 
                     subcarpetaBlocks.push(`
-                      <div class="subfolder-bento-card" data-sub-name="${escapeHtml(sub.nombre)}" style="border: 1px solid ${allDeliveredInSub ? '#a7f3d0' : 'rgba(15, 23, 42, 0.08)'}; border-radius: 12px; overflow: hidden; background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.02); transition: opacity 0.25s ease, transform 0.25s ease;">
-                        <!-- Nivel 1: Encabezado de la Subcarpeta Bento -->
-                        <div style="background: ${allDeliveredInSub ? '#f0fdf4' : '#f8fafc'}; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid rgba(15, 23, 42, 0.06);">
+                      <div class="subfolder-bento-card" data-sub-name="${escapeHtml(sub.nombre)}" data-collapsed="false" style="border: 1px solid ${allDeliveredInSub ? '#a7f3d0' : 'rgba(15, 23, 42, 0.08)'}; border-radius: 12px; overflow: hidden; background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.02); transition: opacity 0.25s ease, transform 0.25s ease;">
+                        <!-- Nivel 1: Encabezado Clickeable de la Subcarpeta (Acordeón Pro Max) -->
+                        <div class="subcarpeta-header" data-sub-id="${escapeHtml(sub.id)}" style="background: ${allDeliveredInSub ? '#f0fdf4' : '#f8fafc'}; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; cursor: pointer; user-select: none; transition: background 0.2s ease;">
                           <div style="display: flex; align-items: center; gap: 10px;">
                             <div style="width: 32px; height: 32px; border-radius: 6px; background: #ffffff; border: 1px solid ${allDeliveredInSub ? '#a7f3d0' : 'rgba(15, 23, 42, 0.1)'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="${allDeliveredInSub ? '#047857' : '#006837'}" stroke-width="1.75"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
@@ -1533,90 +1533,99 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                               ` : ''}
                             </div>
                           </div>
-                          <span style="font-size: 0.74rem; font-weight: 800; padding: 4px 12px; border-radius: 6px; border: 1px solid; ${allDeliveredInSub ? 'background: #ecfdf5; color: #047857; border-color: #a7f3d0;' : 'background: #fffbeb; color: #854d0e; border-color: #fde68a;'}">
-                            ${deliveredCount} de ${subResps.length} Aportes entregados
-                          </span>
+                          <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 0.74rem; font-weight: 800; padding: 4px 12px; border-radius: 6px; border: 1px solid; ${allDeliveredInSub ? 'background: #ecfdf5; color: #047857; border-color: #a7f3d0;' : 'background: #fffbeb; color: #854d0e; border-color: #fde68a;'}">
+                              ${deliveredCount} de ${subResps.length} Aportes entregados
+                            </span>
+                            <div class="subcarpeta-chevron" style="width: 28px; height: 28px; border-radius: 6px; background: #ffffff; border: 1px solid rgba(15, 23, 42, 0.1); display: flex; align-items: center; justify-content: center; transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);">
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#334155" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                            </div>
+                          </div>
                         </div>
 
-                        <!-- Nivel 2: Lista de Aportes por Dependencia de esta Subcarpeta -->
-                        <div style="padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; background: #ffffff;">
-                          ${subResps.length > 0 ? subResps.map((r) => {
-                            const ofiAnexos = subAnexos.filter((a) => a && a.peticion_responsable_id === r.id);
-                            const isStateEntregado = String(r.estado_entrega || '').toLowerCase() === 'entregado';
-                            const isDelivered = ofiAnexos.length > 0 || (subcarpetas.length === 1 && isStateEntregado);
-                            const ofiNombre = Array.isArray(r.oficinas) ? (r.oficinas[0]?.nombre || 'Oficina Responsable') : (r.oficinas?.nombre || 'Oficina Responsable');
-                            const ofiCodigo = Array.isArray(r.oficinas) ? (r.oficinas[0]?.codigo || '') : (r.oficinas?.codigo || '');
-                            const rawObs = (r as any).observaciones_entrega || '';
-                            const cleanObs = extractSubObs(rawObs, sub.nombre);
+                        <!-- Nivel 2: Contenedor Acordeón Suave con CSS Grid -->
+                        <div class="subcarpeta-body-wrapper" style="display: grid; grid-template-rows: 1fr; transition: grid-template-rows 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease; opacity: 1;">
+                          <div class="subcarpeta-body-content" style="overflow: hidden;">
+                            <div style="padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; background: #ffffff; border-top: 1px solid rgba(15, 23, 42, 0.06);">
+                              ${subResps.length > 0 ? subResps.map((r) => {
+                                const ofiAnexos = subAnexos.filter((a) => a && a.peticion_responsable_id === r.id);
+                                const isStateEntregado = String(r.estado_entrega || '').toLowerCase() === 'entregado';
+                                const isDelivered = ofiAnexos.length > 0 || (subcarpetas.length === 1 && isStateEntregado);
+                                const ofiNombre = Array.isArray(r.oficinas) ? (r.oficinas[0]?.nombre || 'Oficina Responsable') : (r.oficinas?.nombre || 'Oficina Responsable');
+                                const ofiCodigo = Array.isArray(r.oficinas) ? (r.oficinas[0]?.codigo || '') : (r.oficinas?.codigo || '');
+                                const rawObs = (r as any).observaciones_entrega || '';
+                                const cleanObs = extractSubObs(rawObs, sub.nombre);
 
-                            return `
-                              <div style="background: #f8fafc; border: 1px solid rgba(15, 23, 42, 0.07); border-radius: 8px; padding: 14px 16px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
-                                  <div style="display: flex; align-items: center; gap: 8px;">
-                                    <strong style="font-size: 0.88rem; color: #0f172a; font-weight: 750;">Aporte de: ${escapeHtml(ofiNombre)}</strong>
-                                    ${ofiCodigo ? `<span style="font-size: 0.70rem; color: #64748b;">(${escapeHtml(ofiCodigo)})</span>` : ''}
-                                  </div>
-                                  <div style="display: flex; align-items: center; gap: 6px;">
-                                    <span style="font-family: monospace; font-size: 0.74rem; font-weight: 800; color: #006837; background: #ffffff; padding: 2px 7px; border-radius: 4px; border: 1px solid #a7f3d0;" title="Código Único de Acceso">${escapeHtml(r.codigo_acceso || 'UPQ')}</span>
-                                    <span style="font-size: 0.70rem; font-weight: 800; padding: 2px 8px; border-radius: 4px; border: 1px solid; ${isDelivered ? 'background: #ecfdf5; color: #047857; border-color: #a7f3d0;' : 'background: #fffbeb; color: #854d0e; border-color: #fde68a;'}">
-                                      ${isDelivered ? 'Entregado' : 'Pendiente de aporte'}
-                                    </span>
-                                  </div>
-                                </div>
+                                return `
+                                  <div style="background: #f8fafc; border: 1px solid rgba(15, 23, 42, 0.07); border-radius: 8px; padding: 14px 16px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                                      <div style="display: flex; align-items: center; gap: 8px;">
+                                        <strong style="font-size: 0.88rem; color: #0f172a; font-weight: 750;">Aporte de: ${escapeHtml(ofiNombre)}</strong>
+                                        ${ofiCodigo ? `<span style="font-size: 0.70rem; color: #64748b;">(${escapeHtml(ofiCodigo)})</span>` : ''}
+                                      </div>
+                                      <div style="display: flex; align-items: center; gap: 6px;">
+                                        <span style="font-family: monospace; font-size: 0.74rem; font-weight: 800; color: #006837; background: #ffffff; padding: 2px 7px; border-radius: 4px; border: 1px solid #a7f3d0;" title="Código Único de Acceso">${escapeHtml(r.codigo_acceso || 'UPQ')}</span>
+                                        <span style="font-size: 0.70rem; font-weight: 800; padding: 2px 8px; border-radius: 4px; border: 1px solid; ${isDelivered ? 'background: #ecfdf5; color: #047857; border-color: #a7f3d0;' : 'background: #fffbeb; color: #854d0e; border-color: #fde68a;'}">
+                                          ${isDelivered ? 'Entregado' : 'Pendiente de aporte'}
+                                        </span>
+                                      </div>
+                                    </div>
 
-                                ${ofiAnexos.length > 0 ? `
-                                  <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
-                                    <div style="font-size: 0.70rem; font-weight: 750; color: #475569; text-transform: uppercase; letter-spacing: 0.3px;">Documentos aportados en esta subcarpeta:</div>
-                                    ${ofiAnexos.map((oa) => `
-                                      <div style="background: #ffffff; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 6px; padding: 9px 12px; display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; gap: 10px;">
-                                        <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
-                                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#006837" stroke-width="1.75" style="flex-shrink: 0;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                                          <div style="min-width: 0;">
-                                            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                                              <strong style="color: #0f172a; word-break: break-all;">${escapeHtml(oa.nombre_archivo)}</strong>
-                                              <span style="font-size: 0.66rem; font-weight: 750; color: #006837; background: #ecfdf5; padding: 1px 6px; border-radius: 3px; border: 1px solid #a7f3d0;">[Subcarpeta ${escapeHtml(sub.nombre)} • Enviado por: ${escapeHtml(ofiNombre)}]</span>
+                                    ${ofiAnexos.length > 0 ? `
+                                      <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+                                        <div style="font-size: 0.70rem; font-weight: 750; color: #475569; text-transform: uppercase; letter-spacing: 0.3px;">Documentos aportados en esta subcarpeta:</div>
+                                        ${ofiAnexos.map((oa) => `
+                                          <div style="background: #ffffff; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 6px; padding: 9px 12px; display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; gap: 10px;">
+                                            <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#006837" stroke-width="1.75" style="flex-shrink: 0;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                              <div style="min-width: 0;">
+                                                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                                  <strong style="color: #0f172a; word-break: break-all;">${escapeHtml(oa.nombre_archivo)}</strong>
+                                                  <span style="font-size: 0.66rem; font-weight: 750; color: #006837; background: #ecfdf5; padding: 1px 6px; border-radius: 3px; border: 1px solid #a7f3d0;">[Subcarpeta ${escapeHtml(sub.nombre)} • Enviado por: ${escapeHtml(ofiNombre)}]</span>
+                                                </div>
+                                                <div style="font-size: 0.68rem; color: #64748b; margin-top: 2px;">
+                                                  ${formatFileSize(oa.tamano_bytes)}${oa.created_at ? ` • Subido el ${new Date(oa.created_at).toLocaleDateString('es-CO')}` : ''}
+                                                </div>
+                                              </div>
                                             </div>
-                                            <div style="font-size: 0.68rem; color: #64748b; margin-top: 2px;">
-                                              ${formatFileSize(oa.tamano_bytes)}${oa.created_at ? ` • Subido el ${new Date(oa.created_at).toLocaleDateString('es-CO')}` : ''}
+                                            <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                                              <a href="${getPublicStorageUrl(oa.storage_path)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" class="btn btn-secondary btn-sm" style="text-decoration: none; font-size: 0.72rem; padding: 4px 9px; font-weight: 750;">
+                                                Ver
+                                              </a>
+                                              <a href="${getPublicStorageUrl(oa.storage_path)}" download="${escapeHtml(oa.nombre_archivo)}" onclick="event.stopPropagation()" class="btn btn-primary btn-sm" style="text-decoration: none; font-size: 0.72rem; padding: 4px 9px; font-weight: 750; background: #006837; color: #ffffff;">
+                                                Descargar
+                                              </a>
                                             </div>
                                           </div>
-                                        </div>
-                                        <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
-                                          <a href="${getPublicStorageUrl(oa.storage_path)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="text-decoration: none; font-size: 0.72rem; padding: 4px 9px; font-weight: 750;">
-                                            Ver
-                                          </a>
-                                          <a href="${getPublicStorageUrl(oa.storage_path)}" download="${escapeHtml(oa.nombre_archivo)}" class="btn btn-primary btn-sm" style="text-decoration: none; font-size: 0.72rem; padding: 4px 9px; font-weight: 750; background: #006837; color: #ffffff;">
-                                            Descargar
-                                          </a>
-                                        </div>
+                                        `).join('')}
                                       </div>
-                                    `).join('')}
-                                  </div>
-                                ` : `
-                                  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 8px; padding: 10px 12px; background: #ffffff; border: 1px dashed #cbd5e1; border-radius: 6px;">
-                                    <span style="font-size: 0.76rem; color: #64748b; font-style: italic;">Pendiente de entrega (Sin archivos cargados aún)</span>
-                                    <button type="button" class="btn btn-secondary btn-sm btn-subir-soporte-manual" data-resp-id="${escapeHtml(r.id)}" data-sub-id="${escapeHtml(sub.id)}" data-sub-nombre="${escapeHtml(sub.nombre)}" data-ofi-nombre="${escapeHtml(ofiNombre)}" style="font-size: 0.72rem; padding: 4px 10px; font-weight: 750; border: 1px solid #006837; color: #006837; background: #f0fdf4;">
-                                      Subir soporte manualmente
-                                    </button>
-                                  </div>
-                                `}
+                                    ` : `
+                                      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 8px; padding: 10px 12px; background: #ffffff; border: 1px dashed #cbd5e1; border-radius: 6px;">
+                                        <span style="font-size: 0.76rem; color: #64748b; font-style: italic;">Pendiente de entrega (Sin archivos cargados aún)</span>
+                                        <button type="button" class="btn btn-secondary btn-sm btn-subir-soporte-manual" onclick="event.stopPropagation()" data-resp-id="${escapeHtml(r.id)}" data-sub-id="${escapeHtml(sub.id)}" data-sub-nombre="${escapeHtml(sub.nombre)}" data-ofi-nombre="${escapeHtml(ofiNombre)}" style="font-size: 0.72rem; padding: 4px 10px; font-weight: 750; border: 1px solid #006837; color: #006837; background: #f0fdf4;">
+                                          Subir soporte manualmente
+                                        </button>
+                                      </div>
+                                    `}
 
-                                ${cleanObs ? `
-                                  <div style="margin-top: 10px; background: #ffffff; border: 1px solid rgba(15, 23, 42, 0.08); border-left: 3px solid #b8860b; border-radius: 6px; padding: 10px 14px; font-size: 0.78rem; color: #334155;">
-                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px;">
-                                      <strong style="color: #854d0e; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.3px;">Observación del Aporte:</strong>
-                                      ${r.fecha_entrega ? `<span style="font-size: 0.68rem; color: #64748b;">${new Date(r.fecha_entrega).toLocaleDateString('es-CO')}</span>` : ''}
-                                    </div>
-                                    <div style="line-height: 1.45;">"${escapeHtml(cleanObs)}"</div>
+                                    ${cleanObs ? `
+                                      <div style="margin-top: 10px; background: #ffffff; border: 1px solid rgba(15, 23, 42, 0.08); border-left: 3px solid #b8860b; border-radius: 6px; padding: 10px 14px; font-size: 0.78rem; color: #334155;">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px;">
+                                          <strong style="color: #854d0e; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.3px;">Observación del Aporte:</strong>
+                                          ${r.fecha_entrega ? `<span style="font-size: 0.68rem; color: #64748b;">${new Date(r.fecha_entrega).toLocaleDateString('es-CO')}</span>` : ''}
+                                        </div>
+                                        <div style="line-height: 1.45;">"${escapeHtml(cleanObs)}"</div>
+                                      </div>
+                                    ` : ''}
                                   </div>
-                                ` : ''}
-                              </div>
-                            `;
-                          }).join('') : `
-                            <div style="font-size: 0.78rem; color: #64748b; font-style: italic;">
-                              No hay dependencias asignadas en esta subcarpeta.
+                                `;
+                              }).join('') : `
+                                <div style="font-size: 0.78rem; color: #64748b; font-style: italic;">
+                                  No hay dependencias asignadas en esta subcarpeta.
+                                </div>
+                              `}
                             </div>
-                          `}
+                          </div>
                         </div>
                       </div>
                     `);
@@ -1635,8 +1644,8 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
 
                 if (unassignedResps.length > 0) {
                   subcarpetaBlocks.push(`
-                    <div class="subfolder-bento-card" data-sub-name="Expediente General" style="border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 12px; overflow: hidden; background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
-                      <div style="background: #f8fafc; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid rgba(15, 23, 42, 0.06);">
+                    <div class="subfolder-bento-card" data-sub-name="Expediente General" data-collapsed="false" style="border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 12px; overflow: hidden; background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+                      <div class="subcarpeta-header" style="background: #f8fafc; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; cursor: pointer; user-select: none; border-bottom: 1px solid rgba(15, 23, 42, 0.06); transition: background 0.2s ease;">
                         <div style="display: flex; align-items: center; gap: 10px;">
                           <div style="width: 32px; height: 32px; border-radius: 6px; background: #ffffff; border: 1px solid rgba(15, 23, 42, 0.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#b8860b" stroke-width="1.75"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
@@ -1646,82 +1655,66 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                             <div style="font-size: 0.74rem; color: #64748b; margin-top: 2px;">Dependencias requeridas directamente para el radicado</div>
                           </div>
                         </div>
-                        <span style="font-size: 0.72rem; font-weight: 800; color: #854d0e; background: #fefce8; padding: 3px 10px; border-radius: 6px; border: 1px solid #fef08a;">
-                          ${unassignedResps.length} dependencia${unassignedResps.length === 1 ? '' : 's'}
-                        </span>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                          <span style="font-size: 0.72rem; font-weight: 800; color: #854d0e; background: #fefce8; padding: 3px 10px; border-radius: 6px; border: 1px solid #fef08a;">
+                            ${unassignedResps.length} dependencia${unassignedResps.length === 1 ? '' : 's'}
+                          </span>
+                          <div class="subcarpeta-chevron" style="width: 28px; height: 28px; border-radius: 6px; background: #ffffff; border: 1px solid rgba(15, 23, 42, 0.1); display: flex; align-items: center; justify-content: center; transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#334155" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                          </div>
+                        </div>
                       </div>
 
-                      <div style="padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; background: #ffffff;">
-                        ${unassignedResps.map((r) => {
-                          if (!r) return '';
-                          const ofiAnexos = anexosOficinas.filter((a) => a && a.peticion_responsable_id === r.id);
-                          const isStateEntregado = String(r.estado_entrega || '').toLowerCase() === 'entregado';
-                          const isDelivered = isStateEntregado || ofiAnexos.length > 0;
-                          const ofiNombre = Array.isArray(r.oficinas) ? (r.oficinas[0]?.nombre || 'Oficina Responsable') : (r.oficinas?.nombre || 'Oficina Responsable');
-                          const ofiCodigo = Array.isArray(r.oficinas) ? (r.oficinas[0]?.codigo || '') : (r.oficinas?.codigo || '');
-                          const rawObs = (r as any).observaciones_entrega || '';
-                          const cleanObs = rawObs.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '').trim();
+                      <div class="subcarpeta-body-wrapper" style="display: grid; grid-template-rows: 1fr; transition: grid-template-rows 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease; opacity: 1;">
+                        <div class="subcarpeta-body-content" style="overflow: hidden;">
+                          <div style="padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; background: #ffffff; border-top: 1px solid rgba(15, 23, 42, 0.06);">
+                            ${unassignedResps.map((r) => {
+                              if (!r) return '';
+                              const ofiAnexos = anexosOficinas.filter((a) => a && a.peticion_responsable_id === r.id);
+                              const isStateEntregado = String(r.estado_entrega || '').toLowerCase() === 'entregado';
+                              const isDelivered = isStateEntregado || ofiAnexos.length > 0;
+                              const ofiNombre = Array.isArray(r.oficinas) ? (r.oficinas[0]?.nombre || 'Oficina Responsable') : (r.oficinas?.nombre || 'Oficina Responsable');
+                              const ofiCodigo = Array.isArray(r.oficinas) ? (r.oficinas[0]?.codigo || '') : (r.oficinas?.codigo || '');
+                              const rawObs = (r as any).observaciones_entrega || '';
+                              const cleanObs = rawObs.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '').trim();
 
-                          return `
-                            <div style="background: #f8fafc; border: 1px solid rgba(15, 23, 42, 0.07); border-radius: 8px; padding: 12px 14px;">
-                              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                  <strong style="font-size: 0.88rem; color: #0f172a; font-weight: 750;">${escapeHtml(ofiNombre)}</strong>
-                                  ${ofiCodigo ? `<span style="font-size: 0.70rem; color: #64748b;">(${escapeHtml(ofiCodigo)})</span>` : ''}
-                                </div>
-                                <div style="display: flex; align-items: center; gap: 6px;">
-                                  <span style="font-family: monospace; font-size: 0.74rem; font-weight: 800; color: #006837; background: #ffffff; padding: 2px 6px; border-radius: 4px; border: 1px solid #a7f3d0;">${escapeHtml(r.codigo_acceso || 'UPQ')}</span>
-                                  <span style="font-size: 0.70rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; border: 1px solid; ${isDelivered ? 'background: #ecfdf5; color: #047857; border-color: #a7f3d0;' : 'background: #fffbeb; color: #854d0e; border-color: #fde68a;'}">
-                                    ${isDelivered ? 'Entregado' : 'Pendiente'}
-                                  </span>
-                                </div>
-                              </div>
+                              return `
+                                <div style="background: #f8fafc; border: 1px solid rgba(15, 23, 42, 0.07); border-radius: 8px; padding: 12px 14px;">
+                                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                      <strong style="font-size: 0.86rem; color: #0f172a; font-weight: 750;">Aporte de: ${escapeHtml(ofiNombre)}</strong>
+                                      ${ofiCodigo ? `<span style="font-size: 0.70rem; color: #64748b;">(${escapeHtml(ofiCodigo)})</span>` : ''}
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                      <span style="font-family: monospace; font-size: 0.72rem; font-weight: 800; color: #b8860b; background: #ffffff; padding: 2px 6px; border-radius: 4px; border: 1px solid #fef08a;" title="Código Único de Acceso">${escapeHtml(r.codigo_acceso || 'UPQ')}</span>
+                                      <span style="font-size: 0.68rem; font-weight: 800; padding: 2px 7px; border-radius: 4px; border: 1px solid; ${isDelivered ? 'background: #ecfdf5; color: #047857; border-color: #a7f3d0;' : 'background: #fffbeb; color: #854d0e; border-color: #fde68a;'}">
+                                        ${isDelivered ? 'Entregado' : 'Pendiente de aporte'}
+                                      </span>
+                                    </div>
+                                  </div>
 
-                              ${ofiAnexos.length > 0 ? `
-                                <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
-                                  ${ofiAnexos.map((oa) => `
-                                    <div style="background: #ffffff; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 6px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; gap: 10px;">
-                                      <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
-                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#006837" stroke-width="1.75" style="flex-shrink: 0;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                                        <div style="min-width: 0;">
-                                          <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                                            <strong style="color: #0f172a; word-break: break-all;">${escapeHtml(oa.nombre_archivo)}</strong>
-                                            <span style="font-size: 0.66rem; font-weight: 750; color: #006837; background: #ecfdf5; padding: 1px 6px; border-radius: 3px; border: 1px solid #a7f3d0;">[General • Enviado por: ${escapeHtml(ofiNombre)}]</span>
+                                  ${ofiAnexos.length > 0 ? `
+                                    <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
+                                      <div style="font-size: 0.68rem; font-weight: 750; color: #475569; text-transform: uppercase;">Documentos aportados:</div>
+                                      ${ofiAnexos.map((oa) => `
+                                        <div style="background: #ffffff; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 6px; padding: 8px 10px; display: flex; justify-content: space-between; align-items: center; font-size: 0.76rem; gap: 8px;">
+                                          <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
+                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#b8860b" stroke-width="1.75"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                            <span style="color: #0f172a; font-weight: 700; word-break: break-all;">${escapeHtml(oa.nombre_archivo)}</span>
                                           </div>
-                                          <div style="font-size: 0.68rem; color: #64748b; margin-top: 2px;">
-                                            ${formatFileSize(oa.tamano_bytes)}${oa.created_at ? ` • Subido el ${new Date(oa.created_at).toLocaleDateString('es-CO')}` : ''}
+                                          <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                                            <a href="${getPublicStorageUrl(oa.storage_path)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" class="btn btn-secondary btn-sm" style="text-decoration: none; font-size: 0.70rem; padding: 3px 8px; font-weight: 750;">Ver</a>
+                                            <a href="${getPublicStorageUrl(oa.storage_path)}" download="${escapeHtml(oa.nombre_archivo)}" onclick="event.stopPropagation()" class="btn btn-primary btn-sm" style="text-decoration: none; font-size: 0.70rem; padding: 3px 8px; font-weight: 750; background: #006837; color: #ffffff;">Descargar</a>
                                           </div>
                                         </div>
-                                      </div>
-                                      <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
-                                        <a href="${getPublicStorageUrl(oa.storage_path)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="text-decoration: none; font-size: 0.70rem; padding: 3px 8px; font-weight: 750;">
-                                          Ver
-                                        </a>
-                                        <a href="${getPublicStorageUrl(oa.storage_path)}" download="${escapeHtml(oa.nombre_archivo)}" class="btn btn-primary btn-sm" style="text-decoration: none; font-size: 0.70rem; padding: 3px 8px; font-weight: 750; background: #006837; color: #ffffff;">
-                                          Descargar
-                                        </a>
-                                      </div>
+                                      `).join('')}
                                     </div>
-                                  `).join('')}
+                                  ` : ''}
                                 </div>
-                              ` : `
-                                <div style="font-size: 0.74rem; color: #64748b; font-style: italic;">
-                                  Esta dependencia aún no ha cargado anexos en el radicado.
-                                </div>
-                              `}
-
-                              ${cleanObs ? `
-                                <div style="margin-top: 8px; background: #ffffff; border: 1px solid rgba(15, 23, 42, 0.08); border-left: 3px solid #b8860b; border-radius: 6px; padding: 8px 12px; font-size: 0.78rem; color: #334155;">
-                                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px;">
-                                    <strong style="color: #854d0e; font-size: 0.72rem; text-transform: uppercase;">Observación de la oficina:</strong>
-                                    ${r.fecha_entrega ? `<span style="font-size: 0.68rem; color: #64748b;">${new Date(r.fecha_entrega).toLocaleDateString('es-CO')}</span>` : ''}
-                                  </div>
-                                  <div style="line-height: 1.45;">"${escapeHtml(cleanObs)}"</div>
-                                </div>
-                              ` : ''}
-                            </div>
-                          `;
-                        }).join('')}
+                              `;
+                            }).join('')}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   `);
@@ -1777,6 +1770,31 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                 htmlCard.style.display = 'none';
               }
             });
+          });
+        });
+
+        // Registrar listener para Acordeón Vertical Pro Max en cada subcarpeta
+        container.querySelectorAll('.subcarpeta-header').forEach((hdr) => {
+          hdr.addEventListener('click', (e) => {
+            const h = e.currentTarget as HTMLElement;
+            const card = h.closest('.subfolder-bento-card');
+            if (!card) return;
+            const wrapper = card.querySelector('.subcarpeta-body-wrapper') as HTMLElement | null;
+            const chevron = h.querySelector('.subcarpeta-chevron') as HTMLElement | null;
+            if (!wrapper) return;
+
+            const isCollapsed = card.getAttribute('data-collapsed') === 'true';
+            if (isCollapsed) {
+              card.setAttribute('data-collapsed', 'false');
+              wrapper.style.gridTemplateRows = '1fr';
+              wrapper.style.opacity = '1';
+              if (chevron) chevron.style.transform = 'rotate(0deg)';
+            } else {
+              card.setAttribute('data-collapsed', 'true');
+              wrapper.style.gridTemplateRows = '0fr';
+              wrapper.style.opacity = '0';
+              if (chevron) chevron.style.transform = 'rotate(-90deg)';
+            }
           });
         });
 
@@ -2227,8 +2245,12 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       if (subcarpetaModal) subcarpetaModal.style.display = 'flex';
     }
 
+    let isSubmittingSubfolder = false;
+
     formCrearSubcarpeta?.addEventListener('submit', async (e: Event) => {
       e.preventDefault();
+      if (isSubmittingSubfolder) return;
+
       const petIdInput = document.getElementById('subcarpeta-target-pet-id') as HTMLInputElement | null;
       const nombreInput = document.getElementById('subcarpeta-nombre-input') as HTMLInputElement | null;
       const descInput = document.getElementById('subcarpeta-desc-input') as HTMLTextAreaElement | null;
@@ -2252,12 +2274,12 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         return;
       }
 
+      isSubmittingSubfolder = true;
       if (submitBtn) {
         submitBtn.disabled = true;
         submitBtn.textContent = 'Creando y notificando...';
       }
 
-      let successCreated = false;
       try {
         const res = await fetch('/api/peticiones/subcarpetas/crear', {
           method: 'POST',
@@ -2278,7 +2300,6 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
           return;
         }
 
-        successCreated = true;
         if (typeof (window as any).showToast === 'function') {
           (window as any).showToast('Subcarpeta creada exitosamente y dependencias notificadas vía correo.', 'success');
         }
@@ -2301,6 +2322,9 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                 if (r.observaciones_entrega) {
                   existing.observaciones_entrega = r.observaciones_entrega;
                 }
+                if (r.subcarpeta_id) {
+                  existing.subcarpeta_id = r.subcarpeta_id;
+                }
               } else {
                 pet.peticion_responsables!.push({
                   id: r.id,
@@ -2320,12 +2344,11 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         }
       } catch (err: any) {
         console.error('Error al crear subcarpeta:', err);
-        if (!successCreated && typeof (window as any).showToast === 'function') {
+        if (typeof (window as any).showToast === 'function') {
           (window as any).showToast('Error de red al crear la subcarpeta.', 'error');
-        } else if (successCreated) {
-          setTimeout(() => window.location.reload(), 600);
         }
       } finally {
+        isSubmittingSubfolder = false;
         if (submitBtn) {
           submitBtn.disabled = false;
           submitBtn.textContent = 'Crear Subcarpeta y Notificar';

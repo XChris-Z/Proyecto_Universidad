@@ -34,6 +34,11 @@ ADD COLUMN IF NOT EXISTS observaciones TEXT;
 ALTER TABLE public.peticion_responsables 
 DROP CONSTRAINT IF EXISTS unique_peticion_oficina;
 
+ALTER TABLE public.peticion_responsables 
+DROP CONSTRAINT IF EXISTS peticion_responsables_peticion_id_oficina_id_key;
+
+DROP INDEX IF EXISTS public.idx_peticion_responsables_peticion_oficina;
+
 -- 4. Vincular peticion_anexos a la subcarpeta correspondiente
 ALTER TABLE public.peticion_anexos
 ADD COLUMN IF NOT EXISTS subcarpeta_id UUID REFERENCES public.peticion_subcarpetas(id) ON DELETE SET NULL;
