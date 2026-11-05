@@ -194,17 +194,21 @@ export const POST: APIRoute = async ({ request, url }) => {
       );
     }
 
-    // Asignar el PIN de 6 dígitos en memoria para notificaciones y trazabilidad
-    peticionData.pin_acceso = pinAcceso;
+    // Si PostgreSQL ya generó un PIN válido mediante trigger o columna, sincronizar con él; de lo contrario usar el generado
+    const finalPinAcceso = (peticionData.pin_acceso && /^\d{6}$/.test(String(peticionData.pin_acceso).trim()))
+      ? String(peticionData.pin_acceso).trim()
+      : pinAcceso;
+
+    peticionData.pin_acceso = finalPinAcceso;
 
     // Intentar actualizar la columna pin_acceso de forma no bloqueante si ya fue creada en PostgreSQL
     try {
       await (supabase
         .from('peticiones' as any)
-        .update({ pin_acceso: pinAcceso } as any)
+        .update({ pin_acceso: finalPinAcceso } as any)
         .eq('id', peticionData.id) as any);
     } catch (pinUpdateErr) {
-      // Silencioso si la columna física aún no existe
+      // Silencioso si la columna física aún no existe en el schema cache
     }
 
     // 2. Subir o mover Archivo Principal al Storage y registrar en peticion_anexos (Carpeta del Radicado)
@@ -354,7 +358,7 @@ export const POST: APIRoute = async ({ request, url }) => {
           oficina_id: ofiId,
           subcarpeta_id: validSubUuid,
           estado_entrega: 'Pendiente',
-          observaciones_entrega: `PIN:${pinAcceso} | [${sub.nombre}]${sub.descripcion ? ` ${sub.descripcion}` : ''}`,
+          observaciones_entrega: `PIN:${finalPinAcceso} | [${sub.nombre}]${sub.descripcion ? ` ${sub.descripcion}` : ''}`,
         });
       }
     }
@@ -362,32 +366,36 @@ export const POST: APIRoute = async ({ request, url }) => {
     let responsablesData: any = null;
     let respError: any = null;
 
-    const tryInsertResponsables = async (list: any[]) => {
-      return await (supabase
+    // Helper con reintentos inteligentes contra errores de schema cache (subcarpeta_id)
+    const tryInsertSafe = async (list: any[]) => {
+      let res = await (supabase
         .from('peticion_responsables' as any)
         .insert(list as any)
         .select('id, oficina_id, codigo_acceso, fecha_expiracion_codigo, storage_subfolder_path, estado_entrega') as any);
+
+      if (
+        res.error &&
+        (String(res.error.message || '').includes('subcarpeta_id') ||
+         String(res.error.message || '').includes('schema cache') ||
+         res.error.code === '42703' ||
+         res.error.code === 'PGRST204')
+      ) {
+        console.warn('Aviso: Columna subcarpeta_id no encontrada en schema cache. Reintentando inserción sin subcarpeta_id...');
+        const withoutSub = list.map((item) => {
+          const c = { ...item };
+          delete c.subcarpeta_id;
+          return c;
+        });
+        res = await (supabase
+          .from('peticion_responsables' as any)
+          .insert(withoutSub as any)
+          .select('id, oficina_id, codigo_acceso, fecha_expiracion_codigo, storage_subfolder_path, estado_entrega') as any);
+      }
+      return res;
     };
 
-    // Intento 1: Inserción directa (vinculando subcarpeta_id si la columna existe)
-    let insertAttempt = await tryInsertResponsables(asignacionesToInsert);
-
-    // Si falla por columna subcarpeta_id inexistente en schema cache:
-    if (
-      insertAttempt.error &&
-      (String(insertAttempt.error.message || '').includes('subcarpeta_id') ||
-       String(insertAttempt.error.message || '').includes('schema cache') ||
-       insertAttempt.error.code === '42703' ||
-       insertAttempt.error.code === 'PGRST204')
-    ) {
-      console.warn('Columna subcarpeta_id no encontrada. Reintentando radicación sin subcarpeta_id...');
-      const fallbackList = asignacionesToInsert.map((a: any) => {
-        const copy = { ...a };
-        delete copy.subcarpeta_id;
-        return copy;
-      });
-      insertAttempt = await tryInsertResponsables(fallbackList);
-    }
+    // Intento 1: Inserción directa (asignaciones individuales por subcarpeta)
+    let insertAttempt = await tryInsertSafe(asignacionesToInsert);
 
     // Si falla por restricción única (unique_peticion_oficina o código 23505 duplicate key):
     if (
@@ -405,15 +413,23 @@ export const POST: APIRoute = async ({ request, url }) => {
           .map((s) => `[${s.nombre}]${s.descripcion ? ` ${s.descripcion}` : ''}`)
           .join(' | ');
 
+        let singleSubUuid: string | null = null;
+        if (matchingSubs.length === 1) {
+          const subIdx = subcarpetas.indexOf(matchingSubs[0]!);
+          const sId = createdSubcarpetasMap[subIdx];
+          if (sId && !sId.startsWith('sub-local-')) singleSubUuid = sId;
+        }
+
         uniqueOfficeMap[ofiId] = {
           peticion_id: peticionData.id,
           oficina_id: ofiId,
+          subcarpeta_id: singleSubUuid,
           estado_entrega: 'Pendiente',
-          observaciones_entrega: `PIN:${pinAcceso} | ${subNotes}`,
+          observaciones_entrega: `PIN:${finalPinAcceso} | ${subNotes}`,
         };
       }
 
-      insertAttempt = await tryInsertResponsables(Object.values(uniqueOfficeMap));
+      insertAttempt = await tryInsertSafe(Object.values(uniqueOfficeMap));
     }
 
     responsablesData = insertAttempt.data;
@@ -458,7 +474,7 @@ export const POST: APIRoute = async ({ request, url }) => {
             descripcion: s.descripcion || 'Entrega de anexos oficiales para esta subcarpeta.',
           }));
 
-        const portalUrl = `${baseUrl}/portal-responsable?codigo=${encodeURIComponent(accessCode)}&email=${encodeURIComponent(targetEmail)}&pin=${encodeURIComponent(pinAcceso)}`;
+        const portalUrl = `${baseUrl}/portal-responsable?codigo=${encodeURIComponent(accessCode)}&email=${encodeURIComponent(targetEmail)}&pin=${encodeURIComponent(finalPinAcceso)}`;
 
         const emailPromise = sendPeticionAssignmentEmail({
           toEmail: targetEmail,
@@ -472,7 +488,7 @@ export const POST: APIRoute = async ({ request, url }) => {
           fechaLimiteEntrega: peticionData.fecha_limite_entrega,
           fechaLimiteResponsable: peticionData.fecha_limite_responsable,
           codigoAcceso: accessCode,
-          pinAcceso: pinAcceso,
+          pinAcceso: finalPinAcceso,
           portalUrl,
           attachments: emailAttachments,
         }).catch((err: any) => {
@@ -509,7 +525,7 @@ export const POST: APIRoute = async ({ request, url }) => {
           fecha_limite_entrega: peticionData.fecha_limite_entrega,
           fecha_limite_responsable: peticionData.fecha_limite_responsable,
           storage_folder_path: peticionData.storage_folder_path,
-          pin_acceso: pinAcceso,
+          pin_acceso: finalPinAcceso,
           archivo_principal: savedPrimaryFile,
         },
         subcarpetas: createdSubcarpetasInfo,

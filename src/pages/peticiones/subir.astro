@@ -730,23 +730,56 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
             submitBtn.innerHTML = `<span>Subiendo documento (${(primaryFile.size / (1024 * 1024)).toFixed(1)} MB)...</span>`;
           }
 
-          // Blindaje contra límite de Vercel (413 Payload Too Large): Subir archivo directo al Storage
+          // Blindaje contra límite de Vercel (413 Payload Too Large) y RLS del Storage:
           const cleanName = primaryFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
           const tempPath = `temp_radicaciones/${Date.now()}_${cleanName}`;
+          let uploadedSuccessfully = false;
 
           try {
-            const { data: uploadData, error: uploadErr } = await supabase.storage
-              .from('peticiones')
-              .upload(tempPath, primaryFile, {
-                contentType: archivoMime,
-                upsert: true,
+            // 1. Intentar subir mediante URL firmada de subida (Service Role / Administrativa)
+            try {
+              const signedRes = await fetch('/api/storage/signed-url', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ bucket: 'peticiones', path: tempPath }),
               });
+              const signedJson = await signedRes.json().catch(() => ({}));
+              if (signedJson.success && signedJson.signedUrl) {
+                const putRes = await fetch(signedJson.signedUrl, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': archivoMime },
+                  body: primaryFile,
+                });
+                if (putRes.ok) {
+                  archivoStoragePath = signedJson.path || tempPath;
+                  uploadedSuccessfully = true;
+                }
+              }
+            } catch (signedErr) {
+              console.warn('Aviso en subida por URL firmada:', signedErr);
+            }
 
-            if (!uploadErr && uploadData?.path) {
-              archivoStoragePath = uploadData.path;
-            } else {
-              console.warn('Aviso en subida directa al storage:', uploadErr);
-              // Fallback a base64 solo para archivos pequeños (< 2 MB)
+            // 2. Si no se pudo por URL firmada, intentar con SDK de Supabase directo
+            if (!uploadedSuccessfully) {
+              try {
+                const { data: uploadData, error: uploadErr } = await supabase.storage
+                  .from('peticiones')
+                  .upload(tempPath, primaryFile, {
+                    contentType: archivoMime,
+                    upsert: true,
+                  });
+
+                if (!uploadErr && uploadData?.path) {
+                  archivoStoragePath = uploadData.path;
+                  uploadedSuccessfully = true;
+                }
+              } catch (sdkErr) {
+                console.warn('Aviso en subida SDK directa:', sdkErr);
+              }
+            }
+
+            // 3. Fallback a Base64 SOLO para archivos menores a 2 MB si falla la subida directa
+            if (!uploadedSuccessfully) {
               if (primaryFile.size < 2 * 1024 * 1024) {
                 archivoBase64 = await new Promise<string>((resolve, reject) => {
                   const reader = new FileReader();
@@ -758,7 +791,7 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
                   reader.readAsDataURL(primaryFile!);
                 });
               } else {
-                throw new Error(`No se pudo subir el archivo (${uploadErr?.message || 'Error de almacenamiento'}). Intente nuevamente.`);
+                throw new Error('No se pudo subir el archivo grande al servidor de almacenamiento. Intente nuevamente o verifique su conexión.');
               }
             }
           } catch (uploadException: any) {

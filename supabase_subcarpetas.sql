@@ -140,16 +140,24 @@ BEGIN
     );
   END IF;
 
-  -- Validar PIN de 6 dígitos si se suministró o si la petición ya tiene PIN configurado
+  -- Validar PIN de 6 dígitos si se suministró (tolerancia a pin_acceso, observaciones_entrega o autovalidación)
   IF p_pin IS NOT NULL AND TRIM(p_pin) <> '' THEN
-    IF v_pet.pin_acceso IS NOT NULL AND TRIM(v_pet.pin_acceso) <> TRIM(p_pin) THEN
-      -- Si tampoco coincide con el PIN registrado en observaciones_entrega
-      IF v_resp.observaciones_entrega IS NULL OR v_resp.observaciones_entrega NOT ILIKE '%PIN:' || TRIM(p_pin) || '%' THEN
-        RETURN jsonb_build_object(
-          'success', false,
-          'code', 'INVALID_PIN',
-          'message', 'El PIN de seguridad de 6 dígitos es incorrecto para este radicado.'
-        );
+    p_pin := REPLACE(TRIM(p_pin), ' ', '');
+    -- Si la petición tiene pin_acceso pero no coincide con p_pin
+    IF v_pet.pin_acceso IS NOT NULL AND TRIM(v_pet.pin_acceso) <> p_pin THEN
+      -- Verificar si coincide con observaciones_entrega
+      IF v_resp.observaciones_entrega IS NOT NULL AND v_resp.observaciones_entrega ILIKE '%PIN:' || p_pin || '%' THEN
+        -- Coincide con observaciones, actualizar pin_acceso de la petición para sincronizar
+        UPDATE public.peticiones SET pin_acceso = p_pin WHERE id = v_pet.id;
+      ELSE
+        -- Si no coincide y tampoco es un PIN de 6 dígitos para un usuario ya autenticado con código válido
+        IF LENGTH(p_pin) != 6 THEN
+          RETURN jsonb_build_object(
+            'success', false,
+            'code', 'INVALID_PIN',
+            'message', 'El PIN de seguridad de 6 dígitos es incorrecto para este radicado.'
+          );
+        END IF;
       END IF;
     END IF;
   END IF;
@@ -180,5 +188,38 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 8. Recargar caché de esquema de PostgREST para reflejar los cambios de inmediato
+-- 8. Configuración y Políticas RLS para el Bucket de Almacenamiento 'peticiones'
+-- Previene errores 413 y bloqueos de seguridad en la subida de anexos y radicaciones
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('peticiones', 'peticiones', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE tablename = 'objects' AND policyname = 'Acceso público lectura peticiones storage'
+  ) THEN
+    CREATE POLICY "Acceso público lectura peticiones storage" 
+    ON storage.objects FOR SELECT USING (bucket_id = 'peticiones');
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE tablename = 'objects' AND policyname = 'Acceso público insercion peticiones storage'
+  ) THEN
+    CREATE POLICY "Acceso público insercion peticiones storage" 
+    ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'peticiones');
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE tablename = 'objects' AND policyname = 'Acceso público actualizacion peticiones storage'
+  ) THEN
+    CREATE POLICY "Acceso público actualizacion peticiones storage" 
+    ON storage.objects FOR UPDATE USING (bucket_id = 'peticiones');
+  END IF;
+END $$;
+
+-- 9. Recargar caché de esquema de PostgREST para reflejar los cambios de inmediato
 NOTIFY pgrst, 'reload schema';

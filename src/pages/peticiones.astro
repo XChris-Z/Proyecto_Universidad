@@ -58,12 +58,31 @@ try {
   if (anexosData) dbAnexos = anexosData;
 } catch (e) {}
 
+const respSubcarpetasMap: Record<string, string> = {};
+try {
+  const { data: respSubs } = await (supabase
+    .from('peticion_responsables' as any)
+    .select('id, subcarpeta_id') as any);
+  if (respSubs && respSubs.length > 0) {
+    respSubs.forEach((r: any) => {
+      if (r.id && r.subcarpeta_id) respSubcarpetasMap[r.id] = r.subcarpeta_id;
+    });
+  }
+} catch {}
+
 const peticionesList = ((dbPeticiones as any[]) || []).map((p: any) => {
   const respObs = p.peticion_responsables?.find((r: any) => r?.observaciones_entrega?.includes('PIN:'))?.observaciones_entrega;
   const pinMatch = respObs?.match(/PIN:\s*([0-9A-Z]{6})/i);
   const storedPin = pinMatch ? pinMatch[1] : null;
+
+  const enrichedResponsables = (p.peticion_responsables || []).map((r: any) => ({
+    ...r,
+    subcarpeta_id: r.subcarpeta_id || respSubcarpetasMap[r.id] || null,
+  }));
+
   return {
     ...p,
+    peticion_responsables: enrichedResponsables,
     pin_acceso: storedPin || p.pin_acceso || getDeterministicPin(p.numero_radicado || p.id),
   };
 });
@@ -228,11 +247,12 @@ const pendientesCount = peticionesList.filter((p: any) => p.estado !== 'respondi
                           }
                         }
 
-                        if (r.estado_entrega === 'Entregado' && deliveredCount === 0) {
+                        const isEntregado = String(r.estado_entrega || '').toLowerCase() === 'entregado';
+                        if (isEntregado && deliveredCount === 0) {
                           deliveredCount = totalSubs;
                         }
 
-                        // Determinar badge consolidado
+                        // Determinar badge consolidado (Paleta sobria institucional: verde, dorado, ámbar)
                         let statusText = 'Pendiente';
                         let dotColor = 'var(--dorado-principal)';
                         let badgeStyle = 'background: #fffbeb; color: #b45309; border: 1px solid #fde68a;';
@@ -244,15 +264,15 @@ const pendientesCount = peticionesList.filter((p: any) => p.estado !== 'respondi
                             badgeStyle = 'background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;';
                           } else if (deliveredCount > 0) {
                             statusText = `Parcial (${deliveredCount}/${totalSubs})`;
-                            dotColor = '#2563eb';
-                            badgeStyle = 'background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;';
+                            dotColor = '#d97706';
+                            badgeStyle = 'background: #fefce8; color: #854d0e; border: 1px solid #fef08a;';
                           } else {
                             statusText = 'Pendiente';
                             dotColor = 'var(--dorado-principal)';
                             badgeStyle = 'background: #fffbeb; color: #b45309; border: 1px solid #fde68a;';
                           }
                         } else {
-                          if (r.estado_entrega === 'Entregado' || deliveredCount > 0) {
+                          if (isEntregado || deliveredCount > 0) {
                             statusText = 'Entregado';
                             dotColor = '#059669';
                             badgeStyle = 'background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;';
