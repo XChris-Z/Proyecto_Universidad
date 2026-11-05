@@ -138,7 +138,8 @@ export const POST: APIRoute = async ({ request, url }) => {
         assignedSubs = subcarpetasData.map((s: any) => ({ nombre: s.nombre, descripcion: s.descripcion }));
       }
 
-      const storedPin = resp.observaciones_entrega?.startsWith('PIN:') ? resp.observaciones_entrega.replace('PIN:', '').trim() : null;
+      const pinMatch = resp.observaciones_entrega?.match(/PIN:\s*([0-9A-Z]{6})/i);
+      const storedPin = pinMatch ? pinMatch[1].trim() : null;
       const effectivePin = storedPin || peticion.pin_acceso || getDeterministicPin(peticion.numero_radicado || peticion.id);
       const portalUrl = `${baseUrl}/portal-responsable?codigo=${encodeURIComponent(resp.codigo_acceso)}&email=${encodeURIComponent(email)}&pin=${encodeURIComponent(effectivePin)}`;
 

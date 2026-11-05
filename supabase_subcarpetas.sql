@@ -82,5 +82,99 @@ BEGIN
   END IF;
 END $$;
 
--- 7. Recargar caché de esquema de PostgREST para reflejar los cambios de inmediato
+-- 7. Actualizar función RPC fn_validar_acceso_portal para tolerancia total a formatos de código (con/sin guión) y PIN de 6 dígitos
+CREATE OR REPLACE FUNCTION public.fn_validar_acceso_portal(
+  p_email TEXT,
+  p_codigo TEXT,
+  p_pin TEXT DEFAULT NULL
+)
+RETURNS JSONB AS $$
+DECLARE
+  v_resp RECORD;
+  v_pet RECORD;
+  v_ofi RECORD;
+  v_now TIMESTAMPTZ := NOW();
+  v_clean_codigo TEXT;
+BEGIN
+  -- Normalizar parámetros
+  p_email := LOWER(TRIM(p_email));
+  p_codigo := UPPER(TRIM(p_codigo));
+  v_clean_codigo := REPLACE(p_codigo, '-', '');
+
+  -- Buscar oficina por correo institucional
+  SELECT * INTO v_ofi FROM public.oficinas WHERE LOWER(TRIM(email_institucional)) = p_email LIMIT 1;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object(
+      'success', false,
+      'code', 'INVALID_EMAIL',
+      'message', 'El correo ingresado no corresponde a ninguna oficina o dependencia registrada.'
+    );
+  END IF;
+
+  -- Buscar asignación en peticion_responsables por código de acceso y oficina (tolerante a guiones)
+  SELECT * INTO v_resp 
+  FROM public.peticion_responsables 
+  WHERE (UPPER(TRIM(codigo_acceso)) = p_codigo OR REPLACE(UPPER(TRIM(codigo_acceso)), '-', '') = v_clean_codigo)
+    AND oficina_id = v_ofi.id 
+  LIMIT 1;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object(
+      'success', false,
+      'code', 'INVALID_CODE',
+      'message', 'El código de acceso no es válido o no pertenece a esta dependencia.'
+    );
+  END IF;
+
+  -- Buscar petición asociada
+  SELECT * INTO v_pet FROM public.peticiones WHERE id = v_resp.peticion_id LIMIT 1;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object(
+      'success', false,
+      'code', 'PETICION_NOT_FOUND',
+      'message', 'No se encontró el expediente asociado a este acceso.'
+    );
+  END IF;
+
+  -- Validar PIN de 6 dígitos si se suministró o si la petición ya tiene PIN configurado
+  IF p_pin IS NOT NULL AND TRIM(p_pin) <> '' THEN
+    IF v_pet.pin_acceso IS NOT NULL AND TRIM(v_pet.pin_acceso) <> TRIM(p_pin) THEN
+      -- Si tampoco coincide con el PIN registrado en observaciones_entrega
+      IF v_resp.observaciones_entrega IS NULL OR v_resp.observaciones_entrega NOT ILIKE '%PIN:' || TRIM(p_pin) || '%' THEN
+        RETURN jsonb_build_object(
+          'success', false,
+          'code', 'INVALID_PIN',
+          'message', 'El PIN de seguridad de 6 dígitos es incorrecto para este radicado.'
+        );
+      END IF;
+    END IF;
+  END IF;
+
+  -- Validar fecha de expiración (-5 días perentorio)
+  IF v_resp.fecha_expiracion_codigo IS NOT NULL AND v_now > v_resp.fecha_expiracion_codigo THEN
+    RETURN jsonb_build_object(
+      'success', false,
+      'code', 'EXPIRED_CODE',
+      'message', 'El plazo preventivo para radicar anexos venció el ' || TO_CHAR(v_resp.fecha_expiracion_codigo, 'YYYY-MM-DD HH24:MI') || '.'
+    );
+  END IF;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'responsable_id', v_resp.id,
+    'peticion_id', v_pet.id,
+    'numero_radicado', v_pet.numero_radicado,
+    'asunto', v_pet.asunto,
+    'descripcion', v_pet.descripcion,
+    'fecha_limite_entrega', v_pet.fecha_limite_entrega,
+    'fecha_limite_responsable', v_pet.fecha_limite_responsable,
+    'storage_subfolder_path', v_resp.storage_subfolder_path,
+    'oficina_nombre', v_ofi.nombre,
+    'oficina_codigo', v_ofi.codigo,
+    'estado_entrega', v_resp.estado_entrega
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 8. Recargar caché de esquema de PostgREST para reflejar los cambios de inmediato
 NOTIFY pgrst, 'reload schema';

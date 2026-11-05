@@ -99,7 +99,7 @@ export const POST: APIRoute = async ({ request, url }) => {
         peticion_id: peticion.id,
         oficina_id: ofi.id,
         estado_entrega: 'Pendiente',
-        observaciones_entrega: `PIN:${pinAcceso}${cleanDescripcion ? ` | ${cleanDescripcion}` : ''}`,
+        observaciones_entrega: `PIN:${pinAcceso} | [${cleanNombre}]${cleanDescripcion ? ` ${cleanDescripcion}` : ''}`,
       };
       if (createdSubcarpeta?.id && !createdSubcarpeta.id.startsWith('sub-')) {
         payload.subcarpeta_id = createdSubcarpeta.id;
@@ -107,10 +107,39 @@ export const POST: APIRoute = async ({ request, url }) => {
       return payload;
     });
 
-    const { data: respData, error: respErr } = await (supabase
+    let respData: any = null;
+    let respErr: any = null;
+
+    const resWithSub = await (supabase
       .from('peticion_responsables' as any)
       .insert(asignacionesToInsert as any)
       .select('id, oficina_id, codigo_acceso, fecha_expiracion_codigo, storage_subfolder_path, estado_entrega') as any);
+
+    if (
+      resWithSub.error &&
+      (String(resWithSub.error.message || '').includes('subcarpeta_id') ||
+       String(resWithSub.error.message || '').includes('schema cache') ||
+       resWithSub.error.code === '42703' ||
+       resWithSub.error.code === 'PGRST204')
+    ) {
+      console.warn('Columna subcarpeta_id no encontrada en peticion_responsables. Reintentando asignación...');
+      const fallbackAsignaciones = asignacionesToInsert.map((a: any) => {
+        const copy = { ...a };
+        delete copy.subcarpeta_id;
+        return copy;
+      });
+
+      const resFallback = await (supabase
+        .from('peticion_responsables' as any)
+        .insert(fallbackAsignaciones as any)
+        .select('id, oficina_id, codigo_acceso, fecha_expiracion_codigo, storage_subfolder_path, estado_entrega') as any);
+
+      respData = resFallback.data;
+      respErr = resFallback.error;
+    } else {
+      respData = resWithSub.data;
+      respErr = resWithSub.error;
+    }
 
     if (respErr || !respData) {
       console.error('Error insertando responsables para subcarpeta:', respErr);
@@ -196,3 +225,4 @@ export const POST: APIRoute = async ({ request, url }) => {
     );
   }
 };
+

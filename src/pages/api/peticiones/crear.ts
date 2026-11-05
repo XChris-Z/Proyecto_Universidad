@@ -303,15 +303,45 @@ export const POST: APIRoute = async ({ request, url }) => {
           oficina_id: ofiId,
           subcarpeta_id: validSubUuid,
           estado_entrega: 'Pendiente',
-          observaciones_entrega: `PIN:${pinAcceso}${sub.descripcion ? ` | [${sub.nombre}] ${sub.descripcion}` : ''}`,
+          observaciones_entrega: `PIN:${pinAcceso} | [${sub.nombre}]${sub.descripcion ? ` ${sub.descripcion}` : ''}`,
         });
       }
     }
 
-    const { data: responsablesData, error: respError } = await (supabase
+    let responsablesData: any = null;
+    let respError: any = null;
+
+    // Intento 1: Inserción vinculando subcarpeta_id si la columna física ya existe en PostgreSQL
+    const resWithSub = await (supabase
       .from('peticion_responsables' as any)
       .insert(asignacionesToInsert as any)
-      .select('id, oficina_id, subcarpeta_id, codigo_acceso, fecha_expiracion_codigo, storage_subfolder_path, estado_entrega') as any);
+      .select('id, oficina_id, codigo_acceso, fecha_expiracion_codigo, storage_subfolder_path, estado_entrega') as any);
+
+    if (
+      resWithSub.error &&
+      (String(resWithSub.error.message || '').includes('subcarpeta_id') ||
+       String(resWithSub.error.message || '').includes('schema cache') ||
+       resWithSub.error.code === '42703' ||
+       resWithSub.error.code === 'PGRST204')
+    ) {
+      console.warn('Columna subcarpeta_id no encontrada en peticion_responsables. Reintentando radicación sin subcarpeta_id...');
+      const asignacionesFallback = asignacionesToInsert.map((a: any) => {
+        const copy = { ...a };
+        delete copy.subcarpeta_id;
+        return copy;
+      });
+
+      const resFallback = await (supabase
+        .from('peticion_responsables' as any)
+        .insert(asignacionesFallback as any)
+        .select('id, oficina_id, codigo_acceso, fecha_expiracion_codigo, storage_subfolder_path, estado_entrega') as any);
+
+      responsablesData = resFallback.data;
+      respError = resFallback.error;
+    } else {
+      responsablesData = resWithSub.data;
+      respError = resWithSub.error;
+    }
 
     if (respError || !responsablesData) {
       console.error('Error asignando responsables:', respError);

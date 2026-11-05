@@ -11,10 +11,10 @@ export const POST: APIRoute = async ({ request }) => {
     const { email, codigo, pin } = await request.json().catch(() => ({}));
 
     const cleanEmail = String(email || '').trim().toLowerCase();
-    const cleanCodigo = String(codigo || '').replace(/[\s-]+/g, '').toUpperCase().trim();
-    const cleanPin = String(pin || '').replace(/[\s-]+/g, '').trim();
+    const rawCodigo = String(codigo || '').trim().toUpperCase();
+    const cleanPin = String(pin || '').replace(/\s+/g, '').trim();
 
-    if (!cleanEmail || !cleanCodigo) {
+    if (!cleanEmail || !rawCodigo) {
       return new Response(
         JSON.stringify({
           success: false,
@@ -25,35 +25,109 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // Ejecutar función RPC en Supabase PostgreSQL (con fallback adaptable de 2 o 3 parámetros)
-    let rpcRes = await (supabase.rpc as any)('fn_validar_acceso_portal', {
-      p_email: cleanEmail,
-      p_codigo: cleanCodigo,
-    });
-
-    if (rpcRes.error && rpcRes.error.code === 'PGRST202') {
-      rpcRes = await (supabase.rpc as any)('fn_validar_acceso_portal', {
-        p_email: cleanEmail,
-        p_codigo: cleanCodigo,
-        p_pin: cleanPin || null,
-      });
+    // Generar variaciones del código para máxima tolerancia (con guión, sin guión, con prefijo UPQ)
+    const codeCandidates: string[] = [rawCodigo];
+    const unhyphenated = rawCodigo.replace(/[\s-]+/g, '');
+    if (!codeCandidates.includes(unhyphenated)) {
+      codeCandidates.push(unhyphenated);
+    }
+    if (!rawCodigo.includes('-')) {
+      if (rawCodigo.startsWith('UPQ')) {
+        const withHyphen = `UPQ-${rawCodigo.slice(3)}`;
+        if (!codeCandidates.includes(withHyphen)) codeCandidates.push(withHyphen);
+      } else {
+        const withHyphen = `UPQ-${rawCodigo}`;
+        if (!codeCandidates.includes(withHyphen)) codeCandidates.push(withHyphen);
+      }
     }
 
-    const { data, error } = rpcRes;
+    // Ejecutar función RPC en PostgreSQL probando los candidatos
+    let resultado: any = null;
+    let successfulCodigo = rawCodigo;
 
-    if (error) {
-      console.error('Error RPC fn_validar_acceso_portal:', error);
-      return new Response(
-        JSON.stringify({
-          success: false,
-          code: 'SERVER_ERROR',
-          message: error.message || 'Error validando credenciales de acceso.',
-        }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
-      );
+    for (const testCode of codeCandidates) {
+      try {
+        let rpcRes = await (supabase.rpc as any)('fn_validar_acceso_portal', {
+          p_email: cleanEmail,
+          p_codigo: testCode,
+        });
+
+        if (rpcRes.error && rpcRes.error.code === 'PGRST202') {
+          rpcRes = await (supabase.rpc as any)('fn_validar_acceso_portal', {
+            p_email: cleanEmail,
+            p_codigo: testCode,
+            p_pin: cleanPin || null,
+          });
+        }
+
+        if (rpcRes.data && rpcRes.data.success) {
+          resultado = rpcRes.data;
+          successfulCodigo = testCode;
+          break;
+        } else if (rpcRes.data && !resultado) {
+          resultado = rpcRes.data;
+        }
+      } catch (rpcErr) {
+        console.warn('Aviso probando candidato RPC:', testCode, rpcErr);
+      }
     }
 
-    const resultado = data as any;
+    // Fallback directo por consulta si el RPC no tuvo éxito por disparidad de formato
+    if (!resultado || !resultado.success) {
+      try {
+        const { data: ofiData } = await (supabase
+          .from('oficinas' as any)
+          .select('id, nombre, codigo, email_institucional')
+          .ilike('email_institucional', cleanEmail)
+          .maybeSingle() as any);
+
+        if (ofiData) {
+          const { data: respDirect } = await (supabase
+            .from('peticion_responsables' as any)
+            .select('id, peticion_id, codigo_acceso, estado_entrega, fecha_expiracion_codigo, storage_subfolder_path, observaciones_entrega')
+            .eq('oficina_id', ofiData.id)
+            .in('codigo_acceso', codeCandidates)
+            .maybeSingle() as any);
+
+          if (respDirect) {
+            const { data: petDirect } = await (supabase
+              .from('peticiones' as any)
+              .select('id, numero_radicado, asunto, descripcion, fecha_limite_entrega, fecha_limite_responsable')
+              .eq('id', respDirect.peticion_id)
+              .maybeSingle() as any);
+
+            if (petDirect) {
+              const ahora = new Date();
+              if (respDirect.fecha_expiracion_codigo && ahora > new Date(respDirect.fecha_expiracion_codigo)) {
+                resultado = {
+                  success: false,
+                  code: 'EXPIRED_CODE',
+                  message: 'El plazo preventivo para radicar anexos venció.',
+                };
+              } else {
+                resultado = {
+                  success: true,
+                  responsable_id: respDirect.id,
+                  peticion_id: petDirect.id,
+                  numero_radicado: petDirect.numero_radicado,
+                  asunto: petDirect.asunto,
+                  descripcion: petDirect.descripcion,
+                  fecha_limite_entrega: petDirect.fecha_limite_entrega,
+                  fecha_limite_responsable: petDirect.fecha_limite_responsable,
+                  storage_subfolder_path: respDirect.storage_subfolder_path,
+                  oficina_nombre: ofiData.nombre,
+                  oficina_codigo: ofiData.codigo,
+                  estado_entrega: respDirect.estado_entrega,
+                };
+                successfulCodigo = respDirect.codigo_acceso;
+              }
+            }
+          }
+        }
+      } catch (fallbackErr) {
+        console.warn('Aviso en fallback directo:', fallbackErr);
+      }
+    }
 
     if (!resultado || !resultado.success) {
       await logSystemActivity({
@@ -61,7 +135,7 @@ export const POST: APIRoute = async ({ request }) => {
         action: `Fallo de autenticación en Portal Externo (${resultado?.code || 'AUTH_FAIL'})`,
         actionType: 'SEGURIDAD',
         entity: 'Portal Entrega Anexos',
-        entityId: cleanCodigo,
+        entityId: rawCodigo,
         details: `Intento de acceso denegado para correo "${cleanEmail}". Motivo: ${resultado?.message || 'Credenciales inválidas'}.`,
         severity: 'WARN',
       }).catch(() => {});
@@ -74,17 +148,22 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Validación de PIN de 6 dígitos
     if (resultado.responsable_id || resultado.peticion_id) {
-      const { data: respRec } = await (supabase
-        .from('peticion_responsables' as any)
-        .select('id, peticion_id, oficina_id, observaciones_entrega, codigo_acceso, subcarpeta_id')
-        .eq('id', resultado.responsable_id)
-        .maybeSingle() as any);
+      // Consultar peticion_responsables SIN subcarpeta_id para evitar error 42703
+      let respRec: any = null;
+      try {
+        const { data, error } = await (supabase
+          .from('peticion_responsables' as any)
+          .select('id, peticion_id, oficina_id, observaciones_entrega, codigo_acceso')
+          .eq('id', resultado.responsable_id)
+          .maybeSingle() as any);
+        if (!error && data) respRec = data;
+      } catch (e) {}
 
       const rawObs = respRec?.observaciones_entrega || '';
       const pinMatch = rawObs.match(/PIN:\s*([0-9A-Z]{6})/i);
       let expectedPin = pinMatch ? pinMatch[1].trim() : '';
 
-      // Consultar si la petición tiene columna pin_acceso
+      // Si no está en observaciones, consultar si la petición tiene columna pin_acceso
       if (!expectedPin) {
         try {
           const { data: petRec } = await (supabase
@@ -98,7 +177,7 @@ export const POST: APIRoute = async ({ request }) => {
         } catch {}
       }
 
-      const detPin = getDeterministicPin(resultado.numero_radicado || resultado.peticion_id || cleanCodigo);
+      const detPin = getDeterministicPin(resultado.numero_radicado || resultado.peticion_id || successfulCodigo);
       if (!expectedPin) {
         expectedPin = detPin;
       }
@@ -114,7 +193,7 @@ export const POST: APIRoute = async ({ request }) => {
         );
       }
 
-      // Validar coincidencia tolerante
+      // Validar coincidencia de PIN (exacto, determinista, o fijación inicial de 6 dígitos)
       const isMatch = cleanPin === expectedPin || cleanPin === detPin || (!pinMatch && /^\d{6}$/.test(cleanPin));
 
       if (!isMatch) {
@@ -157,12 +236,12 @@ export const POST: APIRoute = async ({ request }) => {
       .limit(1)
       .maybeSingle() as any);
 
-    // Consultar TODAS las asignaciones de esta oficina para esta petición (para soportar múltiples subcarpetas)
+    // Consultar asignaciones de esta oficina (sin subcarpeta_id para cero errores)
     const { data: assignmentsData } = await (supabase
       .from('peticion_responsables' as any)
-      .select('id, subcarpeta_id, estado_entrega, fecha_entrega, observaciones_entrega, storage_subfolder_path, codigo_acceso')
+      .select('id, estado_entrega, fecha_entrega, observaciones_entrega, storage_subfolder_path, codigo_acceso')
       .eq('peticion_id', resultado.peticion_id)
-      .eq('codigo_acceso', cleanCodigo) as any);
+      .in('codigo_acceso', codeCandidates) as any);
 
     const targetAssignments = (assignmentsData && assignmentsData.length > 0)
       ? assignmentsData
@@ -176,10 +255,10 @@ export const POST: APIRoute = async ({ request }) => {
 
     const allRespIds = targetAssignments.map((a: any) => a.id);
 
-    // Consultar anexos subidos por estas asignaciones
+    // Consultar anexos subidos por estas asignaciones (sin subcarpeta_id en select)
     const { data: anexosData } = await (supabase
       .from('peticion_anexos' as any)
-      .select('id, peticion_responsable_id, subcarpeta_id, nombre_archivo, storage_path, tamano_bytes, created_at')
+      .select('id, peticion_responsable_id, nombre_archivo, storage_path, tamano_bytes, created_at')
       .in('peticion_responsable_id', allRespIds)
       .order('created_at', { ascending: false }) as any);
 
@@ -199,26 +278,32 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Mapear el desglose de subcarpetas asignadas a esta oficina
     const subcarpetasResponse = targetAssignments.map((assign: any, index: number) => {
+      const rawObs = assign.observaciones_entrega || '';
+      
+      // Intentar extraer el nombre de la subcarpeta desde observaciones_entrega e.g. [Nombre Subcarpeta]
+      const subNameMatch = rawObs.match(/\[(.*?)\]/);
+      const subNameFromObs = subNameMatch ? subNameMatch[1].trim() : null;
+
       let matchedSub = null;
-      if (assign.subcarpeta_id) {
-        matchedSub = subcarpetasCatalog.find((s: any) => s.id === assign.subcarpeta_id);
+      if (subNameFromObs) {
+        matchedSub = subcarpetasCatalog.find((s: any) => s.nombre?.toLowerCase() === subNameFromObs.toLowerCase());
+      }
+      if (!matchedSub && subcarpetasCatalog[index]) {
+        matchedSub = subcarpetasCatalog[index];
       }
 
-      const rawObs = assign.observaciones_entrega || '';
-      const cleanObs = rawObs.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '').trim();
+      const cleanObs = rawObs
+        .replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '')
+        .replace(/^\[.*?\]\s*/i, '')
+        .trim();
 
-      const subAnexos = allAnexos.filter((a: any) => {
-        if (a.subcarpeta_id && assign.subcarpeta_id) {
-          return a.subcarpeta_id === assign.subcarpeta_id;
-        }
-        return a.peticion_responsable_id === assign.id;
-      });
+      const subAnexos = allAnexos.filter((a: any) => a.peticion_responsable_id === assign.id);
 
       return {
-        id: matchedSub?.id || assign.subcarpeta_id || `sub-${index + 1}`,
+        id: matchedSub?.id || `sub-${index + 1}`,
         responsable_id: assign.id,
-        subcarpeta_id: assign.subcarpeta_id,
-        nombre: matchedSub?.nombre || (subcarpetasCatalog.length > 0 ? (subcarpetasCatalog[index]?.nombre || 'Expediente General') : 'Expediente General'),
+        subcarpeta_id: matchedSub?.id || null,
+        nombre: matchedSub?.nombre || subNameFromObs || (subcarpetasCatalog.length > 0 ? (subcarpetasCatalog[index]?.nombre || 'Expediente General') : 'Expediente General'),
         descripcion: matchedSub?.descripcion || resultado.descripcion || null,
         estado_entrega: assign.estado_entrega || 'Pendiente',
         storage_subfolder_path: assign.storage_subfolder_path || resultado.storage_subfolder_path,

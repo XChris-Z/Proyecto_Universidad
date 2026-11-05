@@ -129,7 +129,13 @@ export const POST: APIRoute = async ({ request }) => {
       .select()
       .single() as any);
 
-    if (resAnexo.error && (resAnexo.error.message?.includes('subcarpeta_id') || resAnexo.error.code === 'PGRST204')) {
+    if (
+      resAnexo.error &&
+      (resAnexo.error.message?.includes('subcarpeta_id') ||
+       resAnexo.error.message?.includes('schema cache') ||
+       resAnexo.error.code === '42703' ||
+       resAnexo.error.code === 'PGRST204')
+    ) {
       // Reintentar sin subcarpeta_id si la columna física aún no existe
       delete anexoPayload.subcarpeta_id;
       const retryRes = await (supabase

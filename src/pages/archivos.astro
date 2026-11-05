@@ -103,7 +103,6 @@ const { data: dbPeticiones } = await (supabase
     peticion_responsables (
       id,
       codigo_acceso,
-      subcarpeta_id,
       estado_entrega,
       fecha_entrega,
       observaciones_entrega,
@@ -1267,7 +1266,12 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
 
                 if (subcarpetas.length > 0) {
                   subcarpetas.forEach((sub: any) => {
-                    const subResps = responsables.filter((r) => r && r.subcarpeta_id === sub.id);
+                    const subResps = responsables.filter((r) => {
+                      if (!r) return false;
+                      if (r.subcarpeta_id && r.subcarpeta_id === sub.id) return true;
+                      if (r.observaciones_entrega && r.observaciones_entrega.includes(`[${sub.nombre}]`)) return true;
+                      return false;
+                    });
                     const subAnexos = anexosOficinas.filter((a) => {
                       if (a && a.subcarpeta_id && a.subcarpeta_id === sub.id) return true;
                       return a && subResps.some((r) => r && r.id === a.peticion_responsable_id);
@@ -1351,9 +1355,14 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                   });
                 }
 
-                // Asignaciones sin subcarpeta_id asignada (retrocompatibilidad)
+                // Asignaciones sin subcarpeta asignada (retrocompatibilidad)
                 const unassignedResps = subcarpetas.length > 0 
-                  ? responsables.filter((r) => r && (!r.subcarpeta_id || !subcarpetas.some((s: any) => s.id === r.subcarpeta_id)))
+                  ? responsables.filter((r) => {
+                      if (!r) return false;
+                      const hasSubId = r.subcarpeta_id && subcarpetas.some((s: any) => s.id === r.subcarpeta_id);
+                      const hasSubName = r.observaciones_entrega && subcarpetas.some((s: any) => r.observaciones_entrega.includes(`[${s.nombre}]`));
+                      return !hasSubId && !hasSubName;
+                    })
                   : responsables;
 
                 if (unassignedResps.length > 0) {
