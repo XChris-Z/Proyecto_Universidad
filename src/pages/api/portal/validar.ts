@@ -271,16 +271,24 @@ export const POST: APIRoute = async ({ request }) => {
           updatedObs = rawObs ? `PIN:${cleanPin} | ${rawObs}` : `PIN:${cleanPin}`;
         }
 
-        await (supabase
-          .from('peticion_responsables' as any)
-          .update({ observaciones_entrega: updatedObs })
-          .eq('id', respRec.id) as any).catch(() => {});
+        try {
+          await (supabase
+            .from('peticion_responsables' as any)
+            .update({ observaciones_entrega: updatedObs })
+            .eq('id', respRec.id) as any);
+        } catch (syncErr) {
+          console.warn('Aviso sincronizando observaciones_entrega en peticion_responsables:', syncErr);
+        }
 
         // También sincronizar columna pin_acceso en peticiones de forma segura
-        await (supabase
-          .from('peticiones' as any)
-          .update({ pin_acceso: cleanPin })
-          .eq('id', resultado.peticion_id) as any).catch(() => {});
+        try {
+          await (supabase
+            .from('peticiones' as any)
+            .update({ pin_acceso: cleanPin })
+            .eq('id', resultado.peticion_id) as any);
+        } catch (pinErr) {
+          console.warn('Aviso sincronizando pin_acceso en peticiones:', pinErr);
+        }
 
         await logSystemActivity({
           actor: { id: 'usr-external', name: cleanEmail, role: 'oficina_responsable' },
@@ -373,7 +381,9 @@ export const POST: APIRoute = async ({ request }) => {
       const rawObs = assign.observaciones_entrega || '';
 
       // Extraer todas las subcarpetas mencionadas en observaciones_entrega e.g. [Subcarpeta 1], [Subcarpeta 2]
-      const subMatches = Array.from(rawObs.matchAll(/\[(.*?)\]/g)).map((m: any) => m[1].trim());
+      const subMatches = Array.from(rawObs.matchAll(/\[(.*?)\]/g))
+        .map((m: any) => m[1].trim())
+        .filter((name: string) => name && !name.toUpperCase().startsWith('PIN') && name.toUpperCase() !== 'EXPEDIENTE GENERAL');
 
       // Si no hay subMatches en observaciones pero sí existen subcarpetas en catálogo
       const activeSubNames = subMatches.length > 0
