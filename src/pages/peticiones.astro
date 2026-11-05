@@ -219,9 +219,31 @@ const pendientesCount = peticionesList.filter((p: any) => p.estado !== 'respondi
                     <div style="display: flex; flex-direction: column; gap: 5px;">
                       {responsables.map((r: any) => {
                         const ofiNombre = r.oficinas?.nombre || 'Oficina';
-                        const petSubs = dbSubcarpetas.filter((s: any) => s.peticion_id === pet.id);
+                        let petSubs = dbSubcarpetas.filter((s: any) => s.peticion_id === pet.id);
                         const rawObs = r.observaciones_entrega || '';
                         const cleanObs = rawObs.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '').trim();
+
+                        // Si no hay subcarpetas físicas registradas en la tabla, inferir desde observaciones y anexos
+                        if (petSubs.length === 0) {
+                          const foundMap: any = {};
+                          const matches = rawObs.matchAll(/\[([a-zA-Z0-9_\-\s]+)\]/g);
+                          for (const m of matches) {
+                            const name = m[1]?.trim();
+                            if (name && !foundMap[name.toUpperCase()]) {
+                              foundMap[name.toUpperCase()] = { id: `inf-${pet.id}-${name}`, nombre: name, peticion_id: pet.id };
+                            }
+                          }
+                          (dbAnexos || []).filter((a: any) => a.peticion_id === pet.id).forEach((a: any) => {
+                            const fm = (a.nombre_archivo || '').match(/\[([a-zA-Z0-9_\-\s]+)\]/i);
+                            if (fm && fm[1]) {
+                              const name = fm[1].trim();
+                              if (!foundMap[name.toUpperCase()]) {
+                                foundMap[name.toUpperCase()] = { id: `inf-${pet.id}-${name}`, nombre: name, peticion_id: pet.id };
+                              }
+                            }
+                          });
+                          petSubs = Object.values(foundMap);
+                        }
 
                         // Calcular subcarpetas asignadas a esta oficina
                         const assignedSubs = petSubs.filter((s: any) => 

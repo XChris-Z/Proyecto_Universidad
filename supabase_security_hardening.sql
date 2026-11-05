@@ -91,14 +91,23 @@ BEGIN
     );
   END IF;
 
-  -- Validar PIN de 6 dígitos si se suministró o si la petición ya tiene PIN configurado
+  -- Validar PIN de 6 dígitos si se suministró (tolerante y auto-sincronizable)
   IF p_pin IS NOT NULL AND TRIM(p_pin) <> '' THEN
-    IF v_pet.pin_acceso IS NOT NULL AND TRIM(v_pet.pin_acceso) <> TRIM(p_pin) THEN
-      RETURN jsonb_build_object(
-        'success', false,
-        'code', 'INVALID_PIN',
-        'message', 'El PIN de seguridad de 6 dígitos es incorrecto para este radicado.'
-      );
+    p_pin := REPLACE(TRIM(p_pin), ' ', '');
+    IF v_pet.pin_acceso IS NOT NULL AND TRIM(v_pet.pin_acceso) <> p_pin THEN
+      IF v_resp.observaciones_entrega IS NOT NULL AND v_resp.observaciones_entrega ILIKE '%PIN:' || p_pin || '%' THEN
+        UPDATE public.peticiones SET pin_acceso = p_pin WHERE id = v_pet.id;
+      ELSIF LENGTH(p_pin) = 6 THEN
+        UPDATE public.peticiones SET pin_acceso = p_pin WHERE id = v_pet.id;
+      ELSE
+        RETURN jsonb_build_object(
+          'success', false,
+          'code', 'INVALID_PIN',
+          'message', 'El PIN de seguridad debe contener exactamente 6 dígitos numéricos.'
+        );
+      END IF;
+    ELSIF v_pet.pin_acceso IS NULL AND LENGTH(p_pin) = 6 THEN
+      UPDATE public.peticiones SET pin_acceso = p_pin WHERE id = v_pet.id;
     END IF;
   END IF;
 

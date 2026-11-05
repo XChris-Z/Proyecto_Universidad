@@ -172,6 +172,74 @@ try {
 } catch {}
 
 const rawPeticiones = (dbPeticiones as any[]) || [];
+
+// Helper robusto para inferir subcarpetas virtuales si la tabla física aún no tiene registros (retrocompatibilidad)
+function inferSubcarpetas(p: any, dbSubs: any[] = []): any[] {
+  if (dbSubs && dbSubs.length > 0) return dbSubs;
+
+  const foundSubs: Record<string, { id: string; peticion_id: string; nombre: string; descripcion?: string | null }> = {};
+
+  (p.peticion_responsables || []).forEach((r: any) => {
+    const raw = r?.observaciones_entrega || '';
+    const withoutPin = raw.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '');
+    const matches = withoutPin.matchAll(/\[([a-zA-Z0-9_\-\s]+)\](?:\s*:?\s*([^|\[]+))?/g);
+    for (const m of matches) {
+      const name = m[1]?.trim();
+      if (name) {
+        const key = name.toUpperCase();
+        if (!foundSubs[key]) {
+          foundSubs[key] = {
+            id: `sub-inf-${p.id}-${key}`,
+            peticion_id: p.id,
+            nombre: name,
+            descripcion: m[2]?.trim() || null,
+          };
+        } else if (!foundSubs[key].descripcion && m[2]?.trim()) {
+          foundSubs[key].descripcion = m[2].trim();
+        }
+      }
+    }
+  });
+
+  (p.peticion_anexos || []).forEach((a: any) => {
+    const fileName = a?.nombre_archivo || '';
+    const m = fileName.match(/\[([a-zA-Z0-9_\-\s]+)\]/i);
+    if (m && m[1]) {
+      const name = m[1].trim();
+      const key = name.toUpperCase();
+      if (!foundSubs[key]) {
+        foundSubs[key] = {
+          id: `sub-inf-${p.id}-${key}`,
+          peticion_id: p.id,
+          nombre: name,
+          descripcion: null,
+        };
+      }
+    }
+  });
+
+  const textDesc = p.instrucciones_anexos || p.descripcion || '';
+  if (textDesc) {
+    const matches = textDesc.matchAll(/\[([a-zA-Z0-9_\-\s]+)\](?:\s*:?\s*([^|\[]+))?/g);
+    for (const m of matches) {
+      const name = m[1]?.trim();
+      if (name) {
+        const key = name.toUpperCase();
+        if (!foundSubs[key]) {
+          foundSubs[key] = {
+            id: `sub-inf-${p.id}-${key}`,
+            peticion_id: p.id,
+            nombre: name,
+            descripcion: m[2]?.trim() || null,
+          };
+        }
+      }
+    }
+  }
+
+  return Object.values(foundSubs);
+}
+
 const peticiones: PeticionExpediente[] = rawPeticiones.map((p) => {
   const respObs = p.peticion_responsables?.find((r: any) => r?.observaciones_entrega?.includes('PIN:'))?.observaciones_entrega;
   const pinMatch = respObs?.match(/PIN:\s*([0-9A-Z]{6})/i);
@@ -187,11 +255,14 @@ const peticiones: PeticionExpediente[] = rawPeticiones.map((p) => {
     subcarpeta_id: a.subcarpeta_id || anexoSubcarpetasMap[a.id] || null,
   }));
 
+  const initialSubs = subcarpetasPorPeticion[p.id] || [];
+  const finalSubs = inferSubcarpetas(p, initialSubs);
+
   return {
     ...p,
     peticion_responsables: enrichedResponsables,
     peticion_anexos: enrichedAnexos,
-    subcarpetas: subcarpetasPorPeticion[p.id] || [],
+    subcarpetas: finalSubs,
     pin_acceso: storedPin || p.pin_acceso || getDeterministicPin(p.numero_radicado || p.id),
   };
 });
@@ -884,12 +955,79 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       estado: string;
       prioridad?: string | null;
       created_at: string;
+      subcarpetas?: any[];
       peticion_anexos?: PeticionAnexo[];
       peticion_responsables?: PeticionResponsable[];
     }
 
     let allPeticiones: PeticionExpediente[] = [];
     const peticionesMap = new Map<string, PeticionExpediente>();
+
+    function inferSubcarpetas(p: any): any[] {
+      if (p.subcarpetas && p.subcarpetas.length > 0) return p.subcarpetas;
+
+      const foundSubs: Record<string, { id: string; peticion_id: string; nombre: string; descripcion?: string | null }> = {};
+
+      (p.peticion_responsables || []).forEach((r: any) => {
+        const raw = r?.observaciones_entrega || '';
+        const withoutPin = raw.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '');
+        const matches = withoutPin.matchAll(/\[([a-zA-Z0-9_\-\s]+)\](?:\s*:?\s*([^|\[]+))?/g);
+        for (const m of matches) {
+          const name = m[1]?.trim();
+          if (name) {
+            const key = name.toUpperCase();
+            if (!foundSubs[key]) {
+              foundSubs[key] = {
+                id: `sub-inf-${p.id}-${key}`,
+                peticion_id: p.id,
+                nombre: name,
+                descripcion: m[2]?.trim() || null,
+              };
+            } else if (!foundSubs[key].descripcion && m[2]?.trim()) {
+              foundSubs[key].descripcion = m[2].trim();
+            }
+          }
+        }
+      });
+
+      (p.peticion_anexos || []).forEach((a: any) => {
+        const fileName = a?.nombre_archivo || '';
+        const m = fileName.match(/\[([a-zA-Z0-9_\-\s]+)\]/i);
+        if (m && m[1]) {
+          const name = m[1].trim();
+          const key = name.toUpperCase();
+          if (!foundSubs[key]) {
+            foundSubs[key] = {
+              id: `sub-inf-${p.id}-${key}`,
+              peticion_id: p.id,
+              nombre: name,
+              descripcion: null,
+            };
+          }
+        }
+      });
+
+      const textDesc = p.instrucciones_anexos || p.descripcion || '';
+      if (textDesc) {
+        const matches = textDesc.matchAll(/\[([a-zA-Z0-9_\-\s]+)\](?:\s*:?\s*([^|\[]+))?/g);
+        for (const m of matches) {
+          const name = m[1]?.trim();
+          if (name) {
+            const key = name.toUpperCase();
+            if (!foundSubs[key]) {
+              foundSubs[key] = {
+                id: `sub-inf-${p.id}-${key}`,
+                peticion_id: p.id,
+                nombre: name,
+                descripcion: m[2]?.trim() || null,
+              };
+            }
+          }
+        }
+      }
+
+      return Object.values(foundSubs);
+    }
 
     function decodeBase64Utf8(b64: string): PeticionExpediente[] {
       try {
@@ -1321,7 +1459,9 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
 
             <div id="subcarpetas-bento-container" style="display: flex; flex-direction: column; gap: 16px;">
               ${(() => {
-                const subcarpetas = peticion.subcarpetas || [];
+                const subcarpetas = (peticion.subcarpetas && peticion.subcarpetas.length > 0) 
+                  ? peticion.subcarpetas 
+                  : inferSubcarpetas(peticion);
                 const subcarpetaBlocks = [];
 
                 // Helper para extraer observaciones específicas de cada subcarpeta
@@ -1375,7 +1515,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
 
                     subcarpetaBlocks.push(`
                       <div class="subfolder-bento-card" data-sub-name="${escapeHtml(sub.nombre)}" style="border: 1px solid ${allDeliveredInSub ? '#a7f3d0' : 'rgba(15, 23, 42, 0.08)'}; border-radius: 12px; overflow: hidden; background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.02); transition: opacity 0.25s ease, transform 0.25s ease;">
-                        <!-- Encabezado de la Subcarpeta Bento -->
+                        <!-- Nivel 1: Encabezado de la Subcarpeta Bento -->
                         <div style="background: ${allDeliveredInSub ? '#f0fdf4' : '#f8fafc'}; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid rgba(15, 23, 42, 0.06);">
                           <div style="display: flex; align-items: center; gap: 10px;">
                             <div style="width: 32px; height: 32px; border-radius: 6px; background: #ffffff; border: 1px solid ${allDeliveredInSub ? '#a7f3d0' : 'rgba(15, 23, 42, 0.1)'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
@@ -1383,7 +1523,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                             </div>
                             <div>
                               <div style="display: flex; align-items: center; gap: 8px;">
-                                <strong style="font-size: 0.95rem; color: #052e16; font-weight: 800;">Subcarpeta ${escapeHtml(sub.nombre)}</strong>
+                                <strong style="font-size: 0.95rem; color: #052e16; font-weight: 800;">Subcarpeta: ${escapeHtml(sub.nombre)}</strong>
                                 <span style="font-size: 0.68rem; font-weight: 800; color: #006837; background: #ffffff; padding: 2px 8px; border-radius: 4px; border: 1px solid #a7f3d0;">${subResps.length} dependencia${subResps.length === 1 ? '' : 's'}</span>
                               </div>
                               ${sub.descripcion ? `
@@ -1394,11 +1534,11 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                             </div>
                           </div>
                           <span style="font-size: 0.74rem; font-weight: 800; padding: 4px 12px; border-radius: 6px; border: 1px solid; ${allDeliveredInSub ? 'background: #ecfdf5; color: #047857; border-color: #a7f3d0;' : 'background: #fffbeb; color: #854d0e; border-color: #fde68a;'}">
-                            ${deliveredCount} de ${subResps.length} Entregados
+                            ${deliveredCount} de ${subResps.length} Aportes entregados
                           </span>
                         </div>
 
-                        <!-- Lista de Dependencias y Archivos de esta Subcarpeta -->
+                        <!-- Nivel 2: Lista de Aportes por Dependencia de esta Subcarpeta -->
                         <div style="padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; background: #ffffff;">
                           ${subResps.length > 0 ? subResps.map((r) => {
                             const ofiAnexos = subAnexos.filter((a) => a && a.peticion_responsable_id === r.id);
@@ -1413,13 +1553,13 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                               <div style="background: #f8fafc; border: 1px solid rgba(15, 23, 42, 0.07); border-radius: 8px; padding: 14px 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
                                   <div style="display: flex; align-items: center; gap: 8px;">
-                                    <strong style="font-size: 0.88rem; color: #0f172a; font-weight: 750;">${escapeHtml(ofiNombre)}</strong>
+                                    <strong style="font-size: 0.88rem; color: #0f172a; font-weight: 750;">Aporte de: ${escapeHtml(ofiNombre)}</strong>
                                     ${ofiCodigo ? `<span style="font-size: 0.70rem; color: #64748b;">(${escapeHtml(ofiCodigo)})</span>` : ''}
                                   </div>
                                   <div style="display: flex; align-items: center; gap: 6px;">
                                     <span style="font-family: monospace; font-size: 0.74rem; font-weight: 800; color: #006837; background: #ffffff; padding: 2px 7px; border-radius: 4px; border: 1px solid #a7f3d0;" title="Código Único de Acceso">${escapeHtml(r.codigo_acceso || 'UPQ')}</span>
                                     <span style="font-size: 0.70rem; font-weight: 800; padding: 2px 8px; border-radius: 4px; border: 1px solid; ${isDelivered ? 'background: #ecfdf5; color: #047857; border-color: #a7f3d0;' : 'background: #fffbeb; color: #854d0e; border-color: #fde68a;'}">
-                                      ${isDelivered ? 'Entregado' : 'Pendiente'}
+                                      ${isDelivered ? 'Entregado' : 'Pendiente de aporte'}
                                     </span>
                                   </div>
                                 </div>
@@ -1453,15 +1593,18 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                                     `).join('')}
                                   </div>
                                 ` : `
-                                  <div style="font-size: 0.75rem; color: #64748b; font-style: italic; margin-top: 4px;">
-                                    Pendiente de entrega de soportes oficiales para esta subcarpeta.
+                                  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 8px; padding: 10px 12px; background: #ffffff; border: 1px dashed #cbd5e1; border-radius: 6px;">
+                                    <span style="font-size: 0.76rem; color: #64748b; font-style: italic;">Pendiente de entrega (Sin archivos cargados aún)</span>
+                                    <button type="button" class="btn btn-secondary btn-sm btn-subir-soporte-manual" data-resp-id="${escapeHtml(r.id)}" data-sub-id="${escapeHtml(sub.id)}" data-sub-nombre="${escapeHtml(sub.nombre)}" data-ofi-nombre="${escapeHtml(ofiNombre)}" style="font-size: 0.72rem; padding: 4px 10px; font-weight: 750; border: 1px solid #006837; color: #006837; background: #f0fdf4;">
+                                      Subir soporte manualmente
+                                    </button>
                                   </div>
                                 `}
 
                                 ${cleanObs ? `
                                   <div style="margin-top: 10px; background: #ffffff; border: 1px solid rgba(15, 23, 42, 0.08); border-left: 3px solid #b8860b; border-radius: 6px; padding: 10px 14px; font-size: 0.78rem; color: #334155;">
                                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px;">
-                                      <strong style="color: #854d0e; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.3px;">Observación / Aclaración de la Dependencia:</strong>
+                                      <strong style="color: #854d0e; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.3px;">Observación del Aporte:</strong>
                                       ${r.fecha_entrega ? `<span style="font-size: 0.68rem; color: #64748b;">${new Date(r.fecha_entrega).toLocaleDateString('es-CO')}</span>` : ''}
                                     </div>
                                     <div style="line-height: 1.45;">"${escapeHtml(cleanObs)}"</div>
@@ -1634,6 +1777,100 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                 htmlCard.style.display = 'none';
               }
             });
+          });
+        });
+
+        // Registrar listener para botones "Subir soporte manualmente"
+        document.querySelectorAll('.btn-subir-soporte-manual').forEach((btn) => {
+          btn.addEventListener('click', (e) => {
+            const b = e.currentTarget as HTMLButtonElement;
+            const respId = b.getAttribute('data-resp-id');
+            const subId = b.getAttribute('data-sub-id');
+            const subNombre = b.getAttribute('data-sub-nombre');
+            const ofiNombre = b.getAttribute('data-ofi-nombre');
+
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip';
+            fileInput.style.display = 'none';
+            document.body.appendChild(fileInput);
+
+            fileInput.onchange = async () => {
+              const file = fileInput.files?.[0];
+              if (!file) {
+                document.body.removeChild(fileInput);
+                return;
+              }
+
+              if (typeof (window as any).showToast === 'function') {
+                (window as any).showToast(`Subiendo soporte para ${ofiNombre}...`, 'info');
+              }
+
+              try {
+                // Generar URL firmada de subida
+                const radicadoClean = (peticion.numero_radicado || 'EXP').replace(/[^a-zA-Z0-9_-]/g, '_');
+                const subSlug = (subNombre || 'general').toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+                const cleanFileName = `[${subNombre}]_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+                const storagePath = `peticiones/${radicadoClean}/${subSlug}/${Date.now()}_${cleanFileName}`;
+
+                let uploadedPath = storagePath;
+                try {
+                  const signedRes = await fetch('/api/storage/signed-url', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ bucket: 'peticiones', path: storagePath }),
+                  });
+                  const signedData = await signedRes.json().catch(() => ({}));
+                  if (signedData.success && signedData.signedUrl) {
+                    await fetch(signedData.signedUrl, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+                      body: file,
+                    });
+                    uploadedPath = signedData.path || storagePath;
+                  }
+                } catch (signErr) {
+                  console.warn('Fallo URL firmada, probando subida directa:', signErr);
+                }
+
+                // Registrar en public.peticion_anexos mediante endpoint oficial
+                const res = await fetch('/api/portal/subir-anexo', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    peticion_id: peticion.id,
+                    responsable_id: respId,
+                    subcarpeta_id: subId && !subId.startsWith('sub-inf-') ? subId : null,
+                    subcarpeta_nombre: subNombre,
+                    numero_radicado: peticion.numero_radicado,
+                    storage_path: uploadedPath,
+                    archivo_nombre: cleanFileName,
+                    archivo_mime: file.type || 'application/octet-stream',
+                    archivo_tamano: file.size,
+                    observaciones: `Carga manual de soporte para ${ofiNombre} en Subcarpeta ${subNombre}`,
+                  }),
+                });
+
+                const data = await res.json().catch(() => ({}));
+                if (data.success) {
+                  if (typeof (window as any).showToast === 'function') {
+                    (window as any).showToast('Soporte cargado exitosamente.', 'success');
+                  }
+                  setTimeout(() => window.location.reload(), 800);
+                } else {
+                  throw new Error(data.error || 'No se pudo registrar el soporte.');
+                }
+              } catch (uploadErr: any) {
+                console.error('Error subiendo soporte manual:', uploadErr);
+                if (typeof (window as any).showToast === 'function') {
+                  (window as any).showToast(uploadErr.message || 'Error al subir soporte.', 'error');
+                }
+              } finally {
+                document.body.removeChild(fileInput);
+              }
+            };
+
+            fileInput.click();
           });
         });
       } catch (err) {

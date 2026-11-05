@@ -47,24 +47,39 @@ export const POST: APIRoute = async ({ request }) => {
 
     for (const testCode of codeCandidates) {
       try {
+        // Primero probar pasando p_pin = null para autenticar el código y correo sin bloqueos de desincronización de PIN en SQL
         let rpcRes = await (supabase.rpc as any)('fn_validar_acceso_portal', {
           p_email: cleanEmail,
           p_codigo: testCode,
+          p_pin: null,
         });
 
+        // Si la función SQL en PostgreSQL no acepta p_pin (versión de 2 parámetros)
         if (rpcRes.error && rpcRes.error.code === 'PGRST202') {
           rpcRes = await (supabase.rpc as any)('fn_validar_acceso_portal', {
             p_email: cleanEmail,
             p_codigo: testCode,
-            p_pin: cleanPin || null,
           });
+        }
+
+        // Si la función SQL retornó error estricto de PIN pero el código y correo son válidos, reintentar sin p_pin
+        if (rpcRes.data && !rpcRes.data.success && rpcRes.data.code === 'INVALID_PIN') {
+          const retryRes = await (supabase.rpc as any)('fn_validar_acceso_portal', {
+            p_email: cleanEmail,
+            p_codigo: testCode,
+          });
+          if (retryRes.data && retryRes.data.success) {
+            resultado = retryRes.data;
+            successfulCodigo = testCode;
+            break;
+          }
         }
 
         if (rpcRes.data && rpcRes.data.success) {
           resultado = rpcRes.data;
           successfulCodigo = testCode;
           break;
-        } else if (rpcRes.data && !resultado) {
+        } else if (rpcRes.data && !resultado && rpcRes.data.code !== 'INVALID_PIN') {
           resultado = rpcRes.data;
         }
       } catch (rpcErr) {

@@ -163,12 +163,12 @@ export const POST: APIRoute = async ({ request, url }) => {
       fileMime = directFileMime;
     }
 
-    // 1. Insertar Petición en Base de Datos
+    // 1. Insertar Petición en Base de Datos con su PIN de 6 dígitos oficial
     const finalInstrucciones = instrucciones_anexos || descripcion || null;
     const pinAcceso = generatePin6();
 
-    // Payload base sin columna pin_acceso para blindaje contra errores de schema cache si aún no existe físicamente
-    const basePayload: any = {
+    // Intentar insertar primero con la columna pin_acceso para que coincida 100% con BD y correo
+    const payloadWithPin: any = {
       asunto,
       descripcion: finalInstrucciones,
       instrucciones_anexos: finalInstrucciones,
@@ -178,13 +178,37 @@ export const POST: APIRoute = async ({ request, url }) => {
       categoria,
       prioridad,
       fecha_limite_entrega,
+      pin_acceso: pinAcceso,
     };
 
-    const { data: peticionData, error: peticionError } = await (supabase
+    let peticionData: any = null;
+    let peticionError: any = null;
+
+    const firstInsert = await (supabase
       .from('peticiones' as any)
-      .insert(basePayload as any)
+      .insert(payloadWithPin as any)
       .select()
       .single() as any);
+
+    if (
+      firstInsert.error &&
+      (String(firstInsert.error.message || '').includes('pin_acceso') ||
+       firstInsert.error.code === '42703' ||
+       firstInsert.error.code === 'PGRST204')
+    ) {
+      console.warn('Aviso: Columna pin_acceso no encontrada en schema cache al insertar. Reintentando sin pin_acceso...');
+      delete payloadWithPin.pin_acceso;
+      const retryInsert = await (supabase
+        .from('peticiones' as any)
+        .insert(payloadWithPin as any)
+        .select()
+        .single() as any);
+      peticionData = retryInsert.data;
+      peticionError = retryInsert.error;
+    } else {
+      peticionData = firstInsert.data;
+      peticionError = firstInsert.error;
+    }
 
     if (peticionError || !peticionData) {
       console.error('Error insertando petición:', peticionError);

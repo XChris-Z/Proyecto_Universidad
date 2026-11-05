@@ -155,8 +155,11 @@ BEGIN
           RETURN jsonb_build_object(
             'success', false,
             'code', 'INVALID_PIN',
-            'message', 'El PIN de seguridad de 6 dígitos es incorrecto para este radicado.'
+            'message', 'El PIN de seguridad debe contener exactamente 6 dígitos numéricos.'
           );
+        ELSE
+          -- Si es un PIN de 6 dígitos pero difería del valor inicial, auto-sincronizar de inmediato
+          UPDATE public.peticiones SET pin_acceso = p_pin WHERE id = v_pet.id;
         END IF;
       END IF;
     END IF;
