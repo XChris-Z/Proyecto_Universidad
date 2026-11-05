@@ -1273,6 +1273,8 @@ import Layout from '@layouts/Layout.astro';
 </style>
 
 <script>
+  import { supabase } from '@lib/supabase';
+
   let activeSessionData: any = null;
   let activeSubIndex = 0;
   let selectedFilesToUpload: File[] = [];
@@ -1631,23 +1633,51 @@ import Layout from '@layouts/Layout.astro';
 
       try {
         for (const file of selectedFilesToUpload) {
-          const fileBase64 = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => {
-              const resStr = String(reader.result || '');
-              const base64Data = resStr.includes(',') ? resStr.split(',')[1] : resStr;
-              resolve(base64Data || '');
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-          });
+          const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+          const relativeStoragePath = `${targetStorageSubfolder.replace(/^peticiones\//, '')}${Date.now()}_${cleanName}`;
+          const fullPath = `peticiones/${relativeStoragePath}`;
+
+          let directUploaded = false;
+          let fileBase64: string | null = null;
+
+          try {
+            const { error: uploadErr } = await supabase.storage
+              .from('peticiones')
+              .upload(relativeStoragePath, file, {
+                contentType: file.type || 'application/octet-stream',
+                upsert: true,
+              });
+
+            if (!uploadErr) {
+              directUploaded = true;
+            } else {
+              console.warn('Aviso en subida directa de anexo:', uploadErr);
+            }
+          } catch (e) {
+            console.warn('Excepción en subida directa de anexo:', e);
+          }
+
+          if (!directUploaded && file.size < 2.5 * 1024 * 1024) {
+            fileBase64 = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => {
+                const resStr = String(reader.result || '');
+                const base64Data = resStr.includes(',') ? resStr.split(',')[1] : resStr;
+                resolve(base64Data || '');
+              };
+              reader.onerror = reject;
+              reader.readAsDataURL(file);
+            });
+          }
 
           const res = await fetch('/api/portal/subir-anexo', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+              storage_path: directUploaded ? fullPath : null,
               archivo_base64: fileBase64,
               archivo_nombre: file.name,
+              archivo_tamano: file.size,
               archivo_mime: file.type || 'application/octet-stream',
               peticion_id: activeSessionData.peticion_id,
               responsable_id: targetResponsableId,

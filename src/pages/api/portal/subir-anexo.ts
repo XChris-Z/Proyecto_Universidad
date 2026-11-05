@@ -19,6 +19,8 @@ export const POST: APIRoute = async ({ request }) => {
     let fileMime = 'application/octet-stream';
     let fileSize = 0;
 
+    let directStoragePath: string | null = null;
+
     if (contentType.includes('multipart/form-data')) {
       const formData = await request.formData();
       const file = formData.get('archivo') as File | null;
@@ -46,6 +48,10 @@ export const POST: APIRoute = async ({ request }) => {
       emailInstitucional = body.email_institucional || '';
       storageSubfolder = body.storage_subfolder_path || '';
       observaciones = body.observaciones || '';
+      directStoragePath = body.storage_path || null;
+      if (body.archivo_nombre) fileName = body.archivo_nombre;
+      if (body.archivo_mime) fileMime = body.archivo_mime;
+      if (body.archivo_tamano) fileSize = Number(body.archivo_tamano) || 0;
 
       if (body.archivo_base64 && body.archivo_nombre) {
         fileBuffer = Buffer.from(body.archivo_base64, 'base64');
@@ -55,7 +61,7 @@ export const POST: APIRoute = async ({ request }) => {
       }
     }
 
-    if (!fileBuffer || !peticionId || !responsableId || !numeroRadicado || !storageSubfolder) {
+    if ((!fileBuffer && !directStoragePath) || !peticionId || !responsableId || !numeroRadicado || !storageSubfolder) {
       return new Response(
         JSON.stringify({ success: false, error: 'Parámetros obligatorios faltantes para la carga.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -88,20 +94,23 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // 2. Subir archivo a Supabase Storage bucket 'peticiones'
-    const cleanFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const relativeStoragePath = `${storageSubfolder.replace(/^peticiones\//, '')}${Date.now()}_${cleanFileName}`;
-    const fullStoragePath = `peticiones/${relativeStoragePath}`;
+    // 2. Subir archivo a Supabase Storage bucket 'peticiones' (si no fue subido directo por el cliente)
+    let fullStoragePath = directStoragePath;
+    if (!fullStoragePath && fileBuffer) {
+      const cleanFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const relativeStoragePath = `${storageSubfolder.replace(/^peticiones\//, '')}${Date.now()}_${cleanFileName}`;
+      fullStoragePath = `peticiones/${relativeStoragePath}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from('peticiones')
-      .upload(relativeStoragePath, fileBuffer, {
-        contentType: fileMime,
-        upsert: true,
-      });
+      const { error: uploadError } = await supabase.storage
+        .from('peticiones')
+        .upload(relativeStoragePath, fileBuffer, {
+          contentType: fileMime,
+          upsert: true,
+        });
 
-    if (uploadError) {
-      console.warn('Advertencia subiendo al repositorio (se registrará anexo):', uploadError.message);
+      if (uploadError) {
+        console.warn('Advertencia subiendo al repositorio (se registrará anexo):', uploadError.message);
+      }
     }
 
     // 3. Registrar en public.peticion_anexos con subcarpeta_id si está disponible

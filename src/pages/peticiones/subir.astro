@@ -334,6 +334,8 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
   </style>
 
   <script>
+    import { supabase } from '@lib/supabase';
+
     // 0. Archivo Principal de la Petición & Auto-rellenado inteligente
     let primaryFile: File | null = null;
     const dropZone = document.getElementById('drop-zone-peticion');
@@ -712,23 +714,64 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
           primaryFile = fileInput.files[0]!;
         }
 
-        let archivoBase64: string | null = null;
         let archivoNombre: string | null = null;
         let archivoMime: string | null = null;
+        let archivoStoragePath: string | null = null;
+        let archivoTamano: number = 0;
+        let archivoBase64: string | null = null;
 
         if (primaryFile) {
           archivoNombre = primaryFile.name;
           archivoMime = primaryFile.type || 'application/pdf';
-          archivoBase64 = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => {
-              const resStr = String(reader.result || '');
-              const base64Data = resStr.includes(',') ? resStr.split(',')[1] : resStr;
-              resolve(base64Data || '');
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(primaryFile!);
-          });
+          archivoTamano = primaryFile.size;
+
+          if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<span>Subiendo documento (${(primaryFile.size / (1024 * 1024)).toFixed(1)} MB)...</span>`;
+          }
+
+          // Blindaje contra límite de Vercel (413 Payload Too Large): Subir archivo directo al Storage
+          const cleanName = primaryFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+          const tempPath = `temp_radicaciones/${Date.now()}_${cleanName}`;
+
+          try {
+            const { data: uploadData, error: uploadErr } = await supabase.storage
+              .from('peticiones')
+              .upload(tempPath, primaryFile, {
+                contentType: archivoMime,
+                upsert: true,
+              });
+
+            if (!uploadErr && uploadData?.path) {
+              archivoStoragePath = uploadData.path;
+            } else {
+              console.warn('Aviso en subida directa al storage:', uploadErr);
+              // Fallback a base64 solo para archivos pequeños (< 2 MB)
+              if (primaryFile.size < 2 * 1024 * 1024) {
+                archivoBase64 = await new Promise<string>((resolve, reject) => {
+                  const reader = new FileReader();
+                  reader.onload = () => {
+                    const resStr = String(reader.result || '');
+                    resolve(resStr.includes(',') ? resStr.split(',')[1] : resStr);
+                  };
+                  reader.onerror = reject;
+                  reader.readAsDataURL(primaryFile!);
+                });
+              } else {
+                throw new Error(`No se pudo subir el archivo (${uploadErr?.message || 'Error de almacenamiento'}). Intente nuevamente.`);
+              }
+            }
+          } catch (uploadException: any) {
+            console.error('Error al subir archivo:', uploadException);
+            if ((window as any).showToast) {
+              (window as any).showToast(uploadException.message || 'Error al cargar el documento adjunto.', 'error');
+            }
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.innerHTML = `<span>Radicar y Generar Notificaciones</span>`;
+            }
+            return;
+          }
         }
 
         const payload = {
@@ -745,6 +788,8 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
           subcarpetas: subcarpetasPayload,
           archivo_nombre: archivoNombre,
           archivo_mime: archivoMime,
+          archivo_tamano: archivoTamano,
+          archivo_storage_path: archivoStoragePath,
           archivo_base64: archivoBase64,
         };
 

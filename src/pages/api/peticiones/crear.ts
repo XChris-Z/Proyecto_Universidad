@@ -29,6 +29,10 @@ export const POST: APIRoute = async ({ request, url }) => {
     let oficina_ids: string[] = [];
     let subcarpetas: SubcarpetaInput[] = [];
     let primaryFile: File | null = null;
+    let directStoragePath: string | null = null;
+    let directFileSize: number = 0;
+    let directFileName: string = '';
+    let directFileMime: string = 'application/pdf';
 
     let rawBase64File: { buffer: Buffer; name: string; mime: string } | null = null;
 
@@ -78,6 +82,11 @@ export const POST: APIRoute = async ({ request, url }) => {
       if (Array.isArray(body.subcarpetas)) {
         subcarpetas = body.subcarpetas;
       }
+
+      directStoragePath = body.archivo_storage_path || null;
+      directFileSize = Number(body.archivo_tamano) || 0;
+      if (body.archivo_nombre) directFileName = body.archivo_nombre;
+      if (body.archivo_mime) directFileMime = body.archivo_mime;
 
       if (body.archivo_base64 && body.archivo_nombre) {
         try {
@@ -149,6 +158,9 @@ export const POST: APIRoute = async ({ request, url }) => {
       fileBuffer = rawBase64File.buffer;
       fileName = rawBase64File.name;
       fileMime = rawBase64File.mime;
+    } else if (directFileName) {
+      fileName = directFileName;
+      fileMime = directFileMime;
     }
 
     // 1. Insertar Petición en Base de Datos
@@ -195,22 +207,61 @@ export const POST: APIRoute = async ({ request, url }) => {
       // Silencioso si la columna física aún no existe
     }
 
-    // 2. Subir Archivo Principal al Storage y registrar en peticion_anexos (Carpeta del Radicado)
+    // 2. Subir o mover Archivo Principal al Storage y registrar en peticion_anexos (Carpeta del Radicado)
     let savedPrimaryFile = null;
-    if (fileBuffer && fileName) {
+    if (fileName && (directStoragePath || fileBuffer)) {
       const cleanFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
       const storageRelativePath = `${peticionData.numero_radicado}/${cleanFileName}`;
+      let finalStoragePath = storageRelativePath;
+      let finalBytes = directFileSize || (fileBuffer ? fileBuffer.length : 0);
 
       try {
-        const { error: uploadErr } = await supabase.storage
-          .from('peticiones')
-          .upload(storageRelativePath, bufferOrFallback(fileBuffer), {
-            contentType: fileMime,
-            upsert: true,
-          });
+        if (directStoragePath) {
+          // El archivo ya fue subido directamente al Storage desde el navegador para evitar 413 Payload Too Large
+          const { error: moveErr } = await supabase.storage
+            .from('peticiones')
+            .move(directStoragePath, storageRelativePath);
 
-        if (uploadErr) {
-          console.warn('Advertencia subiendo archivo principal al storage:', uploadErr.message);
+          if (moveErr) {
+            console.warn('Aviso moviendo archivo temporal (intentando copy):', moveErr.message);
+            const { error: copyErr } = await supabase.storage
+              .from('peticiones')
+              .copy(directStoragePath, storageRelativePath);
+
+            if (!copyErr) {
+              await supabase.storage.from('peticiones').remove([directStoragePath]).catch(() => {});
+            } else {
+              // Si no se puede mover ni copiar, conservar la ruta temporal donde ya quedó
+              finalStoragePath = directStoragePath;
+            }
+          }
+        } else if (fileBuffer) {
+          const { error: uploadErr } = await supabase.storage
+            .from('peticiones')
+            .upload(storageRelativePath, bufferOrFallback(fileBuffer), {
+              contentType: fileMime,
+              upsert: true,
+            });
+
+          if (uploadErr) {
+            console.warn('Advertencia subiendo archivo principal al storage:', uploadErr.message);
+          }
+          finalBytes = fileBuffer.length;
+        }
+
+        // Descargar buffer si es necesario para el adjunto de Nodemailer (solo si <= 4 MB)
+        if (!fileBuffer && finalBytes > 0 && finalBytes <= 4 * 1024 * 1024) {
+          try {
+            const { data: downloadedBlob } = await supabase.storage
+              .from('peticiones')
+              .download(finalStoragePath);
+            if (downloadedBlob) {
+              const arrayBuf = await downloadedBlob.arrayBuffer();
+              fileBuffer = Buffer.from(arrayBuf);
+            }
+          } catch (dlErr: any) {
+            console.warn('No se pudo descargar buffer para adjunto:', dlErr.message);
+          }
         }
 
         // Registrar en peticion_anexos como documento raíz inicial del radicado
@@ -219,8 +270,8 @@ export const POST: APIRoute = async ({ request, url }) => {
           .insert({
             peticion_id: peticionData.id,
             nombre_archivo: fileName,
-            storage_path: storageRelativePath,
-            tamano_bytes: fileBuffer.length,
+            storage_path: finalStoragePath,
+            tamano_bytes: finalBytes,
             mime_type: fileMime,
             subido_por_email: solicitante_email || 'radicacion@unitropico.edu.co',
             es_anexo_oficina: false,
@@ -234,8 +285,8 @@ export const POST: APIRoute = async ({ request, url }) => {
 
         savedPrimaryFile = anexoPrincipal || {
           nombre_archivo: fileName,
-          storage_path: storageRelativePath,
-          tamano_bytes: fileBuffer.length,
+          storage_path: finalStoragePath,
+          tamano_bytes: finalBytes,
         };
       } catch (uploadException: any) {
         console.error('Excepción al procesar archivo principal:', uploadException.message);
