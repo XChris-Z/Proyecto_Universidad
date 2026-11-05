@@ -356,7 +356,7 @@ export const POST: APIRoute = async ({ request }) => {
       if (catalogDesc && catalogDesc.trim()) return catalogDesc.trim();
       if (!fullDesc) return 'Cargue los documentos de soporte requeridos para esta subcarpeta.';
       const escaped = subName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const reg = new RegExp(`\\[${escaped}\\]:?\\s*([^\\[\\n\\|]+)`, 'i');
+      const reg = new RegExp(`\\[${escaped}\\]:?\\s*([^\\[|]+)`, 'i');
       const match = fullDesc.match(reg);
       if (match && match[1]?.trim()) return match[1].trim();
       return 'Cargue los documentos de soporte requeridos para esta subcarpeta.';
@@ -381,14 +381,27 @@ export const POST: APIRoute = async ({ request }) => {
       const rawObs = assign.observaciones_entrega || '';
 
       // Extraer todas las subcarpetas mencionadas en observaciones_entrega e.g. [Subcarpeta 1], [Subcarpeta 2]
-      const subMatches = Array.from(rawObs.matchAll(/\[(.*?)\]/g))
+      let subMatches = Array.from(rawObs.matchAll(/\[(.*?)\]/g))
         .map((m: any) => m[1].trim())
         .filter((name: string) => name && !name.toUpperCase().startsWith('PIN') && name.toUpperCase() !== 'EXPEDIENTE GENERAL');
 
       // Si no hay subMatches en observaciones pero sí existen subcarpetas en catálogo
-      const activeSubNames = subMatches.length > 0
-        ? subMatches
-        : (subcarpetasCatalog.length > 0 ? subcarpetasCatalog.map((s: any) => s.nombre) : ['Subcarpeta 1']);
+      let activeSubNames = subMatches;
+      if (activeSubNames.length === 0 && subcarpetasCatalog.length > 0) {
+        activeSubNames = subcarpetasCatalog.map((s: any) => s.nombre);
+      }
+      // Si aún no hay subcarpetas pero están codificadas en la descripción (ej: [1.1]: ... [1.2]: ...)
+      if (activeSubNames.length === 0 && resultado.descripcion) {
+        const descMatches = Array.from(String(resultado.descripcion).matchAll(/\[(.*?)\]:/g))
+          .map((m: any) => m[1].trim())
+          .filter((name: string) => name && !name.toUpperCase().startsWith('PIN') && name.toUpperCase() !== 'EXPEDIENTE GENERAL');
+        if (descMatches.length > 0) {
+          activeSubNames = descMatches;
+        }
+      }
+      if (activeSubNames.length === 0) {
+        activeSubNames = ['Subcarpeta 1'];
+      }
 
       if (activeSubNames.length > 1) {
         for (let sIdx = 0; sIdx < activeSubNames.length; sIdx++) {

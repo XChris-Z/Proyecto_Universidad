@@ -223,7 +223,10 @@ import Layout from '@layouts/Layout.astro';
                 <span class="chip-status-safe">Acceso Autorizado</span>
               </div>
               <h2 id="portal-disp-asunto" class="portal-asunto-title">Asunto de la petición</h2>
-              <p id="portal-disp-desc" class="portal-asunto-desc">Descripción del trámite solicitado.</p>
+              <p id="portal-disp-desc" class="portal-asunto-desc" style="display: none;">Descripción del trámite solicitado.</p>
+              
+              <!-- Desglose de Requerimientos por Subcarpeta (Bento Cards Pro Max) -->
+              <div id="portal-sub-reqs-container" class="portal-sub-reqs-container"></div>
             </div>
 
             <button type="button" id="btn-portal-logout" class="btn-portal-logout" title="Finalizar sesión">
@@ -306,7 +309,7 @@ import Layout from '@layouts/Layout.astro';
             <div id="portal-subcarpeta-desc-box" style="font-size: 0.82rem; color: #334155; background: #ffffff; border: 1px solid #e2e8f0; border-left: 4px solid #006837; padding: 12px 16px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); transition: opacity 0.25s ease, transform 0.25s ease;">
               <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#006837" stroke-width="1.75"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                <strong style="color: #006837; font-weight: 800; text-transform: uppercase; font-size: 0.74rem; letter-spacing: 0.4px;">Instrucción / Requerimiento de esta Subcarpeta:</strong>
+                <strong id="portal-subcarpeta-desc-title" style="color: #006837; font-weight: 800; text-transform: uppercase; font-size: 0.74rem; letter-spacing: 0.4px;">Instrucción / Requerimiento de esta Subcarpeta:</strong>
               </div>
               <span id="portal-subcarpeta-desc-text" style="line-height: 1.5; color: #475569;">Cargue los documentos de soporte solicitados.</span>
             </div>
@@ -898,19 +901,87 @@ import Layout from '@layouts/Layout.astro';
   }
 
   .portal-asunto-title {
-    font-size: 1.35rem;
-    font-weight: 850;
+    font-size: 1.15rem;
+    font-weight: 700;
     color: #0f172a;
     margin: 0 0 6px 0;
-    letter-spacing: -0.02em;
-    line-height: 1.35;
+    line-height: 1.4;
   }
 
   .portal-asunto-desc {
-    font-size: 0.84rem;
-    color: #64748b;
-    margin: 0;
-    line-height: 1.55;
+    font-size: 0.86rem;
+    color: #475569;
+    margin: 0 0 10px 0;
+    line-height: 1.6;
+  }
+
+  .portal-sub-reqs-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .portal-sub-req-card {
+    padding: 10px 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 0.86rem;
+    color: #334155;
+    line-height: 1.5;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .portal-sub-req-card.active {
+    border-color: #006837;
+    border-left: 4px solid #006837;
+    background: #ffffff;
+    box-shadow: 0 2px 10px rgba(0, 104, 55, 0.08);
+    opacity: 1;
+    transform: translateX(2px);
+  }
+
+  .portal-sub-req-card.inactive {
+    opacity: 0.65;
+    background: #f8fafc;
+    border-left: 1px solid #e2e8f0;
+  }
+
+  .portal-sub-req-card:hover {
+    opacity: 1;
+    background: #f1f5f9;
+  }
+
+  .portal-sub-req-card.active:hover {
+    background: #ffffff;
+  }
+
+  .portal-sub-badge {
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #006837;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    padding: 4px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .portal-sub-req-text {
+    flex: 1;
+    font-size: 0.86rem;
+    color: #334155;
+    line-height: 1.5;
+    word-break: break-word;
   }
 
   .btn-portal-logout {
@@ -1403,7 +1474,66 @@ import Layout from '@layouts/Layout.astro';
     if (loginSection) loginSection.style.display = 'none';
     if (uploadSection) uploadSection.style.display = 'flex';
 
-    // Normalizar subcarpetas en la sesión
+    // 1. Extraer y desglosar requerimientos por subcarpeta vs descripción general
+    const rawDescripcion = String(activeSessionData.descripcion || '');
+    
+    // Parsear subcarpetas en formato [1.1]: ... [1.2]: ... o [Subcarpeta X]: ...
+    const bracketPattern = /\[([^\]]+)\]:?\s*([^[|\n]+(?:\n(?![\[\s]*[0-9a-zA-Z._-]+\s*\]:)[^[|\n]+)*)/g;
+    const parsedRequirementsMap = new Map<string, string>();
+    let m;
+    while ((m = bracketPattern.exec(rawDescripcion)) !== null) {
+      const subKey = m[1].trim();
+      const subReq = m[2].trim();
+      if (subKey && !subKey.toUpperCase().startsWith('PIN') && subKey.toUpperCase() !== 'EXPEDIENTE GENERAL') {
+        parsedRequirementsMap.set(subKey.toLowerCase(), subReq);
+      }
+    }
+
+    // Extraer descripción general limpia eliminando tags de subcarpetas
+    let cleanGeneralDesc = rawDescripcion
+      .replace(/\[([^\]]+)\]:?\s*[^[|\n]+(?:\n(?![\[\s]*[0-9a-zA-Z._-]+\s*\]:)[^[|\n]+)*/g, '')
+      .replace(/\[.*?\]/g, '')
+      .replace(/\|/g, '')
+      .trim();
+
+    // Si encontramos múltiples subcarpetas en la descripción y activeSessionData.subcarpetas no las tenía
+    if (parsedRequirementsMap.size > 1 && (!activeSessionData.subcarpetas || activeSessionData.subcarpetas.length <= 1)) {
+      const newSubs: any[] = [];
+      let sIdx = 0;
+      for (const [subKey, subReq] of parsedRequirementsMap.entries()) {
+        const origKey = Array.from(rawDescripcion.matchAll(/\[(.*?)\]:/g))
+          .map(match => match[1].trim())
+          .find(k => k.toLowerCase() === subKey) || subKey;
+          
+        newSubs.push({
+          id: `parsed-sub-${sIdx + 1}`,
+          responsable_id: activeSessionData.responsable_id,
+          subcarpeta_id: null,
+          nombre: origKey,
+          descripcion: subReq,
+          estado_entrega: activeSessionData.estado_entrega || 'Pendiente',
+          storage_subfolder_path: activeSessionData.storage_subfolder_path,
+          observaciones: '',
+          anexos: activeSessionData.anexos || []
+        });
+        sIdx++;
+      }
+      activeSessionData.subcarpetas = newSubs;
+    } else if (activeSessionData.subcarpetas && activeSessionData.subcarpetas.length > 0) {
+      // Si ya existen subcarpetas, enriquecer su descripción si tienen la genérica o el texto crudo
+      for (const sub of activeSessionData.subcarpetas) {
+        const subName = String(sub.nombre || '').trim();
+        const lowerName = subName.toLowerCase();
+        if (parsedRequirementsMap.has(lowerName)) {
+          const req = parsedRequirementsMap.get(lowerName)!;
+          if (!sub.descripcion || sub.descripcion.startsWith('Cargue los documentos') || sub.descripcion === rawDescripcion) {
+            sub.descripcion = req;
+          }
+        }
+      }
+    }
+
+    // Normalizar subcarpetas en la sesión si estuviera vacía
     if (!activeSessionData.subcarpetas || activeSessionData.subcarpetas.length === 0) {
       activeSessionData.subcarpetas = [
         {
@@ -1411,7 +1541,7 @@ import Layout from '@layouts/Layout.astro';
           responsable_id: activeSessionData.responsable_id,
           subcarpeta_id: null,
           nombre: 'Subcarpeta 1',
-          descripcion: activeSessionData.descripcion || 'Entrega de anexos oficiales para este radicado.',
+          descripcion: cleanGeneralDesc || 'Entrega de anexos oficiales para este radicado.',
           estado_entrega: activeSessionData.estado_entrega || 'Pendiente',
           storage_subfolder_path: activeSessionData.storage_subfolder_path,
           observaciones: '',
@@ -1449,7 +1579,18 @@ import Layout from '@layouts/Layout.astro';
     if (radEl) radEl.textContent = activeSessionData.numero_radicado;
     if (ofiEl) ofiEl.textContent = activeSessionData.oficina_nombre;
     if (asuntoEl) asuntoEl.textContent = activeSessionData.asunto;
-    if (descEl) descEl.textContent = activeSessionData.descripcion || 'Sin descripción adicional.';
+    
+    // Descripción general limpia (se oculta si no existe o solo habían subcarpetas)
+    if (descEl) {
+      if (cleanGeneralDesc && cleanGeneralDesc.length > 3) {
+        descEl.textContent = cleanGeneralDesc;
+        descEl.style.display = 'block';
+      } else {
+        descEl.textContent = '';
+        descEl.style.display = 'none';
+      }
+    }
+
     if (fechaRespEl) fechaRespEl.textContent = `${activeSessionData.fecha_limite_responsable} (Cierre Dependencia)`;
     if (fechaEntEl) fechaEntEl.textContent = activeSessionData.fecha_limite_entrega;
 
@@ -1469,8 +1610,60 @@ import Layout from '@layouts/Layout.astro';
       if (docOrigCard) docOrigCard.style.display = 'none';
     }
 
+    // Renderizar Resumen Superior de Requerimientos y Pestañas de Subcarpetas
+    renderSubcarpetasRequirementsSummary();
     renderSubcarpetasTabs();
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // 3. Renderizar Resumen Superior Bento de Requerimientos por Subcarpeta
+  function renderSubcarpetasRequirementsSummary() {
+    const reqsContainer = document.getElementById('portal-sub-reqs-container');
+    if (!reqsContainer) return;
+
+    const subs = activeSessionData?.subcarpetas || [];
+    if (subs.length === 0) {
+      reqsContainer.innerHTML = '';
+      return;
+    }
+
+    reqsContainer.innerHTML = subs.map((s: any, idx: number) => {
+      const isActive = idx === activeSubIndex;
+      const rawName = String(s.nombre || `Subcarpeta ${idx + 1}`).trim();
+      const badgeLabel = rawName.toLowerCase().startsWith('subcarpeta') ? rawName : `Subcarpeta ${rawName}`;
+      const desc = s.descripcion && s.descripcion.trim() ? s.descripcion.trim() : 'Aportar memorandos oficiales, certificaciones o soportes requeridos para responder de fondo la petición.';
+
+      return `
+        <div 
+          class="portal-sub-req-card ${isActive ? 'active' : 'inactive'}" 
+          data-sub-idx="${idx}"
+          role="button"
+          tabindex="0"
+          title="Haga clic para enfocar esta subcarpeta"
+        >
+          <div style="flex-shrink: 0; display: flex; align-items: center; margin-top: 1px;">
+            <span class="portal-sub-badge">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <span>${badgeLabel}</span>
+            </span>
+          </div>
+          <div class="portal-sub-req-text">
+            ${desc}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Listener interactivo para seleccionar la subcarpeta al pulsar su tarjeta en el resumen superior
+    reqsContainer.querySelectorAll('.portal-sub-req-card').forEach((card) => {
+      card.addEventListener('click', () => {
+        const idx = Number(card.getAttribute('data-sub-idx'));
+        if (activeSubIndex !== idx) {
+          activeSubIndex = idx;
+          renderSubcarpetasTabs();
+        }
+      });
+    });
   }
 
   function renderSubcarpetasTabs() {
@@ -1495,6 +1688,23 @@ import Layout from '@layouts/Layout.astro';
     if (activeSubName) {
       activeSubName.textContent = currentSub.nombre || `Subcarpeta ${activeSubIndex + 1}`;
     }
+
+    const descTitle = document.getElementById('portal-subcarpeta-desc-title');
+    if (descTitle) {
+      descTitle.textContent = `Requerimiento de esta Subcarpeta (${currentSub.nombre || activeSubIndex + 1}):`;
+    }
+
+    // Sincronizar estado visual activo en el Resumen Superior Bento
+    const reqCards = document.querySelectorAll('#portal-sub-reqs-container .portal-sub-req-card');
+    reqCards.forEach((card, idx) => {
+      if (idx === activeSubIndex) {
+        card.classList.add('active');
+        card.classList.remove('inactive');
+      } else {
+        card.classList.remove('active');
+        card.classList.add('inactive');
+      }
+    });
 
     const isCurrentDelivered = currentSub.estado_entrega === 'Entregado' || (currentSub.anexos && currentSub.anexos.length > 0);
     if (activeSubStatus) {
