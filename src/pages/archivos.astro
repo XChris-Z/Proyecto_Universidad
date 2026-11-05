@@ -1778,7 +1778,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         });
 
         // Registrar listener para Acordeón Vertical Pro Max en cada subcarpeta
-        container.querySelectorAll('.subcarpeta-header').forEach((hdr) => {
+        explorerFolder.querySelectorAll('.subcarpeta-header').forEach((hdr) => {
           hdr.addEventListener('click', (e) => {
             const h = e.currentTarget as HTMLElement;
             const card = h.closest('.subfolder-bento-card');
