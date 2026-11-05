@@ -110,35 +110,66 @@ export const POST: APIRoute = async ({ request, url }) => {
     let respData: any = null;
     let respErr: any = null;
 
-    const resWithSub = await (supabase
-      .from('peticion_responsables' as any)
-      .insert(asignacionesToInsert as any)
-      .select('id, oficina_id, codigo_acceso, fecha_expiracion_codigo, storage_subfolder_path, estado_entrega') as any);
+    const tryInsertSubResp = async (list: any[]) => {
+      return await (supabase
+        .from('peticion_responsables' as any)
+        .insert(list as any)
+        .select('id, oficina_id, codigo_acceso, fecha_expiracion_codigo, storage_subfolder_path, estado_entrega') as any);
+    };
 
+    let res = await tryInsertSubResp(asignacionesToInsert);
+
+    // Si falla por columna subcarpeta_id inexistente:
     if (
-      resWithSub.error &&
-      (String(resWithSub.error.message || '').includes('subcarpeta_id') ||
-       String(resWithSub.error.message || '').includes('schema cache') ||
-       resWithSub.error.code === '42703' ||
-       resWithSub.error.code === 'PGRST204')
+      res.error &&
+      (String(res.error.message || '').includes('subcarpeta_id') ||
+       String(res.error.message || '').includes('schema cache') ||
+       res.error.code === '42703' ||
+       res.error.code === 'PGRST204')
     ) {
-      console.warn('Columna subcarpeta_id no encontrada en peticion_responsables. Reintentando asignación...');
+      console.warn('Columna subcarpeta_id no encontrada en peticion_responsables. Reintentando sin subcarpeta_id...');
       const fallbackAsignaciones = asignacionesToInsert.map((a: any) => {
         const copy = { ...a };
         delete copy.subcarpeta_id;
         return copy;
       });
+      res = await tryInsertSubResp(fallbackAsignaciones);
+    }
 
-      const resFallback = await (supabase
+    // Si falla por restricción unique_peticion_oficina (la dependencia ya estaba en la petición):
+    if (
+      res.error &&
+      (res.error.code === '23505' ||
+       String(res.error.message || '').includes('unique_peticion_oficina') ||
+       String(res.error.message || '').includes('duplicate key'))
+    ) {
+      console.warn('Dependencia ya vinculada a la petición. Actualizando asignación existente con la nueva subcarpeta...');
+      const { data: existingRows } = await (supabase
         .from('peticion_responsables' as any)
-        .insert(fallbackAsignaciones as any)
-        .select('id, oficina_id, codigo_acceso, fecha_expiracion_codigo, storage_subfolder_path, estado_entrega') as any);
+        .select('id, oficina_id, codigo_acceso, fecha_expiracion_codigo, storage_subfolder_path, estado_entrega, observaciones_entrega')
+        .eq('peticion_id', peticion.id)
+        .in('oficina_id', cleanOfficeIds) as any);
 
-      respData = resFallback.data;
-      respErr = resFallback.error;
+      if (existingRows && existingRows.length > 0) {
+        for (const row of existingRows) {
+          const prevObs = row.observaciones_entrega || '';
+          if (!prevObs.includes(`[${cleanNombre}]`)) {
+            const updatedObs = `${prevObs} | [${cleanNombre}]${cleanDescripcion ? ` ${cleanDescripcion}` : ''}`;
+            await (supabase
+              .from('peticion_responsables' as any)
+              .update({ observaciones_entrega: updatedObs })
+              .eq('id', row.id) as any);
+          }
+        }
+        respData = existingRows;
+        respErr = null;
+      } else {
+        respData = res.data;
+        respErr = res.error;
+      }
     } else {
-      respData = resWithSub.data;
-      respErr = resWithSub.error;
+      respData = res.data;
+      respErr = res.error;
     }
 
     if (respErr || !respData) {

@@ -362,37 +362,62 @@ export const POST: APIRoute = async ({ request, url }) => {
     let responsablesData: any = null;
     let respError: any = null;
 
-    // Intento 1: Inserción vinculando subcarpeta_id si la columna física ya existe en PostgreSQL
-    const resWithSub = await (supabase
-      .from('peticion_responsables' as any)
-      .insert(asignacionesToInsert as any)
-      .select('id, oficina_id, codigo_acceso, fecha_expiracion_codigo, storage_subfolder_path, estado_entrega') as any);
+    const tryInsertResponsables = async (list: any[]) => {
+      return await (supabase
+        .from('peticion_responsables' as any)
+        .insert(list as any)
+        .select('id, oficina_id, codigo_acceso, fecha_expiracion_codigo, storage_subfolder_path, estado_entrega') as any);
+    };
 
+    // Intento 1: Inserción directa (vinculando subcarpeta_id si la columna existe)
+    let insertAttempt = await tryInsertResponsables(asignacionesToInsert);
+
+    // Si falla por columna subcarpeta_id inexistente en schema cache:
     if (
-      resWithSub.error &&
-      (String(resWithSub.error.message || '').includes('subcarpeta_id') ||
-       String(resWithSub.error.message || '').includes('schema cache') ||
-       resWithSub.error.code === '42703' ||
-       resWithSub.error.code === 'PGRST204')
+      insertAttempt.error &&
+      (String(insertAttempt.error.message || '').includes('subcarpeta_id') ||
+       String(insertAttempt.error.message || '').includes('schema cache') ||
+       insertAttempt.error.code === '42703' ||
+       insertAttempt.error.code === 'PGRST204')
     ) {
-      console.warn('Columna subcarpeta_id no encontrada en peticion_responsables. Reintentando radicación sin subcarpeta_id...');
-      const asignacionesFallback = asignacionesToInsert.map((a: any) => {
+      console.warn('Columna subcarpeta_id no encontrada. Reintentando radicación sin subcarpeta_id...');
+      const fallbackList = asignacionesToInsert.map((a: any) => {
         const copy = { ...a };
         delete copy.subcarpeta_id;
         return copy;
       });
-
-      const resFallback = await (supabase
-        .from('peticion_responsables' as any)
-        .insert(asignacionesFallback as any)
-        .select('id, oficina_id, codigo_acceso, fecha_expiracion_codigo, storage_subfolder_path, estado_entrega') as any);
-
-      responsablesData = resFallback.data;
-      respError = resFallback.error;
-    } else {
-      responsablesData = resWithSub.data;
-      respError = resWithSub.error;
+      insertAttempt = await tryInsertResponsables(fallbackList);
     }
+
+    // Si falla por restricción única (unique_peticion_oficina o código 23505 duplicate key):
+    if (
+      insertAttempt.error &&
+      (insertAttempt.error.code === '23505' ||
+       String(insertAttempt.error.message || '').includes('unique_peticion_oficina') ||
+       String(insertAttempt.error.message || '').includes('duplicate key'))
+    ) {
+      console.warn('Restricción única unique_peticion_oficina detectada en PostgreSQL. Consolidando dependencias asignadas a múltiples subcarpetas...');
+      const uniqueOfficeMap: Record<string, any> = {};
+
+      for (const ofiId of allUniqueOfficeIds) {
+        const matchingSubs = subcarpetas.filter((s) => s.oficina_ids?.includes(ofiId));
+        const subNotes = matchingSubs
+          .map((s) => `[${s.nombre}]${s.descripcion ? ` ${s.descripcion}` : ''}`)
+          .join(' | ');
+
+        uniqueOfficeMap[ofiId] = {
+          peticion_id: peticionData.id,
+          oficina_id: ofiId,
+          estado_entrega: 'Pendiente',
+          observaciones_entrega: `PIN:${pinAcceso} | ${subNotes}`,
+        };
+      }
+
+      insertAttempt = await tryInsertResponsables(Object.values(uniqueOfficeMap));
+    }
+
+    responsablesData = insertAttempt.data;
+    respError = insertAttempt.error;
 
     if (respError || !responsablesData) {
       console.error('Error asignando responsables:', respError);

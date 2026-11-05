@@ -277,40 +277,60 @@ export const POST: APIRoute = async ({ request }) => {
     } catch {}
 
     // Mapear el desglose de subcarpetas asignadas a esta oficina
-    const subcarpetasResponse = targetAssignments.map((assign: any, index: number) => {
+    const subcarpetasResponse: any[] = [];
+
+    for (let index = 0; index < targetAssignments.length; index++) {
+      const assign = targetAssignments[index];
       const rawObs = assign.observaciones_entrega || '';
-      
-      // Intentar extraer el nombre de la subcarpeta desde observaciones_entrega e.g. [Nombre Subcarpeta]
-      const subNameMatch = rawObs.match(/\[(.*?)\]/);
-      const subNameFromObs = subNameMatch ? subNameMatch[1].trim() : null;
 
-      let matchedSub = null;
-      if (subNameFromObs) {
-        matchedSub = subcarpetasCatalog.find((s: any) => s.nombre?.toLowerCase() === subNameFromObs.toLowerCase());
+      // Extraer todas las subcarpetas mencionadas en observaciones_entrega e.g. [Subcarpeta 1], [Subcarpeta 2]
+      const subMatches = Array.from(rawObs.matchAll(/\[(.*?)\]/g)).map((m: any) => m[1].trim());
+
+      if (subMatches.length > 1) {
+        for (let sIdx = 0; sIdx < subMatches.length; sIdx++) {
+          const subName = subMatches[sIdx];
+          const matchedSub = subcarpetasCatalog.find((s: any) => s.nombre?.toLowerCase() === subName.toLowerCase());
+
+          subcarpetasResponse.push({
+            id: matchedSub?.id || `sub-${index + 1}-${sIdx + 1}`,
+            responsable_id: assign.id,
+            subcarpeta_id: matchedSub?.id || null,
+            nombre: matchedSub?.nombre || subName,
+            descripcion: matchedSub?.descripcion || resultado.descripcion || null,
+            estado_entrega: assign.estado_entrega || 'Pendiente',
+            storage_subfolder_path: assign.storage_subfolder_path || resultado.storage_subfolder_path,
+            observaciones: rawObs.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '').trim(),
+            anexos: allAnexos.filter((a: any) => a.peticion_responsable_id === assign.id),
+          });
+        }
+      } else {
+        const subNameFromObs = subMatches[0] || null;
+        let matchedSub = null;
+        if (subNameFromObs) {
+          matchedSub = subcarpetasCatalog.find((s: any) => s.nombre?.toLowerCase() === subNameFromObs.toLowerCase());
+        }
+        if (!matchedSub && subcarpetasCatalog[index]) {
+          matchedSub = subcarpetasCatalog[index];
+        }
+
+        const cleanObs = rawObs
+          .replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '')
+          .replace(/^\[.*?\]\s*/i, '')
+          .trim();
+
+        subcarpetasResponse.push({
+          id: matchedSub?.id || `sub-${index + 1}`,
+          responsable_id: assign.id,
+          subcarpeta_id: matchedSub?.id || null,
+          nombre: matchedSub?.nombre || subNameFromObs || (subcarpetasCatalog.length > 0 ? (subcarpetasCatalog[index]?.nombre || 'Expediente General') : 'Expediente General'),
+          descripcion: matchedSub?.descripcion || resultado.descripcion || null,
+          estado_entrega: assign.estado_entrega || 'Pendiente',
+          storage_subfolder_path: assign.storage_subfolder_path || resultado.storage_subfolder_path,
+          observaciones: cleanObs,
+          anexos: allAnexos.filter((a: any) => a.peticion_responsable_id === assign.id),
+        });
       }
-      if (!matchedSub && subcarpetasCatalog[index]) {
-        matchedSub = subcarpetasCatalog[index];
-      }
-
-      const cleanObs = rawObs
-        .replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '')
-        .replace(/^\[.*?\]\s*/i, '')
-        .trim();
-
-      const subAnexos = allAnexos.filter((a: any) => a.peticion_responsable_id === assign.id);
-
-      return {
-        id: matchedSub?.id || `sub-${index + 1}`,
-        responsable_id: assign.id,
-        subcarpeta_id: matchedSub?.id || null,
-        nombre: matchedSub?.nombre || subNameFromObs || (subcarpetasCatalog.length > 0 ? (subcarpetasCatalog[index]?.nombre || 'Expediente General') : 'Expediente General'),
-        descripcion: matchedSub?.descripcion || resultado.descripcion || null,
-        estado_entrega: assign.estado_entrega || 'Pendiente',
-        storage_subfolder_path: assign.storage_subfolder_path || resultado.storage_subfolder_path,
-        observaciones: cleanObs,
-        anexos: subAnexos,
-      };
-    });
+    }
 
     // Registrar acceso exitoso en auditoría
     await logSystemActivity({

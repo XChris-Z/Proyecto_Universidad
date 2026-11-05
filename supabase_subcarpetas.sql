@@ -30,6 +30,10 @@ ADD COLUMN IF NOT EXISTS subcarpeta_id UUID REFERENCES public.peticion_subcarpet
 ALTER TABLE public.peticion_responsables
 ADD COLUMN IF NOT EXISTS observaciones TEXT;
 
+-- 3b. Eliminar restricción única obsoleta que impedía asignar la misma dependencia a múltiples subcarpetas de una misma petición
+ALTER TABLE public.peticion_responsables 
+DROP CONSTRAINT IF EXISTS unique_peticion_oficina;
+
 -- 4. Vincular peticion_anexos a la subcarpeta correspondiente
 ALTER TABLE public.peticion_anexos
 ADD COLUMN IF NOT EXISTS subcarpeta_id UUID REFERENCES public.peticion_subcarpetas(id) ON DELETE SET NULL;
