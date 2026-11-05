@@ -115,7 +115,7 @@ export const POST: APIRoute = async ({ request, url }) => {
     if (!subcarpetas || subcarpetas.length === 0) {
       if (Array.isArray(oficina_ids) && oficina_ids.length > 0) {
         subcarpetas = [{
-          nombre: 'Expediente General',
+          nombre: 'Subcarpeta 1',
           descripcion: instrucciones_anexos || descripcion || 'Anexos requeridos para el radicado oficial.',
           oficina_ids: oficina_ids,
         }];

@@ -378,7 +378,7 @@ export const POST: APIRoute = async ({ request }) => {
       // Si no hay subMatches en observaciones pero sí existen subcarpetas en catálogo
       const activeSubNames = subMatches.length > 0
         ? subMatches
-        : (subcarpetasCatalog.length > 0 ? subcarpetasCatalog.map((s: any) => s.nombre) : ['Expediente General']);
+        : (subcarpetasCatalog.length > 0 ? subcarpetasCatalog.map((s: any) => s.nombre) : ['Subcarpeta 1']);
 
       if (activeSubNames.length > 1) {
         for (let sIdx = 0; sIdx < activeSubNames.length; sIdx++) {
@@ -412,7 +412,7 @@ export const POST: APIRoute = async ({ request }) => {
           });
         }
       } else {
-        const subName = activeSubNames[0] || 'Expediente General';
+        const subName = activeSubNames[0] || 'Subcarpeta 1';
         let matchedSub = null;
         if (subName) {
           matchedSub = subcarpetasCatalog.find((s: any) => s.nombre?.toLowerCase() === subName.toLowerCase());

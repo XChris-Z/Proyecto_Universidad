@@ -176,22 +176,25 @@ const rawPeticiones = (dbPeticiones as any[]) || [];
 // Helper robusto para inferir subcarpetas virtuales si la tabla física aún no tiene registros (retrocompatibilidad)
 function combineSubcarpetas(p: any, dbSubs: any[] = []): any[] {
   const mapByName: Record<string, any> = {};
-  (dbSubs || []).forEach(s => { if (s && s.nombre) mapByName[s.nombre.trim().toUpperCase()] = s; });
-
+  (dbSubs || []).forEach(s => {
+    if (s && s.nombre && s.nombre.trim().toLowerCase() !== 'expediente general') {
+      mapByName[s.nombre.trim().toUpperCase()] = s;
+    }
+  });
 
   const foundSubs: Record<string, { id: string; peticion_id: string; nombre: string; descripcion?: string | null }> = {};
 
   (p.peticion_responsables || []).forEach((r: any) => {
     const raw = r?.observaciones_entrega || '';
     const withoutPin = raw.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '');
-    const matches = withoutPin.matchAll(/\[([a-zA-Z0-9_\-\s]+)\](?:\s*:?\s*([^|\[]+))?/g);
+    const matches = withoutPin.matchAll(/\[([^\]\r\n]+)\](?:\s*:?\s*([^|\[\r\n]+))?/g);
     for (const m of matches) {
       const name = m[1]?.trim();
-      if (name) {
+      if (name && !name.toUpperCase().startsWith('PIN') && name.toUpperCase() !== 'EXPEDIENTE GENERAL') {
         const key = name.toUpperCase();
         if (!foundSubs[key]) {
           foundSubs[key] = {
-            id: `sub-inf-${p.id}-${key}`,
+            id: `sub-inf-${p.id}-${key.replace(/[^A-Z0-9_-]/g, '_')}`,
             peticion_id: p.id,
             nombre: name,
             descripcion: m[2]?.trim() || null,
@@ -205,42 +208,60 @@ function combineSubcarpetas(p: any, dbSubs: any[] = []): any[] {
 
   (p.peticion_anexos || []).forEach((a: any) => {
     const fileName = a?.nombre_archivo || '';
-    const m = fileName.match(/\[([a-zA-Z0-9_\-\s]+)\]/i);
+    const m = fileName.match(/\[([^\]\r\n]+)\]/i);
     if (m && m[1]) {
       const name = m[1].trim();
-      const key = name.toUpperCase();
-      if (!foundSubs[key]) {
-        foundSubs[key] = {
-          id: `sub-inf-${p.id}-${key}`,
-          peticion_id: p.id,
-          nombre: name,
-          descripcion: null,
-        };
+      if (name && !name.toUpperCase().startsWith('PIN') && name.toUpperCase() !== 'EXPEDIENTE GENERAL') {
+        const key = name.toUpperCase();
+        if (!foundSubs[key]) {
+          foundSubs[key] = {
+            id: `sub-inf-${p.id}-${key.replace(/[^A-Z0-9_-]/g, '_')}`,
+            peticion_id: p.id,
+            nombre: name,
+            descripcion: null,
+          };
+        }
       }
     }
   });
 
   const textDesc = p.instrucciones_anexos || p.descripcion || '';
   if (textDesc) {
-    const matches = textDesc.matchAll(/\[([a-zA-Z0-9_\-\s]+)\](?:\s*:?\s*([^|\[]+))?/g);
+    const matches = textDesc.matchAll(/\[([^\]\r\n]+)\](?:\s*:?\s*([^|\[\r\n]+))?/g);
     for (const m of matches) {
       const name = m[1]?.trim();
-      if (name) {
+      if (name && !name.toUpperCase().startsWith('PIN') && name.toUpperCase() !== 'EXPEDIENTE GENERAL') {
         const key = name.toUpperCase();
         if (!foundSubs[key]) {
           foundSubs[key] = {
-            id: `sub-inf-${p.id}-${key}`,
+            id: `sub-inf-${p.id}-${key.replace(/[^A-Z0-9_-]/g, '_')}`,
             peticion_id: p.id,
             nombre: name,
             descripcion: m[2]?.trim() || null,
           };
+        } else if (!foundSubs[key].descripcion && m[2]?.trim()) {
+          foundSubs[key].descripcion = m[2].trim();
         }
       }
     }
   }
 
-  Object.values(foundSubs).forEach(s => { const k = s.nombre.trim().toUpperCase(); if (!mapByName[k]) mapByName[k] = s; });
-  return Object.values(mapByName);
+  Object.values(foundSubs).forEach(s => {
+    const k = s.nombre.trim().toUpperCase();
+    if (!mapByName[k]) mapByName[k] = s;
+  });
+
+  const list = Object.values(mapByName);
+  if (list.length === 0 && (p.peticion_responsables?.length > 0 || (p.peticion_anexos && p.peticion_anexos.some((a: any) => a.es_anexo_oficina)))) {
+    list.push({
+      id: `sub-default-${p.id}`,
+      peticion_id: p.id,
+      nombre: 'Subcarpeta 1',
+      descripcion: p.instrucciones_anexos || 'Aportes y requerimientos de dependencias',
+    });
+  }
+
+  return list;
 }
 const inferSubcarpetas = combineSubcarpetas;
 
@@ -570,7 +591,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
               Al radicar una nueva petición se creará automáticamente su carpeta virtual con su documento inicial y las subcarpetas de las dependencias asignadas.
             </p>
             <a href="/peticiones/subir" class="btn btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
-              <span>+ Radicar Primera Petición</span>
+              <span>Radicar Primera Petición</span>
             </a>
           </div>
         )}
@@ -968,21 +989,27 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
     const peticionesMap = new Map<string, PeticionExpediente>();
 
     function inferSubcarpetas(p: any): any[] {
-      if (p.subcarpetas && p.subcarpetas.length > 0) return p.subcarpetas;
+      const dbSubs = (p.subcarpetas && Array.isArray(p.subcarpetas)) ? p.subcarpetas : [];
+      const mapByName: Record<string, any> = {};
+      dbSubs.forEach((s) => {
+        if (s && s.nombre && s.nombre.trim().toLowerCase() !== 'expediente general') {
+          mapByName[s.nombre.trim().toUpperCase()] = s;
+        }
+      });
 
       const foundSubs: Record<string, { id: string; peticion_id: string; nombre: string; descripcion?: string | null }> = {};
 
       (p.peticion_responsables || []).forEach((r: any) => {
         const raw = r?.observaciones_entrega || '';
         const withoutPin = raw.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '');
-        const matches = withoutPin.matchAll(/\[([a-zA-Z0-9_\-\s]+)\](?:\s*:?\s*([^|\[]+))?/g);
+        const matches = withoutPin.matchAll(/\[([^\]\r\n]+)\](?:\s*:?\s*([^|\[\r\n]+))?/g);
         for (const m of matches) {
           const name = m[1]?.trim();
-          if (name) {
+          if (name && !name.toUpperCase().startsWith('PIN') && name.toUpperCase() !== 'EXPEDIENTE GENERAL') {
             const key = name.toUpperCase();
             if (!foundSubs[key]) {
               foundSubs[key] = {
-                id: `sub-inf-${p.id}-${key}`,
+                id: `sub-inf-${p.id}-${key.replace(/[^A-Z0-9_-]/g, '_')}`,
                 peticion_id: p.id,
                 nombre: name,
                 descripcion: m[2]?.trim() || null,
@@ -996,41 +1023,60 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
 
       (p.peticion_anexos || []).forEach((a: any) => {
         const fileName = a?.nombre_archivo || '';
-        const m = fileName.match(/\[([a-zA-Z0-9_\-\s]+)\]/i);
+        const m = fileName.match(/\[([^\]\r\n]+)\]/i);
         if (m && m[1]) {
           const name = m[1].trim();
-          const key = name.toUpperCase();
-          if (!foundSubs[key]) {
-            foundSubs[key] = {
-              id: `sub-inf-${p.id}-${key}`,
-              peticion_id: p.id,
-              nombre: name,
-              descripcion: null,
-            };
+          if (name && !name.toUpperCase().startsWith('PIN') && name.toUpperCase() !== 'EXPEDIENTE GENERAL') {
+            const key = name.toUpperCase();
+            if (!foundSubs[key]) {
+              foundSubs[key] = {
+                id: `sub-inf-${p.id}-${key.replace(/[^A-Z0-9_-]/g, '_')}`,
+                peticion_id: p.id,
+                nombre: name,
+                descripcion: null,
+              };
+            }
           }
         }
       });
 
       const textDesc = p.instrucciones_anexos || p.descripcion || '';
       if (textDesc) {
-        const matches = textDesc.matchAll(/\[([a-zA-Z0-9_\-\s]+)\](?:\s*:?\s*([^|\[]+))?/g);
+        const matches = textDesc.matchAll(/\[([^\]\r\n]+)\](?:\s*:?\s*([^|\[\r\n]+))?/g);
         for (const m of matches) {
           const name = m[1]?.trim();
-          if (name) {
+          if (name && !name.toUpperCase().startsWith('PIN') && name.toUpperCase() !== 'EXPEDIENTE GENERAL') {
             const key = name.toUpperCase();
             if (!foundSubs[key]) {
               foundSubs[key] = {
-                id: `sub-inf-${p.id}-${key}`,
+                id: `sub-inf-${p.id}-${key.replace(/[^A-Z0-9_-]/g, '_')}`,
                 peticion_id: p.id,
                 nombre: name,
                 descripcion: m[2]?.trim() || null,
               };
+            } else if (!foundSubs[key].descripcion && m[2]?.trim()) {
+              foundSubs[key].descripcion = m[2].trim();
             }
           }
         }
       }
 
-      return Object.values(foundSubs);
+      Object.values(foundSubs).forEach((s) => {
+        const k = s.nombre.trim().toUpperCase();
+        if (!mapByName[k]) mapByName[k] = s;
+      });
+
+      const list = Object.values(mapByName);
+      if (list.length === 0 && (p.peticion_responsables?.length > 0 || (p.peticion_anexos && p.peticion_anexos.some((a: any) => a.es_anexo_oficina)))) {
+        list.push({
+          id: `sub-default-${p.id}`,
+          peticion_id: p.id,
+          nombre: 'Subcarpeta 1',
+          descripcion: p.instrucciones_anexos || 'Aportes y requerimientos de dependencias',
+        });
+      }
+
+      return list;
     }
 
     function decodeBase64Utf8(b64: string): PeticionExpediente[] {
@@ -1431,7 +1477,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                   style="display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 0.78rem; background: #006837; color: #ffffff;"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                  <span>+ Crear Subcarpeta y Asignar Dependencias</span>
+                  <span>Crear Subcarpeta y Asignar Dependencias</span>
                 </button>
                 <span style="font-size: 0.78rem; font-weight: 800; color: #006837; background: #ecfdf5; padding: 4px 12px; border-radius: 6px; border: 1px solid #a7f3d0;">
                   ${responsables.length} asignacion${responsables.length === 1 ? '' : 'es'}
@@ -1440,7 +1486,9 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
             </div>
 
             ${(() => {
-              const subcarpetas = peticion.subcarpetas || [];
+              const subcarpetas = (peticion.subcarpetas && peticion.subcarpetas.length > 0)
+                ? peticion.subcarpetas
+                : inferSubcarpetas(peticion);
               if (subcarpetas.length > 1) {
                 return `
                   <!-- Barra de Pestañas / Filtro de Subcarpetas con Transición Fluida Crossfade -->
@@ -1449,12 +1497,14 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                       <span>Todas las Subcarpetas</span>
                       <span style="background: rgba(255,255,255,0.2); padding: 1px 6px; border-radius: 9999px; font-size: 0.68rem;">${subcarpetas.length}</span>
                     </button>
-                    ${subcarpetas.map((s: any) => `
+                    ${subcarpetas.map((s: any) => {
+                      const cleanSubTitle = s.nombre.toLowerCase().startsWith('subcarpeta') ? s.nombre : `Subcarpeta ${s.nombre}`;
+                      return `
                       <button type="button" class="btn-sub-filter-tab" data-filter-sub="${escapeHtml(s.nombre)}" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 0.76rem; font-weight: 750; border-radius: 6px; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; cursor: pointer; transition: all 0.2s ease;">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                        <span>Subcarpeta ${escapeHtml(s.nombre)}</span>
+                        <span>${escapeHtml(cleanSubTitle)}</span>
                       </button>
-                    `).join('')}
+                    `}).join('')}
                   </div>
                 `;
               }
@@ -1496,17 +1546,38 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                 };
 
                 if (subcarpetas.length > 0) {
-                  subcarpetas.forEach((sub: any) => {
-                    const subResps = responsables.filter((r) => {
-                      if (!r) return false;
-                      if (r.subcarpeta_id && r.subcarpeta_id === sub.id) return true;
-                      if (r.observaciones_entrega && r.observaciones_entrega.includes(`[${sub.nombre}]`)) return true;
-                      if (subcarpetas.length === 1) return true;
-                      return false;
+                  // Helper para asociar responsables a la subcarpeta correcta
+                  const isRespForSub = (r: any, sub: any, index: number): boolean => {
+                    if (!r) return false;
+                    if (r.subcarpeta_id && (r.subcarpeta_id === sub.id || String(r.subcarpeta_id) === String(sub.id))) return true;
+                    const cleanSubName = (sub.nombre || '').toLowerCase().trim();
+                    const rawObs = (r.observaciones_entrega || '').toLowerCase();
+                    if (cleanSubName && (rawObs.includes(`[${cleanSubName}]`) || rawObs.includes(`[subcarpeta ${cleanSubName}]`))) return true;
+                    if (subcarpetas.length === 1) return true;
+                    // Si no tiene coincidencia explícita con ninguna subcarpeta, asignar a la primera subcarpeta
+                    const matchesAnySub = subcarpetas.some((s: any) => {
+                      const sName = (s.nombre || '').toLowerCase().trim();
+                      return (r.subcarpeta_id && String(r.subcarpeta_id) === String(s.id)) || 
+                             (sName && (rawObs.includes(`[${sName}]`) || rawObs.includes(`[subcarpeta ${sName}]`)));
                     });
+                    if (!matchesAnySub && index === 0) return true;
+                    return false;
+                  };
+
+                  subcarpetas.forEach((sub: any, subIdx: number) => {
+                    const subResps = responsables.filter((r) => isRespForSub(r, sub, subIdx));
 
                     // Filtrar anexos estrictamente correspondientes a esta subcarpeta
-                    const subAnexos = anexosOficinas.filter((a) => isFileForSub(a, sub.nombre, sub.id));
+                    const subAnexos = anexosOficinas.filter((a) => {
+                      if (isFileForSub(a, sub.nombre, sub.id)) return true;
+                      if (a.peticion_responsable_id && subResps.some((sr: any) => sr.id === a.peticion_responsable_id)) {
+                        const otherSubNames = subcarpetas.filter((s: any) => s.id !== sub.id).map((s: any) => (s.nombre || '').toLowerCase().trim());
+                        const fileName = (a.nombre_archivo || '').toLowerCase();
+                        const hasOtherSub = otherSubNames.some((os: string) => os && fileName.includes(`[${os}]`));
+                        if (!hasOtherSub) return true;
+                      }
+                      return false;
+                    });
 
                     // Contar dependencias que ya entregaron archivos en esta subcarpeta
                     const deliveredCount = subResps.filter((r) => {
@@ -1516,6 +1587,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                     }).length;
 
                     const allDeliveredInSub = subResps.length > 0 && deliveredCount >= subResps.length;
+                    const subDisplayTitle = sub.nombre.toLowerCase().startsWith('subcarpeta') ? sub.nombre : `Subcarpeta ${sub.nombre}`;
 
                     subcarpetaBlocks.push(`
                       <div class="subfolder-bento-card" data-sub-name="${escapeHtml(sub.nombre)}" data-collapsed="false" style="border: 1px solid ${allDeliveredInSub ? '#a7f3d0' : 'rgba(15, 23, 42, 0.08)'}; border-radius: 12px; overflow: hidden; background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.02); transition: opacity 0.25s ease, transform 0.25s ease;">
@@ -1527,7 +1599,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                             </div>
                             <div>
                               <div style="display: flex; align-items: center; gap: 8px;">
-                                <strong style="font-size: 0.95rem; color: #052e16; font-weight: 800;">Subcarpeta: ${escapeHtml(sub.nombre)}</strong>
+                                <strong style="font-size: 0.95rem; color: #052e16; font-weight: 800;">${escapeHtml(subDisplayTitle)}</strong>
                                 <span style="font-size: 0.68rem; font-weight: 800; color: #006837; background: #ffffff; padding: 2px 8px; border-radius: 4px; border: 1px solid #a7f3d0;">${subResps.length} dependencia${subResps.length === 1 ? '' : 's'}</span>
                               </div>
                               ${sub.descripcion ? `
@@ -1585,7 +1657,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                                               <div style="min-width: 0;">
                                                 <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                                                   <strong style="color: #0f172a; word-break: break-all;">${escapeHtml(oa.nombre_archivo)}</strong>
-                                                  <span style="font-size: 0.66rem; font-weight: 750; color: #006837; background: #ecfdf5; padding: 1px 6px; border-radius: 3px; border: 1px solid #a7f3d0;">[Subcarpeta ${escapeHtml(sub.nombre)} • Enviado por: ${escapeHtml(ofiNombre)}]</span>
+                                                  <span style="font-size: 0.66rem; font-weight: 750; color: #006837; background: #ecfdf5; padding: 1px 6px; border-radius: 3px; border: 1px solid #a7f3d0;">[${escapeHtml(subDisplayTitle)} • Enviado por: ${escapeHtml(ofiNombre)}]</span>
                                                 </div>
                                                 <div style="font-size: 0.68rem; color: #64748b; margin-top: 2px;">
                                                   ${formatFileSize(oa.tamano_bytes)}${oa.created_at ? ` • Subido el ${new Date(oa.created_at).toLocaleDateString('es-CO')}` : ''}
@@ -1593,11 +1665,18 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                                               </div>
                                             </div>
                                             <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
-                                              <a href="${getPublicStorageUrl(oa.storage_path)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" class="btn btn-secondary btn-sm" style="text-decoration: none; font-size: 0.72rem; padding: 4px 9px; font-weight: 750;">
-                                                Ver
-                                              </a>
-                                              <a href="${getPublicStorageUrl(oa.storage_path)}" download="${escapeHtml(oa.nombre_archivo)}" onclick="event.stopPropagation()" class="btn btn-primary btn-sm" style="text-decoration: none; font-size: 0.72rem; padding: 4px 9px; font-weight: 750; background: #006837; color: #ffffff;">
-                                                Descargar
+                                              <a 
+                                                href="${getPublicStorageUrl(oa.storage_path)}" 
+                                                download="${escapeHtml(oa.nombre_archivo)}" 
+                                                onclick="event.stopPropagation()" 
+                                                class="btn-download-discreet" 
+                                                style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; font-size: 0.74rem; font-weight: 600; border-radius: 6px; background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; text-decoration: none; transition: all 0.2s ease;"
+                                                onmouseover="this.style.borderColor='#006837'; this.style.color='#006837'; this.style.background='#ffffff';"
+                                                onmouseout="this.style.borderColor='#cbd5e1'; this.style.color='#334155'; this.style.background='#f8fafc';"
+                                                title="Descargar archivo"
+                                              >
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                                <span>Descargar</span>
                                               </a>
                                             </div>
                                           </div>
@@ -1636,98 +1715,10 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                   });
                 }
 
-                // Asignaciones sin subcarpeta asignada (retrocompatibilidad)
-                const unassignedResps = subcarpetas.length > 0 
-                  ? responsables.filter((r) => {
-                      if (!r) return false;
-                      const hasSubId = r.subcarpeta_id && subcarpetas.some((s: any) => s.id === r.subcarpeta_id);
-                      const hasSubName = r.observaciones_entrega && subcarpetas.some((s: any) => r.observaciones_entrega.includes(`[${s.nombre}]`));
-                      return !hasSubId && !hasSubName;
-                    })
-                  : responsables;
-
-                if (unassignedResps.length > 0) {
-                  subcarpetaBlocks.push(`
-                    <div class="subfolder-bento-card" data-sub-name="Expediente General" data-collapsed="false" style="border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 12px; overflow: hidden; background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
-                      <div class="subcarpeta-header" style="background: #f8fafc; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; cursor: pointer; user-select: none; border-bottom: 1px solid rgba(15, 23, 42, 0.06); transition: background 0.2s ease;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                          <div style="width: 32px; height: 32px; border-radius: 6px; background: #ffffff; border: 1px solid rgba(15, 23, 42, 0.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#b8860b" stroke-width="1.75"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                          </div>
-                          <div>
-                            <strong style="font-size: 0.94rem; color: #0f172a; font-weight: 800;">Expediente General</strong>
-                            <div style="font-size: 0.74rem; color: #64748b; margin-top: 2px;">Dependencias requeridas directamente para el radicado</div>
-                          </div>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                          <span style="font-size: 0.72rem; font-weight: 800; color: #854d0e; background: #fefce8; padding: 3px 10px; border-radius: 6px; border: 1px solid #fef08a;">
-                            ${unassignedResps.length} dependencia${unassignedResps.length === 1 ? '' : 's'}
-                          </span>
-                          <div class="subcarpeta-chevron" style="width: 28px; height: 28px; border-radius: 6px; background: #ffffff; border: 1px solid rgba(15, 23, 42, 0.1); display: flex; align-items: center; justify-content: center; transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#334155" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div class="subcarpeta-body-wrapper" style="display: grid; grid-template-rows: 1fr; transition: grid-template-rows 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease; opacity: 1;">
-                        <div class="subcarpeta-body-content" style="overflow: hidden;">
-                          <div style="padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; background: #ffffff; border-top: 1px solid rgba(15, 23, 42, 0.06);">
-                            ${unassignedResps.map((r) => {
-                              if (!r) return '';
-                              const ofiAnexos = anexosOficinas.filter((a) => a && a.peticion_responsable_id === r.id);
-                              const isStateEntregado = String(r.estado_entrega || '').toLowerCase() === 'entregado';
-                              const isDelivered = isStateEntregado || ofiAnexos.length > 0;
-                              const ofiNombre = Array.isArray(r.oficinas) ? (r.oficinas[0]?.nombre || 'Oficina Responsable') : (r.oficinas?.nombre || 'Oficina Responsable');
-                              const ofiCodigo = Array.isArray(r.oficinas) ? (r.oficinas[0]?.codigo || '') : (r.oficinas?.codigo || '');
-                              const rawObs = (r as any).observaciones_entrega || '';
-                              const cleanObs = rawObs.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '').trim();
-
-                              return `
-                                <div style="background: #f8fafc; border: 1px solid rgba(15, 23, 42, 0.07); border-radius: 8px; padding: 12px 14px;">
-                                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
-                                    <div style="display: flex; align-items: center; gap: 8px;">
-                                      <strong style="font-size: 0.86rem; color: #0f172a; font-weight: 750;">Aporte de: ${escapeHtml(ofiNombre)}</strong>
-                                      ${ofiCodigo ? `<span style="font-size: 0.70rem; color: #64748b;">(${escapeHtml(ofiCodigo)})</span>` : ''}
-                                    </div>
-                                    <div style="display: flex; align-items: center; gap: 6px;">
-                                      <span style="font-family: monospace; font-size: 0.72rem; font-weight: 800; color: #b8860b; background: #ffffff; padding: 2px 6px; border-radius: 4px; border: 1px solid #fef08a;" title="Código Único de Acceso">${escapeHtml(r.codigo_acceso || 'UPQ')}</span>
-                                      <span style="font-size: 0.68rem; font-weight: 800; padding: 2px 7px; border-radius: 4px; border: 1px solid; ${isDelivered ? 'background: #ecfdf5; color: #047857; border-color: #a7f3d0;' : 'background: #fffbeb; color: #854d0e; border-color: #fde68a;'}">
-                                        ${isDelivered ? 'Entregado' : 'Pendiente de aporte'}
-                                      </span>
-                                    </div>
-                                  </div>
-
-                                  ${ofiAnexos.length > 0 ? `
-                                    <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
-                                      <div style="font-size: 0.68rem; font-weight: 750; color: #475569; text-transform: uppercase;">Documentos aportados:</div>
-                                      ${ofiAnexos.map((oa) => `
-                                        <div style="background: #ffffff; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 6px; padding: 8px 10px; display: flex; justify-content: space-between; align-items: center; font-size: 0.76rem; gap: 8px;">
-                                          <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
-                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#b8860b" stroke-width="1.75"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                                            <span style="color: #0f172a; font-weight: 700; word-break: break-all;">${escapeHtml(oa.nombre_archivo)}</span>
-                                          </div>
-                                          <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
-                                            <a href="${getPublicStorageUrl(oa.storage_path)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" class="btn btn-secondary btn-sm" style="text-decoration: none; font-size: 0.70rem; padding: 3px 8px; font-weight: 750;">Ver</a>
-                                            <a href="${getPublicStorageUrl(oa.storage_path)}" download="${escapeHtml(oa.nombre_archivo)}" onclick="event.stopPropagation()" class="btn btn-primary btn-sm" style="text-decoration: none; font-size: 0.70rem; padding: 3px 8px; font-weight: 750; background: #006837; color: #ffffff;">Descargar</a>
-                                          </div>
-                                        </div>
-                                      `).join('')}
-                                    </div>
-                                  ` : ''}
-                                </div>
-                              `;
-                            }).join('')}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  `);
-                }
-
                 if (subcarpetaBlocks.length === 0) {
                   return `
                     <div style="text-align: center; padding: 24px; color: #64748b; font-size: 0.82rem;">
-                      No se han asignado subcarpetas ni dependencias a este expediente. Utilice el botón "+ Crear Subcarpeta" para estructurarlo.
+                      No se han asignado subcarpetas ni dependencias a este expediente. Utilice el botón "Crear Subcarpeta" para estructurarlo.
                     </div>
                   `;
                 }
