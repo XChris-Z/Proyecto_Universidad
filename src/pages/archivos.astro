@@ -2257,6 +2257,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         submitBtn.textContent = 'Creando y notificando...';
       }
 
+      let successCreated = false;
       try {
         const res = await fetch('/api/peticiones/subcarpetas/crear', {
           method: 'POST',
@@ -2269,40 +2270,61 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
           }),
         });
 
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         if (!res.ok || !data.success) {
-          (window as any).showToast('Error: ' + (data.error || 'No se pudo crear la subcarpeta'), 'error');
+          if (typeof (window as any).showToast === 'function') {
+            (window as any).showToast('Error: ' + (data.error || 'No se pudo crear la subcarpeta'), 'error');
+          }
           return;
         }
 
-        (window as any).showToast('Subcarpeta creada exitosamente y dependencias notificadas vía correo.', 'success');
+        successCreated = true;
+        if (typeof (window as any).showToast === 'function') {
+          (window as any).showToast('Subcarpeta creada exitosamente y dependencias notificadas vía correo.', 'success');
+        }
         closeSubModal();
 
-        // Actualizar peticion en el array local y re-renderizar
-        const pet = peticiones.find((p) => p.id === petId);
+        // Actualizar peticion en el array local y re-renderizar sin recarga forzada
+        const pet = peticionesMap.get(petId) || allPeticiones.find((p) => p.id === petId);
         if (pet) {
           if (!pet.subcarpetas) pet.subcarpetas = [];
-          pet.subcarpetas.push(data.subcarpeta);
+          if (!pet.subcarpetas.some((s: any) => s.id === data.subcarpeta.id || s.nombre?.toLowerCase() === data.subcarpeta.nombre?.toLowerCase())) {
+            pet.subcarpetas.push(data.subcarpeta);
+          }
           if (Array.isArray(data.responsables)) {
             if (!pet.peticion_responsables) pet.peticion_responsables = [];
             data.responsables.forEach((r: any) => {
+              const existingIdx = pet.peticion_responsables!.findIndex((er: any) => er.id === r.id || er.oficina_id === r.oficina_id);
               const matchedOfi = archivosOficinasCatalog.find((o: any) => o.id === r.oficina_id);
-              pet.peticion_responsables!.push({
-                id: r.id,
-                codigo_acceso: r.codigo_acceso,
-                subcarpeta_id: data.subcarpeta.id,
-                estado_entrega: 'Pendiente',
-                oficinas: matchedOfi,
-              });
+              if (existingIdx >= 0) {
+                const existing = pet.peticion_responsables![existingIdx];
+                if (r.observaciones_entrega) {
+                  existing.observaciones_entrega = r.observaciones_entrega;
+                }
+              } else {
+                pet.peticion_responsables!.push({
+                  id: r.id,
+                  codigo_acceso: r.codigo_acceso,
+                  subcarpeta_id: data.subcarpeta.id,
+                  estado_entrega: 'Pendiente',
+                  observaciones_entrega: r.observaciones_entrega,
+                  oficinas: matchedOfi,
+                });
+              }
             });
           }
+          indexPeticion(pet);
           openFolderDetail(petId);
         } else {
           setTimeout(() => window.location.reload(), 600);
         }
       } catch (err: any) {
-        console.error(err);
-        (window as any).showToast('Error de red al crear la subcarpeta.', 'error');
+        console.error('Error al crear subcarpeta:', err);
+        if (!successCreated && typeof (window as any).showToast === 'function') {
+          (window as any).showToast('Error de red al crear la subcarpeta.', 'error');
+        } else if (successCreated) {
+          setTimeout(() => window.location.reload(), 600);
+        }
       } finally {
         if (submitBtn) {
           submitBtn.disabled = false;
