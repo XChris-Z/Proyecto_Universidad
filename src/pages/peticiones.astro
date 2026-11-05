@@ -41,6 +41,23 @@ const { data: dbPeticiones } = await (supabase
   `)
   .order('created_at', { ascending: false }) as any);
 
+// Consultar subcarpetas y anexos para cálculo consolidado de entregas por subcarpeta
+let dbSubcarpetas: any[] = [];
+try {
+  const { data: subsData } = await (supabase
+    .from('peticion_subcarpetas' as any)
+    .select('id, peticion_id, nombre, descripcion') as any);
+  if (subsData) dbSubcarpetas = subsData;
+} catch (e) {}
+
+let dbAnexos: any[] = [];
+try {
+  const { data: anexosData } = await (supabase
+    .from('peticion_anexos' as any)
+    .select('id, peticion_id, peticion_responsable_id, subcarpeta_id, nombre_archivo, storage_path') as any);
+  if (anexosData) dbAnexos = anexosData;
+} catch (e) {}
+
 const peticionesList = ((dbPeticiones as any[]) || []).map((p: any) => {
   const respObs = p.peticion_responsables?.find((r: any) => r?.observaciones_entrega?.includes('PIN:'))?.observaciones_entrega;
   const pinMatch = respObs?.match(/PIN:\s*([0-9A-Z]{6})/i);
@@ -180,18 +197,78 @@ const pendientesCount = peticionesList.filter((p: any) => p.estado !== 'respondi
                   </td>
 
                   <td style="padding: 12px 8px;">
-                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <div style="display: flex; flex-direction: column; gap: 5px;">
                       {responsables.map((r: any) => {
                         const ofiNombre = r.oficinas?.nombre || 'Oficina';
-                        const isDelivered = r.estado_entrega === 'Entregado';
+                        const petSubs = dbSubcarpetas.filter((s: any) => s.peticion_id === pet.id);
                         const rawObs = r.observaciones_entrega || '';
                         const cleanObs = rawObs.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '').trim();
+
+                        // Calcular subcarpetas asignadas a esta oficina
+                        const assignedSubs = petSubs.filter((s: any) => 
+                          (r.subcarpeta_id && r.subcarpeta_id === s.id) || 
+                          rawObs.includes(`[${s.nombre}]`) || 
+                          petSubs.length === 1
+                        );
+                        const totalSubs = assignedSubs.length > 0 ? assignedSubs.length : (petSubs.length > 0 ? petSubs.length : 1);
+
+                        // Contar entregas verificadas por archivo o estado
+                        let deliveredCount = 0;
+                        if (assignedSubs.length > 0) {
+                          for (const asub of assignedSubs) {
+                            const subSlug = (asub.nombre || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+                            const hasFile = dbAnexos.some((a: any) => 
+                              a.peticion_responsable_id === r.id && 
+                              ((a.subcarpeta_id && a.subcarpeta_id === asub.id) || 
+                               (a.nombre_archivo && a.nombre_archivo.includes(`[${asub.nombre}]`)) || 
+                               (subSlug && a.storage_path && a.storage_path.toLowerCase().includes(`/${subSlug}/`)) || 
+                               petSubs.length === 1)
+                            );
+                            if (hasFile) deliveredCount++;
+                          }
+                        }
+
+                        if (r.estado_entrega === 'Entregado' && deliveredCount === 0) {
+                          deliveredCount = totalSubs;
+                        }
+
+                        // Determinar badge consolidado
+                        let statusText = 'Pendiente';
+                        let dotColor = 'var(--dorado-principal)';
+                        let badgeStyle = 'background: #fffbeb; color: #b45309; border: 1px solid #fde68a;';
+
+                        if (totalSubs > 1) {
+                          if (deliveredCount >= totalSubs) {
+                            statusText = 'Entregado';
+                            dotColor = '#059669';
+                            badgeStyle = 'background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;';
+                          } else if (deliveredCount > 0) {
+                            statusText = `Parcial (${deliveredCount}/${totalSubs})`;
+                            dotColor = '#2563eb';
+                            badgeStyle = 'background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;';
+                          } else {
+                            statusText = 'Pendiente';
+                            dotColor = 'var(--dorado-principal)';
+                            badgeStyle = 'background: #fffbeb; color: #b45309; border: 1px solid #fde68a;';
+                          }
+                        } else {
+                          if (r.estado_entrega === 'Entregado' || deliveredCount > 0) {
+                            statusText = 'Entregado';
+                            dotColor = '#059669';
+                            badgeStyle = 'background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;';
+                          } else {
+                            statusText = 'Pendiente';
+                            dotColor = 'var(--dorado-principal)';
+                            badgeStyle = 'background: #fffbeb; color: #b45309; border: 1px solid #fde68a;';
+                          }
+                        }
+
                         return (
                           <div style="display: flex; align-items: center; gap: 6px; font-size: 0.74rem;">
-                            <span style={`width: 7px; height: 7px; border-radius: 50%; background: ${isDelivered ? '#059669' : 'var(--dorado-principal)'};`}></span>
+                            <span style={`width: 7px; height: 7px; border-radius: 50%; background: ${dotColor}; flex-shrink: 0;`}></span>
                             <span style="color: var(--text-main); font-weight: 600;">{ofiNombre}</span>
-                            <span style={`font-size: 0.65rem; padding: 1px 6px; border-radius: 3px; font-weight: 700; ${isDelivered ? 'background: #ecfdf5; color: #047857;' : 'background: #fffbeb; color: #b45309;'}`}>
-                              {r.estado_entrega || 'Pendiente'}
+                            <span style={`font-size: 0.65rem; padding: 1px 7px; border-radius: 4px; font-weight: 750; ${badgeStyle}`}>
+                              {statusText}
                             </span>
                             {cleanObs ? (
                               <span title={`Observación de la oficina: "${cleanObs}"`} style="display: inline-flex; align-items: center; color: #d97706; cursor: help;">

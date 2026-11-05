@@ -10,6 +10,7 @@ export const POST: APIRoute = async ({ request }) => {
     let peticionId = '';
     let responsableId = '';
     let subcarpetaId = '';
+    let subcarpetaNombre = '';
     let numeroRadicado = '';
     let emailInstitucional = '';
     let storageSubfolder = '';
@@ -27,6 +28,7 @@ export const POST: APIRoute = async ({ request }) => {
       peticionId = (formData.get('peticion_id') as string) || '';
       responsableId = (formData.get('responsable_id') as string) || '';
       subcarpetaId = (formData.get('subcarpeta_id') as string) || '';
+      subcarpetaNombre = (formData.get('subcarpeta_nombre') as string) || '';
       numeroRadicado = (formData.get('numero_radicado') as string) || '';
       emailInstitucional = (formData.get('email_institucional') as string) || '';
       storageSubfolder = (formData.get('storage_subfolder_path') as string) || '';
@@ -44,6 +46,7 @@ export const POST: APIRoute = async ({ request }) => {
       peticionId = body.peticion_id || '';
       responsableId = body.responsable_id || '';
       subcarpetaId = body.subcarpeta_id || '';
+      subcarpetaNombre = body.subcarpeta_nombre || '';
       numeroRadicado = body.numero_radicado || '';
       emailInstitucional = body.email_institucional || '';
       storageSubfolder = body.storage_subfolder_path || '';
@@ -114,10 +117,14 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // 3. Registrar en public.peticion_anexos con subcarpeta_id si está disponible
+    const anexoNombre = subcarpetaNombre && !fileName.includes(`[${subcarpetaNombre}]`)
+      ? `[${subcarpetaNombre}] ${fileName}`
+      : fileName;
+
     const anexoPayload: any = {
       peticion_id: peticionId,
       peticion_responsable_id: responsableId,
-      nombre_archivo: fileName,
+      nombre_archivo: anexoNombre,
       storage_path: fullStoragePath,
       tamano_bytes: fileSize,
       mime_type: fileMime,
@@ -163,7 +170,7 @@ export const POST: APIRoute = async ({ request }) => {
       console.error('Error insertando registro de anexo:', anexoError);
     }
 
-    // 4. Actualizar estado de entrega en peticion_responsables preservando el PIN
+    // 4. Actualizar estado de entrega en peticion_responsables preservando el PIN y observaciones por subcarpeta
     const { data: currentResp } = await (supabase
       .from('peticion_responsables' as any)
       .select('observaciones_entrega')
@@ -172,35 +179,63 @@ export const POST: APIRoute = async ({ request }) => {
 
     const rawExisting = currentResp?.observaciones_entrega || '';
     const pinMatch = rawExisting.match(/PIN:\s*([0-9A-Z]{6})/i);
+    const pinHeader = pinMatch ? pinMatch[0] : '';
     const cleanUserObs = String(observaciones || '').trim();
 
+    // Actualizar o insertar la observación específica para esta subcarpeta
     let finalObservaciones = '';
-    if (pinMatch) {
-      finalObservaciones = cleanUserObs ? `${pinMatch[0]} | ${cleanUserObs}` : pinMatch[0];
+    const cleanSubName = String(subcarpetaNombre || '').replace(/^\[+|\]+$/g, '').trim();
+
+    if (cleanSubName) {
+      let updatedBody = rawExisting.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '').trim();
+      const escapedSub = cleanSubName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const subRegex = new RegExp(`\\[\\s*${escapedSub}\\s*\\][^|]*`, 'i');
+
+      const newSubNote = cleanUserObs ? `[${cleanSubName}]: ${cleanUserObs}` : `[${cleanSubName}]`;
+      if (subRegex.test(updatedBody)) {
+        updatedBody = updatedBody.replace(subRegex, newSubNote);
+      } else {
+        updatedBody = updatedBody ? `${updatedBody} | ${newSubNote}` : newSubNote;
+      }
+      finalObservaciones = pinHeader ? `${pinHeader} | ${updatedBody}` : updatedBody;
     } else {
-      finalObservaciones = cleanUserObs;
+      finalObservaciones = pinHeader ? (cleanUserObs ? `${pinHeader} | ${cleanUserObs}` : pinHeader) : cleanUserObs;
     }
 
-    // Actualizar de forma defensiva
+    // Actualizar de forma segura sin columnas inexistentes
+    const updatePayload: any = {
+      estado_entrega: 'Entregado',
+      fecha_entrega: new Date().toISOString(),
+      observaciones_entrega: finalObservaciones || null,
+    };
+
+    const updResult = await (supabase
+      .from('peticion_responsables' as any)
+      .update(updatePayload)
+      .eq('id', responsableId) as any);
+
+    if (updResult.error) {
+      console.warn('Advertencia actualizando peticion_responsables:', updResult.error.message);
+    }
+
+    // 5. Actualizar estado general en la tabla peticiones a "Revisión" o "Respondida"
     try {
-      await (supabase
+      const { data: allResps } = await (supabase
         .from('peticion_responsables' as any)
-        .update({
-          estado_entrega: 'Entregado',
-          fecha_entrega: new Date().toISOString(),
-          observaciones_entrega: finalObservaciones || null,
-          observaciones: cleanUserObs || null,
-        } as any)
-        .eq('id', responsableId) as any);
-    } catch {
-      await (supabase
-        .from('peticion_responsables' as any)
-        .update({
-          estado_entrega: 'Entregado',
-          fecha_entrega: new Date().toISOString(),
-          observaciones_entrega: finalObservaciones || null,
-        } as any)
-        .eq('id', responsableId) as any);
+        .select('estado_entrega')
+        .eq('peticion_id', peticionId) as any);
+
+      if (allResps && allResps.length > 0) {
+        const allCompleted = allResps.every((r: any) => r.estado_entrega === 'Entregado');
+        const nextState = allCompleted ? 'Respondida' : 'Revisión';
+
+        await (supabase
+          .from('peticiones' as any)
+          .update({ estado: nextState } as any)
+          .eq('id', peticionId) as any);
+      }
+    } catch (petUpdErr: any) {
+      console.warn('Aviso actualizando estado general de petición:', petUpdErr.message);
     }
 
     return new Response(

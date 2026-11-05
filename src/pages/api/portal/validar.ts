@@ -164,15 +164,33 @@ export const POST: APIRoute = async ({ request }) => {
       let expectedPin = pinMatch ? pinMatch[1].trim() : '';
 
       // Si no está en observaciones, consultar si la petición tiene columna pin_acceso
+      let dbPeticionPin = '';
+      try {
+        const { data: petRec } = await (supabase
+          .from('peticiones' as any)
+          .select('pin_acceso')
+          .eq('id', resultado.peticion_id)
+          .maybeSingle() as any);
+        if (petRec?.pin_acceso) {
+          dbPeticionPin = String(petRec.pin_acceso).trim();
+          if (!expectedPin) {
+            expectedPin = dbPeticionPin;
+          }
+        }
+      } catch {}
+
+      // Si aún no se encontró, buscar en los demás responsables del mismo expediente
       if (!expectedPin) {
         try {
-          const { data: petRec } = await (supabase
-            .from('peticiones' as any)
-            .select('pin_acceso')
-            .eq('id', resultado.peticion_id)
-            .maybeSingle() as any);
-          if (petRec?.pin_acceso) {
-            expectedPin = String(petRec.pin_acceso).trim();
+          const { data: otherResps } = await (supabase
+            .from('peticion_responsables' as any)
+            .select('observaciones_entrega')
+            .eq('peticion_id', resultado.peticion_id)
+            .ilike('observaciones_entrega', '%PIN:%')
+            .limit(1) as any);
+          if (otherResps && otherResps[0]?.observaciones_entrega) {
+            const m = otherResps[0].observaciones_entrega.match(/PIN:\s*([0-9A-Z]{6})/i);
+            if (m) expectedPin = m[1].trim();
           }
         } catch {}
       }
@@ -193,8 +211,8 @@ export const POST: APIRoute = async ({ request }) => {
         );
       }
 
-      // Validar coincidencia de PIN (exacto, determinista, o fijación inicial de 6 dígitos)
-      const isMatch = cleanPin === expectedPin || cleanPin === detPin || (!pinMatch && /^\d{6}$/.test(cleanPin));
+      // Validar coincidencia de PIN (exacto por observaciones, por columna de BD, determinista o fijación)
+      const isMatch = cleanPin === expectedPin || cleanPin === dbPeticionPin || cleanPin === detPin || (!pinMatch && /^\d{6}$/.test(cleanPin));
 
       if (!isMatch) {
         await logSystemActivity({
@@ -276,6 +294,28 @@ export const POST: APIRoute = async ({ request }) => {
       }
     } catch {}
 
+    // Función auxiliar para extraer requerimiento específico de una subcarpeta
+    const getSubRequirement = (subName: string, catalogDesc?: string | null, fullDesc?: string | null) => {
+      if (catalogDesc && catalogDesc.trim()) return catalogDesc.trim();
+      if (!fullDesc) return 'Cargue los documentos de soporte requeridos para esta subcarpeta.';
+      const escaped = subName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const reg = new RegExp(`\\[${escaped}\\]:?\\s*([^\\[\\n\\|]+)`, 'i');
+      const match = fullDesc.match(reg);
+      if (match && match[1]?.trim()) return match[1].trim();
+      return 'Cargue los documentos de soporte requeridos para esta subcarpeta.';
+    };
+
+    // Función auxiliar para extraer observación específica de una subcarpeta
+    const getSubSpecificObs = (subName: string, rawText: string) => {
+      const cleanWithoutPin = rawText.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '').trim();
+      const escaped = subName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const reg = new RegExp(`\\[${escaped}\\]:?\\s*([^\\[\\|]+)`, 'i');
+      const match = cleanWithoutPin.match(reg);
+      if (match && match[1]?.trim()) return match[1].trim();
+      if (!cleanWithoutPin.includes('[')) return cleanWithoutPin;
+      return '';
+    };
+
     // Mapear el desglose de subcarpetas asignadas a esta oficina
     const subcarpetasResponse: any[] = [];
 
@@ -286,48 +326,76 @@ export const POST: APIRoute = async ({ request }) => {
       // Extraer todas las subcarpetas mencionadas en observaciones_entrega e.g. [Subcarpeta 1], [Subcarpeta 2]
       const subMatches = Array.from(rawObs.matchAll(/\[(.*?)\]/g)).map((m: any) => m[1].trim());
 
-      if (subMatches.length > 1) {
-        for (let sIdx = 0; sIdx < subMatches.length; sIdx++) {
-          const subName = subMatches[sIdx];
+      // Si no hay subMatches en observaciones pero sí existen subcarpetas en catálogo
+      const activeSubNames = subMatches.length > 0
+        ? subMatches
+        : (subcarpetasCatalog.length > 0 ? subcarpetasCatalog.map((s: any) => s.nombre) : ['Expediente General']);
+
+      if (activeSubNames.length > 1) {
+        for (let sIdx = 0; sIdx < activeSubNames.length; sIdx++) {
+          const subName = activeSubNames[sIdx];
           const matchedSub = subcarpetasCatalog.find((s: any) => s.nombre?.toLowerCase() === subName.toLowerCase());
+          const subSlug = subName.toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+
+          const specificDesc = getSubRequirement(subName, matchedSub?.descripcion, resultado.descripcion);
+          const specificObs = getSubSpecificObs(subName, rawObs);
+
+          const subAnexos = allAnexos.filter((a: any) => {
+            if (a.peticion_responsable_id !== assign.id) return false;
+            if (matchedSub?.id && a.subcarpeta_id && a.subcarpeta_id === matchedSub.id) return true;
+            if (a.storage_path && a.storage_path.includes(`/${subSlug}/`)) return true;
+            if (a.nombre_archivo && a.nombre_archivo.toLowerCase().includes(`[${subName.toLowerCase()}]`)) return true;
+            return false;
+          });
+
+          const hasDelivered = subAnexos.length > 0 || (assign.estado_entrega === 'Entregado' && activeSubNames.length === 1);
 
           subcarpetasResponse.push({
             id: matchedSub?.id || `sub-${index + 1}-${sIdx + 1}`,
             responsable_id: assign.id,
             subcarpeta_id: matchedSub?.id || null,
             nombre: matchedSub?.nombre || subName,
-            descripcion: matchedSub?.descripcion || resultado.descripcion || null,
-            estado_entrega: assign.estado_entrega || 'Pendiente',
+            descripcion: specificDesc,
+            estado_entrega: hasDelivered ? 'Entregado' : 'Pendiente',
             storage_subfolder_path: assign.storage_subfolder_path || resultado.storage_subfolder_path,
-            observaciones: rawObs.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '').trim(),
-            anexos: allAnexos.filter((a: any) => a.peticion_responsable_id === assign.id),
+            observaciones: specificObs,
+            anexos: subAnexos,
           });
         }
       } else {
-        const subNameFromObs = subMatches[0] || null;
+        const subName = activeSubNames[0] || 'Expediente General';
         let matchedSub = null;
-        if (subNameFromObs) {
-          matchedSub = subcarpetasCatalog.find((s: any) => s.nombre?.toLowerCase() === subNameFromObs.toLowerCase());
+        if (subName) {
+          matchedSub = subcarpetasCatalog.find((s: any) => s.nombre?.toLowerCase() === subName.toLowerCase());
         }
         if (!matchedSub && subcarpetasCatalog[index]) {
           matchedSub = subcarpetasCatalog[index];
         }
 
-        const cleanObs = rawObs
-          .replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '')
-          .replace(/^\[.*?\]\s*/i, '')
-          .trim();
+        const subSlug = subName.toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+        const specificDesc = getSubRequirement(subName, matchedSub?.descripcion, resultado.descripcion);
+        const specificObs = getSubSpecificObs(subName, rawObs);
+
+        const subAnexos = allAnexos.filter((a: any) => {
+          if (a.peticion_responsable_id !== assign.id) return false;
+          if (matchedSub?.id && a.subcarpeta_id && a.subcarpeta_id === matchedSub.id) return true;
+          if (a.storage_path && a.storage_path.includes(`/${subSlug}/`)) return true;
+          if (a.nombre_archivo && a.nombre_archivo.toLowerCase().includes(`[${subName.toLowerCase()}]`)) return true;
+          return true; // Si es única, todos los anexos pertenecen aquí
+        });
+
+        const hasDelivered = subAnexos.length > 0 || assign.estado_entrega === 'Entregado';
 
         subcarpetasResponse.push({
           id: matchedSub?.id || `sub-${index + 1}`,
           responsable_id: assign.id,
           subcarpeta_id: matchedSub?.id || null,
-          nombre: matchedSub?.nombre || subNameFromObs || (subcarpetasCatalog.length > 0 ? (subcarpetasCatalog[index]?.nombre || 'Expediente General') : 'Expediente General'),
-          descripcion: matchedSub?.descripcion || resultado.descripcion || null,
-          estado_entrega: assign.estado_entrega || 'Pendiente',
+          nombre: matchedSub?.nombre || subName,
+          descripcion: specificDesc,
+          estado_entrega: hasDelivered ? 'Entregado' : 'Pendiente',
           storage_subfolder_path: assign.storage_subfolder_path || resultado.storage_subfolder_path,
-          observaciones: cleanObs,
-          anexos: allAnexos.filter((a: any) => a.peticion_responsable_id === assign.id),
+          observaciones: specificObs,
+          anexos: subAnexos,
         });
       }
     }
