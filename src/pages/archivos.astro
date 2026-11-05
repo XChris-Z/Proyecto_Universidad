@@ -2307,6 +2307,11 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
           if (!pet.subcarpetas.some((s: any) => s.id === data.subcarpeta.id || s.nombre?.toLowerCase() === data.subcarpeta.nombre?.toLowerCase())) {
             pet.subcarpetas.push(data.subcarpeta);
           }
+          if (data.subcarpeta?.nombre) {
+            const newDesc = data.subcarpeta.descripcion || '';
+            const entry = `[${data.subcarpeta.nombre}]: ${newDesc}`;
+            pet.instrucciones_anexos = pet.instrucciones_anexos ? `${pet.instrucciones_anexos}\n${entry}` : entry;
+          }
           if (Array.isArray(data.responsables)) {
             if (!pet.peticion_responsables) pet.peticion_responsables = [];
             data.responsables.forEach((r: any) => {
