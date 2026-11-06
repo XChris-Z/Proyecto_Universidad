@@ -139,7 +139,7 @@ export const POST: APIRoute = async ({ request, url }) => {
       }
 
       const pinMatch = resp.observaciones_entrega?.match(/PIN:\s*([0-9A-Z]{6})/i);
-      const storedPin = pinMatch ? pinMatch[1].trim() : null;
+      const storedPin = pinMatch ? (pinMatch[1] || '').trim() : null;
       const effectivePin = storedPin || peticion.pin_acceso || getDeterministicPin(peticion.numero_radicado || peticion.id);
       const portalUrl = `${baseUrl}/portal-responsable?codigo=${encodeURIComponent(resp.codigo_acceso)}&email=${encodeURIComponent(email)}&pin=${encodeURIComponent(effectivePin)}`;
 

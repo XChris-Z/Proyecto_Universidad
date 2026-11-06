@@ -200,7 +200,7 @@ function combineSubcarpetas(p: any, dbSubs: any[] = []): any[] {
             descripcion: m[2]?.trim() || null,
           };
         } else if (!foundSubs[key].descripcion && m[2]?.trim()) {
-          foundSubs[key].descripcion = m[2].trim();
+          foundSubs[key].descripcion = m[2]?.trim() || null;
         }
       }
     }
@@ -240,7 +240,7 @@ function combineSubcarpetas(p: any, dbSubs: any[] = []): any[] {
             descripcion: m[2]?.trim() || null,
           };
         } else if (!foundSubs[key].descripcion && m[2]?.trim()) {
-          foundSubs[key].descripcion = m[2].trim();
+          foundSubs[key].descripcion = m[2]?.trim() || null;
         }
       }
     }
@@ -1015,7 +1015,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                 descripcion: m[2]?.trim() || null,
               };
             } else if (!foundSubs[key].descripcion && m[2]?.trim()) {
-              foundSubs[key].descripcion = m[2].trim();
+              foundSubs[key].descripcion = m[2]?.trim() || null;
             }
           }
         }
@@ -1055,7 +1055,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                 descripcion: m[2]?.trim() || null,
               };
             } else if (!foundSubs[key].descripcion && m[2]?.trim()) {
-              foundSubs[key].descripcion = m[2].trim();
+              foundSubs[key].descripcion = m[2]?.trim() || null;
             }
           }
         }
@@ -1327,8 +1327,8 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         const parsedInstruccionesMap = new Map<string, string>();
         let im;
         while ((im = bracketPattern.exec(rawInstrucciones)) !== null) {
-          const k = im[1].trim();
-          const v = im[2].trim();
+          const k = (im[1] || '').trim();
+          const v = (im[2] || '').trim();
           if (k && !k.toUpperCase().startsWith('PIN') && k.toUpperCase() !== 'EXPEDIENTE GENERAL') {
             parsedInstruccionesMap.set(k.toLowerCase(), v);
           }
@@ -1347,7 +1347,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         } else if (parsedInstruccionesMap.size > 0) {
           subReqsList = Array.from(parsedInstruccionesMap.entries()).map(([k, v]) => {
             const origKey = Array.from(rawInstrucciones.matchAll(/\[(.*?)\]:/g))
-              .map(m => m[1].trim())
+              .map(m => (m[1] || '').trim())
               .find(name => name.toLowerCase() === k) || k;
             return {
               nombre: origKey,

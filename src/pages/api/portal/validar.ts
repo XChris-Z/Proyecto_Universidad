@@ -176,7 +176,7 @@ export const POST: APIRoute = async ({ request }) => {
 
       const rawObs = respRec?.observaciones_entrega || '';
       const pinMatch = rawObs.match(/PIN:\s*([0-9A-Z]{6})/i);
-      let expectedPin = pinMatch ? pinMatch[1].trim() : '';
+      let expectedPin = pinMatch ? (pinMatch[1] || '').trim() : '';
 
       // Si no está en observaciones, consultar si la petición tiene columna pin_acceso
       let dbPeticionPin = '';
@@ -205,7 +205,7 @@ export const POST: APIRoute = async ({ request }) => {
             .limit(1) as any);
           if (otherResps && otherResps[0]?.observaciones_entrega) {
             const m = otherResps[0].observaciones_entrega.match(/PIN:\s*([0-9A-Z]{6})/i);
-            if (m) expectedPin = m[1].trim();
+            if (m && m[1]) expectedPin = m[1].trim();
           }
         } catch {}
       }
@@ -382,7 +382,7 @@ export const POST: APIRoute = async ({ request }) => {
 
       // Extraer todas las subcarpetas mencionadas en observaciones_entrega e.g. [Subcarpeta 1], [Subcarpeta 2]
       let subMatches = Array.from(rawObs.matchAll(/\[(.*?)\]/g))
-        .map((m: any) => m[1].trim())
+        .map((m: any) => (m[1] || '').trim())
         .filter((name: string) => name && !name.toUpperCase().startsWith('PIN') && name.toUpperCase() !== 'EXPEDIENTE GENERAL');
 
       // Si no hay subMatches en observaciones pero sí existen subcarpetas en catálogo
@@ -393,7 +393,7 @@ export const POST: APIRoute = async ({ request }) => {
       // Si aún no hay subcarpetas pero están codificadas en la descripción (ej: [1.1]: ... [1.2]: ...)
       if (activeSubNames.length === 0 && resultado.descripcion) {
         const descMatches = Array.from(String(resultado.descripcion).matchAll(/\[(.*?)\]:/g))
-          .map((m: any) => m[1].trim())
+          .map((m: any) => (m[1] || '').trim())
           .filter((name: string) => name && !name.toUpperCase().startsWith('PIN') && name.toUpperCase() !== 'EXPEDIENTE GENERAL');
         if (descMatches.length > 0) {
           activeSubNames = descMatches;

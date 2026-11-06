@@ -1525,8 +1525,8 @@ import Layout from '@layouts/Layout.astro';
     const parsedRequirementsMap = new Map<string, string>();
     let m;
     while ((m = bracketPattern.exec(rawDescripcion)) !== null) {
-      const subKey = m[1].trim();
-      const subReq = m[2].trim();
+      const subKey = (m[1] || '').trim();
+      const subReq = (m[2] || '').trim();
       if (subKey && !subKey.toUpperCase().startsWith('PIN') && subKey.toUpperCase() !== 'EXPEDIENTE GENERAL') {
         parsedRequirementsMap.set(subKey.toLowerCase(), subReq);
       }
@@ -1545,7 +1545,7 @@ import Layout from '@layouts/Layout.astro';
       let sIdx = 0;
       for (const [subKey, subReq] of parsedRequirementsMap.entries()) {
         const origKey = Array.from(rawDescripcion.matchAll(/\[(.*?)\]:/g))
-          .map(match => match[1].trim())
+          .map(match => (match[1] || '').trim())
           .find(k => k.toLowerCase() === subKey) || subKey;
           
         newSubs.push({
