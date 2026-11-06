@@ -1721,6 +1721,11 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                                 const ofiCodigo = Array.isArray(r.oficinas) ? (r.oficinas[0]?.codigo || '') : (r.oficinas?.codigo || '');
                                 const rawObs = (r as any).observaciones_entrega || '';
                                 const cleanObs = extractSubObs(rawObs, sub.nombre);
+                                const subReqText = (sub.descripcion || '').trim().toLowerCase();
+                                const obsText = cleanObs.trim().toLowerCase();
+                                const isSameAsRequirement = Boolean(subReqText && (obsText === subReqText || obsText.startsWith(subReqText) || subReqText.startsWith(obsText)));
+                                const hasRealFiles = ofiAnexos.length > 0;
+                                const showAporteObs = hasRealFiles && cleanObs && !isSameAsRequirement;
 
                                 return `
                                   <div style="background: #f8fafc; border: 1px solid rgba(15, 23, 42, 0.07); border-radius: 8px; padding: 14px 16px;">
@@ -1781,7 +1786,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                                       </div>
                                     `}
 
-                                    ${cleanObs ? `
+                                    ${showAporteObs ? `
                                       <div style="margin-top: 10px; background: #ffffff; border: 1px solid rgba(15, 23, 42, 0.08); border-left: 3px solid #b8860b; border-radius: 6px; padding: 10px 14px; font-size: 0.78rem; color: #334155;">
                                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px;">
                                           <strong style="color: #854d0e; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.3px;">Observación del Aporte:</strong>

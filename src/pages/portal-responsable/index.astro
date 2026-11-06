@@ -224,9 +224,6 @@ import Layout from '@layouts/Layout.astro';
               </div>
               <h2 id="portal-disp-asunto" class="portal-asunto-title">Asunto de la petición</h2>
               <p id="portal-disp-desc" class="portal-asunto-desc" style="display: none;">Descripción del trámite solicitado.</p>
-              
-              <!-- Desglose de Requerimientos por Subcarpeta (Bento Cards Pro Max) -->
-              <div id="portal-sub-reqs-container" class="portal-sub-reqs-container"></div>
             </div>
 
             <button type="button" id="btn-portal-logout" class="btn-portal-logout" title="Finalizar sesión">
@@ -1656,64 +1653,9 @@ import Layout from '@layouts/Layout.astro';
       if (docOrigCard) docOrigCard.style.display = 'none';
     }
 
-    // Renderizar Resumen Superior de Requerimientos y Pestañas de Subcarpetas
-    renderSubcarpetasRequirementsSummary();
+    // Renderizar Pestañas de Subcarpetas
     renderSubcarpetasTabs();
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  // 3. Renderizar Resumen Superior Bento de Requerimientos por Subcarpeta
-  function renderSubcarpetasRequirementsSummary() {
-    const reqsContainer = document.getElementById('portal-sub-reqs-container');
-    if (!reqsContainer) return;
-
-    const subs = activeSessionData?.subcarpetas || [];
-    if (subs.length === 0) {
-      reqsContainer.innerHTML = '';
-      return;
-    }
-
-    reqsContainer.innerHTML = subs.map((s: any, idx: number) => {
-      const isActive = idx === activeSubIndex;
-      const rawName = String(s.nombre || `Subcarpeta ${idx + 1}`).trim();
-      const badgeLabel = rawName.toLowerCase().startsWith('subcarpeta') ? rawName : `Subcarpeta ${rawName}`;
-      const desc = s.descripcion && s.descripcion.trim() ? s.descripcion.trim() : 'Aportar memorandos oficiales, certificaciones o soportes requeridos para responder de fondo la petición.';
-      const isDelivered = s.estado_entrega === 'Entregado' || (s.anexos && s.anexos.length > 0);
-
-      return `
-        <div 
-          class="portal-sub-req-card ${isActive ? 'active' : 'inactive'}" 
-          data-sub-idx="${idx}"
-          role="button"
-          tabindex="0"
-          title="Haga clic para enfocar esta subcarpeta"
-        >
-          <div class="portal-sub-card-header">
-            <strong class="portal-sub-card-title">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-              <span>${badgeLabel}</span>
-            </strong>
-            <span class="portal-sub-status-pill ${isDelivered ? 'delivered' : 'pending'}">
-              ${isDelivered ? 'Cargado ✓' : 'Pendiente'}
-            </span>
-          </div>
-          <p class="portal-sub-card-desc">
-            ${desc}
-          </p>
-        </div>
-      `;
-    }).join('');
-
-    // Listener interactivo para seleccionar la subcarpeta al pulsar su tarjeta en el resumen superior
-    reqsContainer.querySelectorAll('.portal-sub-req-card').forEach((card) => {
-      card.addEventListener('click', () => {
-        const idx = Number(card.getAttribute('data-sub-idx'));
-        if (activeSubIndex !== idx) {
-          activeSubIndex = idx;
-          renderSubcarpetasTabs();
-        }
-      });
-    });
   }
 
   function renderSubcarpetasTabs() {
@@ -1743,18 +1685,6 @@ import Layout from '@layouts/Layout.astro';
     if (descTitle) {
       descTitle.textContent = `Requerimiento (${currentSub.nombre || activeSubIndex + 1}):`;
     }
-
-    // Sincronizar estado visual activo en el Resumen Superior Bento
-    const reqCards = document.querySelectorAll('#portal-sub-reqs-container .portal-sub-req-card');
-    reqCards.forEach((card, idx) => {
-      if (idx === activeSubIndex) {
-        card.classList.add('active');
-        card.classList.remove('inactive');
-      } else {
-        card.classList.remove('active');
-        card.classList.add('inactive');
-      }
-    });
 
     const isCurrentDelivered = currentSub.estado_entrega === 'Entregado' || (currentSub.anexos && currentSub.anexos.length > 0);
     if (activeSubStatus) {

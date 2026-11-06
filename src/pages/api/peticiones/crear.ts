@@ -400,7 +400,7 @@ export const POST: APIRoute = async ({ request, url }) => {
           peticion_id: peticionData.id,
           oficina_id: ofiId,
           estado_entrega: 'Pendiente',
-          observaciones_entrega: `PIN:${finalPinAcceso} | [${sub.nombre}]${sub.descripcion ? ` ${sub.descripcion}` : ''}`,
+          observaciones_entrega: `PIN:${finalPinAcceso} | [${sub.nombre}]`,
         };
         if (hasSubcarpetaCol && validSubUuid) {
           item.subcarpeta_id = validSubUuid;
@@ -458,7 +458,7 @@ export const POST: APIRoute = async ({ request, url }) => {
       for (const ofiId of allUniqueOfficeIds) {
         const matchingSubs = subcarpetas.filter((s) => s.oficina_ids?.includes(ofiId));
         const subNotes = matchingSubs
-          .map((s) => `[${s.nombre}]${s.descripcion ? ` ${s.descripcion}` : ''}`)
+          .map((s) => `[${s.nombre}]`)
           .join(' | ');
 
         let singleSubUuid: string | null = null;

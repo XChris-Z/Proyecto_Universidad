@@ -136,7 +136,7 @@ export const POST: APIRoute = async ({ request, url }) => {
         peticion_id: peticion.id,
         oficina_id: ofi.id,
         estado_entrega: 'Pendiente',
-        observaciones_entrega: `PIN:${pinAcceso} | [${cleanNombre}]${cleanDescripcion ? ` ${cleanDescripcion}` : ''}`,
+        observaciones_entrega: `PIN:${pinAcceso} | [${cleanNombre}]`,
       };
       if (hasSubcarpetaCol && nuevaSub.id && !nuevaSub.id.startsWith('sub-inf-')) {
         row.subcarpeta_id = nuevaSub.id;
@@ -189,7 +189,7 @@ export const POST: APIRoute = async ({ request, url }) => {
           const prevObs = row.observaciones_entrega || '';
           const updatedObs = prevObs.includes(`[${cleanNombre}]`)
             ? prevObs
-            : `${prevObs} | [${cleanNombre}]${cleanDescripcion ? ` ${cleanDescripcion}` : ''}`;
+            : `${prevObs} | [${cleanNombre}]`;
 
           const updatePayload: any = {
             observaciones_entrega: updatedObs,
