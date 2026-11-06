@@ -824,7 +824,7 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
                   const reader = new FileReader();
                   reader.onload = () => {
                     const resStr = String(reader.result || '');
-                    resolve(resStr.includes(',') ? resStr.split(',')[1] : resStr);
+                    resolve(resStr.includes(',') ? (resStr.split(',')[1] || '') : resStr);
                   };
                   reader.onerror = reject;
                   reader.readAsDataURL(primaryFile!);

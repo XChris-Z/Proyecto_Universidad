@@ -624,7 +624,8 @@ const permissionsByCategory = categories.map(cat => ({
     }
 
     btnSavePerms?.addEventListener('click', async () => {
-      if (!activePermsUserId) return;
+      const targetUserId = activePermsUserId;
+      if (!targetUserId) return;
 
       const checkboxes = document.querySelectorAll<HTMLInputElement>('.perm-checkbox:checked');
       const newPerms: string[] = [];
@@ -632,15 +633,18 @@ const permissionsByCategory = categories.map(cat => ({
         if (cb.dataset.permId) newPerms.push(cb.dataset.permId);
       });
 
-      btnSavePerms.textContent = 'Guardando cambios...';
-      (btnSavePerms as HTMLButtonElement).disabled = true;
+      const saveBtn = btnSavePerms as HTMLButtonElement | null;
+      if (saveBtn) {
+        saveBtn.textContent = 'Guardando cambios...';
+        saveBtn.disabled = true;
+      }
 
       try {
-        await supabase.from('user_permissions').delete().eq('user_id', activePermsUserId);
+        await (supabase.from('user_permissions') as any).delete().eq('user_id', targetUserId);
 
         if (newPerms.length > 0) {
           const rowsToInsert = newPerms.map((permId) => ({
-            user_id: activePermsUserId,
+            user_id: targetUserId,
             permission_id: permId,
             is_granted: true,
             created_at: new Date().toISOString(),
@@ -648,15 +652,15 @@ const permissionsByCategory = categories.map(cat => ({
           await supabase.from('user_permissions').insert(rowsToInsert);
         }
 
-        userPermissionsMap[activePermsUserId] = newPerms;
+        userPermissionsMap[targetUserId] = newPerms;
 
         await logSystemActivity({
           actor: { id: 'usr-root', name: 'ING. Christian Lemus', role: 'admin' },
           action: 'Actualización de Permisos Granulares',
           actionType: 'SEGURIDAD',
           entity: 'Permisos Dinámicos RBAC',
-          entityId: activePermsUserId,
-          details: `Se actualizaron ${newPerms.length} permisos dinámicos para el usuario ${activePermsUserId}.`,
+          entityId: targetUserId,
+          details: `Se actualizaron ${newPerms.length} permisos dinámicos para el usuario ${targetUserId}.`,
           severity: 'WARN'
         });
 
@@ -665,8 +669,10 @@ const permissionsByCategory = categories.map(cat => ({
       } catch (err: any) {
         (window as any).showToast('Error al guardar permisos: ' + (err.message || 'Error en base de datos'), 'error');
       } finally {
-        btnSavePerms.textContent = 'Guardar Permisos Dinámicos';
-        (btnSavePerms as HTMLButtonElement).disabled = false;
+        if (saveBtn) {
+          saveBtn.textContent = 'Guardar Permisos Dinámicos';
+          saveBtn.disabled = false;
+        }
       }
     });
 
@@ -722,7 +728,7 @@ const permissionsByCategory = categories.map(cat => ({
           updated_at: nowIso,
         }).eq('id', id);
 
-        await supabase.from('users').update({
+        await (supabase.from('users') as any).update({
           name,
           role,
           updated_at: nowIso,
@@ -862,14 +868,18 @@ const permissionsByCategory = categories.map(cat => ({
     btnCancelDelete?.addEventListener('click', closeDeleteModal);
 
     btnConfirmDelete?.addEventListener('click', async () => {
-      if (!userToDelete) return;
+      const targetUser = userToDelete;
+      if (!targetUser) return;
 
-      btnConfirmDelete.textContent = 'Eliminando...';
-      (btnConfirmDelete as HTMLButtonElement).disabled = true;
+      const confirmBtn = btnConfirmDelete as HTMLButtonElement | null;
+      if (confirmBtn) {
+        confirmBtn.textContent = 'Eliminando...';
+        confirmBtn.disabled = true;
+      }
 
       try {
         const { error: delRpcErr } = await (supabase.rpc as any)('admin_delete_user', {
-          p_user_id: userToDelete.id
+          p_user_id: targetUser.id
         });
         if (delRpcErr) throw delRpcErr;
 
@@ -878,21 +888,23 @@ const permissionsByCategory = categories.map(cat => ({
           action: 'Baja y Eliminación de Funcionario',
           actionType: 'ELIMINACION',
           entity: 'Control de Usuarios y Roles',
-          entityId: userToDelete.id,
-          details: `El Administrador dio de baja y eliminó al funcionario "${userToDelete.name}" (${userToDelete.email}).`,
+          entityId: targetUser.id,
+          details: `El Administrador dio de baja y eliminó al funcionario "${targetUser.name}" (${targetUser.email}).`,
           severity: 'CRITICAL'
         });
 
-        const row = document.getElementById(`row-user-${userToDelete.id}`);
+        const row = document.getElementById(`row-user-${targetUser.id}`);
         if (row) row.remove();
 
-        (window as any).showToast(`El funcionario ${userToDelete.name} fue eliminado.`, 'success');
+        (window as any).showToast(`El funcionario ${targetUser.name} fue eliminado.`, 'success');
         closeDeleteModal();
       } catch (err: any) {
         (window as any).showToast('Error eliminando usuario: ' + (err.message || 'Error en el servidor'), 'error');
       } finally {
-        btnConfirmDelete.textContent = 'Confirmar Eliminación';
-        (btnConfirmDelete as HTMLButtonElement).disabled = false;
+        if (confirmBtn) {
+          confirmBtn.textContent = 'Confirmar Eliminación';
+          confirmBtn.disabled = false;
+        }
       }
     });
 

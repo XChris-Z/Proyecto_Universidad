@@ -489,14 +489,16 @@ export interface PeticionResponsable {
   id: string;
   peticion_id: string;
   oficina_id: string;
+  subcarpeta_id?: string | null;
   codigo_acceso: string;
-  fecha_expiracion_codigo: string;
-  storage_subfolder_path: string;
+  fecha_expiracion_codigo?: string;
+  storage_subfolder_path?: string;
   estado_entrega: 'Pendiente' | 'Entregado' | 'Extemporáneo';
   fecha_entrega?: string | null;
   observaciones_entrega?: string | null;
   email_enviado_at?: string | null;
   oficina?: Oficina;
+  oficinas?: Oficina | Oficina[];
 }
 
 export interface PeticionAnexo {

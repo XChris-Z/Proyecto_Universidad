@@ -268,7 +268,6 @@ function combineSubcarpetas(p: any, dbSubs: any[] = []): any[] {
 
   return list;
 }
-const inferSubcarpetas = combineSubcarpetas;
 
 const peticiones: PeticionExpediente[] = rawPeticiones.map((p) => {
   const respObs = p.peticion_responsables?.find((r: any) => r?.observaciones_entrega?.includes('PIN:'))?.observaciones_entrega;
@@ -316,15 +315,6 @@ function getDownloadUrl(storagePath: string | null | undefined): string {
   if (!storagePath) return '#';
   const clean = storagePath.replace(/^peticiones\//, '');
   return `https://irjjpjtvhxoakiazfswn.supabase.co/storage/v1/object/public/peticiones/${clean}`;
-}
-
-function formatBytes(bytes?: number | null): string {
-  if (!bytes || bytes === 0) return '0 KB';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  const unit = sizes[i] ?? 'Bytes';
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + unit;
 }
 
 const peticionesJson = JSON.stringify(peticiones);
@@ -961,7 +951,9 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
     interface PeticionResponsable {
       id: string;
       codigo_acceso: string;
+      subcarpeta_id?: string | null;
       estado_entrega?: string | null;
+      observaciones_entrega?: string | null;
       fecha_entrega?: string | null;
       storage_subfolder_path?: string | null;
       oficinas?: OficinaInfo | OficinaInfo[] | null;
@@ -996,7 +988,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
     function inferSubcarpetas(p: any): any[] {
       const dbSubs = (p.subcarpetas && Array.isArray(p.subcarpetas)) ? p.subcarpetas : [];
       const mapByName: Record<string, any> = {};
-      dbSubs.forEach((s) => {
+      dbSubs.forEach((s: any) => {
         if (s && s.nombre && s.nombre.trim().toLowerCase() !== 'expediente general') {
           mapByName[s.nombre.trim().toUpperCase()] = s;
         }
@@ -1613,7 +1605,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                 const subcarpetas = (peticion.subcarpetas && peticion.subcarpetas.length > 0) 
                   ? peticion.subcarpetas 
                   : inferSubcarpetas(peticion);
-                const subcarpetaBlocks = [];
+                const subcarpetaBlocks: string[] = [];
 
                 // Helper para extraer observaciones específicas de cada subcarpeta
                 const extractSubObs = (raw: string, subName: string): string => {
