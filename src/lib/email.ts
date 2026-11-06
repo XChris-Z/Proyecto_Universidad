@@ -174,9 +174,6 @@ export async function sendPeticionAssignmentEmail(
   params: EmailPeticionNotificationParams
 ): Promise<{ success: boolean; simulated?: boolean; messageId?: string; error?: string; needsSmtpConfig?: boolean }> {
   const smtpInfo = await getSmtpTransporter();
-  const metaEnv = typeof import.meta !== 'undefined' ? (import.meta as any).env || {} : {};
-  const rawSender = process.env.GOOGLE_SMTP_USER || process.env.SMTP_USER || metaEnv.GOOGLE_SMTP_USER || metaEnv.SMTP_USER || 'correspondencia@unitropico.edu.co';
-  const cleanSender = String(rawSender).replace(/['"]+/g, '').trim();
 
   const formattedFechaEntrega = new Date(params.fechaLimiteEntrega + 'T12:00:00').toLocaleDateString('es-CO', {
     weekday: 'long',
@@ -401,5 +398,183 @@ export async function sendPeticionAssignmentEmail(
       success: false,
       error: error.message || 'Error desconocido al enviar correo SMTP',
     };
+  }
+}
+
+export interface EmailRespuestaSolicitanteParams {
+  toEmail: string;
+  solicitanteNombre: string;
+  numeroRadicado: string;
+  asunto: string;
+  mensajeRespuesta: string;
+  funcionarioNombre: string;
+  pinSolicitante: string;
+  fechaExpiracion: string;
+  consultaUrl: string;
+  driveUrl?: string | null;
+  totalArchivos?: number;
+}
+
+/**
+ * Envía la notificación con la respuesta oficial al solicitante original
+ * con credenciales y candado temporal de 10 días calendario.
+ */
+export async function sendRespuestaSolicitanteEmail(
+  params: EmailRespuestaSolicitanteParams
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const smtpInfo = await getSmtpTransporter();
+
+  const formattedFechaExpiracion = new Date(params.fechaExpiracion).toLocaleDateString('es-CO', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  const subject = `[Radicado N° ${params.numeroRadicado}] Notificación oficial de respuesta a su petición - Unitrópico`;
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${subject}</title>
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 24px 12px; color: #1e293b; }
+        .email-container { max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+        .email-header { background: #006837; padding: 28px 24px; text-align: center; color: #ffffff; border-bottom: 4px solid #b8860b; }
+        .email-header h1 { font-size: 20px; font-weight: 800; letter-spacing: 1px; margin: 0; text-transform: uppercase; }
+        .email-header p { font-size: 12px; color: #fde68a; text-transform: uppercase; font-weight: 700; margin: 6px 0 0 0; letter-spacing: 1.5px; }
+        .email-body { padding: 32px 28px; }
+        .greeting { font-size: 16px; font-weight: 700; color: #006837; margin-top: 0; }
+        .badge-radicado { display: inline-block; background: #f0fdf4; color: #006837; border: 1px solid #bbf7d0; padding: 8px 16px; border-radius: 8px; font-weight: 800; font-size: 16px; font-family: monospace; letter-spacing: 0.5px; }
+        .respuesta-box { background: #f8fafc; border-left: 4px solid #006837; border-top: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 24px 0; }
+        .respuesta-header { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #006837; letter-spacing: 0.8px; margin-bottom: 10px; display: flex; justify-content: space-between; }
+        .respuesta-text { font-size: 14px; color: #1e293b; line-height: 1.7; white-space: pre-wrap; margin: 0; }
+        .credentials-card { background: #f8fafc; border: 1px dashed #006837; border-radius: 8px; padding: 18px; margin: 22px 0; text-align: center; }
+        .cred-email { font-size: 13px; color: #475569; margin-bottom: 6px; }
+        .cred-code-title { font-size: 11px; text-transform: uppercase; font-weight: 800; color: #64748b; letter-spacing: 1px; margin-top: 8px; }
+        .cred-code-val { font-size: 26px; font-weight: 900; letter-spacing: 4px; color: #006837; font-family: monospace; margin: 6px 0; }
+        .expira-card { background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #b8860b; border-radius: 8px; padding: 14px 16px; margin: 20px 0; font-size: 12.5px; color: #78350f; line-height: 1.5; }
+        .btn-access { display: block; width: fit-content; margin: 26px auto; background: #006837; color: #ffffff !important; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 800; font-size: 14px; text-align: center; box-shadow: 0 4px 12px rgba(0, 104, 55, 0.25); }
+        .email-footer { background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 22px 24px; font-size: 11px; color: #64748b; text-align: center; line-height: 1.6; }
+        .footer-brand { font-weight: 800; color: #006837; text-transform: uppercase; }
+      </style>
+    </head>
+    <body>
+      <div class="email-container">
+        
+        <div class="email-header">
+          <h1>UNITRÓPICO</h1>
+          <p>Sistema de Gestión Documental y Correspondencia</p>
+        </div>
+
+        <div class="email-body">
+          <p class="greeting">Estimado(a) ${params.solicitanteNombre},</p>
+          
+          <p style="font-size: 14px; line-height: 1.6; color: #334155; margin-top: 0;">
+            Le informamos formalmente que la Universidad Internacional del Trópico Americano — Unitrópico ha emitido pronunciamiento oficial en relación con su petición radicada:
+          </p>
+
+          <div style="text-align: center; margin: 18px 0;">
+            <div class="badge-radicado">Radicado N° ${params.numeroRadicado}</div>
+            <div style="font-size: 13px; color: #64748b; margin-top: 6px; font-weight: 600;">Asunto: ${params.asunto}</div>
+          </div>
+
+          <!-- TARJETA DE RESPUESTA OFICIAL -->
+          <div class="respuesta-box">
+            <div class="respuesta-header">
+              <span>RESPUESTA OFICIAL DE LA INSTITUCIÓN</span>
+              <span style="color: #64748b; font-weight: 600;">Emitida por: ${params.funcionarioNombre}</span>
+            </div>
+            <p class="respuesta-text">${params.mensajeRespuesta}</p>
+          </div>
+
+          <!-- AVISO DE CADUCIDAD 10 DÍAS -->
+          <div class="expira-card">
+            <strong style="display: block; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; color: #92400e;">
+              ⏱ Acceso Temporal Habilitado (10 Días Calendario)
+            </strong>
+            Conforme a los protocolos de seguridad documental, el expediente completo con sus anexos y soportes oficiales estará habilitado para consulta y descarga en el portal seguro hasta el <strong>${formattedFechaExpiracion}</strong>.
+          </div>
+
+          <!-- CREDENCIALES DE CONSULTA -->
+          <div class="credentials-card">
+            <div class="cred-email">Correo registrado: <strong>${params.toEmail}</strong></div>
+            <div class="cred-code-title">Código de Seguridad (PIN de 6 Dígitos)</div>
+            <div class="cred-code-val">${params.pinSolicitante}</div>
+            <div style="font-size: 11px; color: #64748b; margin-top: 6px;">
+              Este código de acceso es confidencial y de uso exclusivo para desbloquear su expediente.
+            </div>
+          </div>
+
+          <!-- BOTÓN DE ACCESO AL PORTAL -->
+          <div style="text-align: center; margin: 26px 0;">
+            <a href="${params.consultaUrl}" class="btn-access" target="_blank">
+              Consultar Expediente y Descargar Anexos &rarr;
+            </a>
+            <div style="font-size: 11.5px; color: #64748b; margin-top: 8px;">
+              O ingrese directamente en: <a href="${params.consultaUrl}" style="color: #006837; word-break: break-all;">${params.consultaUrl}</a>
+            </div>
+          </div>
+
+          ${params.driveUrl ? `
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin: 18px 0; font-size: 13px; text-align: center;">
+              <strong>Repositorio Complementario Externo:</strong><br>
+              <a href="${params.driveUrl}" target="_blank" style="color: #006837; font-weight: 700; text-decoration: underline; margin-top: 4px; display: inline-block;">
+                Ver carpeta complementaria compartida &rarr;
+              </a>
+            </div>
+          ` : ''}
+
+          <p style="font-size: 12px; color: #64748b; line-height: 1.5; margin-top: 24px;">
+            Si tiene alguna inquietud adicional respecto a esta respuesta, por favor canalícela a través de los canales institucionales oficiales de correspondencia de Unitrópico.
+          </p>
+        </div>
+
+        <div class="email-footer">
+          <span class="footer-brand">Universidad Internacional del Trópico Americano — Unitrópico</span><br>
+          Sistema de Gestión Documental y Archivo Central<br>
+          Yopal, Casanare, Colombia &bull; Vigilada MinEducación<br>
+          <span style="font-size: 10px; color: #94a3b8; margin-top: 8px; display: block;">
+            Este es un correo institucional generado automáticamente para la entrega de respuestas a solicitudes ciudadanas y de la comunidad académica. Por favor no responda a este remitente.
+          </span>
+        </div>
+
+      </div>
+    </body>
+    </html>
+  `;
+
+  if (!smtpInfo) {
+    console.error('[SMTP NO CONFIGURADO] No se pudo obtener el transporte SMTP');
+    return { success: false, error: 'Configuración SMTP no disponible en el servidor' };
+  }
+
+  const { transporter, sender, creds } = smtpInfo;
+
+  const mailOptions = {
+    from: `"Correspondencia Oficial Unitrópico" <${sender}>`,
+    to: params.toEmail,
+    subject,
+    html: htmlContent,
+  };
+
+  try {
+    let info;
+    try {
+      info = await transporter.sendMail(mailOptions);
+    } catch (primaryErr: any) {
+      console.warn(`[SMTP AVISO] Reintentando con puerto alternativo 587 para respuesta a solicitante (${primaryErr.message})...`);
+      const fallbackTransporter = createTransporter(creds, true);
+      info = await fallbackTransporter.sendMail(mailOptions);
+    }
+
+    console.log(`[RESPUESTA ENVIADA] Correo entregado al solicitante ${params.toEmail} (MessageId: ${info.messageId})`);
+    return { success: true, messageId: info.messageId };
+  } catch (error: any) {
+    console.error('Error enviando respuesta oficial a ' + params.toEmail + ':', error.message);
+    return { success: false, error: error.message || 'Error al despachar correo al solicitante' };
   }
 }

@@ -65,6 +65,13 @@ export interface PeticionExpediente {
   estado: string;
   prioridad?: string | null;
   created_at: string;
+  respuesta_mensaje?: string | null;
+  respuesta_funcionario?: string | null;
+  respuesta_fecha_envio?: string | null;
+  respuesta_expira_at?: string | null;
+  respuesta_pin_solicitante?: string | null;
+  respuesta_archivos_incluidos?: string[] | null;
+  respuesta_drive_url?: string | null;
   peticion_anexos?: PeticionAnexo[];
   peticion_responsables?: PeticionResponsable[];
   subcarpetas?: PeticionSubcarpeta[];
@@ -849,6 +856,160 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
     </div>
   </div>
 
+  <!-- Modal: Enviar Respuesta Oficial al Solicitante (Bento Pro Max) -->
+  <div class="modal-backdrop" id="modal-responder-solicitante" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 2100; align-items: center; justify-content: center; padding: 16px;">
+    <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 860px; border-radius: var(--radius-md); box-shadow: 0 20px 40px rgba(0,0,0,0.2); overflow: hidden; max-height: 92vh; display: flex; flex-direction: column;">
+      
+      <!-- Encabezado Institucional del Modal -->
+      <div style="background: #006837; color: #ffffff; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #b8860b;">
+        <div>
+          <span style="font-size: 0.68rem; font-weight: 800; color: #fde68a; letter-spacing: 0.8px; text-transform: uppercase; display: block;">SGD Unitrópico &bull; Cierre del Ciclo Documental</span>
+          <h3 style="font-size: 1.15rem; font-weight: 800; margin: 2px 0 0 0; display: flex; align-items: center; gap: 8px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            <span>Despacho de Respuesta Oficial al Solicitante</span>
+          </h3>
+        </div>
+        <button type="button" id="btn-close-responder-modal" style="background: transparent; border: none; font-size: 1.6rem; color: #ffffff; cursor: pointer; line-height: 1;">&times;</button>
+      </div>
+
+      <form id="form-responder-solicitante" style="padding: 24px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto;">
+        <input type="hidden" id="responder-pet-id" />
+
+        <!-- BLOQUE A: DESTINATARIO Y VIGENCIA -->
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="font-size: 0.76rem; font-weight: 800; text-transform: uppercase; color: #006837; letter-spacing: 0.5px;">
+            Bloque A &bull; Datos del Solicitante y Vigencia Temporal
+          </div>
+          
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">
+            <!-- Radicado & Asunto -->
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
+              <span style="font-size: 0.68rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Radicado y Asunto:</span>
+              <div id="responder-disp-radicado" style="font-size: 0.88rem; font-weight: 800; color: #006837; font-family: monospace; margin-top: 2px;">RAD-2026-XXXXX</div>
+              <div id="responder-disp-asunto" style="font-size: 0.78rem; color: #1e293b; font-weight: 600; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Asunto</div>
+            </div>
+
+            <!-- Solicitante & Correo editable -->
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
+              <span style="font-size: 0.68rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Solicitante:</span>
+              <div id="responder-disp-solicitante" style="font-size: 0.84rem; font-weight: 750; color: #0f172a; margin-top: 2px;">Nombre del Solicitante</div>
+              <div style="margin-top: 6px;">
+                <label style="font-size: 0.68rem; color: #64748b; font-weight: 600; display: block;">Correo de Notificación (Editable si requiere corrección):</label>
+                <input type="email" id="responder-solicitante-email" required class="form-input" style="padding: 5px 10px; font-size: 0.80rem; margin-top: 3px; font-weight: 600; background: #ffffff;" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Banner de Vigencia Estricta 10 Días -->
+          <div style="background: #fefce8; border: 1px solid #fef08a; border-left: 4px solid #b8860b; border-radius: 8px; padding: 10px 14px; font-size: 0.78rem; color: #854d0e; display: flex; align-items: center; gap: 8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b8860b" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <div>
+              <strong>Candado de Vigencia Temporal (10 Días Calendario):</strong>
+              <span>El enlace de acceso y los archivos estarán habilitados para consulta y descarga pública hasta el <strong id="responder-disp-fecha-expira">--</strong>. Tras este plazo caducará automáticamente.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- BLOQUE B: TABLA / LISTA DE REVISIÓN DEL EXPEDIENTE A ENTREGAR -->
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <div style="font-size: 0.76rem; font-weight: 800; text-transform: uppercase; color: #006837; letter-spacing: 0.5px;">
+              Bloque B &bull; Selección de Soportes y Anexos a Habilitar
+            </div>
+            <button type="button" id="btn-toggle-all-responder-files" style="background: transparent; border: none; font-size: 0.72rem; font-weight: 700; color: #006837; cursor: pointer; text-decoration: underline;">
+              Marcar / Desmarcar todos
+            </button>
+          </div>
+
+          <p style="margin: 0; font-size: 0.78rem; color: #64748b;">
+            Revise los soportes consolidados del expediente. Los archivos marcados con casilla de verificación serán los únicos disponibles para descarga en el portal del solicitante.
+          </p>
+
+          <div id="responder-archivos-container" style="max-height: 200px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; background: #fafaf9; display: flex; flex-direction: column; gap: 8px;">
+            <!-- Inyectado dinámicamente -->
+          </div>
+
+          <!-- Campo Opcional Enlace Drive -->
+          <div style="margin-top: 4px;">
+            <label style="font-size: 0.74rem; font-weight: 700; color: #334155; text-transform: uppercase;">
+              Enlace adicional a carpeta externa / Drive (Opcional):
+            </label>
+            <input 
+              type="url" 
+              id="responder-drive-url" 
+              class="form-input" 
+              placeholder="https://drive.google.com/drive/folders/..." 
+              style="font-size: 0.82rem; margin-top: 4px;" 
+            />
+          </div>
+        </div>
+
+        <!-- BLOQUE C: TARJETA DE RESPUESTA OFICIAL DEL FUNCIONARIO -->
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="font-size: 0.76rem; font-weight: 800; text-transform: uppercase; color: #006837; letter-spacing: 0.5px;">
+            Bloque C &bull; Redacción del Pronunciamiento Oficial
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+            <!-- Columna Izquierda: Redacción -->
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div>
+                <label style="font-size: 0.72rem; font-weight: 700; color: #475569; text-transform: uppercase;">Funcionario / Oficina que emite:</label>
+                <input type="text" id="responder-funcionario-input" class="form-input" value="Oficina de Correspondencia y Gestión Documental" style="font-size: 0.80rem; font-weight: 600;" required />
+              </div>
+
+              <div>
+                <label style="font-size: 0.72rem; font-weight: 700; color: #475569; text-transform: uppercase;">Texto de la Respuesta Oficial *</label>
+                <textarea 
+                  id="responder-mensaje-input" 
+                  rows="6" 
+                  class="form-input" 
+                  placeholder="Redacte la respuesta formal al solicitante..." 
+                  style="font-size: 0.82rem; line-height: 1.6; resize: vertical;" 
+                  required
+                ></textarea>
+              </div>
+            </div>
+
+            <!-- Columna Derecha: Vista Previa en Vivo -->
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <span style="font-size: 0.70rem; font-weight: 700; color: #64748b; text-transform: uppercase;">
+                Vista Previa en Vivo (Tarjeta Oficial del Solicitante):
+              </span>
+              <div style="background: #ffffff; border: 1px solid #e2e8f0; border-top: 3px solid #006837; border-radius: 8px; padding: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); height: 100%; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-size: 0.65rem; font-weight: 800; color: #006837; background: #f0fdf4; padding: 2px 6px; border-radius: 4px;">RESPUESTA OFICIAL</span>
+                    <span style="font-size: 0.68rem; color: #64748b;" id="preview-funcionario">Oficina de Correspondencia</span>
+                  </div>
+                  <div id="preview-mensaje-body" style="font-size: 0.78rem; color: #1e293b; line-height: 1.55; white-space: pre-wrap; max-height: 140px; overflow-y: auto;">
+                    Escriba en el campo de la izquierda para previsualizar aquí el pronunciamiento...
+                  </div>
+                </div>
+                <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #cbd5e1; font-size: 0.68rem; color: #854d0e; display: flex; align-items: center; gap: 4px;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#b8860b" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  <span>Vigencia: 10 días calendario con candado temporal</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Botones de Acción -->
+        <div style="display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-top: 10px; border-top: 1px solid var(--border-subtle); padding-top: 16px;">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-responder-modal">
+            Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-responder" style="background: #006837; border-color: #006837; font-weight: 800; font-size: 0.88rem; padding: 10px 24px; box-shadow: 0 2px 8px rgba(0, 104, 55, 0.25);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            <span id="btn-submit-responder-text">Confirmar y Enviar Respuesta Oficial</span>
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
   <script id="data-archivos-oficinas" type="application/json" set:html={JSON.stringify(oficinasCatalogo)} />
 
   <style>
@@ -977,6 +1138,13 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       estado: string;
       prioridad?: string | null;
       created_at: string;
+      respuesta_mensaje?: string | null;
+      respuesta_funcionario?: string | null;
+      respuesta_fecha_envio?: string | null;
+      respuesta_expira_at?: string | null;
+      respuesta_pin_solicitante?: string | null;
+      respuesta_archivos_incluidos?: string[] | null;
+      respuesta_drive_url?: string | null;
       subcarpetas?: any[];
       peticion_anexos?: PeticionAnexo[];
       peticion_responsables?: PeticionResponsable[];
@@ -1298,7 +1466,6 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         let slaPct = 0;
         let daysRemaining = 0;
         let slaColor = '#16a34a';
-        let slaBadge = 'Plazo Seguro';
         try {
           const startStr = peticion.fecha_radicacion || peticion.created_at || '';
           const endStr = peticion.fecha_limite_entrega || '';
@@ -1312,10 +1479,8 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
             slaPct = Math.min(100, Math.round((elapsed / totalDays) * 100));
             if (daysRemaining <= 2) {
               slaColor = '#dc2626';
-              slaBadge = 'Crítico / Por Vencer';
             } else if (daysRemaining <= 7) {
               slaColor = '#d97706';
-              slaBadge = 'Próximo a Vencer';
             }
           }
         } catch (err) {}
@@ -1380,7 +1545,18 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
             </div>
 
             <!-- Acciones de Cabecera -->
-            <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <button 
+                type="button" 
+                class="btn btn-primary btn-sm btn-open-responder-modal" 
+                data-id="${escapeHtml(peticion.id)}"
+                title="Despachar respuesta formal y habilitar portal temporal al solicitante"
+                style="display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 0.82rem; padding: 7px 16px; background: #006837; border-color: #006837; color: #ffffff; box-shadow: 0 2px 6px rgba(0, 104, 55, 0.2); cursor: pointer;"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                <span>Enviar Respuesta al Solicitante</span>
+              </button>
+
               <button 
                 type="button" 
                 class="btn btn-secondary btn-sm btn-edit-pet" 
@@ -1409,6 +1585,27 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                   <span style="font-size: 0.74rem; font-weight: 800; padding: 4px 10px; border-radius: 4px; ${peticion.estado === 'respondida' ? 'background: #DCFCE7; color: #15803D;' : 'background: #FEF3C7; color: #92400E;'}">
                     ${peticion.estado === 'respondida' ? 'Respondida' : 'En Trámite'}
                   </span>
+                  ${(() => {
+                    if (peticion.respuesta_fecha_envio) {
+                      const now = Date.now();
+                      const exp = peticion.respuesta_expira_at ? new Date(peticion.respuesta_expira_at).getTime() : 0;
+                      const isExpired = exp > 0 && now > exp;
+                      const daysLeft = exp > 0 ? Math.max(0, Math.ceil((exp - now) / (1000 * 60 * 60 * 24))) : 0;
+                      if (isExpired) {
+                        return `
+                          <span style="font-size: 0.74rem; font-weight: 750; background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; padding: 4px 10px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
+                            <span>Respuesta Enviada (Caducada)</span>
+                          </span>
+                        `;
+                      }
+                      return `
+                        <span style="font-size: 0.74rem; font-weight: 750; background: #f0fdf4; color: #006837; border: 1px solid #bbf7d0; padding: 4px 10px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
+                          <span>Respuesta Enviada (Activa por ${daysLeft} día${daysLeft === 1 ? '' : 's'} restante${daysLeft === 1 ? '' : 's'})</span>
+                        </span>
+                      `;
+                    }
+                    return '';
+                  })()}
                   <span style="font-size: 0.74rem; font-weight: 700; color: var(--dorado-oscuro); background: var(--dorado-suave-bg); border: 1px solid var(--dorado-borde); padding: 4px 10px; border-radius: 4px;">
                     Prioridad: ${escapeHtml(peticion.prioridad || 'Media')}
                   </span>
@@ -1821,6 +2018,25 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
               })()}
             </div>
           </div>
+
+          <!-- BARRA DE ACCIÓN INFERIOR: ENVIAR RESPUESTA AL SOLICITANTE -->
+          <div class="card" style="padding: 20px 24px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 20px; border-left: 5px solid var(--verde-principal);">
+            <div>
+              <strong style="color: #0f172a; font-size: 0.94rem; display: block;">Despacho de Respuesta Oficial al Solicitante</strong>
+              <p style="margin: 3px 0 0 0; font-size: 0.80rem; color: #64748b;">
+                Revise los soportes del expediente, redacte la respuesta institucional y habilite el portal seguro con vigencia de 10 días calendario.
+              </p>
+            </div>
+            <button 
+              type="button" 
+              class="btn btn-primary btn-open-responder-modal"
+              data-id="${escapeHtml(peticion.id)}"
+              style="display: inline-flex; align-items: center; gap: 8px; font-weight: 800; font-size: 0.86rem; padding: 10px 22px; background: #006837; border-color: #006837; color: #ffffff; box-shadow: 0 3px 8px rgba(0, 104, 55, 0.25); cursor: pointer;"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              <span>Enviar Respuesta al Solicitante</span>
+            </button>
+          </div>
         `;
 
         // Registrar listener para el botón volver de la cabecera
@@ -2064,6 +2280,16 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         const petId = subcarpetaBtn.getAttribute('data-peticion-id') || '';
         const radicado = subcarpetaBtn.getAttribute('data-radicado') || '';
         openModalCrearSubcarpeta(petId, radicado);
+        return;
+      }
+
+      // C. Botón Enviar Respuesta al Solicitante
+      const responderBtn = target.closest('.btn-open-responder-modal') as HTMLElement | null;
+      if (responderBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const petId = responderBtn.getAttribute('data-id') || '';
+        if (petId) openResponderModal(petId);
         return;
       }
 
@@ -2448,6 +2674,210 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         if (submitBtn) {
           submitBtn.disabled = false;
           submitBtn.textContent = 'Crear Subcarpeta y Notificar';
+        }
+      }
+    });
+
+    // 7.2 Modal Enviar Respuesta Oficial al Solicitante
+    const responderModal = document.getElementById('modal-responder-solicitante');
+    const formResponder = document.getElementById('form-responder-solicitante');
+    const closeResponder = () => { if (responderModal) responderModal.style.display = 'none'; };
+    document.getElementById('btn-close-responder-modal')?.addEventListener('click', closeResponder);
+    document.getElementById('btn-cancel-responder-modal')?.addEventListener('click', closeResponder);
+
+    const responderPetIdInput = document.getElementById('responder-pet-id') as HTMLInputElement | null;
+    const responderDispRadicado = document.getElementById('responder-disp-radicado');
+    const responderDispAsunto = document.getElementById('responder-disp-asunto');
+    const responderDispSol = document.getElementById('responder-disp-solicitante');
+    const responderEmailInput = document.getElementById('responder-solicitante-email') as HTMLInputElement | null;
+    const responderExpiraLabel = document.getElementById('responder-disp-fecha-expira');
+    const responderArchivosContainer = document.getElementById('responder-archivos-container');
+    const responderDriveInput = document.getElementById('responder-drive-url') as HTMLInputElement | null;
+    const responderFuncionarioInput = document.getElementById('responder-funcionario-input') as HTMLInputElement | null;
+    const responderMensajeInput = document.getElementById('responder-mensaje-input') as HTMLTextAreaElement | null;
+    const previewFuncionario = document.getElementById('preview-funcionario');
+    const previewMensajeBody = document.getElementById('preview-mensaje-body');
+    const btnToggleAllFiles = document.getElementById('btn-toggle-all-responder-files');
+
+    function updateLivePreview() {
+      const funcionario = responderFuncionarioInput?.value.trim() || 'Oficina de Correspondencia y Gestión Documental';
+      const mensaje = responderMensajeInput?.value.trim() || 'Escriba en el campo de la izquierda para previsualizar aquí el pronunciamiento...';
+      if (previewFuncionario) previewFuncionario.textContent = funcionario;
+      if (previewMensajeBody) previewMensajeBody.textContent = mensaje;
+    }
+
+    responderFuncionarioInput?.addEventListener('input', updateLivePreview);
+    responderMensajeInput?.addEventListener('input', updateLivePreview);
+
+    let allFilesChecked = true;
+    btnToggleAllFiles?.addEventListener('click', () => {
+      allFilesChecked = !allFilesChecked;
+      const cbs = document.querySelectorAll<HTMLInputElement>('input[name="responder_file_check"]');
+      cbs.forEach((cb) => { cb.checked = allFilesChecked; });
+    });
+
+    function openResponderModal(petId: string) {
+      const pet = peticionesMap.get(petId) || allPeticiones.find((p) => p.id === petId);
+      if (!pet) return;
+
+      if (responderPetIdInput) responderPetIdInput.value = pet.id;
+      if (responderDispRadicado) responderDispRadicado.textContent = pet.numero_radicado || 'RAD-2026';
+      if (responderDispAsunto) responderDispAsunto.textContent = pet.asunto || 'Sin asunto';
+      if (responderDispSol) responderDispSol.textContent = pet.solicitante_nombre || 'Ciudadano(a)';
+      if (responderEmailInput) responderEmailInput.value = pet.solicitante_email || '';
+
+      // Calcular fecha estimada de expiración (10 días)
+      const expDate = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000);
+      const expStr = expDate.toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      if (responderExpiraLabel) responderExpiraLabel.textContent = expStr;
+
+      // Valores previos si ya se había respondido
+      if (responderDriveInput) responderDriveInput.value = pet.respuesta_drive_url || '';
+      if (responderFuncionarioInput) {
+        responderFuncionarioInput.value = pet.respuesta_funcionario || 'Oficina de Correspondencia y Gestión Documental';
+      }
+
+      // Plantilla por defecto para redactar
+      const defaultMensaje = pet.respuesta_mensaje || `Estimado(a) ${pet.solicitante_nombre || 'solicitante'}, en atención a su comunicación oficial radicada bajo el N° ${pet.numero_radicado}, nos permitimos informarle que la institución ha emitido respuesta de fondo. Se anexan al presente expediente los soportes correspondientes debidamente certificados.`;
+      if (responderMensajeInput) responderMensajeInput.value = defaultMensaje;
+      updateLivePreview();
+
+      // Renderizar checklist de archivos del expediente
+      if (responderArchivosContainer) {
+        const anexos = Array.isArray(pet.peticion_anexos) ? pet.peticion_anexos : [];
+        if (anexos.length === 0) {
+          responderArchivosContainer.innerHTML = `
+            <div style="font-size: 0.78rem; color: #64748b; font-style: italic; text-align: center; padding: 12px;">
+              No se han subido archivos adjuntos a este expediente aún. Podrá enviar el pronunciamiento textual al solicitante.
+            </div>
+          `;
+        } else {
+          // Si ya había archivos aprobados previamente
+          const previouslyApproved = Array.isArray(pet.respuesta_archivos_incluidos) && pet.respuesta_archivos_incluidos.length > 0
+            ? new Set(pet.respuesta_archivos_incluidos)
+            : null;
+
+          responderArchivosContainer.innerHTML = anexos.map((a: any, idx: number) => {
+            const rawName = a.nombre_archivo || `Archivo_${idx + 1}.pdf`;
+            const cleanName = rawName.replace(/^\[[^\]]+\]\s*/, '');
+            const isChecked = previouslyApproved ? previouslyApproved.has(a.id) || previouslyApproved.has(a.storage_path) || previouslyApproved.has(a.nombre_archivo) : true;
+            const subTag = rawName.match(/^\[([^\]]+)\]/);
+            const subLabel = subTag && subTag[1] ? subTag[1].trim() : (a.es_anexo_oficina ? 'Aporte de Dependencia' : 'Documento Inicial');
+
+            return `
+              <label style="display: flex; align-items: center; justify-content: space-between; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 12px; cursor: pointer; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+                  <input type="checkbox" name="responder_file_check" value="${escapeHtml(a.id || a.storage_path || cleanName)}" ${isChecked ? 'checked' : ''} style="accent-color: #006837; width: 16px; height: 16px; cursor: pointer; flex-shrink: 0;" />
+                  <div style="min-width: 0;">
+                    <div style="font-size: 0.80rem; font-weight: 750; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                      ${escapeHtml(cleanName)}
+                    </div>
+                    <div style="font-size: 0.68rem; color: #64748b; display: flex; align-items: center; gap: 6px; margin-top: 1px;">
+                      <span style="background: #f1f5f9; padding: 1px 6px; border-radius: 4px; font-weight: 600;">${escapeHtml(subLabel)}</span>
+                      <span>&bull; ${a.tamano_bytes ? (a.tamano_bytes / 1024).toFixed(0) + ' KB' : 'Soporte digital'}</span>
+                    </div>
+                  </div>
+                </div>
+                <span style="font-size: 0.68rem; color: #006837; font-weight: 700; flex-shrink: 0;">Habilitar</span>
+              </label>
+            `;
+          }).join('');
+        }
+      }
+
+      if (responderModal) responderModal.style.display = 'flex';
+    }
+
+    let isSubmittingRespuesta = false;
+    formResponder?.addEventListener('submit', async (e: Event) => {
+      e.preventDefault();
+      if (isSubmittingRespuesta) return;
+
+      const petId = responderPetIdInput?.value || '';
+      const email = responderEmailInput?.value.trim().toLowerCase() || '';
+      const mensaje = responderMensajeInput?.value.trim() || '';
+      const funcionario = responderFuncionarioInput?.value.trim() || '';
+      const driveUrl = responderDriveInput?.value.trim() || '';
+
+      const checkedFiles: string[] = [];
+      document.querySelectorAll<HTMLInputElement>('input[name="responder_file_check"]:checked').forEach((cb) => {
+        checkedFiles.push(cb.value);
+      });
+
+      if (!petId || !mensaje) {
+        alert('Por favor ingrese el texto de la respuesta oficial.');
+        return;
+      }
+
+      if (!email || !email.includes('@')) {
+        alert('Por favor ingrese un correo válido para el solicitante.');
+        return;
+      }
+
+      const submitBtn = document.getElementById('btn-submit-responder') as HTMLButtonElement | null;
+      const submitText = document.getElementById('btn-submit-responder-text');
+
+      isSubmittingRespuesta = true;
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        if (submitText) submitText.textContent = 'Despachando respuesta oficial y notificando por correo...';
+      }
+
+      try {
+        const res = await fetch('/api/peticiones/responder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            peticion_id: petId,
+            solicitante_email: email,
+            respuesta_mensaje: mensaje,
+            respuesta_funcionario: funcionario,
+            respuesta_archivos_incluidos: checkedFiles,
+            respuesta_drive_url: driveUrl,
+          }),
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          if (typeof (window as any).showToast === 'function') {
+            (window as any).showToast('Error: ' + (data.error || 'No se pudo enviar la respuesta'), 'error');
+          }
+          return;
+        }
+
+        if (typeof (window as any).showToast === 'function') {
+          (window as any).showToast('Respuesta oficial despachada con éxito. Solicitante notificado por correo electrónico.', 'success');
+        }
+        closeResponder();
+
+        // Actualizar peticion en el array local y recargar vista de la carpeta
+        const pet = peticionesMap.get(petId) || allPeticiones.find((p) => p.id === petId);
+        if (pet) {
+          pet.estado = 'respondida';
+          pet.solicitante_email = email;
+          pet.respuesta_mensaje = mensaje;
+          pet.respuesta_funcionario = funcionario;
+          pet.respuesta_fecha_envio = new Date().toISOString();
+          pet.respuesta_expira_at = data.expira_at;
+          pet.respuesta_pin_solicitante = data.pin_solicitante;
+          pet.respuesta_drive_url = driveUrl || null;
+          pet.respuesta_archivos_incluidos = checkedFiles;
+
+          indexPeticion(pet);
+          openFolderDetail(petId);
+        } else {
+          setTimeout(() => window.location.reload(), 600);
+        }
+      } catch (err: any) {
+        console.error('Error al despachar respuesta:', err);
+        if (typeof (window as any).showToast === 'function') {
+          (window as any).showToast('Error de red al despachar la respuesta oficial.', 'error');
+        }
+      } finally {
+        isSubmittingRespuesta = false;
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          if (submitText) submitText.textContent = 'Confirmar y Enviar Respuesta Oficial';
         }
       }
     });

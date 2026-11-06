@@ -482,6 +482,13 @@ export interface Peticion {
   creado_por?: string | null;
   created_at: string;
   updated_at: string;
+  respuesta_mensaje?: string | null;
+  respuesta_funcionario?: string | null;
+  respuesta_fecha_envio?: string | null;
+  respuesta_expira_at?: string | null;
+  respuesta_pin_solicitante?: string | null;
+  respuesta_archivos_incluidos?: string[] | null;
+  respuesta_drive_url?: string | null;
   responsables?: PeticionResponsable[];
 }
 
