@@ -136,10 +136,13 @@ try {
 
   if (allSubcarpetas && allSubcarpetas.length > 0) {
     allSubcarpetas.forEach((sub: any) => {
-      if (!subcarpetasPorPeticion[sub.peticion_id]) {
-        subcarpetasPorPeticion[sub.peticion_id] = [];
+      const petId = String(sub?.peticion_id || '');
+      if (petId) {
+        if (!subcarpetasPorPeticion[petId]) {
+          subcarpetasPorPeticion[petId] = [];
+        }
+        subcarpetasPorPeticion[petId]!.push(sub);
       }
-      subcarpetasPorPeticion[sub.peticion_id].push(sub);
     });
   }
 } catch {
@@ -154,7 +157,7 @@ try {
     .select('id, subcarpeta_id') as any);
   if (respSubs && respSubs.length > 0) {
     respSubs.forEach((r: any) => {
-      if (r.id && r.subcarpeta_id) respSubcarpetasMap[r.id] = r.subcarpeta_id;
+      if (r && r.id && r.subcarpeta_id) respSubcarpetasMap[r.id] = r.subcarpeta_id;
     });
   }
 } catch {}
@@ -166,7 +169,7 @@ try {
     .select('id, subcarpeta_id') as any);
   if (anexoSubs && anexoSubs.length > 0) {
     anexoSubs.forEach((a: any) => {
-      if (a.id && a.subcarpeta_id) anexoSubcarpetasMap[a.id] = a.subcarpeta_id;
+      if (a && a.id && a.subcarpeta_id) anexoSubcarpetasMap[a.id] = a.subcarpeta_id;
     });
   }
 } catch {}
@@ -189,18 +192,19 @@ function combineSubcarpetas(p: any, dbSubs: any[] = []): any[] {
     const withoutPin = raw.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '');
     const matches = withoutPin.matchAll(/\[([^\]\r\n]+)\](?:\s*:?\s*([^|\[\r\n]+))?/g);
     for (const m of matches) {
-      const name = m[1]?.trim();
+      const name = (m[1] || '').trim();
       if (name && !name.toUpperCase().startsWith('PIN') && name.toUpperCase() !== 'EXPEDIENTE GENERAL') {
         const key = name.toUpperCase();
-        if (!foundSubs[key]) {
+        const existing = foundSubs[key];
+        if (!existing) {
           foundSubs[key] = {
             id: `sub-inf-${p.id}-${key.replace(/[^A-Z0-9_-]/g, '_')}`,
             peticion_id: p.id,
             nombre: name,
-            descripcion: m[2]?.trim() || null,
+            descripcion: (m[2] || '').trim() || null,
           };
-        } else if (!foundSubs[key].descripcion && m[2]?.trim()) {
-          foundSubs[key].descripcion = m[2]?.trim() || null;
+        } else if (!existing.descripcion && m[2]?.trim()) {
+          existing.descripcion = (m[2] || '').trim() || null;
         }
       }
     }
@@ -210,7 +214,7 @@ function combineSubcarpetas(p: any, dbSubs: any[] = []): any[] {
     const fileName = a?.nombre_archivo || '';
     const m = fileName.match(/\[([^\]\r\n]+)\]/i);
     if (m && m[1]) {
-      const name = m[1].trim();
+      const name = (m[1] || '').trim();
       if (name && !name.toUpperCase().startsWith('PIN') && name.toUpperCase() !== 'EXPEDIENTE GENERAL') {
         const key = name.toUpperCase();
         if (!foundSubs[key]) {
@@ -229,18 +233,19 @@ function combineSubcarpetas(p: any, dbSubs: any[] = []): any[] {
   if (textDesc) {
     const matches = textDesc.matchAll(/\[([^\]\r\n]+)\](?:\s*:?\s*([^|\[\r\n]+))?/g);
     for (const m of matches) {
-      const name = m[1]?.trim();
+      const name = (m[1] || '').trim();
       if (name && !name.toUpperCase().startsWith('PIN') && name.toUpperCase() !== 'EXPEDIENTE GENERAL') {
         const key = name.toUpperCase();
-        if (!foundSubs[key]) {
+        const existing = foundSubs[key];
+        if (!existing) {
           foundSubs[key] = {
             id: `sub-inf-${p.id}-${key.replace(/[^A-Z0-9_-]/g, '_')}`,
             peticion_id: p.id,
             nombre: name,
-            descripcion: m[2]?.trim() || null,
+            descripcion: (m[2] || '').trim() || null,
           };
-        } else if (!foundSubs[key].descripcion && m[2]?.trim()) {
-          foundSubs[key].descripcion = m[2]?.trim() || null;
+        } else if (!existing.descripcion && m[2]?.trim()) {
+          existing.descripcion = (m[2] || '').trim() || null;
         }
       }
     }
@@ -268,7 +273,7 @@ const inferSubcarpetas = combineSubcarpetas;
 const peticiones: PeticionExpediente[] = rawPeticiones.map((p) => {
   const respObs = p.peticion_responsables?.find((r: any) => r?.observaciones_entrega?.includes('PIN:'))?.observaciones_entrega;
   const pinMatch = respObs?.match(/PIN:\s*([0-9A-Z]{6})/i);
-  const storedPin = pinMatch ? pinMatch[1] : null;
+  const storedPin = pinMatch ? (pinMatch[1] || null) : null;
 
   const enrichedResponsables = (p.peticion_responsables || []).map((r: any) => ({
     ...r,
@@ -1004,18 +1009,19 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         const withoutPin = raw.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '');
         const matches = withoutPin.matchAll(/\[([^\]\r\n]+)\](?:\s*:?\s*([^|\[\r\n]+))?/g);
         for (const m of matches) {
-          const name = m[1]?.trim();
+          const name = (m[1] || '').trim();
           if (name && !name.toUpperCase().startsWith('PIN') && name.toUpperCase() !== 'EXPEDIENTE GENERAL') {
             const key = name.toUpperCase();
-            if (!foundSubs[key]) {
+            const existing = foundSubs[key];
+            if (!existing) {
               foundSubs[key] = {
                 id: `sub-inf-${p.id}-${key.replace(/[^A-Z0-9_-]/g, '_')}`,
                 peticion_id: p.id,
                 nombre: name,
-                descripcion: m[2]?.trim() || null,
+                descripcion: (m[2] || '').trim() || null,
               };
-            } else if (!foundSubs[key].descripcion && m[2]?.trim()) {
-              foundSubs[key].descripcion = m[2]?.trim() || null;
+            } else if (!existing.descripcion && m[2]?.trim()) {
+              existing.descripcion = (m[2] || '').trim() || null;
             }
           }
         }
@@ -1025,7 +1031,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         const fileName = a?.nombre_archivo || '';
         const m = fileName.match(/\[([^\]\r\n]+)\]/i);
         if (m && m[1]) {
-          const name = m[1].trim();
+          const name = (m[1] || '').trim();
           if (name && !name.toUpperCase().startsWith('PIN') && name.toUpperCase() !== 'EXPEDIENTE GENERAL') {
             const key = name.toUpperCase();
             if (!foundSubs[key]) {
@@ -1044,18 +1050,19 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       if (textDesc) {
         const matches = textDesc.matchAll(/\[([^\]\r\n]+)\](?:\s*:?\s*([^|\[\r\n]+))?/g);
         for (const m of matches) {
-          const name = m[1]?.trim();
+          const name = (m[1] || '').trim();
           if (name && !name.toUpperCase().startsWith('PIN') && name.toUpperCase() !== 'EXPEDIENTE GENERAL') {
             const key = name.toUpperCase();
-            if (!foundSubs[key]) {
+            const existing = foundSubs[key];
+            if (!existing) {
               foundSubs[key] = {
                 id: `sub-inf-${p.id}-${key.replace(/[^A-Z0-9_-]/g, '_')}`,
                 peticion_id: p.id,
                 nombre: name,
-                descripcion: m[2]?.trim() || null,
+                descripcion: (m[2] || '').trim() || null,
               };
-            } else if (!foundSubs[key].descripcion && m[2]?.trim()) {
-              foundSubs[key].descripcion = m[2]?.trim() || null;
+            } else if (!existing.descripcion && m[2]?.trim()) {
+              existing.descripcion = (m[2] || '').trim() || null;
             }
           }
         }
@@ -1615,7 +1622,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                   const escaped = subName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                   const reg = new RegExp(`\\[\\s*${escaped}\\s*\\]\\s*:?\\s*([^|\\[]+)`, 'i');
                   const m = withoutPin.match(reg);
-                  if (m && m[1]) return m[1].trim();
+                  if (m && m[1]) return (m[1] || '').trim();
                   if (!withoutPin.includes('[') || withoutPin.startsWith(`[${subName}]`)) {
                     return withoutPin.replace(new RegExp(`^\\[\\s*${escaped}\\s*\\]\\s*:?\\s*`, 'i'), '').trim();
                   }
@@ -2414,11 +2421,13 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
               const matchedOfi = archivosOficinasCatalog.find((o: any) => o.id === r.oficina_id);
               if (existingIdx >= 0) {
                 const existing = pet.peticion_responsables![existingIdx];
-                if (r.observaciones_entrega) {
-                  existing.observaciones_entrega = r.observaciones_entrega;
-                }
-                if (r.subcarpeta_id) {
-                  existing.subcarpeta_id = r.subcarpeta_id;
+                if (existing) {
+                  if (r.observaciones_entrega) {
+                    existing.observaciones_entrega = r.observaciones_entrega;
+                  }
+                  if (r.subcarpeta_id) {
+                    existing.subcarpeta_id = r.subcarpeta_id;
+                  }
                 }
               } else {
                 pet.peticion_responsables!.push({

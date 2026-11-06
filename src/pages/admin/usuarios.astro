@@ -541,7 +541,7 @@ const permissionsByCategory = categories.map(cat => ({
           dbPerms.forEach((row: any) => {
             if (!userPermissionsMap[row.user_id]) userPermissionsMap[row.user_id] = [];
             if (row.is_granted && row.permission_id) {
-              userPermissionsMap[row.user_id].push(row.permission_id);
+              userPermissionsMap[row.user_id]!.push(row.permission_id);
             }
           });
         }
