@@ -203,7 +203,7 @@ import Layout from '@layouts/Layout.astro';
 
         <div class="portal-login-footer-info">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-          <span>Ley 1755 de 2015 &bull; Trazabilidad oficial de respuesta institucional</span>
+          <span>Trazabilidad y fe pública oficial &bull; Universidad Internacional del Trópico Americano</span>
         </div>
 
       </section>
@@ -403,6 +403,33 @@ import Layout from '@layouts/Layout.astro';
 </Layout>
 
 <style>
+  :root {
+    /* Color Primario 1: Verde Institucional (Pantone 329 CP) y sus derivados más claros */
+    --uni-green-primary: #00594E;
+    --uni-green-90: #1A6A60;
+    --uni-green-75: #397E75;
+    --uni-green-50: #6E9F98;
+    --uni-green-25: #B2CFCB;
+    --uni-green-10: #E6EFEF;
+    --uni-green-05: #F2F7F6;
+
+    /* Color Primario 2: Dorado / Ocre Institucional (Pantone 4515 CP) y sus derivados más claros */
+    --uni-gold-primary: #B5A160;
+    --uni-gold-90: #C0AE73;
+    --uni-gold-75: #CCC08E;
+    --uni-gold-50: #DBD2B0;
+    --uni-gold-25: #EDE8D7;
+    --uni-gold-10: #F7F5EE;
+    --uni-gold-05: #FBF9F5;
+
+    /* Blanco, Negro y Neutros para detalles tipográficos y bordes */
+    --uni-white: #FFFFFF;
+    --uni-black: #111827;
+    --uni-text-dark: #1E293B;
+    --uni-text-muted: #52606D;
+    --uni-border: #DCE4E3;
+  }
+
   /* ==========================================================================
      LAYOUT PRINCIPAL DEL PORTAL (100% LIMPIO, SIN MANCHAS NI RAYONES)
      ========================================================================== */
@@ -413,22 +440,23 @@ import Layout from '@layouts/Layout.astro';
     display: flex;
     flex-direction: column;
     background: #f8fafc;
-    color: #0f172a;
+    color: var(--uni-black);
     font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
     box-sizing: border-box;
     overflow-x: hidden;
   }
 
   /* ==========================================================================
-     CABECERA SUPERIOR
+     CABECERA SUPERIOR (UI/UX PRO MAX SOBRIO)
      ========================================================================== */
   .portal-top-header {
     width: 100%;
-    background: #052e16;
-    color: #ffffff;
-    border-bottom: 2.5px solid #b8860b;
-    padding: 14px 20px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    background: var(--uni-white);
+    color: var(--uni-black);
+    border-top: 4px solid var(--uni-green-primary);
+    border-bottom: 1px solid var(--uni-border);
+    padding: 12px 20px;
+    box-shadow: 0 2px 10px rgba(0, 89, 78, 0.05);
   }
 
   .portal-header-container {
@@ -448,13 +476,11 @@ import Layout from '@layouts/Layout.astro';
   }
 
   .portal-logo-card {
-    background: #ffffff;
-    padding: 6px 12px;
-    border-radius: 8px;
+    background: transparent;
+    padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
   }
 
   .portal-logo-img {
@@ -467,11 +493,11 @@ import Layout from '@layouts/Layout.astro';
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    font-size: 0.70rem;
+    font-size: 0.68rem;
     font-weight: 750;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #fde047;
+    color: var(--uni-gold-primary);
     margin-bottom: 2px;
   }
 
@@ -479,14 +505,14 @@ import Layout from '@layouts/Layout.astro';
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: #d4af37;
+    background: var(--uni-gold-primary);
   }
 
   .portal-system-title {
     font-size: 1.05rem;
     font-weight: 800;
     margin: 0;
-    color: #ffffff;
+    color: var(--uni-black);
     letter-spacing: -0.01em;
   }
 
@@ -494,10 +520,10 @@ import Layout from '@layouts/Layout.astro';
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 14px;
-    background: rgba(255, 255, 255, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    color: #ffffff;
+    padding: 7px 14px;
+    background: var(--uni-green-05);
+    border: 1px solid var(--uni-green-25);
+    color: var(--uni-green-primary);
     font-size: 0.76rem;
     font-weight: 750;
     border-radius: 8px;
@@ -506,8 +532,10 @@ import Layout from '@layouts/Layout.astro';
   }
 
   .btn-portal-back-login:hover {
-    background: rgba(255, 255, 255, 0.22);
-    border-color: #d4af37;
+    background: var(--uni-green-primary);
+    color: var(--uni-white);
+    border-color: var(--uni-green-primary);
+    box-shadow: 0 2px 6px rgba(0, 89, 78, 0.2);
     transform: translateY(-1px);
   }
 
@@ -560,15 +588,15 @@ import Layout from '@layouts/Layout.astro';
   }
 
   .stepper-step.active .step-icon-circle {
-    background: #006837;
-    border-color: #006837;
+    background: var(--uni-green-primary);
+    border-color: var(--uni-green-primary);
     color: #ffffff;
-    box-shadow: 0 0 0 4px rgba(0, 104, 55, 0.15);
+    box-shadow: 0 0 0 4px rgba(0, 89, 78, 0.15);
   }
 
   .stepper-step.completed .step-icon-circle {
-    background: #10b981;
-    border-color: #10b981;
+    background: var(--uni-green-90);
+    border-color: var(--uni-green-90);
     color: #ffffff;
   }
 
@@ -592,20 +620,20 @@ import Layout from '@layouts/Layout.astro';
   .step-title {
     font-size: 0.78rem;
     font-weight: 800;
-    color: #0f172a;
+    color: var(--uni-black);
     line-height: 1.2;
   }
 
   .step-desc {
     font-size: 0.70rem;
-    color: #64748b;
+    color: var(--uni-text-muted);
     line-height: 1.2;
   }
 
   .stepper-line {
     flex: 1;
     height: 3px;
-    background: #e2e8f0;
+    background: var(--uni-border);
     border-radius: 2px;
     position: relative;
     margin: 0 10px;
@@ -618,7 +646,7 @@ import Layout from '@layouts/Layout.astro';
     top: 0;
     bottom: 0;
     width: 33%;
-    background: #006837;
+    background: var(--uni-green-primary);
     transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
@@ -636,16 +664,17 @@ import Layout from '@layouts/Layout.astro';
   }
 
   /* ==========================================================================
-     PANTALLA 1: FORMULARIO DE ACCESO (CARD)
+     PANTALLA 1: FORMULARIO DE ACCESO (CARD UI/UX PRO MAX SOBRIO)
      ========================================================================== */
   .portal-card-login {
     width: 100%;
     max-width: 500px;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--uni-white);
+    border: 1px solid var(--uni-border);
+    border-top: 4px solid var(--uni-green-primary);
     border-radius: 18px;
     padding: clamp(24px, 4vw, 36px);
-    box-shadow: 0 8px 30px -6px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.02);
+    box-shadow: 0 8px 30px -6px rgba(0, 89, 78, 0.06), 0 1px 3px rgba(0, 0, 0, 0.02);
     box-sizing: border-box;
     animation: portalCrossfade 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
@@ -670,9 +699,9 @@ import Layout from '@layouts/Layout.astro';
     width: 52px;
     height: 52px;
     border-radius: 50%;
-    background: #fefce8;
-    color: #b8860b;
-    border: 1.5px solid #fef08a;
+    background: var(--uni-gold-05);
+    color: var(--uni-gold-primary);
+    border: 1.5px solid var(--uni-gold-25);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -682,14 +711,14 @@ import Layout from '@layouts/Layout.astro';
   .portal-login-title {
     font-size: 1.35rem;
     font-weight: 850;
-    color: #0f172a;
+    color: var(--uni-black);
     margin: 0 0 6px 0;
     letter-spacing: -0.02em;
   }
 
   .portal-login-desc {
     font-size: 0.82rem;
-    color: #64748b;
+    color: var(--uni-text-muted);
     margin: 0;
     line-height: 1.5;
   }
@@ -715,7 +744,7 @@ import Layout from '@layouts/Layout.astro';
   .portal-label {
     font-size: 0.78rem;
     font-weight: 750;
-    color: #1e293b;
+    color: var(--uni-text-dark);
     text-transform: uppercase;
     letter-spacing: 0.03em;
   }
@@ -724,10 +753,10 @@ import Layout from '@layouts/Layout.astro';
     font-size: 0.68rem;
     font-weight: 750;
     color: #854d0e;
-    background: #fef9c3;
+    background: var(--uni-gold-05);
     padding: 2px 8px;
     border-radius: 4px;
-    border: 1px solid #fef08a;
+    border: 1px solid var(--uni-gold-25);
   }
 
   .portal-input-wrap {
@@ -748,9 +777,9 @@ import Layout from '@layouts/Layout.astro';
     width: 100%;
     padding: 12px 14px 12px 42px;
     font-size: 0.90rem;
-    color: #0f172a;
-    background: #f8fafc;
-    border: 1.5px solid #cbd5e1;
+    color: var(--uni-black);
+    background: var(--uni-white);
+    border: 1.5px solid var(--uni-border);
     border-radius: 10px;
     outline: none;
     font-family: inherit;
@@ -769,17 +798,17 @@ import Layout from '@layouts/Layout.astro';
 
   .portal-input:focus {
     background: #ffffff;
-    border-color: #006837;
-    box-shadow: 0 0 0 3px rgba(0, 104, 55, 0.12);
+    border-color: var(--uni-green-primary);
+    box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.12);
   }
 
   .portal-input-wrap:focus-within .portal-field-icon {
-    color: #006837;
+    color: var(--uni-green-primary);
   }
 
   .portal-help-text {
     font-size: 0.70rem;
-    color: #64748b;
+    color: var(--uni-text-muted);
     line-height: 1.35;
     margin-top: 3px;
   }
@@ -799,7 +828,7 @@ import Layout from '@layouts/Layout.astro';
   .btn-portal-submit {
     width: 100%;
     padding: 13px 20px;
-    background: linear-gradient(135deg, #006837 0%, #064e3b 100%);
+    background: var(--uni-green-primary);
     color: #ffffff;
     border: none;
     border-radius: 10px;
@@ -811,14 +840,14 @@ import Layout from '@layouts/Layout.astro';
     align-items: center;
     justify-content: center;
     gap: 8px;
-    box-shadow: 0 4px 14px rgba(0, 104, 55, 0.25);
+    box-shadow: 0 4px 14px rgba(0, 89, 78, 0.25);
     transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     margin-top: 6px;
   }
 
   .btn-portal-submit:hover {
-    background: linear-gradient(135deg, #047857 0%, #006837 100%);
-    box-shadow: 0 6px 18px rgba(0, 104, 55, 0.35);
+    background: var(--uni-green-90);
+    box-shadow: 0 6px 18px rgba(0, 89, 78, 0.35);
     transform: translateY(-2px);
   }
 
@@ -852,12 +881,12 @@ import Layout from '@layouts/Layout.astro';
 
   /* Tarjeta de Información */
   .portal-info-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-left: 5px solid #006837;
+    background: var(--uni-white);
+    border: 1px solid var(--uni-border);
+    border-left: 5px solid var(--uni-green-primary);
     border-radius: 16px;
     padding: clamp(20px, 3vw, 28px);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 4px 20px rgba(0, 89, 78, 0.04);
   }
 
   .portal-info-header {
@@ -880,9 +909,9 @@ import Layout from '@layouts/Layout.astro';
     font-family: monospace;
     font-size: 0.95rem;
     font-weight: 800;
-    background: #ecfdf5;
-    color: #065f46;
-    border: 1px solid #a7f3d0;
+    background: var(--uni-green-05);
+    color: var(--uni-green-primary);
+    border: 1px solid var(--uni-green-25);
     padding: 3px 10px;
     border-radius: 6px;
   }
@@ -890,9 +919,9 @@ import Layout from '@layouts/Layout.astro';
   .chip-oficina {
     font-size: 0.74rem;
     font-weight: 750;
-    background: #fefce8;
+    background: var(--uni-gold-05);
     color: #854d0e;
-    border: 1px solid #fef08a;
+    border: 1px solid var(--uni-gold-25);
     padding: 3px 10px;
     border-radius: 6px;
   }
@@ -900,8 +929,9 @@ import Layout from '@layouts/Layout.astro';
   .chip-status-safe {
     font-size: 0.72rem;
     font-weight: 750;
-    background: #ecfdf5;
-    color: #047857;
+    background: var(--uni-green-05);
+    color: var(--uni-green-primary);
+    border: 1px solid var(--uni-green-25);
     padding: 3px 8px;
     border-radius: 6px;
   }
@@ -909,14 +939,14 @@ import Layout from '@layouts/Layout.astro';
   .portal-asunto-title {
     font-size: 1.15rem;
     font-weight: 700;
-    color: #0f172a;
+    color: var(--uni-black);
     margin: 0 0 6px 0;
     line-height: 1.4;
   }
 
   .portal-asunto-desc {
     font-size: 0.86rem;
-    color: #475569;
+    color: var(--uni-text-muted);
     margin: 0 0 10px 0;
     line-height: 1.6;
   }
@@ -931,7 +961,7 @@ import Layout from '@layouts/Layout.astro';
   .portal-sub-req-card {
     padding: 8px 12px;
     background: #f8fafc;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--uni-border);
     border-radius: 8px;
     display: flex;
     flex-direction: column;
@@ -942,10 +972,10 @@ import Layout from '@layouts/Layout.astro';
   }
 
   .portal-sub-req-card.active {
-    border-color: #006837;
-    border-left: 3px solid #006837;
+    border-color: var(--uni-green-primary);
+    border-left: 3px solid var(--uni-green-primary);
     background: #ffffff;
-    box-shadow: 0 2px 8px rgba(0, 104, 55, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 89, 78, 0.1);
     opacity: 1;
     transform: translateY(-1px);
   }
@@ -953,18 +983,18 @@ import Layout from '@layouts/Layout.astro';
   .portal-sub-req-card.inactive {
     opacity: 0.75;
     background: #f8fafc;
-    border-left: 1px solid #e2e8f0;
+    border-left: 1px solid var(--uni-border);
   }
 
   .portal-sub-req-card:hover {
     opacity: 1;
-    background: #f1f5f9;
-    border-color: #cbd5e1;
+    background: var(--uni-green-05);
+    border-color: var(--uni-green-50);
   }
 
   .portal-sub-req-card.active:hover {
     background: #ffffff;
-    border-color: #006837;
+    border-color: var(--uni-green-primary);
   }
 
   .portal-sub-card-header {
@@ -977,7 +1007,7 @@ import Layout from '@layouts/Layout.astro';
   .portal-sub-card-title {
     font-size: 0.74rem;
     font-weight: 800;
-    color: #006837;
+    color: var(--uni-green-primary);
     display: inline-flex;
     align-items: center;
     gap: 5px;
@@ -993,9 +1023,9 @@ import Layout from '@layouts/Layout.astro';
   }
 
   .portal-sub-status-pill.delivered {
-    background: #dcfce7;
-    color: #166534;
-    border: 1px solid #bbf7d0;
+    background: var(--uni-green-10);
+    color: var(--uni-green-primary);
+    border: 1px solid var(--uni-green-25);
   }
 
   .portal-sub-status-pill.pending {
@@ -1073,12 +1103,12 @@ import Layout from '@layouts/Layout.astro';
     border-radius: 50%;
   }
 
-  .sla-dot.gold { background: #b8860b; }
-  .sla-dot.emerald { background: #006837; }
+  .sla-dot.gold { background: var(--uni-gold-primary); }
+  .sla-dot.emerald { background: var(--uni-green-primary); }
 
   .sla-label {
     font-size: 0.76rem;
-    color: #64748b;
+    color: var(--uni-text-muted);
     font-weight: 600;
     margin-right: 4px;
   }
@@ -1089,19 +1119,19 @@ import Layout from '@layouts/Layout.astro';
   }
 
   .sla-val.gold { color: #854d0e; }
-  .sla-val.emerald { color: #065f46; }
+  .sla-val.emerald { color: var(--uni-green-primary); }
 
   .sla-banner-divider {
     width: 1px;
     height: 24px;
-    background: #d6d3d1;
+    background: var(--uni-border);
   }
 
   /* Documento Base */
   .portal-doc-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-left: 5px solid #b8860b;
+    background: var(--uni-white);
+    border: 1px solid var(--uni-border);
+    border-left: 5px solid var(--uni-gold-primary);
     border-radius: 14px;
     padding: 18px 24px;
     display: flex;
@@ -1109,7 +1139,7 @@ import Layout from '@layouts/Layout.astro';
     align-items: center;
     flex-wrap: wrap;
     gap: 14px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 2px 10px rgba(0, 89, 78, 0.03);
   }
 
   .portal-doc-details {
@@ -1122,9 +1152,9 @@ import Layout from '@layouts/Layout.astro';
     width: 44px;
     height: 44px;
     border-radius: 10px;
-    background: #fefce8;
-    color: #b8860b;
-    border: 1px solid #fef08a;
+    background: var(--uni-gold-05);
+    color: var(--uni-gold-primary);
+    border: 1px solid var(--uni-gold-25);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1134,7 +1164,7 @@ import Layout from '@layouts/Layout.astro';
     font-size: 0.68rem;
     font-weight: 750;
     text-transform: uppercase;
-    color: #b8860b;
+    color: var(--uni-gold-primary);
     letter-spacing: 0.04em;
     display: block;
     margin-bottom: 2px;
@@ -1142,13 +1172,13 @@ import Layout from '@layouts/Layout.astro';
 
   .doc-title {
     font-size: 0.94rem;
-    color: #0f172a;
+    color: var(--uni-black);
     display: block;
   }
 
   .doc-hint {
     font-size: 0.74rem;
-    color: #64748b;
+    color: var(--uni-text-muted);
     margin: 2px 0 0 0;
   }
 
@@ -1157,9 +1187,9 @@ import Layout from '@layouts/Layout.astro';
     align-items: center;
     gap: 7px;
     padding: 8px 16px;
-    background: #f8fafc;
-    border: 1.5px solid #cbd5e1;
-    color: #0f172a;
+    background: var(--uni-green-05);
+    border: 1.5px solid var(--uni-green-25);
+    color: var(--uni-green-primary);
     font-size: 0.78rem;
     font-weight: 750;
     border-radius: 8px;
@@ -1168,19 +1198,20 @@ import Layout from '@layouts/Layout.astro';
   }
 
   .btn-download-doc:hover {
-    background: #006837;
-    border-color: #006837;
+    background: var(--uni-green-primary);
+    border-color: var(--uni-green-primary);
     color: #ffffff;
+    box-shadow: 0 2px 6px rgba(0, 89, 78, 0.2);
     transform: translateY(-1px);
   }
 
   /* Zona Drag & Drop */
   .portal-upload-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--uni-white);
+    border: 1px solid var(--uni-border);
     border-radius: 16px;
     padding: clamp(20px, 3vw, 28px);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 4px 20px rgba(0, 89, 78, 0.04);
   }
 
   .upload-card-header {
@@ -1195,13 +1226,13 @@ import Layout from '@layouts/Layout.astro';
   .upload-title {
     font-size: 1.15rem;
     font-weight: 850;
-    color: #0f172a;
+    color: var(--uni-black);
     margin: 0 0 4px 0;
   }
 
   .upload-subtitle {
     font-size: 0.80rem;
-    color: #64748b;
+    color: var(--uni-text-muted);
     margin: 0;
     line-height: 1.4;
   }
@@ -1211,17 +1242,17 @@ import Layout from '@layouts/Layout.astro';
     align-items: center;
     gap: 6px;
     padding: 4px 10px;
-    background: #ecfdf5;
-    border: 1px solid #a7f3d0;
-    color: #065f46;
+    background: var(--uni-green-05);
+    border: 1px solid var(--uni-green-25);
+    color: var(--uni-green-primary);
     font-size: 0.72rem;
     font-weight: 750;
     border-radius: 6px;
   }
 
   .portal-drop-zone {
-    border: 2px dashed #006837;
-    background: #f0fdf4;
+    border: 2px dashed var(--uni-green-primary);
+    background: var(--uni-green-05);
     border-radius: 14px;
     padding: 34px 20px;
     text-align: center;
@@ -1230,25 +1261,25 @@ import Layout from '@layouts/Layout.astro';
   }
 
   .portal-drop-zone:hover {
-    background: #dcfce7;
-    border-color: #047857;
+    background: var(--uni-green-10);
+    border-color: var(--uni-green-90);
     transform: scale(0.995);
   }
 
   .drop-icon-box {
-    color: #006837;
+    color: var(--uni-green-primary);
     margin-bottom: 8px;
   }
 
   .drop-title {
     font-weight: 800;
     font-size: 0.94rem;
-    color: #065f46;
+    color: var(--uni-green-primary);
   }
 
   .drop-formats {
     font-size: 0.74rem;
-    color: #64748b;
+    color: var(--uni-text-muted);
     margin-top: 4px;
   }
 
@@ -1256,9 +1287,9 @@ import Layout from '@layouts/Layout.astro';
     width: 100%;
     padding: 10px 14px;
     font-size: 0.86rem;
-    color: #0f172a;
-    background: #f8fafc;
-    border: 1.5px solid #cbd5e1;
+    color: var(--uni-black);
+    background: var(--uni-white);
+    border: 1.5px solid var(--uni-border);
     border-radius: 10px;
     font-family: inherit;
     resize: vertical;
@@ -1269,8 +1300,8 @@ import Layout from '@layouts/Layout.astro';
 
   .portal-textarea:focus {
     background: #ffffff;
-    border-color: #006837;
-    box-shadow: 0 0 0 3px rgba(0, 104, 55, 0.12);
+    border-color: var(--uni-green-primary);
+    box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.12);
   }
 
   .upload-actions-row {
@@ -1281,7 +1312,7 @@ import Layout from '@layouts/Layout.astro';
 
   .btn-confirm-upload {
     padding: 11px 22px;
-    background: linear-gradient(135deg, #006837 0%, #064e3b 100%);
+    background: var(--uni-green-primary);
     color: #ffffff;
     border: none;
     border-radius: 10px;
@@ -1292,13 +1323,13 @@ import Layout from '@layouts/Layout.astro';
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    box-shadow: 0 4px 14px rgba(0, 104, 55, 0.25);
+    box-shadow: 0 4px 14px rgba(0, 89, 78, 0.25);
     transition: all 0.2s ease;
   }
 
   .btn-confirm-upload:hover:not(:disabled) {
-    background: linear-gradient(135deg, #047857 0%, #006837 100%);
-    box-shadow: 0 6px 18px rgba(0, 104, 55, 0.35);
+    background: var(--uni-green-90);
+    box-shadow: 0 6px 18px rgba(0, 89, 78, 0.35);
     transform: translateY(-2px);
   }
 
@@ -1526,8 +1557,9 @@ import Layout from '@layouts/Layout.astro';
     const parsedRequirementsMap = new Map<string, string>();
     let m: RegExpExecArray | null;
     while ((m = bracketPattern.exec(rawDescripcion)) !== null) {
-      const subKey = (m[1] || '').trim();
-      const subReq = (m[2] || '').trim();
+      if (!m) break;
+      const subKey = (m[1] ?? '').trim();
+      const subReq = (m[2] ?? '').trim();
       if (subKey && esSubcarpetaValida(subKey)) {
         parsedRequirementsMap.set(subKey.toLowerCase(), subReq);
       }
@@ -1546,7 +1578,7 @@ import Layout from '@layouts/Layout.astro';
       let sIdx = 0;
       for (const [subKey, subReq] of parsedRequirementsMap.entries()) {
         const origKey = Array.from(rawDescripcion.matchAll(/\[(.*?)\]:/g))
-          .map(match => (match[1] || '').trim())
+          .map(match => (match?.[1] ?? '').trim())
           .find(k => k.toLowerCase() === subKey) || subKey;
           
         newSubs.push({
