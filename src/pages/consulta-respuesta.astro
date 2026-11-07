@@ -1129,6 +1129,14 @@ import Layout from '@layouts/Layout.astro';
     const container = document.getElementById('subcarpetas-container');
     if (!container) return;
 
+    const validSubcarpetas = (subcarpetas || []).filter((s: any) => {
+      const n = String(s?.nombre || '').trim();
+      if (!n || n.toUpperCase().includes('RESPUESTA_META') || n.includes('{"') || n.includes('"}') || n.includes('","') || /^["']?[0-9a-f]{8}-/i.test(n)) {
+        return false;
+      }
+      return true;
+    });
+
     if (anexos.length === 0) {
       container.innerHTML = `
         <div style="background: #ffffff; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 24px; text-align: center; color: #64748b; font-size: 0.84rem;">
@@ -1164,7 +1172,7 @@ import Layout from '@layouts/Layout.astro';
     }
 
     // 2. Si no hay subcarpetas estructuradas pero hay archivos de oficinas
-    if (subcarpetas.length === 0 && anexosOficinas.length > 0) {
+    if (validSubcarpetas.length === 0 && anexosOficinas.length > 0) {
       html += `
         <div class="subcarpeta-bento-card open">
           <div class="subcarpeta-header">
@@ -1182,7 +1190,7 @@ import Layout from '@layouts/Layout.astro';
       `;
     } else {
       // 3. Renderizar cada subcarpeta oficial (1A, 1B...)
-      subcarpetas.forEach((sub: any, idx: number) => {
+      validSubcarpetas.forEach((sub: any, idx: number) => {
         const subName = String(sub.nombre || `Subcarpeta ${idx + 1}`).trim();
         const subId = sub.id;
 

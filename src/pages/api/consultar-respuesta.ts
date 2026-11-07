@@ -4,6 +4,7 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { supabase } from '@lib/supabase';
 import { getDeterministicPin } from '@lib/security';
+import { separarRespuestaMeta, esSubcarpetaValida, filtrarSubcarpetasValidas } from '@lib/subcarpetas';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -194,6 +195,8 @@ export const POST: APIRoute = async ({ request }) => {
       }
     }
 
+    subcarpetas = filtrarSubcarpetasValidas(subcarpetas);
+
     // Inferir subcarpetas virtuales a partir de los nombres de los anexos [Subcarpeta] si la tabla física no tiene registros
     if (subcarpetas.length === 0) {
       const subsMap: Record<string, any> = {};
@@ -202,7 +205,7 @@ export const POST: APIRoute = async ({ request }) => {
         const match = rawName.match(/^\[([^\]]+)\]/);
         if (match && match[1]) {
           const subKey = match[1].trim();
-          if (!subsMap[subKey]) {
+          if (esSubcarpetaValida(subKey) && !subsMap[subKey]) {
             subsMap[subKey] = {
               id: `inf-${subKey.replace(/[^A-Za-z0-9_-]/g, '_')}`,
               nombre: subKey,
@@ -211,7 +214,7 @@ export const POST: APIRoute = async ({ request }) => {
           }
         }
       });
-      subcarpetas = Object.values(subsMap);
+      subcarpetas = filtrarSubcarpetasValidas(Object.values(subsMap));
     }
 
     // Asociar cada archivo con su URL pública
@@ -279,3 +282,4 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 };
+

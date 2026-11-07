@@ -7,6 +7,7 @@ import { supabase } from '@lib/supabase';
 import { calculateDeadlineProgress } from '@lib/utils';
 import { Buffer } from 'node:buffer';
 import { getDeterministicPin } from '@lib/security';
+import { separarRespuestaMeta, esSubcarpetaValida, filtrarSubcarpetasValidas } from '@lib/subcarpetas';
 
 // Interfaces estrictas para TypeScript
 export interface PeticionAnexo {
@@ -186,7 +187,7 @@ const rawPeticiones = (dbPeticiones as any[]) || [];
 // Helper robusto para inferir subcarpetas virtuales si la tabla física aún no tiene registros (retrocompatibilidad)
 function combineSubcarpetas(p: any, dbSubs: any[] = []): any[] {
   const mapByName: Record<string, any> = {};
-  (dbSubs || []).forEach(s => {
+  filtrarSubcarpetasValidas(dbSubs || []).forEach(s => {
     if (s && s.nombre && s.nombre.trim().toLowerCase() !== 'expediente general') {
       mapByName[s.nombre.trim().toUpperCase()] = s;
     }
@@ -196,11 +197,13 @@ function combineSubcarpetas(p: any, dbSubs: any[] = []): any[] {
 
   (p.peticion_responsables || []).forEach((r: any) => {
     const raw = r?.observaciones_entrega || '';
-    const withoutPin = raw.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '');
+    const { textoLimpio } = separarRespuestaMeta(raw);
+    const withoutPin = textoLimpio.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '');
     const matches = withoutPin.matchAll(/\[([^\]\r\n]+)\](?:\s*:?\s*([^|\[\r\n]+))?/g);
     for (const m of matches) {
       const name = (m[1] || '').trim();
-      if (name && !name.toUpperCase().startsWith('PIN') && name.toUpperCase() !== 'EXPEDIENTE GENERAL') {
+      const desc = (m[2] || '').trim() || null;
+      if (name && esSubcarpetaValida({ nombre: name, descripcion: desc })) {
         const key = name.toUpperCase();
         const existing = foundSubs[key];
         if (!existing) {
@@ -208,10 +211,10 @@ function combineSubcarpetas(p: any, dbSubs: any[] = []): any[] {
             id: `sub-inf-${p.id}-${key.replace(/[^A-Z0-9_-]/g, '_')}`,
             peticion_id: p.id,
             nombre: name,
-            descripcion: (m[2] || '').trim() || null,
+            descripcion: desc,
           };
-        } else if (!existing.descripcion && m[2]?.trim()) {
-          existing.descripcion = (m[2] || '').trim() || null;
+        } else if (!existing.descripcion && desc) {
+          existing.descripcion = desc;
         }
       }
     }
@@ -222,7 +225,7 @@ function combineSubcarpetas(p: any, dbSubs: any[] = []): any[] {
     const m = fileName.match(/\[([^\]\r\n]+)\]/i);
     if (m && m[1]) {
       const name = (m[1] || '').trim();
-      if (name && !name.toUpperCase().startsWith('PIN') && name.toUpperCase() !== 'EXPEDIENTE GENERAL') {
+      if (name && esSubcarpetaValida({ nombre: name })) {
         const key = name.toUpperCase();
         if (!foundSubs[key]) {
           foundSubs[key] = {
@@ -236,12 +239,13 @@ function combineSubcarpetas(p: any, dbSubs: any[] = []): any[] {
     }
   });
 
-  const textDesc = p.instrucciones_anexos || p.descripcion || '';
-  if (textDesc) {
-    const matches = textDesc.matchAll(/\[([^\]\r\n]+)\](?:\s*:?\s*([^|\[\r\n]+))?/g);
+  const { textoLimpio: cleanDesc } = separarRespuestaMeta(p.instrucciones_anexos || p.descripcion || '');
+  if (cleanDesc) {
+    const matches = cleanDesc.matchAll(/\[([^\]\r\n]+)\](?:\s*:?\s*([^|\[\r\n]+))?/g);
     for (const m of matches) {
       const name = (m[1] || '').trim();
-      if (name && !name.toUpperCase().startsWith('PIN') && name.toUpperCase() !== 'EXPEDIENTE GENERAL') {
+      const desc = (m[2] || '').trim() || null;
+      if (name && esSubcarpetaValida({ nombre: name, descripcion: desc })) {
         const key = name.toUpperCase();
         const existing = foundSubs[key];
         if (!existing) {
@@ -249,31 +253,34 @@ function combineSubcarpetas(p: any, dbSubs: any[] = []): any[] {
             id: `sub-inf-${p.id}-${key.replace(/[^A-Z0-9_-]/g, '_')}`,
             peticion_id: p.id,
             nombre: name,
-            descripcion: (m[2] || '').trim() || null,
+            descripcion: desc,
           };
-        } else if (!existing.descripcion && m[2]?.trim()) {
-          existing.descripcion = (m[2] || '').trim() || null;
+        } else if (!existing.descripcion && desc) {
+          existing.descripcion = desc;
         }
       }
     }
   }
 
   Object.values(foundSubs).forEach(s => {
-    const k = s.nombre.trim().toUpperCase();
-    if (!mapByName[k]) mapByName[k] = s;
+    if (esSubcarpetaValida(s)) {
+      const k = s.nombre.trim().toUpperCase();
+      if (!mapByName[k]) mapByName[k] = s;
+    }
   });
 
-  const list = Object.values(mapByName);
+  const list = filtrarSubcarpetasValidas(Object.values(mapByName));
   if (list.length === 0 && (p.peticion_responsables?.length > 0 || (p.peticion_anexos && p.peticion_anexos.some((a: any) => a.es_anexo_oficina)))) {
+    const { textoLimpio } = separarRespuestaMeta(p.instrucciones_anexos);
     list.push({
       id: `sub-default-${p.id}`,
       peticion_id: p.id,
       nombre: 'Subcarpeta 1',
-      descripcion: p.instrucciones_anexos || 'Aportes y requerimientos de dependencias',
+      descripcion: textoLimpio || 'Aportes y requerimientos de dependencias',
     });
   }
 
-  return list;
+  return filtrarSubcarpetasValidas(list);
 }
 
 const peticiones: PeticionExpediente[] = rawPeticiones.map((p) => {
@@ -1091,6 +1098,8 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
 
   <!-- Lógica Interactiva del Explorador de Carpetas -->
   <script>
+    import { separarRespuestaMeta, esSubcarpetaValida, filtrarSubcarpetasValidas } from '@lib/subcarpetas';
+
     interface PeticionAnexo {
       id: string;
       nombre_archivo: string;
@@ -1154,7 +1163,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
     const peticionesMap = new Map<string, PeticionExpediente>();
 
     function inferSubcarpetas(p: any): any[] {
-      const dbSubs = (p.subcarpetas && Array.isArray(p.subcarpetas)) ? p.subcarpetas : [];
+      const dbSubs = (p.subcarpetas && Array.isArray(p.subcarpetas)) ? filtrarSubcarpetasValidas(p.subcarpetas) : [];
       const mapByName: Record<string, any> = {};
       dbSubs.forEach((s: any) => {
         if (s && s.nombre && s.nombre.trim().toLowerCase() !== 'expediente general') {
@@ -1166,11 +1175,13 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
 
       (p.peticion_responsables || []).forEach((r: any) => {
         const raw = r?.observaciones_entrega || '';
-        const withoutPin = raw.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '');
+        const { textoLimpio } = separarRespuestaMeta(raw);
+        const withoutPin = textoLimpio.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '');
         const matches = withoutPin.matchAll(/\[([^\]\r\n]+)\](?:\s*:?\s*([^|\[\r\n]+))?/g);
         for (const m of matches) {
           const name = (m[1] || '').trim();
-          if (name && !name.toUpperCase().startsWith('PIN') && name.toUpperCase() !== 'EXPEDIENTE GENERAL') {
+          const desc = (m[2] || '').trim() || null;
+          if (name && esSubcarpetaValida({ nombre: name, descripcion: desc })) {
             const key = name.toUpperCase();
             const existing = foundSubs[key];
             if (!existing) {
@@ -1178,10 +1189,10 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                 id: `sub-inf-${p.id}-${key.replace(/[^A-Z0-9_-]/g, '_')}`,
                 peticion_id: p.id,
                 nombre: name,
-                descripcion: (m[2] || '').trim() || null,
+                descripcion: desc,
               };
-            } else if (!existing.descripcion && m[2]?.trim()) {
-              existing.descripcion = (m[2] || '').trim() || null;
+            } else if (!existing.descripcion && desc) {
+              existing.descripcion = desc;
             }
           }
         }
@@ -1192,7 +1203,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         const m = fileName.match(/\[([^\]\r\n]+)\]/i);
         if (m && m[1]) {
           const name = (m[1] || '').trim();
-          if (name && !name.toUpperCase().startsWith('PIN') && name.toUpperCase() !== 'EXPEDIENTE GENERAL') {
+          if (name && esSubcarpetaValida({ nombre: name })) {
             const key = name.toUpperCase();
             if (!foundSubs[key]) {
               foundSubs[key] = {
@@ -1206,12 +1217,13 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         }
       });
 
-      const textDesc = p.instrucciones_anexos || p.descripcion || '';
-      if (textDesc) {
-        const matches = textDesc.matchAll(/\[([^\]\r\n]+)\](?:\s*:?\s*([^|\[\r\n]+))?/g);
+      const { textoLimpio: cleanDesc } = separarRespuestaMeta(p.instrucciones_anexos || p.descripcion || '');
+      if (cleanDesc) {
+        const matches = cleanDesc.matchAll(/\[([^\]\r\n]+)\](?:\s*:?\s*([^|\[\r\n]+))?/g);
         for (const m of matches) {
           const name = (m[1] || '').trim();
-          if (name && !name.toUpperCase().startsWith('PIN') && name.toUpperCase() !== 'EXPEDIENTE GENERAL') {
+          const desc = (m[2] || '').trim() || null;
+          if (name && esSubcarpetaValida({ nombre: name, descripcion: desc })) {
             const key = name.toUpperCase();
             const existing = foundSubs[key];
             if (!existing) {
@@ -1219,31 +1231,34 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                 id: `sub-inf-${p.id}-${key.replace(/[^A-Z0-9_-]/g, '_')}`,
                 peticion_id: p.id,
                 nombre: name,
-                descripcion: (m[2] || '').trim() || null,
+                descripcion: desc,
               };
-            } else if (!existing.descripcion && m[2]?.trim()) {
-              existing.descripcion = (m[2] || '').trim() || null;
+            } else if (!existing.descripcion && desc) {
+              existing.descripcion = desc;
             }
           }
         }
       }
 
       Object.values(foundSubs).forEach((s) => {
-        const k = s.nombre.trim().toUpperCase();
-        if (!mapByName[k]) mapByName[k] = s;
+        if (esSubcarpetaValida(s)) {
+          const k = s.nombre.trim().toUpperCase();
+          if (!mapByName[k]) mapByName[k] = s;
+        }
       });
 
-      const list = Object.values(mapByName);
+      const list = filtrarSubcarpetasValidas(Object.values(mapByName));
       if (list.length === 0 && (p.peticion_responsables?.length > 0 || (p.peticion_anexos && p.peticion_anexos.some((a: any) => a.es_anexo_oficina)))) {
+        const { textoLimpio } = separarRespuestaMeta(p.instrucciones_anexos);
         list.push({
           id: `sub-default-${p.id}`,
           peticion_id: p.id,
           nombre: 'Subcarpeta 1',
-          descripcion: p.instrucciones_anexos || 'Aportes y requerimientos de dependencias',
+          descripcion: textoLimpio || 'Aportes y requerimientos de dependencias',
         });
       }
 
-      return list;
+      return filtrarSubcarpetasValidas(list);
     }
 
     function decodeBase64Utf8(b64: string): PeticionExpediente[] {
@@ -1486,17 +1501,19 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         } catch (err) {}
 
         // Parsear instrucciones_anexos si contiene desglose por subcarpetas [1.1]: ... [1.2]: ...
-        const rawInstrucciones = String(peticion.instrucciones_anexos || peticion.descripcion || '').trim();
+        const { textoLimpio: rawInstrucciones, respuestaMeta } = separarRespuestaMeta(peticion.instrucciones_anexos || peticion.descripcion || '');
         const bracketPattern = /\[([^\]]+)\]:?\s*([^[|\n]+(?:\n(?![\[\s]*[0-9a-zA-Z._-]+\s*\]:)[^[|\n]+)*)/g;
         const parsedInstruccionesMap = new Map<string, string>();
         let im;
         while ((im = bracketPattern.exec(rawInstrucciones)) !== null) {
           const k = (im[1] || '').trim();
           const v = (im[2] || '').trim();
-          if (k && !k.toUpperCase().startsWith('PIN') && k.toUpperCase() !== 'EXPEDIENTE GENERAL' && k.toUpperCase() !== 'RESPUESTA_META') {
+          if (k && esSubcarpetaValida(k)) {
             parsedInstruccionesMap.set(k.toLowerCase(), v);
           }
         }
+
+        peticion.subcarpetas = filtrarSubcarpetasValidas(peticion.subcarpetas || []);
 
         let subReqsList: Array<{ nombre: string; descripcion: string }> = [];
         if (peticion.subcarpetas && peticion.subcarpetas.length > 0) {
@@ -1519,9 +1536,9 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
             };
           });
         }
+        subReqsList = filtrarSubcarpetasValidas(subReqsList);
 
         const cleanGeneralInstruccion = rawInstrucciones
-          .replace(/\[RESPUESTA_META\]:\s*\{.*?\}$/gs, '')
           .replace(/\[([^\]]+)\]:?\s*[^[|\n]+(?:\n(?![\[\s]*[0-9a-zA-Z._-]+\s*\]:)[^[|\n]+)*/g, '')
           .replace(/\[.*?\]/g, '')
           .replace(/\|/g, '')
@@ -1587,18 +1604,8 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                     ${String(peticion.estado || '').toLowerCase() === 'respondida' ? 'Respondida' : 'En Trámite'}
                   </span>
                   ${(() => {
-                    let fechaEnvio = peticion.respuesta_fecha_envio;
-                    let expiraAt = peticion.respuesta_expira_at;
-                    if (!fechaEnvio && peticion.instrucciones_anexos) {
-                      const m = String(peticion.instrucciones_anexos).match(/\[RESPUESTA_META\]:\s*(\{.*\})/s);
-                      if (m && m[1]) {
-                        try {
-                          const parsed = JSON.parse(m[1]);
-                          fechaEnvio = parsed.fecha_envio;
-                          expiraAt = parsed.expira;
-                        } catch {}
-                      }
-                    }
+                    const fechaEnvio = peticion.respuesta_fecha_envio || respuestaMeta?.fecha_envio;
+                    const expiraAt = peticion.respuesta_expira_at || respuestaMeta?.expira;
                     if (fechaEnvio || String(peticion.estado || '').toLowerCase() === 'respondida') {
                       const now = Date.now();
                       const exp = expiraAt ? new Date(expiraAt).getTime() : 0;
@@ -1711,6 +1718,49 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                 ` : ''}
               </div>
             ` : ''}
+
+            ${(() => {
+              const resMsg = peticion.respuesta_mensaje || respuestaMeta?.msg;
+              if (!resMsg) return '';
+              const pinSol = peticion.respuesta_pin_solicitante || respuestaMeta?.pin || peticion.pin_acceso;
+              const funcEmite = peticion.respuesta_funcionario || respuestaMeta?.func || 'Oficina de Correspondencia y Gestión Documental';
+              const fEnvio = peticion.respuesta_fecha_envio || respuestaMeta?.fecha_envio;
+              const fEnvioFormatted = fEnvio ? safeFormatDate(fEnvio) : 'Reciente';
+              const queryParams = new URLSearchParams({
+                radicado: peticion.numero_radicado || '',
+                correo: peticion.solicitante_email || ''
+              }).toString();
+              return `
+                <div style="background: #ffffff; border: 1px solid #bbf7d0; border-left: 4px solid #006837; border-radius: 8px; padding: 14px 18px; margin-top: 4px; box-shadow: 0 1px 3px rgba(0, 104, 55, 0.05);">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 6px; color: #006837; font-weight: 800; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.4px;">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                      <span>Respuesta Oficial Despachada al Solicitante</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                      ${pinSol ? `
+                        <span style="font-size: 0.72rem; font-weight: 700; color: #006837; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 3px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 5px;">
+                          <span>PIN Solicitante:</span>
+                          <strong style="font-family: monospace; letter-spacing: 0.05em;">${escapeHtml(pinSol)}</strong>
+                        </span>
+                      ` : ''}
+                      <a href="/consulta-respuesta?${queryParams}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.72rem; font-weight: 750; color: #006837; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 3px 10px; border-radius: 4px; text-decoration: none;">
+                        <span>Ver Portal Solicitante</span>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                      </a>
+                    </div>
+                  </div>
+                  <p style="font-size: 0.82rem; color: #1e293b; line-height: 1.55; margin: 0 0 8px 0; background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 6px; padding: 10px 12px; white-space: pre-wrap;">${escapeHtml(resMsg)}</p>
+                  <div style="display: flex; gap: 14px; font-size: 0.72rem; color: #64748b; flex-wrap: wrap;">
+                    <span>Emitida por: <strong style="color: #334155;">${escapeHtml(funcEmite)}</strong></span>
+                    <span>&bull;</span>
+                    <span>Fecha de envío: <strong style="color: #334155;">${escapeHtml(fEnvioFormatted)}</strong></span>
+                    <span>&bull;</span>
+                    <span>Vigencia: <strong style="color: #b8860b;">10 días calendario con candado temporal</strong></span>
+                  </div>
+                </div>
+              `;
+            })()}
           </div>
 
           <!-- SECCIÓN 1: DOCUMENTO ORIGINAL RADICADO (ARCHIVO BASE DEL EXPEDIENTE) -->
@@ -1785,9 +1835,11 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
             </div>
 
             ${(() => {
-              const subcarpetas = (peticion.subcarpetas && peticion.subcarpetas.length > 0)
-                ? peticion.subcarpetas
-                : inferSubcarpetas(peticion);
+              const subcarpetas = filtrarSubcarpetasValidas(
+                (peticion.subcarpetas && peticion.subcarpetas.length > 0)
+                  ? peticion.subcarpetas
+                  : inferSubcarpetas(peticion)
+              );
               if (subcarpetas.length > 1) {
                 return `
                   <!-- Barra de Pestañas / Filtro de Subcarpetas con Transición Fluida Crossfade -->
@@ -1812,15 +1864,18 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
 
             <div id="subcarpetas-bento-container" style="display: flex; flex-direction: column; gap: 16px;">
               ${(() => {
-                const subcarpetas = (peticion.subcarpetas && peticion.subcarpetas.length > 0) 
-                  ? peticion.subcarpetas 
-                  : inferSubcarpetas(peticion);
+                const subcarpetas = filtrarSubcarpetasValidas(
+                  (peticion.subcarpetas && peticion.subcarpetas.length > 0) 
+                    ? peticion.subcarpetas 
+                    : inferSubcarpetas(peticion)
+                );
                 const subcarpetaBlocks: string[] = [];
 
                 // Helper para extraer observaciones específicas de cada subcarpeta
                 const extractSubObs = (raw: string, subName: string): string => {
                   if (!raw) return '';
-                  const withoutPin = raw.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '').trim();
+                  const { textoLimpio } = separarRespuestaMeta(raw);
+                  const withoutPin = textoLimpio.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '').trim();
                   const escaped = subName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                   const reg = new RegExp(`\\[\\s*${escaped}\\s*\\]\\s*:?\\s*([^|\\[]+)`, 'i');
                   const m = withoutPin.match(reg);

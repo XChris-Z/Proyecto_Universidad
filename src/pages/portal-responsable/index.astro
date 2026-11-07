@@ -1411,6 +1411,7 @@ import Layout from '@layouts/Layout.astro';
 
 <script>
   import { supabase } from '@lib/supabase';
+  import { separarRespuestaMeta, esSubcarpetaValida, filtrarSubcarpetasValidas } from '@lib/subcarpetas';
 
   let activeSessionData: any = null;
   let activeSubIndex = 0;
@@ -1518,16 +1519,16 @@ import Layout from '@layouts/Layout.astro';
     if (uploadSection) uploadSection.style.display = 'flex';
 
     // 1. Extraer y desglosar requerimientos por subcarpeta vs descripción general
-    const rawDescripcion = String(activeSessionData.descripcion || '');
+    const { textoLimpio: rawDescripcion } = separarRespuestaMeta(activeSessionData.descripcion || '');
     
     // Parsear subcarpetas en formato [1.1]: ... [1.2]: ... o [Subcarpeta X]: ...
     const bracketPattern = /\[([^\]]+)\]:?\s*([^[|\n]+(?:\n(?![\[\s]*[0-9a-zA-Z._-]+\s*\]:)[^[|\n]+)*)/g;
     const parsedRequirementsMap = new Map<string, string>();
-    let m;
+    let m: RegExpExecArray | null;
     while ((m = bracketPattern.exec(rawDescripcion)) !== null) {
       const subKey = (m[1] || '').trim();
       const subReq = (m[2] || '').trim();
-      if (subKey && !subKey.toUpperCase().startsWith('PIN') && subKey.toUpperCase() !== 'EXPEDIENTE GENERAL') {
+      if (subKey && esSubcarpetaValida(subKey)) {
         parsedRequirementsMap.set(subKey.toLowerCase(), subReq);
       }
     }
@@ -1561,8 +1562,9 @@ import Layout from '@layouts/Layout.astro';
         });
         sIdx++;
       }
-      activeSessionData.subcarpetas = newSubs;
+      activeSessionData.subcarpetas = filtrarSubcarpetasValidas(newSubs);
     } else if (activeSessionData.subcarpetas && activeSessionData.subcarpetas.length > 0) {
+      activeSessionData.subcarpetas = filtrarSubcarpetasValidas(activeSessionData.subcarpetas);
       // Si ya existen subcarpetas, enriquecer su descripción si tienen la genérica o el texto crudo
       for (const sub of activeSessionData.subcarpetas) {
         const subName = String(sub.nombre || '').trim();
