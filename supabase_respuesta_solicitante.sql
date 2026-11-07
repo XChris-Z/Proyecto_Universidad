@@ -18,3 +18,6 @@ COMMENT ON COLUMN public.peticiones.respuesta_pin_solicitante IS 'Código o PIN 
 COMMENT ON COLUMN public.peticiones.respuesta_archivos_incluidos IS 'Array JSON con los IDs de archivos autorizados para descarga en el portal del solicitante';
 COMMENT ON COLUMN public.peticiones.respuesta_drive_url IS 'Enlace complementario a carpeta externa o Drive si aplica';
 
+-- 2. Recargar de inmediato el caché de esquema de PostgREST para exponer las nuevas columnas
+NOTIFY pgrst, 'reload schema';
+

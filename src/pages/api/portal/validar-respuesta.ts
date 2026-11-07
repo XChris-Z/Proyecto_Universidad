@@ -64,9 +64,21 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
+    // 2b. Intentar leer paquete de contingencia [RESPUESTA_META] si no existen columnas dedicadas
+    let metaRespuesta: any = {};
+    if (peticion.instrucciones_anexos && typeof peticion.instrucciones_anexos === 'string') {
+      const match = peticion.instrucciones_anexos.match(/\[RESPUESTA_META\]:\s*(\{.*\})/s);
+      if (match && match[1]) {
+        try {
+          metaRespuesta = JSON.parse(match[1]);
+        } catch {}
+      }
+    }
+
     // 3. Validar PIN de seguridad
     const expectedPin = String(
       peticion.respuesta_pin_solicitante ||
+      metaRespuesta.pin ||
       peticion.pin_acceso ||
       getDeterministicPin(peticion.numero_radicado || peticion.id)
     ).trim();
@@ -87,6 +99,8 @@ export const POST: APIRoute = async ({ request }) => {
     let expiraDate: Date;
     if (peticion.respuesta_expira_at) {
       expiraDate = new Date(peticion.respuesta_expira_at);
+    } else if (metaRespuesta.expira) {
+      expiraDate = new Date(metaRespuesta.expira);
     } else {
       // Fallback a 10 días tras última actualización
       const baseDate = new Date(peticion.updated_at || peticion.created_at || nowMs);
@@ -142,9 +156,10 @@ export const POST: APIRoute = async ({ request }) => {
     } catch {}
 
     // Si existen archivos_incluidos especificados por el funcionario, filtrar anexos
+    const filesAprobados = peticion.respuesta_archivos_incluidos || metaRespuesta.files;
     let includedFiles = anexos;
-    if (Array.isArray(peticion.respuesta_archivos_incluidos) && peticion.respuesta_archivos_incluidos.length > 0) {
-      const allowedIds = new Set(peticion.respuesta_archivos_incluidos);
+    if (Array.isArray(filesAprobados) && filesAprobados.length > 0) {
+      const allowedIds = new Set(filesAprobados);
       includedFiles = anexos.filter((a) => allowedIds.has(a.id) || allowedIds.has(a.storage_path) || allowedIds.has(a.nombre_archivo));
       // Si el filtro dejó 0 archivos pero había anexos, mostrar todos los no-privados
       if (includedFiles.length === 0) {
@@ -187,13 +202,13 @@ export const POST: APIRoute = async ({ request }) => {
           fecha_radicacion: peticion.fecha_radicacion || peticion.created_at,
         },
         respuesta: {
-          mensaje: peticion.respuesta_mensaje || 'Se ha completado el trámite institucional de su petición.',
-          funcionario: peticion.respuesta_funcionario || 'Oficina de Correspondencia y Gestión Documental',
-          fecha_envio: peticion.respuesta_fecha_envio || peticion.updated_at || peticion.created_at,
+          mensaje: peticion.respuesta_mensaje || metaRespuesta.msg || 'Se ha completado el trámite institucional de su petición.',
+          funcionario: peticion.respuesta_funcionario || metaRespuesta.func || 'Oficina de Correspondencia y Gestión Documental',
+          fecha_envio: peticion.respuesta_fecha_envio || metaRespuesta.fecha_envio || peticion.updated_at || peticion.created_at,
           expira_at: expiraDate.toISOString(),
           formatted_expira: formattedExpira,
           remaining_days: remainingDays,
-          drive_url: peticion.respuesta_drive_url || null,
+          drive_url: peticion.respuesta_drive_url || metaRespuesta.drive || null,
         },
         subcarpetas,
         anexos: mappedFiles,

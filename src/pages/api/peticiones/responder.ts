@@ -65,7 +65,7 @@ export const POST: APIRoute = async ({ request, url }) => {
 
     // 3. Preparar payload de actualización en public.peticiones
     const updatePayload: Record<string, any> = {
-      estado: 'respondida',
+      estado: 'Respondida',
       updated_at: fechaEnvio,
       solicitante_email: effectiveEmail,
       respuesta_mensaje: cleanMensaje,
@@ -88,15 +88,34 @@ export const POST: APIRoute = async ({ request, url }) => {
     if (!updateErr) {
       updateSuccess = true;
     } else {
-      console.warn('[RESPONDER] Error actualizando campos completos, intentando fallback de columnas:', updateErr.message);
+      console.warn('[RESPONDER] Aviso: Nuevas columnas no detectadas en el schema cache de Supabase:', updateErr.message);
       updateErrorMsg = updateErr.message;
 
-      // Fallback si alguna columna no está en el schema cache aún
+      // Fallback seguro: Si las columnas aún no existen físicamente en la BD,
+      // preservamos el estado 'Respondida' y empaquetamos la metadata en instrucciones_anexos
+      const existingInst = String(peticion.instrucciones_anexos || '').trim();
+      const metaPackage = JSON.stringify({
+        pin: pinSolicitante,
+        expira: expiraAt,
+        msg: cleanMensaje,
+        func: funcionarioResp,
+        files: Array.isArray(respuesta_archivos_incluidos) ? respuesta_archivos_incluidos : [],
+        drive: cleanDrive || null,
+        fecha_envio: fechaEnvio,
+      });
+
+      const cleanInst = existingInst.replace(/\n*\[RESPUESTA_META\]:\s*\{.*\}$/gs, '').trim();
+      const fallbackInst = cleanInst
+        ? `${cleanInst}\n\n[RESPUESTA_META]: ${metaPackage}`
+        : `[RESPUESTA_META]: ${metaPackage}`;
+
       const fallbackPayload: Record<string, any> = {
-        estado: 'respondida',
+        estado: 'Respondida',
         updated_at: fechaEnvio,
         solicitante_email: effectiveEmail,
+        instrucciones_anexos: fallbackInst,
       };
+
       const { error: fbErr } = await (supabase
         .from('peticiones' as any)
         .update(fallbackPayload)
@@ -104,6 +123,10 @@ export const POST: APIRoute = async ({ request, url }) => {
 
       if (!fbErr) {
         updateSuccess = true;
+        console.log('[RESPONDER] Fallback aplicado con éxito: metadata guardada en instrucciones_anexos y estado actualizado a Respondida.');
+      } else {
+        console.error('[RESPONDER] Error en actualización fallback:', fbErr.message);
+        updateErrorMsg = fbErr.message || updateErr.message;
       }
     }
 

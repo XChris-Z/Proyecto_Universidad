@@ -1493,7 +1493,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         while ((im = bracketPattern.exec(rawInstrucciones)) !== null) {
           const k = (im[1] || '').trim();
           const v = (im[2] || '').trim();
-          if (k && !k.toUpperCase().startsWith('PIN') && k.toUpperCase() !== 'EXPEDIENTE GENERAL') {
+          if (k && !k.toUpperCase().startsWith('PIN') && k.toUpperCase() !== 'EXPEDIENTE GENERAL' && k.toUpperCase() !== 'RESPUESTA_META') {
             parsedInstruccionesMap.set(k.toLowerCase(), v);
           }
         }
@@ -1521,6 +1521,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         }
 
         const cleanGeneralInstruccion = rawInstrucciones
+          .replace(/\[RESPUESTA_META\]:\s*\{.*?\}$/gs, '')
           .replace(/\[([^\]]+)\]:?\s*[^[|\n]+(?:\n(?![\[\s]*[0-9a-zA-Z._-]+\s*\]:)[^[|\n]+)*/g, '')
           .replace(/\[.*?\]/g, '')
           .replace(/\|/g, '')
@@ -1582,15 +1583,27 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
               <div>
                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap;">
                   <span class="radicado-chip" style="font-size: 1.05rem; padding: 4px 12px;">${escapeHtml(peticion.numero_radicado)}</span>
-                  <span style="font-size: 0.74rem; font-weight: 800; padding: 4px 10px; border-radius: 4px; ${peticion.estado === 'respondida' ? 'background: #DCFCE7; color: #15803D;' : 'background: #FEF3C7; color: #92400E;'}">
-                    ${peticion.estado === 'respondida' ? 'Respondida' : 'En Trámite'}
+                  <span style="font-size: 0.74rem; font-weight: 800; padding: 4px 10px; border-radius: 4px; ${String(peticion.estado || '').toLowerCase() === 'respondida' ? 'background: #DCFCE7; color: #15803D;' : 'background: #FEF3C7; color: #92400E;'}">
+                    ${String(peticion.estado || '').toLowerCase() === 'respondida' ? 'Respondida' : 'En Trámite'}
                   </span>
                   ${(() => {
-                    if (peticion.respuesta_fecha_envio) {
+                    let fechaEnvio = peticion.respuesta_fecha_envio;
+                    let expiraAt = peticion.respuesta_expira_at;
+                    if (!fechaEnvio && peticion.instrucciones_anexos) {
+                      const m = String(peticion.instrucciones_anexos).match(/\[RESPUESTA_META\]:\s*(\{.*\})/s);
+                      if (m && m[1]) {
+                        try {
+                          const parsed = JSON.parse(m[1]);
+                          fechaEnvio = parsed.fecha_envio;
+                          expiraAt = parsed.expira;
+                        } catch {}
+                      }
+                    }
+                    if (fechaEnvio || String(peticion.estado || '').toLowerCase() === 'respondida') {
                       const now = Date.now();
-                      const exp = peticion.respuesta_expira_at ? new Date(peticion.respuesta_expira_at).getTime() : 0;
+                      const exp = expiraAt ? new Date(expiraAt).getTime() : 0;
                       const isExpired = exp > 0 && now > exp;
-                      const daysLeft = exp > 0 ? Math.max(0, Math.ceil((exp - now) / (1000 * 60 * 60 * 24))) : 0;
+                      const daysLeft = exp > 0 ? Math.max(0, Math.ceil((exp - now) / (1000 * 60 * 60 * 24))) : 10;
                       if (isExpired) {
                         return `
                           <span style="font-size: 0.74rem; font-weight: 750; background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; padding: 4px 10px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
@@ -2853,7 +2866,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         // Actualizar peticion en el array local y recargar vista de la carpeta
         const pet = peticionesMap.get(petId) || allPeticiones.find((p) => p.id === petId);
         if (pet) {
-          pet.estado = 'respondida';
+          pet.estado = 'Respondida';
           pet.solicitante_email = email;
           pet.respuesta_mensaje = mensaje;
           pet.respuesta_funcionario = funcionario;
