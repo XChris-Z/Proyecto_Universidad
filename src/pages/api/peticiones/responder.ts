@@ -55,10 +55,12 @@ export const POST: APIRoute = async ({ request, url }) => {
       );
     }
 
-    // 2. Generar PIN de 6 dígitos y plazo de 10 días calendario
-    const pinSolicitante = generatePin6();
-    const fechaEnvio = new Date().toISOString();
-    const expiraAt = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
+    // 2. Generar PIN de 6 dígitos y plazo de 10 días calendario (exactamente 864,000,000 ms)
+    const pinSolicitante = String(Math.floor(100000 + Math.random() * 900000));
+    const fechaEnvio = new Date();
+    const fechaEnvioIso = fechaEnvio.toISOString();
+    const fechaExpiracion = new Date(fechaEnvio.getTime() + 10 * 24 * 60 * 60 * 1000);
+    const expiraAt = fechaExpiracion.toISOString();
     const funcionarioResp = String(respuesta_funcionario || 'Oficina de Correspondencia y Gestión Documental').trim();
     const cleanMensaje = String(respuesta_mensaje).trim();
     const cleanDrive = String(respuesta_drive_url || '').trim();
@@ -66,11 +68,11 @@ export const POST: APIRoute = async ({ request, url }) => {
     // 3. Preparar payload de actualización en public.peticiones
     const updatePayload: Record<string, any> = {
       estado: 'Respondida',
-      updated_at: fechaEnvio,
+      updated_at: fechaEnvioIso,
       solicitante_email: effectiveEmail,
       respuesta_mensaje: cleanMensaje,
       respuesta_funcionario: funcionarioResp,
-      respuesta_fecha_envio: fechaEnvio,
+      respuesta_fecha_envio: fechaEnvioIso,
       respuesta_expira_at: expiraAt,
       respuesta_pin_solicitante: pinSolicitante,
       respuesta_archivos_incluidos: Array.isArray(respuesta_archivos_incluidos) ? respuesta_archivos_incluidos : [],
@@ -101,7 +103,7 @@ export const POST: APIRoute = async ({ request, url }) => {
         func: funcionarioResp,
         files: Array.isArray(respuesta_archivos_incluidos) ? respuesta_archivos_incluidos : [],
         drive: cleanDrive || null,
-        fecha_envio: fechaEnvio,
+        fecha_envio: fechaEnvioIso,
       });
 
       const cleanInst = existingInst.replace(/\n*\[RESPUESTA_META\]:\s*\{.*\}$/gs, '').trim();
@@ -111,7 +113,7 @@ export const POST: APIRoute = async ({ request, url }) => {
 
       const fallbackPayload: Record<string, any> = {
         estado: 'Respondida',
-        updated_at: fechaEnvio,
+        updated_at: fechaEnvioIso,
         solicitante_email: effectiveEmail,
         instrucciones_anexos: fallbackInst,
       };
@@ -152,11 +154,11 @@ export const POST: APIRoute = async ({ request, url }) => {
       console.warn('[RESPONDER] Aviso de auditoría:', auditErr.message);
     }
 
-    // 5. Determinar URL pública de consulta
+    // 5. Determinar URL pública de consulta (apunta exactamente a ?radicado=...&correo=...)
     const proto = request.headers.get('x-forwarded-proto') || url.protocol.replace(':', '') || 'https';
     const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || url.host;
     const baseUrl = `${proto}://${host}`;
-    const consultaUrl = `${baseUrl}/consulta-respuesta?radicado=${encodeURIComponent(peticion.numero_radicado)}&email=${encodeURIComponent(effectiveEmail)}&pin=${encodeURIComponent(pinSolicitante)}`;
+    const consultaUrl = `${baseUrl}/consulta-respuesta?radicado=${encodeURIComponent(peticion.numero_radicado)}&correo=${encodeURIComponent(effectiveEmail)}`;
 
     // 6. Enviar Correo Institucional al Solicitante
     const emailResult = await sendRespuestaSolicitanteEmail({

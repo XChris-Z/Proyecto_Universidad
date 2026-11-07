@@ -242,9 +242,9 @@ import Layout from '@layouts/Layout.astro';
           <div class="expired-icon-circle">
             <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#991b1b" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           </div>
-          <h2 style="font-size: 1.25rem; font-weight: 800; color: #991b1b; margin: 12px 0 6px 0;">Acceso Temporal Caducado</h2>
+          <h2 style="font-size: 1.25rem; font-weight: 800; color: #991b1b; margin: 12px 0 6px 0;">Enlace Temporal Vencido (Plazo de 10 días finalizado)</h2>
           <p id="expired-detail-text" style="font-size: 0.88rem; color: #475569; line-height: 1.6; margin: 0 0 20px 0;">
-            El periodo estricto de 10 días calendario para consultar y descargar los anexos de este radicado ha finalizado.
+            El periodo habilitado de 10 días calendario para consultar y descargar los documentos de este radicado ha vencido. Por políticas de seguridad documental, el acceso público ha sido cerrado.
           </p>
           <div class="expired-instruction-box">
             <strong>¿Necesita una copia de su respuesta o anexos?</strong>
@@ -978,12 +978,12 @@ import Layout from '@layouts/Layout.astro';
   const errorMsg = document.getElementById('auth-error-msg');
   const btnLogout = document.getElementById('btn-logout');
 
-  // 1. Prellenado automático desde URL (?radicado=...&email=...&pin=...)
+  // 1. Prellenado automático desde URL (?radicado=...&correo=...&pin=...)
   function checkUrlParams() {
     const urlParams = new URLSearchParams(window.location.search);
     const rad = urlParams.get('radicado') || urlParams.get('rad');
-    const email = urlParams.get('email');
-    const pin = urlParams.get('pin');
+    const email = urlParams.get('correo') || urlParams.get('email');
+    const pin = urlParams.get('pin') || urlParams.get('codigo');
 
     if (rad && inputRadicado) inputRadicado.value = rad.trim().toUpperCase();
     if (email && inputEmail) inputEmail.value = email.trim();
@@ -991,10 +991,12 @@ import Layout from '@layouts/Layout.astro';
 
     if (rad && email && pin) {
       submitValidation(rad.trim(), email.trim(), pin.trim());
+    } else if (rad && email && inputPin) {
+      inputPin.focus();
     }
   }
 
-  // 2. Ejecutar validación contra /api/portal/validar-respuesta
+  // 2. Ejecutar validación contra /api/consultar-respuesta
   async function submitValidation(radicado: string, email: string, pin: string) {
     if (btnSubmit) {
       btnSubmit.disabled = true;
@@ -1003,10 +1005,10 @@ import Layout from '@layouts/Layout.astro';
     if (errorBox) errorBox.style.display = 'none';
 
     try {
-      const res = await fetch('/api/portal/validar-respuesta', {
+      const res = await fetch('/api/consultar-respuesta', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ radicado, email, pin }),
+        body: JSON.stringify({ radicado, correo: email, email, pin }),
       });
 
       const data = await res.json().catch(() => ({}));
@@ -1018,7 +1020,7 @@ import Layout from '@layouts/Layout.astro';
         }
 
         if (errorBox && errorMsg) {
-          errorMsg.textContent = data.error || 'Credenciales no válidas o radicado no encontrado.';
+          errorMsg.textContent = data.error || 'Las credenciales ingresadas (Correo o Código de 6 dígitos) no coinciden con este radicado.';
           errorBox.style.display = 'flex';
         }
         return;
@@ -1060,10 +1062,11 @@ import Layout from '@layouts/Layout.astro';
     if (expiredSection) expiredSection.style.display = 'none';
     if (expedienteSection) expedienteSection.style.display = 'flex';
 
-    // Banner de Vigencia
+    // Banner de Vigencia Estricto (10 días)
     const dispVigenciaText = document.getElementById('disp-vigencia-text');
     if (dispVigenciaText) {
-      dispVigenciaText.textContent = `Acceso temporal habilitado hasta el ${resp.formatted_expira} (Quedan ${resp.remaining_days} día${resp.remaining_days === 1 ? '' : 's'} de vigencia)`;
+      const diasLeft = resp.dias_restantes ?? resp.remaining_days ?? 10;
+      dispVigenciaText.textContent = `Acceso temporal activo • Disponible por ${diasLeft} día${diasLeft === 1 ? '' : 's'} más (Vence el ${resp.formatted_expira})`;
     }
 
     // Cabecera del pronunciamiento
@@ -1227,22 +1230,28 @@ import Layout from '@layouts/Layout.astro';
   }
 
   function renderFileRow(doc: any): string {
-    const rawName = doc.nombre_archivo || 'Documento_Adjunto.pdf';
-    // Limpiar tags [1.1], etc. si existen
-    const cleanDisplayName = rawName.replace(/^\[[^\]]+\]\s*/, '');
-    const downloadUrl = doc.download_url || '#';
-    const fecha = doc.created_at ? new Date(doc.created_at).toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric' }) : '';
+    const rawName = String(doc?.nombre_archivo || 'Documento_Adjunto.pdf');
+    // Limpiar tags [1.1], [Soportes Técnicos], etc. si existen
+    const cleanDisplayName = rawName.replace(/^\[[^\]]+\]\s*/, '').trim();
+    const downloadUrl = doc?.download_url || '#';
+    const fecha = doc?.created_at ? new Date(doc.created_at).toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric' }) : '';
+    const oficina = doc?.oficina_nombre ? String(doc.oficina_nombre).trim() : '';
+    const observacion = doc?.observacion ? String(doc.observacion).trim() : '';
 
     return `
       <div class="file-item-row">
         <div class="file-left">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#006837" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          <div>
-            <div class="file-name">${cleanDisplayName}</div>
-            ${fecha ? `<div class="file-meta">Radicado el: ${fecha}</div>` : ''}
+          <div style="flex: 1; min-width: 0;">
+            <div class="file-name" style="word-break: break-all;">${cleanDisplayName}</div>
+            <div class="file-meta" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 3px;">
+              ${oficina ? `<span style="font-size: 0.72rem; color: #006837; font-weight: 700; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 1px 6px; border-radius: 4px;">Aporte de: ${oficina}</span>` : ''}
+              ${fecha ? `<span>Radicado el: ${fecha}</span>` : ''}
+            </div>
+            ${observacion ? `<div style="font-size: 0.75rem; color: #475569; font-style: italic; margin-top: 4px; line-height: 1.4;">&ldquo;${observacion}&rdquo;</div>` : ''}
           </div>
         </div>
-        <a href="${downloadUrl}" download="${cleanDisplayName}" class="btn-download-clean" target="_blank" rel="noopener noreferrer">
+        <a href="${downloadUrl}" download="${cleanDisplayName}" class="btn-download-clean" target="_blank" rel="noopener noreferrer" title="Descargar documento">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           <span>Descargar</span>
         </a>
