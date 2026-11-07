@@ -11,7 +11,7 @@ export const POST: APIRoute = async ({ request }) => {
     const body = await request.json().catch(() => ({}));
     const rawRadicado = String(body.radicado || '').trim().toUpperCase();
     const rawEmail = String(body.correo || body.email || '').trim().toLowerCase();
-    const rawPin = String(body.pin || body.codigo || '').trim();
+    const rawPin = String(body.pin || body.codigo || '').replace(/\s+/g, '').trim();
 
     if (!rawRadicado) {
       return new Response(
@@ -34,12 +34,15 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // 1. Consultar la petición en la base de datos
-    const { data: peticion, error: petErr } = await (supabase
-      .from('peticiones' as any)
-      .select('*')
-      .or(`numero_radicado.ilike.${rawRadicado},id.eq.${rawRadicado}`)
-      .maybeSingle() as any);
+    // 1. Consultar la petición en la base de datos (seguro para tipo UUID en 'id' o cadena en 'numero_radicado')
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawRadicado);
+    let petQuery = supabase.from('peticiones' as any).select('*');
+    if (isUuid) {
+      petQuery = petQuery.eq('id', rawRadicado);
+    } else {
+      petQuery = petQuery.ilike('numero_radicado', rawRadicado);
+    }
+    const { data: peticion, error: petErr } = await (petQuery.maybeSingle() as any);
 
     if (petErr || !peticion) {
       return new Response(
@@ -52,20 +55,22 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // 2. Extraer paquete de contingencia si no existen columnas dedicadas en BD
-    let metaRespuesta: any = {};
-    if (peticion.instrucciones_anexos && typeof peticion.instrucciones_anexos === 'string') {
-      const match = peticion.instrucciones_anexos.match(/\[RESPUESTA_META\]:\s*(\{.*\})/s);
-      if (match && match[1]) {
-        try {
-          metaRespuesta = JSON.parse(match[1]);
-        } catch {}
-      }
-    }
+    // 2. Extraer metadatos de respuesta con el parser centralizado y resiliente
+    const { respuestaMeta, allPins } = separarRespuestaMeta(peticion.instrucciones_anexos || peticion.descripcion || '');
+    const metaRespuesta = respuestaMeta || {};
 
-    // 3. Validar Correo Electrónico del Solicitante
-    const registeredEmail = String(peticion.solicitante_email || '').trim().toLowerCase();
-    if (registeredEmail && registeredEmail !== rawEmail) {
+    // 3. Validar Correo Electrónico del Solicitante de forma flexible
+    const emailsToCheck = [
+      peticion.solicitante_email,
+      peticion.correo_solicitante,
+      peticion.solicitante_correo,
+      peticion.correo,
+      peticion.email,
+      metaRespuesta.correo,
+    ].map((e: any) => String(e || '').trim().toLowerCase()).filter(Boolean);
+
+    const emailCoincide = emailsToCheck.length === 0 || emailsToCheck.includes(rawEmail);
+    if (!emailCoincide) {
       return new Response(
         JSON.stringify({
           success: false,
@@ -76,15 +81,16 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // 4. Validar PIN de Seguridad (6 dígitos)
-    const expectedPin = String(
-      peticion.respuesta_pin_solicitante ||
-      metaRespuesta.pin ||
-      peticion.pin_acceso ||
-      getDeterministicPin(peticion.numero_radicado || peticion.id)
-    ).trim();
+    // 4. Validar PIN de Seguridad (6 dígitos) aceptando el PIN más reciente o históricos válidos
+    const validPins = new Set<string>();
+    if (metaRespuesta.pin) validPins.add(String(metaRespuesta.pin).replace(/\s+/g, '').trim());
+    if (peticion.respuesta_pin_solicitante) validPins.add(String(peticion.respuesta_pin_solicitante).replace(/\s+/g, '').trim());
+    allPins.forEach((p) => { if (p) validPins.add(String(p).replace(/\s+/g, '').trim()); });
+    if (peticion.pin_acceso) validPins.add(String(peticion.pin_acceso).replace(/\s+/g, '').trim());
+    const detPin = getDeterministicPin(peticion.numero_radicado || peticion.id);
+    if (detPin) validPins.add(String(detPin).replace(/\s+/g, '').trim());
 
-    if (expectedPin && expectedPin !== rawPin) {
+    if (!validPins.has(rawPin)) {
       return new Response(
         JSON.stringify({
           success: false,

@@ -981,16 +981,16 @@ import Layout from '@layouts/Layout.astro';
   // 1. Prellenado automático desde URL (?radicado=...&correo=...&pin=...)
   function checkUrlParams() {
     const urlParams = new URLSearchParams(window.location.search);
-    const rad = urlParams.get('radicado') || urlParams.get('rad');
-    const email = urlParams.get('correo') || urlParams.get('email');
-    const pin = urlParams.get('pin') || urlParams.get('codigo');
+    const rad = (urlParams.get('radicado') || urlParams.get('rad') || '').trim().toUpperCase();
+    const email = (urlParams.get('correo') || urlParams.get('email') || '').trim().toLowerCase();
+    const pin = (urlParams.get('pin') || urlParams.get('codigo') || '').replace(/\s+/g, '').trim();
 
-    if (rad && inputRadicado) inputRadicado.value = rad.trim().toUpperCase();
-    if (email && inputEmail) inputEmail.value = email.trim();
-    if (pin && inputPin) inputPin.value = pin.trim();
+    if (rad && inputRadicado) inputRadicado.value = rad;
+    if (email && inputEmail) inputEmail.value = email;
+    if (pin && inputPin) inputPin.value = pin;
 
     if (rad && email && pin) {
-      submitValidation(rad.trim(), email.trim(), pin.trim());
+      submitValidation(rad, email, pin);
     } else if (rad && email && inputPin) {
       inputPin.focus();
     }
@@ -998,6 +998,10 @@ import Layout from '@layouts/Layout.astro';
 
   // 2. Ejecutar validación contra /api/consultar-respuesta
   async function submitValidation(radicado: string, email: string, pin: string) {
+    const cleanRad = String(radicado || '').trim().toUpperCase();
+    const cleanEmail = String(email || '').trim().toLowerCase();
+    const cleanPin = String(pin || '').replace(/\s+/g, '').trim();
+
     if (btnSubmit) {
       btnSubmit.disabled = true;
       if (btnText) btnText.textContent = 'Verificando y validando vigencia (10 días)...';
@@ -1008,7 +1012,7 @@ import Layout from '@layouts/Layout.astro';
       const res = await fetch('/api/consultar-respuesta', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ radicado, correo: email, email, pin }),
+        body: JSON.stringify({ radicado: cleanRad, correo: cleanEmail, email: cleanEmail, pin: cleanPin }),
       });
 
       const data = await res.json().catch(() => ({}));
@@ -1272,7 +1276,7 @@ import Layout from '@layouts/Layout.astro';
     e.preventDefault();
     const rad = inputRadicado ? inputRadicado.value.trim().toUpperCase() : '';
     const email = inputEmail ? inputEmail.value.trim().toLowerCase() : '';
-    const pin = inputPin ? inputPin.value.trim() : '';
+    const pin = inputPin ? inputPin.value.replace(/\s+/g, '').trim() : '';
     if (!rad || !email || !pin) return;
     submitValidation(rad, email, pin);
   });

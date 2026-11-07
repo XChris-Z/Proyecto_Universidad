@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { supabase } from '@lib/supabase';
 import { sendRespuestaSolicitanteEmail } from '@lib/email';
 import { logSystemActivity } from '@lib/audit';
+import { separarRespuestaMeta } from '@lib/subcarpetas';
 
 export const POST: APIRoute = async ({ request, url }) => {
   try {
@@ -64,11 +65,30 @@ export const POST: APIRoute = async ({ request, url }) => {
     const cleanMensaje = String(respuesta_mensaje).trim();
     const cleanDrive = String(respuesta_drive_url || '').trim();
 
+    // Limpiar estrictamente cualquier bloque RESPUESTA_META anterior antes de anexar el nuevo
+    const { textoLimpio } = separarRespuestaMeta(peticion.instrucciones_anexos || '');
+    const metaPackage = JSON.stringify({
+      pin: pinSolicitante,
+      expira: expiraAt,
+      msg: cleanMensaje,
+      func: funcionarioResp,
+      files: Array.isArray(respuesta_archivos_incluidos) ? respuesta_archivos_incluidos : [],
+      drive: cleanDrive || null,
+      fecha_envio: fechaEnvioIso,
+      correo: effectiveEmail,
+    });
+
+    const cleanInst = textoLimpio.trim();
+    const cleanUpdatedInst = cleanInst
+      ? `${cleanInst}\n\n[RESPUESTA_META]: ${metaPackage}`
+      : `[RESPUESTA_META]: ${metaPackage}`;
+
     // 3. Preparar payload de actualización en public.peticiones
     const updatePayload: Record<string, any> = {
       estado: 'Respondida',
       updated_at: fechaEnvioIso,
       solicitante_email: effectiveEmail,
+      instrucciones_anexos: cleanUpdatedInst,
       respuesta_mensaje: cleanMensaje,
       respuesta_funcionario: funcionarioResp,
       respuesta_fecha_envio: fechaEnvioIso,
@@ -93,28 +113,12 @@ export const POST: APIRoute = async ({ request, url }) => {
       updateErrorMsg = updateErr.message;
 
       // Fallback seguro: Si las columnas aún no existen físicamente en la BD,
-      // preservamos el estado 'Respondida' y empaquetamos la metadata en instrucciones_anexos
-      const existingInst = String(peticion.instrucciones_anexos || '').trim();
-      const metaPackage = JSON.stringify({
-        pin: pinSolicitante,
-        expira: expiraAt,
-        msg: cleanMensaje,
-        func: funcionarioResp,
-        files: Array.isArray(respuesta_archivos_incluidos) ? respuesta_archivos_incluidos : [],
-        drive: cleanDrive || null,
-        fecha_envio: fechaEnvioIso,
-      });
-
-      const cleanInst = existingInst.replace(/\n*\[RESPUESTA_META\]:\s*\{.*\}$/gs, '').trim();
-      const fallbackInst = cleanInst
-        ? `${cleanInst}\n\n[RESPUESTA_META]: ${metaPackage}`
-        : `[RESPUESTA_META]: ${metaPackage}`;
-
+      // preservamos el estado 'Respondida' y empaquetamos la metadata limpia en instrucciones_anexos
       const fallbackPayload: Record<string, any> = {
         estado: 'Respondida',
         updated_at: fechaEnvioIso,
         solicitante_email: effectiveEmail,
-        instrucciones_anexos: fallbackInst,
+        instrucciones_anexos: cleanUpdatedInst,
       };
 
       const { error: fbErr } = await (supabase
