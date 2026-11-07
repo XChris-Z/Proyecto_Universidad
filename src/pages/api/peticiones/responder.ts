@@ -3,7 +3,6 @@ export const prerender = false;
 
 import type { APIRoute } from 'astro';
 import { supabase } from '@lib/supabase';
-import { generatePin6 } from '@lib/security';
 import { sendRespuestaSolicitanteEmail } from '@lib/email';
 import { logSystemActivity } from '@lib/audit';
 
