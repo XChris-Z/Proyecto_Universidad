@@ -48,83 +48,83 @@ const permissionsByCategory = categories.map(cat => ({
 }));
 ---
 
-<AppLayout title="Directorio de Usuarios y Permisos" activeNav="usuarios">
+<AppLayout title="Usuarios" activeNav="usuarios">
   <div class="users-admin-container" style="display: flex; flex-direction: column; gap: 24px; max-width: 1280px; margin: 0 auto; width: 100%;">
     
-    <!-- Encabezado Ejecutivo con Estadísticas Rápidas -->
-    <div class="card" style="padding: 24px 28px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); border-left: 5px solid var(--verde-principal);">
+    <!-- Encabezado Ejecutivo con Estadísticas Rápidas (Bento Pro Max) -->
+    <div class="card" style="padding: 24px 28px; background: #ffffff; border: 1.5px solid #DCE4E3; border-top: 4px solid var(--verde-principal); border-radius: var(--radius-md); box-shadow: 0 2px 10px rgba(0, 89, 78, 0.05);">
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
-        <div>
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <h2 style="font-size: 1.4rem; font-weight: 800; color: var(--text-main); margin: 0;">Directorio Institucional de Usuarios</h2>
-            <span class="role-badge admin" style="font-size: 0.70rem; padding: 3px 8px;">Panel de Control RBAC</span>
+        <div style="min-width: 0; flex: 1;">
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--text-main); margin: 0;">Directorio Institucional de Usuarios</h2>
+            <span style="font-size: 0.70rem; font-weight: 750; background: var(--verde-suave-bg); color: var(--verde-principal); border: 1px solid var(--verde-borde); padding: 3px 10px; border-radius: 999px;">Panel de Control RBAC</span>
           </div>
-          <p style="font-size: 0.84rem; color: var(--text-muted); margin: 6px 0 0 0;">
+          <p style="font-size: 0.84rem; color: var(--text-muted); margin: 6px 0 0 0; line-height: 1.4;">
             Administración centralizada de funcionarios, credenciales protegidas y concesión granular de permisos dinámicos con trazabilidad oficial.
           </p>
         </div>
 
-        <button type="button" class="btn btn-primary" id="btn-open-create-user" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; font-weight: 800; font-size: 0.86rem; box-shadow: 0 2px 6px rgba(0, 89, 78, 0.2);">
+        <button type="button" class="btn btn-primary" id="btn-open-create-user" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 22px; font-weight: 800; font-size: 0.86rem; background: var(--verde-principal); border-color: var(--verde-principal); color: #ffffff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 89, 78, 0.25);">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           <span>Nuevo Usuario</span>
         </button>
       </div>
 
-      <!-- Tarjetas de Métricas Rápidas -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border-subtle);">
-        <div style="background: var(--bg-body); padding: 12px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+      <!-- Tarjetas de Métricas Rápidas (Paleta Oficial Estricta) -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 20px; padding-top: 18px; border-top: 1px solid #E2E8F0;">
+        <div style="background: #F8FAFC; padding: 14px 18px; border-radius: 10px; border: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center;">
           <div>
-            <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px;">Total Usuarios</div>
-            <div style="font-size: 1.5rem; font-weight: 800; color: var(--verde-principal); margin-top: 2px;" id="kpi-total-users">{totalUsers}</div>
+            <div style="font-size: 0.70rem; text-transform: uppercase; font-weight: 750; color: #52606D; letter-spacing: 0.5px;">Total Usuarios</div>
+            <div style="font-size: 1.55rem; font-weight: 800; color: var(--verde-principal); margin-top: 2px;" id="kpi-total-users">{totalUsers}</div>
           </div>
-          <span style="font-size: 0.70rem; font-weight: 700; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 3px 8px; border-radius: 4px; border: 1px solid var(--verde-borde);">Directorio Activo</span>
+          <span style="font-size: 0.70rem; font-weight: 750; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--verde-borde);">Directorio Activo</span>
         </div>
 
-        <div style="background: var(--bg-body); padding: 12px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+        <div style="background: #F8FAFC; padding: 14px 18px; border-radius: 10px; border: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center;">
           <div>
-            <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px;">Administradores</div>
-            <div style="font-size: 1.5rem; font-weight: 800; color: var(--dorado-oscuro); margin-top: 2px;">{totalAdmins}</div>
+            <div style="font-size: 0.70rem; text-transform: uppercase; font-weight: 750; color: #52606D; letter-spacing: 0.5px;">Administradores</div>
+            <div style="font-size: 1.55rem; font-weight: 800; color: #786832; margin-top: 2px;">{totalAdmins}</div>
           </div>
-          <span style="font-size: 0.70rem; font-weight: 700; color: var(--dorado-oscuro); background: var(--dorado-suave-bg); padding: 3px 8px; border-radius: 4px; border: 1px solid var(--dorado-borde);">Control Total</span>
+          <span style="font-size: 0.70rem; font-weight: 750; color: #786832; background: #F7F5EE; padding: 3px 8px; border-radius: 6px; border: 1px solid #DBD2B0;">Control Total</span>
         </div>
 
-        <div style="background: var(--bg-body); padding: 12px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+        <div style="background: #F8FAFC; padding: 14px 18px; border-radius: 10px; border: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center;">
           <div>
-            <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px;">Funcionarios Operativos</div>
-            <div style="font-size: 1.5rem; font-weight: 800; color: var(--text-main); margin-top: 2px;">{totalFuncionarios}</div>
+            <div style="font-size: 0.70rem; text-transform: uppercase; font-weight: 750; color: #52606D; letter-spacing: 0.5px;">Funcionarios Operativos</div>
+            <div style="font-size: 1.55rem; font-weight: 800; color: #111827; margin-top: 2px;">{totalFuncionarios}</div>
           </div>
-          <span style="font-size: 0.70rem; font-weight: 700; color: #0284c7; background: #e0f2fe; padding: 3px 8px; border-radius: 4px; border: 1px solid #bae6fd;">Permisos Dinámicos</span>
+          <span style="font-size: 0.70rem; font-weight: 750; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--verde-borde);">Permisos Dinámicos</span>
         </div>
       </div>
     </div>
 
-    <!-- Barra de Búsqueda y Filtros de la Tabla -->
-    <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; box-shadow: var(--shadow-sm);">
-      <div style="position: relative; flex: 1; max-width: 440px;">
-        <input type="text" id="user-search-input" placeholder="Buscar por nombre, correo institucional o cargo..." class="form-input" style="padding-left: 38px;" />
-        <div style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted);">
+    <!-- Barra de Búsqueda y Filtros de la Tabla (Bento Pro Max) -->
+    <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-radius: 12px; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.02);">
+      <div style="position: relative; flex: 1; max-width: 440px; min-width: 240px;">
+        <input type="text" id="user-search-input" placeholder="Buscar por nombre, correo institucional o cargo..." class="form-input" style="padding-left: 38px; border-radius: 8px; border: 1px solid #DCE4E3; font-size: 0.84rem;" />
+        <div style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); display: flex; align-items: center;">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
         </div>
       </div>
 
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <span style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted);">Filtrar por Rol:</span>
-        <button type="button" class="btn btn-secondary btn-sm user-filter-btn active" data-role="all" style="font-size: 0.78rem; font-weight: 700;">Todos</button>
-        <button type="button" class="btn btn-secondary btn-sm user-filter-btn" data-role="admin" style="font-size: 0.78rem; font-weight: 700;">Administradores</button>
-        <button type="button" class="btn btn-secondary btn-sm user-filter-btn" data-role="funcionario" style="font-size: 0.78rem; font-weight: 700;">Funcionarios</button>
+      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <span style="font-size: 0.78rem; font-weight: 700; color: #52606D;">Filtrar por Rol:</span>
+        <button type="button" class="btn btn-secondary btn-sm user-filter-btn active" data-role="all" style="font-size: 0.76rem; font-weight: 750; border-radius: 8px; padding: 6px 14px; cursor: pointer;">Todos</button>
+        <button type="button" class="btn btn-secondary btn-sm user-filter-btn" data-role="admin" style="font-size: 0.76rem; font-weight: 750; border-radius: 8px; padding: 6px 14px; cursor: pointer;">Administradores</button>
+        <button type="button" class="btn btn-secondary btn-sm user-filter-btn" data-role="funcionario" style="font-size: 0.76rem; font-weight: 750; border-radius: 8px; padding: 6px 14px; cursor: pointer;">Funcionarios</button>
       </div>
     </div>
 
-    <!-- Tabla Ejecutiva de Usuarios (100% Ancho Completo) -->
-    <div class="card" style="padding: 0; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-sm);">
-      <div class="table-responsive" style="overflow-x: auto;">
-        <table class="table-users" style="width: 100%; border-collapse: collapse; font-size: 0.86rem;">
+    <!-- Tabla Ejecutiva de Usuarios (100% Ancho Completo, Cero Desbordamiento de Texto) -->
+    <div class="card" style="padding: 0; background: #ffffff; border: 1.5px solid #DCE4E3; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+      <div class="table-responsive" style="overflow-x: auto; width: 100%;">
+        <table class="table-users" style="width: 100%; border-collapse: collapse; font-size: 0.86rem; table-layout: auto;">
           <thead>
-            <tr style="background: #F8FAFC; border-bottom: 2px solid var(--border-color); text-align: left; color: var(--text-muted); font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.5px;">
+            <tr style="background: #F8FAFC; border-bottom: 2px solid #DCE4E3; text-align: left; color: #52606D; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.5px;">
               <th style="padding: 14px 18px;">Funcionario / Despacho</th>
               <th style="padding: 14px 16px;">Correo Institucional</th>
               <th style="padding: 14px 16px;">Dependencia Oficial</th>
-              <th style="padding: 14px 16px;">Rol Asignado</th>
+              <th style="padding: 14px 16px;">Rol y Estado</th>
               <th style="padding: 14px 18px; text-align: right;">Acciones</th>
             </tr>
           </thead>
@@ -137,48 +137,55 @@ const permissionsByCategory = categories.map(cat => ({
               const avatarUrl = u.avatar_url;
 
               return (
-                <tr class="user-row" id={`row-user-${u.id}`} data-user-id={u.id} data-user-email={u.email} data-user-name={u.full_name} data-user-cargo={cargo} data-user-role={isAdmin ? 'admin' : 'funcionario'} style="border-bottom: 1px solid var(--border-subtle); transition: background 0.15s ease;">
+                <tr class="user-row" id={`row-user-${u.id}`} data-user-id={u.id} data-user-email={u.email} data-user-name={u.full_name} data-user-cargo={cargo} data-user-role={isAdmin ? 'admin' : 'funcionario'} style="border-bottom: 1px solid #E2E8F0; transition: background 0.15s ease;">
                   
                   <!-- Columna 1: Funcionario -->
-                  <td style="padding: 14px 18px;">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                      <div class="user-avatar-circle" style={`width: 38px; height: 38px; min-width: 38px; border-radius: var(--radius-full); background: ${isAdmin ? 'var(--verde-suave-bg)' : 'var(--dorado-suave-bg)'}; color: ${isAdmin ? 'var(--verde-principal)' : 'var(--dorado-oscuro)'}; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.84rem; border: 2px solid ${isAdmin ? 'var(--verde-borde)' : 'var(--dorado-borde)'}; overflow: hidden;`}>
+                  <td style="padding: 14px 18px; min-width: 0; max-width: 260px;">
+                    <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+                      <div class="user-avatar-circle" style={`width: 38px; height: 38px; min-width: 38px; border-radius: 999px; background: ${isAdmin ? 'var(--verde-suave-bg)' : '#F7F5EE'}; color: ${isAdmin ? 'var(--verde-principal)' : '#786832'}; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.84rem; border: 1.5px solid ${isAdmin ? 'var(--verde-borde)' : '#DBD2B0'}; overflow: hidden; flex-shrink: 0;`}>
                         {avatarUrl ? (
                           <img src={avatarUrl} alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;" />
                         ) : (
                           <span>{initials}</span>
                         )}
                       </div>
-                      <div>
-                        <div style="font-weight: 800; color: var(--text-main); font-size: 0.90rem;">{u.full_name}</div>
-                        <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 1px;">{cargo}</div>
+                      <div style="min-width: 0; flex: 1; overflow: hidden;">
+                        <div style="font-weight: 750; color: #111827; font-size: 0.90rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title={u.full_name}>{u.full_name}</div>
+                        <div style="font-size: 0.74rem; color: #52606D; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title={cargo}>{cargo}</div>
                       </div>
                     </div>
                   </td>
 
-                  <!-- Columna 2: Correo Institucional -->
-                  <td style="padding: 14px 16px;">
-                    <div style="display: inline-flex; align-items: center; gap: 6px; font-family: monospace; font-size: 0.82rem; color: var(--text-main); background: #F1F5F9; padding: 4px 10px; border-radius: 6px; border: 1px solid #E2E8F0;">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--verde-principal);"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                      <span>{u.email}</span>
+                  <!-- Columna 2: Correo Institucional (Overflow Fix con title y ellipsis) -->
+                  <td style="padding: 14px 16px; min-width: 0; max-width: 240px;">
+                    <div class="user-email-chip" style="display: inline-flex; align-items: center; gap: 6px; font-family: monospace; font-size: 0.80rem; color: #111827; background: #F8FAFC; padding: 5px 10px; border-radius: 6px; border: 1px solid #DCE4E3; max-width: 100%; min-width: 0; box-sizing: border-box;" title={u.email}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--verde-principal); flex-shrink: 0;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                      <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; display: block;">{u.email}</span>
                     </div>
                   </td>
 
                   <!-- Columna 3: Dependencia -->
-                  <td style="padding: 14px 16px; color: var(--text-muted); font-size: 0.82rem;">
-                    <span style="font-weight: 600; color: var(--text-main);">{cargo}</span>
+                  <td style="padding: 14px 16px; color: #52606D; font-size: 0.82rem; min-width: 0; max-width: 220px;">
+                    <span style="font-weight: 600; color: #111827; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title={cargo}>{cargo}</span>
                   </td>
 
-                  <!-- Columna 4: Rol -->
-                  <td style="padding: 14px 16px;">
-                    <span class={`role-badge ${isAdmin ? 'admin' : 'funcionario'}`} style="font-size: 0.72rem; padding: 4px 10px; font-weight: 800; display: inline-flex; align-items: center; gap: 5px;">
-                      {isAdmin ? (
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
-                      ) : (
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
-                      )}
-                      <span>{isAdmin ? 'ADMINISTRADOR' : 'FUNCIONARIO'}</span>
-                    </span>
+                  <!-- Columna 4: Rol y Estado -->
+                  <td style="padding: 14px 16px; white-space: nowrap;">
+                    <div style="display: inline-flex; align-items: center; gap: 8px;">
+                      <span style={`font-size: 0.70rem; padding: 3px 9px; font-weight: 750; border-radius: 999px; display: inline-flex; align-items: center; gap: 5px; ${isAdmin ? 'background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB;' : 'background: #F7F5EE; color: #786832; border: 1px solid #DBD2B0;'}`}>
+                        {isAdmin ? (
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+                        ) : (
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
+                        )}
+                        <span>{isAdmin ? 'ADMINISTRADOR' : 'FUNCIONARIO'}</span>
+                      </span>
+
+                      <span style="font-size: 0.68rem; font-weight: 700; color: var(--verde-principal); background: var(--verde-suave-bg); border: 1px solid var(--verde-borde); padding: 2px 7px; border-radius: 9999px; display: inline-flex; align-items: center; gap: 4px;">
+                        <span style="width: 5px; height: 5px; border-radius: 50%; background: var(--verde-principal);"></span>
+                        <span>Activo</span>
+                      </span>
+                    </div>
                   </td>
 
                   <!-- Columna 5: Acciones (3 Botones con Iconos Limpios) -->
@@ -248,32 +255,33 @@ const permissionsByCategory = categories.map(cat => ({
     <div class="modal-backdrop" id="modal-permissions" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
       <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 680px; border-radius: var(--radius-md); box-shadow: 0 20px 45px rgba(0,0,0,0.2); overflow: hidden; display: flex; flex-direction: column; max-height: 90vh;">
         
-        <!-- Header del Modal de Permisos -->
-        <div style="background: var(--verde-suave-bg); border-bottom: 1px solid var(--verde-borde); padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
+        <!-- Header del Modal de Permisos (Bento Pro Max) -->
+        <div style="background: #ffffff; border-top: 4px solid var(--verde-principal); border-bottom: 1px solid #DCE4E3; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
           <div style="display: flex; align-items: center; gap: 12px;">
-            <div style="width: 40px; height: 40px; border-radius: 50%; background: #ffffff; border: 1px solid var(--verde-borde); display: flex; align-items: center; justify-content: center; color: var(--verde-principal);">
+            <div style="width: 40px; height: 40px; border-radius: 10px; background: #F2F7F6; border: 1.5px solid #B2CFCB; display: flex; align-items: center; justify-content: center; color: var(--verde-principal);">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="11" r="3"/></svg>
             </div>
             <div>
-              <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--verde-principal); margin: 0;" id="perm-modal-user-name">Configurar Permisos</h3>
-              <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 2px;" id="perm-modal-user-desc">Seleccione los permisos operativos para este funcionario</div>
+              <div style="font-size: 0.68rem; font-weight: 750; color: #B5A160; text-transform: uppercase; letter-spacing: 0.05em;">SGD UNITRÓPICO &bull; MATRIZ RBAC</div>
+              <h3 style="font-size: 1.15rem; font-weight: 800; color: #111827; margin: 2px 0 0 0;" id="perm-modal-user-name">Configurar Permisos</h3>
+              <div style="font-size: 0.76rem; color: #52606D; margin-top: 2px;" id="perm-modal-user-desc">Seleccione los permisos operativos para este funcionario</div>
             </div>
           </div>
-          <button type="button" class="btn-close-modal" id="btn-close-perms-modal" style="background: transparent; border: none; font-size: 1.6rem; color: var(--text-muted); cursor: pointer; line-height: 1;">&times;</button>
+          <button type="button" class="btn-close-modal" id="btn-close-perms-modal" style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid #DCE4E3; background: #F8FAFC; color: #52606D; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; line-height: 1;">&times;</button>
         </div>
 
         <!-- Cuerpo del Modal: Cuadrícula de Toggles por Categoría -->
         <div style="padding: 22px 24px; overflow-y: auto; flex: 1;">
           
-          <div id="perms-admin-banner" style="display: none; background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; padding: 14px 18px; border-radius: var(--radius-sm); font-size: 0.82rem; margin-bottom: 18px;">
+          <div id="perms-admin-banner" style="display: none; background: #F2F7F6; border: 1px solid #B2CFCB; color: #00594E; padding: 14px 18px; border-radius: var(--radius-sm); font-size: 0.82rem; margin-bottom: 18px;">
             <strong>Control Total Habilitado:</strong> El rol <code>Administrador</code> cuenta por definición institucional con acceso irrestricto a todos los módulos y operaciones del sistema.
           </div>
 
           <div id="perms-category-container" style="display: flex; flex-direction: column; gap: 20px;">
             {permissionsByCategory.map(({ category, perms }) => (
-              <div class="perm-category-card" style="border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 16px; background: #ffffff;">
-                <div style="font-size: 0.74rem; font-weight: 800; color: var(--dorado-oscuro); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
-                  <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--dorado-oscuro);"></span>
+              <div class="perm-category-card" style="border: 1.5px solid #DCE4E3; border-radius: 10px; padding: 16px; background: #ffffff;">
+                <div style="font-size: 0.74rem; font-weight: 800; color: #786832; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                  <span style="width: 8px; height: 8px; border-radius: 50%; background: #B5A160;"></span>
                   <span>Módulo: {category}</span>
                 </div>
 
@@ -302,7 +310,7 @@ const permissionsByCategory = categories.map(cat => ({
         <!-- Footer del Modal de Permisos -->
         <div style="padding: 16px 24px; background: #f8fafc; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
           <button type="button" class="btn btn-ghost" id="btn-cancel-perms-modal">Cancelar</button>
-          <button type="button" class="btn btn-primary" id="btn-save-dynamic-perms" style="padding: 10px 22px; font-weight: 800;">
+          <button type="button" class="btn btn-primary" id="btn-save-dynamic-perms" style="padding: 10px 22px; font-weight: 800; background: var(--verde-principal); border-color: var(--verde-principal);">
             Guardar Permisos Dinámicos
           </button>
         </div>
@@ -314,12 +322,19 @@ const permissionsByCategory = categories.map(cat => ({
     <div class="modal-backdrop" id="modal-create-user" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
       <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 520px; border-radius: var(--radius-md); box-shadow: 0 20px 45px rgba(0,0,0,0.2); overflow: hidden;">
         
-        <div class="modal-header" style="background: var(--verde-suave-bg); border-bottom: 1px solid var(--verde-borde); padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
-          <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--verde-principal); margin: 0; display: flex; align-items: center; gap: 8px;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
-            Crear Funcionario Institucional
-          </h3>
-          <button type="button" class="btn-close-modal" id="btn-close-create-modal" style="background: transparent; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer;">&times;</button>
+        <div class="modal-header" style="background: #ffffff; border-top: 4px solid var(--verde-principal); border-bottom: 1px solid #DCE4E3; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 40px; height: 40px; border-radius: 10px; background: #F2F7F6; border: 1.5px solid #B2CFCB; display: flex; align-items: center; justify-content: center; color: var(--verde-principal);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+            </div>
+            <div>
+              <div style="font-size: 0.68rem; font-weight: 750; color: #B5A160; text-transform: uppercase; letter-spacing: 0.05em;">GESTIÓN DE PERSONAL</div>
+              <h3 style="font-size: 1.15rem; font-weight: 800; color: #111827; margin: 2px 0 0 0;">
+                Crear Funcionario Institucional
+              </h3>
+            </div>
+          </div>
+          <button type="button" class="btn-close-modal" id="btn-close-create-modal" style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid #DCE4E3; background: #F8FAFC; color: #52606D; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; line-height: 1;">&times;</button>
         </div>
 
         <form id="form-create-new-user" style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
@@ -375,12 +390,19 @@ const permissionsByCategory = categories.map(cat => ({
     <div class="modal-backdrop" id="modal-edit-user" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
       <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 500px; border-radius: var(--radius-md); box-shadow: 0 20px 45px rgba(0,0,0,0.2); overflow: hidden;">
         
-        <div class="modal-header" style="background: #F8FAFC; border-bottom: 1px solid var(--border-color); padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
-          <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--text-main); margin: 0; display: flex; align-items: center; gap: 8px;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            Editar Funcionario
-          </h3>
-          <button type="button" class="btn-close-modal" id="btn-close-edit-modal" style="background: transparent; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer;">&times;</button>
+        <div class="modal-header" style="background: #ffffff; border-top: 4px solid var(--verde-principal); border-bottom: 1px solid #DCE4E3; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 40px; height: 40px; border-radius: 10px; background: #F2F7F6; border: 1.5px solid #B2CFCB; display: flex; align-items: center; justify-content: center; color: var(--verde-principal);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </div>
+            <div>
+              <div style="font-size: 0.68rem; font-weight: 750; color: #B5A160; text-transform: uppercase; letter-spacing: 0.05em;">ACTUALIZACIÓN DE PERFIL</div>
+              <h3 style="font-size: 1.15rem; font-weight: 800; color: #111827; margin: 2px 0 0 0;">
+                Editar Funcionario
+              </h3>
+            </div>
+          </div>
+          <button type="button" class="btn-close-modal" id="btn-close-edit-modal" style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid #DCE4E3; background: #F8FAFC; color: #52606D; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; line-height: 1;">&times;</button>
         </div>
 
         <form id="form-edit-user" style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">

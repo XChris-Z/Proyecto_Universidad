@@ -443,23 +443,23 @@ export async function sendRespuestaSolicitanteEmail(
       <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 24px 12px; color: #1e293b; }
         .email-container { max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
-        .email-header { background: #006837; padding: 28px 24px; text-align: center; color: #ffffff; border-bottom: 4px solid #b8860b; }
+        .email-header { background: #00594E; padding: 28px 24px; text-align: center; color: #ffffff; border-bottom: 4px solid #B5A160; }
         .email-header h1 { font-size: 20px; font-weight: 800; letter-spacing: 1px; margin: 0; text-transform: uppercase; }
         .email-header p { font-size: 12px; color: #fde68a; text-transform: uppercase; font-weight: 700; margin: 6px 0 0 0; letter-spacing: 1.5px; }
         .email-body { padding: 32px 28px; }
-        .greeting { font-size: 16px; font-weight: 700; color: #006837; margin-top: 0; }
-        .badge-radicado { display: inline-block; background: #f0fdf4; color: #006837; border: 1px solid #bbf7d0; padding: 8px 16px; border-radius: 8px; font-weight: 800; font-size: 16px; font-family: monospace; letter-spacing: 0.5px; }
-        .respuesta-box { background: #f8fafc; border-left: 4px solid #006837; border-top: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 24px 0; }
-        .respuesta-header { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #006837; letter-spacing: 0.8px; margin-bottom: 10px; display: flex; justify-content: space-between; }
+        .greeting { font-size: 16px; font-weight: 700; color: #00594E; margin-top: 0; }
+        .badge-radicado { display: inline-block; background: #f2f7f6; color: #00594E; border: 1px solid #b2cfcb; padding: 8px 16px; border-radius: 8px; font-weight: 800; font-size: 16px; font-family: monospace; letter-spacing: 0.5px; }
+        .respuesta-box { background: #f8fafc; border-left: 4px solid #00594E; border-top: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 24px 0; }
+        .respuesta-header { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #00594E; letter-spacing: 0.8px; margin-bottom: 10px; display: flex; justify-content: space-between; }
         .respuesta-text { font-size: 14px; color: #1e293b; line-height: 1.7; white-space: pre-wrap; margin: 0; }
-        .credentials-card { background: #f8fafc; border: 1px dashed #006837; border-radius: 8px; padding: 18px; margin: 22px 0; text-align: center; }
+        .credentials-card { background: #f8fafc; border: 1px dashed #00594E; border-radius: 8px; padding: 18px; margin: 22px 0; text-align: center; }
         .cred-email { font-size: 13px; color: #475569; margin-bottom: 6px; }
         .cred-code-title { font-size: 11px; text-transform: uppercase; font-weight: 800; color: #64748b; letter-spacing: 1px; margin-top: 8px; }
-        .cred-code-val { font-size: 26px; font-weight: 900; letter-spacing: 4px; color: #006837; font-family: monospace; margin: 6px 0; }
-        .expira-card { background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #b8860b; border-radius: 8px; padding: 14px 16px; margin: 20px 0; font-size: 12.5px; color: #78350f; line-height: 1.5; }
-        .btn-access { display: block; width: fit-content; margin: 26px auto; background: #006837; color: #ffffff !important; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 800; font-size: 14px; text-align: center; box-shadow: 0 4px 12px rgba(0, 104, 55, 0.25); }
+        .cred-code-val { font-size: 26px; font-weight: 900; letter-spacing: 4px; color: #00594E; font-family: monospace; margin: 6px 0; }
+        .expira-card { background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #B5A160; border-radius: 8px; padding: 14px 16px; margin: 20px 0; font-size: 12.5px; color: #78350f; line-height: 1.5; }
+        .btn-access { display: block; width: fit-content; margin: 26px auto; background: #00594E; color: #ffffff !important; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 800; font-size: 14px; text-align: center; box-shadow: 0 4px 12px rgba(0, 89, 78, 0.25); }
         .email-footer { background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 22px 24px; font-size: 11px; color: #64748b; text-align: center; line-height: 1.6; }
-        .footer-brand { font-weight: 800; color: #006837; text-transform: uppercase; }
+        .footer-brand { font-weight: 800; color: #00594E; text-transform: uppercase; }
       </style>
     </head>
     <body>
@@ -515,14 +515,14 @@ export async function sendRespuestaSolicitanteEmail(
               Consultar Expediente y Descargar Anexos &rarr;
             </a>
             <div style="font-size: 11.5px; color: #64748b; margin-top: 8px;">
-              O ingrese directamente en: <a href="${params.consultaUrl}" style="color: #006837; word-break: break-all;">${params.consultaUrl}</a>
+              O ingrese directamente en: <a href="${params.consultaUrl}" style="color: #00594E; word-break: break-all;">${params.consultaUrl}</a>
             </div>
           </div>
 
           ${params.driveUrl ? `
             <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin: 18px 0; font-size: 13px; text-align: center;">
               <strong>Repositorio Complementario Externo:</strong><br>
-              <a href="${params.driveUrl}" target="_blank" style="color: #006837; font-weight: 700; text-decoration: underline; margin-top: 4px; display: inline-block;">
+              <a href="${params.driveUrl}" target="_blank" style="color: #00594E; font-weight: 700; text-decoration: underline; margin-top: 4px; display: inline-block;">
                 Ver carpeta complementaria compartida &rarr;
               </a>
             </div>

@@ -5,12 +5,12 @@
 
 :root {
   /* Paleta Estricta Institucional: Verde Unitrópico y variaciones */
-  --verde-oscuro: #004239;
+  --verde-oscuro: #00443B;
   --verde-principal: #00594E;
-  --verde-claro: #0d796b;
+  --verde-claro: #1A6A60;
   --verde-suave-bg: rgba(0, 89, 78, 0.08);
   --verde-borde: rgba(0, 89, 78, 0.22);
-  --verde-hover: #00453c;
+  --verde-hover: #1A6A60;
 
   /* Paleta Estricta Institucional: Dorado/Oro y variaciones */
   --dorado-oscuro: #7a6a35;
@@ -585,15 +585,79 @@ body.sidebar-collapsed .btn-sidebar-expand-tab {
 }
 
 .btn-primary {
-  background: var(--primary);
-  color: #ffffff;
+  background: var(--verde-principal) !important;
+  color: #ffffff !important;
+  border: 1px solid var(--verde-principal);
   box-shadow: 0 2px 8px rgba(0, 89, 78, 0.25);
+  transition: all 0.2s ease;
 }
 
 .btn-primary:hover {
-  background: var(--primary-hover);
+  background: var(--verde-hover) !important;
+  border-color: var(--verde-hover) !important;
+  color: #ffffff !important;
   box-shadow: 0 4px 14px rgba(0, 89, 78, 0.35);
   transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   GLOBAL OVERFLOW & WORD BREAK FIX (TARJETAS, BENTO, CORREOS, ARCHIVOS)
+   ========================================================================== */
+.card,
+.bento-card,
+.user-card,
+.oficina-card,
+.peticion-card,
+.modal-card,
+.folder-card,
+.table-responsive,
+.table-users,
+.subfolder-group-card,
+.subfolder-bento-card,
+.responder-file-card {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.card > *,
+.bento-card > *,
+.user-card > *,
+.oficina-card > *,
+.peticion-card > *,
+.modal-card > *,
+.subfolder-bento-card > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Manejo seguro de palabras largas y URLs en párrafos, títulos y celdas */
+p, h1, h2, h3, h4, h5, h6, span, label, td, th {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Elementos de correos electrónicos, URLs, nombres de archivo o identificadores largos */
+.email-text,
+.email-badge,
+.truncate-text,
+.file-name-text,
+.user-email-col,
+.user-email-chip,
+.peticion-card-email,
+.text-break-all {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+.text-ellipsis {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .btn-secondary {

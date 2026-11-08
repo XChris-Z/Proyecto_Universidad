@@ -1318,54 +1318,76 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
     }
 
     .responder-files-container {
-      max-height: 220px;
+      max-height: 280px;
       overflow-y: auto;
-      border: 1px solid #DCE4E3;
-      border-radius: 10px;
-      padding: 10px;
-      background: #F8FAFC;
+      background: transparent;
+      border: none;
+      padding: 2px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 10px;
     }
 
     .responder-file-card {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: #ffffff;
-      border: 1px solid #E2E8F0;
-      border-radius: 8px;
-      padding: 9px 12px;
+      gap: 14px;
+      padding: 12px 16px;
+      background: #FFFFFF;
+      border: 1.5px solid #DCE4E3;
+      border-radius: 12px;
+      margin-bottom: 0;
       cursor: pointer;
-      gap: 12px;
-      transition: all 0.18s ease;
+      transition: all 0.2s ease;
       user-select: none;
+      box-sizing: border-box;
+      width: 100%;
     }
 
     .responder-file-card:hover {
       border-color: #B2CFCB;
       background: #FAFDFC;
+      box-shadow: 0 2px 8px rgba(0, 89, 78, 0.05);
     }
 
     .responder-file-card.selected,
     .responder-file-card:has(input[type="checkbox"]:checked) {
-      border-color: #00594E;
-      background: #F2F7F6;
+      border-color: #00594E !important;
+      background: #F2F7F6 !important;
+      box-shadow: 0 2px 10px rgba(0, 89, 78, 0.08);
     }
 
-    .responder-file-checkbox {
-      accent-color: #00594E;
-      width: 17px;
-      height: 17px;
-      cursor: pointer;
+    .responder-file-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .responder-file-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
       flex-shrink: 0;
     }
 
+    .responder-file-checkbox {
+      accent-color: #00594E !important;
+      width: 18px !important;
+      height: 18px !important;
+      cursor: pointer;
+      flex-shrink: 0;
+      border-radius: 4px;
+      margin: 0;
+    }
+
     .file-icon-badge {
-      width: 32px;
-      height: 32px;
-      border-radius: 6px;
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
       background: #E6EFEF;
       color: #00594E;
       display: flex;
@@ -1374,31 +1396,40 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       flex-shrink: 0;
     }
 
+    .responder-file-title-wrap {
+      min-width: 0;
+      flex: 1;
+      overflow: hidden;
+    }
+
     .responder-file-name {
-      font-size: 0.82rem;
-      font-weight: 750;
       color: #111827;
+      font-weight: 600;
+      font-size: 0.88rem;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-    }
-
-    .responder-file-meta {
-      font-size: 0.69rem;
-      color: #52606D;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-top: 1px;
+      display: block;
     }
 
     .subfolder-chip {
-      background: #E6EFEF;
-      color: #00594E;
-      padding: 1px 7px;
-      border-radius: 4px;
+      background: #F7F5EE;
+      color: #786832;
+      border: 1px solid #DBD2B0;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 0.74rem;
       font-weight: 600;
-      font-size: 0.68rem;
+      display: inline-flex;
+      align-items: center;
+      white-space: nowrap;
+    }
+
+    .file-size-text {
+      font-size: 0.74rem;
+      color: #52606D;
+      font-weight: 500;
+      white-space: nowrap;
     }
 
     .responder-redaccion-bento {
@@ -2002,7 +2033,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                 class="btn btn-primary btn-sm btn-open-responder-modal" 
                 data-id="${escapeHtml(peticion.id)}"
                 title="Despachar respuesta formal y habilitar portal temporal al solicitante"
-                style="display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 0.82rem; padding: 7px 16px; background: #006837; border-color: #006837; color: #ffffff; box-shadow: 0 2px 6px rgba(0, 104, 55, 0.2); cursor: pointer;"
+                style="display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 0.82rem; padding: 7px 16px; background: #00594E; border-color: #00594E; color: #ffffff; box-shadow: 0 2px 6px rgba(0, 89, 78, 0.2); cursor: pointer;"
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                 <span>Enviar Respuesta al Solicitante</span>
@@ -2052,7 +2083,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                         `;
                       }
                       return `
-                        <span style="font-size: 0.74rem; font-weight: 750; background: #f0fdf4; color: #006837; border: 1px solid #bbf7d0; padding: 4px 10px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
+                        <span style="font-size: 0.74rem; font-weight: 750; background: #f0fdf4; color: #00594E; border: 1px solid #b2cfcb; padding: 4px 10px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
                           <span>Respuesta Enviada (Activa por ${daysLeft} día${daysLeft === 1 ? '' : 's'} restante${daysLeft === 1 ? '' : 's'})</span>
                         </span>
                       `;
@@ -2070,17 +2101,17 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                     </button>
                   </span>
                 </div>
-                <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--text-main); margin: 0 0 8px 0; line-height: 1.35;">${escapeHtml(peticion.asunto)}</h2>
-                <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; font-size: 0.82rem; color: #64748b; line-height: 1.5; margin-top: 4px;">
-                  <span style="display: inline-flex; align-items: center; gap: 5px;">
+                <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--text-main); margin: 0 0 8px 0; line-height: 1.35; overflow-wrap: anywhere; word-break: break-word;">${escapeHtml(peticion.asunto)}</h2>
+                <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; font-size: 0.82rem; color: #64748b; line-height: 1.5; margin-top: 4px; min-width: 0;">
+                  <span style="display: inline-flex; align-items: center; gap: 5px; min-width: 0;">
                     <strong style="color: #334155;">Solicitante:</strong>
-                    <span style="color: #0f172a; font-weight: 700;">${escapeHtml(peticion.solicitante_nombre)}</span>
+                    <span style="color: #0f172a; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; display: inline-block;" title="${escapeHtml(peticion.solicitante_nombre)}">${escapeHtml(peticion.solicitante_nombre)}</span>
                     <span style="font-size: 0.72rem; color: #64748b; background: #f1f5f9; padding: 1px 6px; border-radius: 4px;">${escapeHtml(peticion.solicitante_tipo === 'Docente' ? 'Profesor' : (peticion.solicitante_tipo || 'Ciudadano'))}</span>
                   </span>
                   <span style="color: #cbd5e1;">&bull;</span>
-                  <span style="display: inline-flex; align-items: center; gap: 5px;">
+                  <span style="display: inline-flex; align-items: center; gap: 5px; min-width: 0;">
                     <strong style="color: #334155;">Correo:</strong>
-                    <span style="color: #475569;">${escapeHtml(peticion.solicitante_email || 'Sin correo registrado')}</span>
+                    <span style="color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 240px; display: inline-block;" title="${escapeHtml(peticion.solicitante_email || 'Sin correo registrado')}">${escapeHtml(peticion.solicitante_email || 'Sin correo registrado')}</span>
                   </span>
                   <span style="color: #cbd5e1;">&bull;</span>
                   <span style="display: inline-flex; align-items: center; gap: 5px;">
@@ -2138,7 +2169,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                       return `
                         <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; display: flex; flex-direction: column; gap: 3px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
                           <div style="display: flex; align-items: center; gap: 5px;">
-                            <span style="font-size: 0.72rem; font-weight: 800; color: #006837; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 2px 7px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
+                            <span style="font-size: 0.72rem; font-weight: 800; color: #00594E; background: #f0fdf4; border: 1px solid #b2cfcb; padding: 2px 7px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
                               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                               ${escapeHtml(badgeLabel)}
                             </span>
@@ -2164,20 +2195,20 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                 correo: peticion.solicitante_email || ''
               }).toString();
               return `
-                <div style="background: #ffffff; border: 1px solid #bbf7d0; border-left: 4px solid #006837; border-radius: 8px; padding: 14px 18px; margin-top: 4px; box-shadow: 0 1px 3px rgba(0, 104, 55, 0.05);">
+                <div style="background: #ffffff; border: 1px solid #b2cfcb; border-left: 4px solid #00594E; border-radius: 8px; padding: 14px 18px; margin-top: 4px; box-shadow: 0 1px 3px rgba(0, 89, 78, 0.05);">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
-                    <div style="display: flex; align-items: center; gap: 6px; color: #006837; font-weight: 800; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.4px;">
+                    <div style="display: flex; align-items: center; gap: 6px; color: #00594E; font-weight: 800; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.4px;">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                       <span>Respuesta Oficial Despachada al Solicitante</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                       ${pinSol ? `
-                        <span style="font-size: 0.72rem; font-weight: 700; color: #006837; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 3px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 5px;">
+                        <span style="font-size: 0.72rem; font-weight: 700; color: #00594E; background: #f0fdf4; border: 1px solid #b2cfcb; padding: 3px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 5px;">
                           <span>PIN Solicitante:</span>
                           <strong style="font-family: monospace; letter-spacing: 0.05em;">${escapeHtml(pinSol)}</strong>
                         </span>
                       ` : ''}
-                      <a href="/consulta-respuesta?${queryParams}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.72rem; font-weight: 750; color: #006837; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 3px 10px; border-radius: 4px; text-decoration: none;">
+                      <a href="/consulta-respuesta?${queryParams}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.72rem; font-weight: 750; color: #00594E; background: #f0fdf4; border: 1px solid #b2cfcb; padding: 3px 10px; border-radius: 4px; text-decoration: none;">
                         <span>Ver Portal Solicitante</span>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                       </a>
@@ -2189,7 +2220,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                     <span>&bull;</span>
                     <span>Fecha de envío: <strong style="color: #334155;">${escapeHtml(fEnvioFormatted)}</strong></span>
                     <span>&bull;</span>
-                    <span>Vigencia: <strong style="color: #b8860b;">10 días calendario con candado temporal</strong></span>
+                    <span>Vigencia: <strong style="color: #786832;">10 días calendario con candado temporal</strong></span>
                   </div>
                 </div>
               `;
@@ -2241,8 +2272,8 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
           <div class="card" style="padding: 22px; background: #ffffff; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: var(--radius-md); box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(15, 23, 42, 0.06); flex-wrap: wrap; gap: 10px;">
               <div style="display: flex; align-items: center; gap: 10px;">
-                <div style="width: 36px; height: 36px; border-radius: 8px; background: #f0fdf4; color: #006837; display: flex; align-items: center; justify-content: center; border: 1px solid #bbf7d0;">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#006837" stroke-width="1.75"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                <div style="width: 36px; height: 36px; border-radius: 8px; background: #E6EFEF; color: #00594E; display: flex; align-items: center; justify-content: center; border: 1px solid #B2CFCB;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00594E" stroke-width="1.75"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                 </div>
                 <div>
                   <h3 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin: 0;">Anexos y Requerimientos de Dependencias</h3>
@@ -2256,12 +2287,12 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                   class="btn btn-primary btn-sm btn-open-modal-subcarpeta" 
                   data-peticion-id="${escapeHtml(peticion.id)}" 
                   data-radicado="${escapeHtml(peticion.numero_radicado)}" 
-                  style="display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 0.78rem; background: #006837; color: #ffffff;"
+                  style="display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 0.78rem; background: #00594E; border-color: #00594E; color: #ffffff;"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                   <span>Crear Subcarpeta y Asignar Dependencias</span>
                 </button>
-                <span style="font-size: 0.78rem; font-weight: 800; color: #006837; background: #ecfdf5; padding: 4px 12px; border-radius: 6px; border: 1px solid #a7f3d0;">
+                <span style="font-size: 0.78rem; font-weight: 800; color: #00594E; background: #F2F7F6; padding: 4px 12px; border-radius: 6px; border: 1px solid #B2CFCB;">
                   ${responsables.length} asignacion${responsables.length === 1 ? '' : 'es'}
                 </span>
               </div>
@@ -2277,7 +2308,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                 return `
                   <!-- Barra de Pestañas / Filtro de Subcarpetas con Transición Fluida Crossfade -->
                   <div class="sub-filter-bar" style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch;">
-                    <button type="button" class="btn-sub-filter-tab active" data-filter-sub="all" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 0.76rem; font-weight: 800; border-radius: 6px; border: 1px solid #006837; background: #006837; color: #ffffff; cursor: pointer; transition: all 0.2s ease;">
+                    <button type="button" class="btn-sub-filter-tab active" data-filter-sub="all" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 0.76rem; font-weight: 800; border-radius: 6px; border: 1px solid #00594E; background: #00594E; color: #ffffff; cursor: pointer; transition: all 0.2s ease;">
                       <span>Todas las Subcarpetas</span>
                       <span style="background: rgba(255,255,255,0.2); padding: 1px 6px; border-radius: 9999px; font-size: 0.68rem;">${subcarpetas.length}</span>
                     </button>
@@ -2382,22 +2413,22 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                         <div class="subcarpeta-header" data-sub-id="${escapeHtml(sub.id)}" style="background: ${allDeliveredInSub ? '#f0fdf4' : '#f8fafc'}; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; cursor: pointer; user-select: none; transition: background 0.2s ease;">
                           <div style="display: flex; align-items: center; gap: 10px;">
                             <div style="width: 32px; height: 32px; border-radius: 6px; background: #ffffff; border: 1px solid ${allDeliveredInSub ? '#a7f3d0' : 'rgba(15, 23, 42, 0.1)'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="${allDeliveredInSub ? '#047857' : '#006837'}" stroke-width="1.75"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="${allDeliveredInSub ? '#00594E' : '#00594E'}" stroke-width="1.75"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                             </div>
                             <div>
                               <div style="display: flex; align-items: center; gap: 8px;">
                                 <strong style="font-size: 0.95rem; color: #052e16; font-weight: 800;">${escapeHtml(subDisplayTitle)}</strong>
-                                <span style="font-size: 0.68rem; font-weight: 800; color: #006837; background: #ffffff; padding: 2px 8px; border-radius: 4px; border: 1px solid #a7f3d0;">${subResps.length} dependencia${subResps.length === 1 ? '' : 's'}</span>
+                                <span style="font-size: 0.68rem; font-weight: 800; color: #00594E; background: #ffffff; padding: 2px 8px; border-radius: 4px; border: 1px solid #B2CFCB;">${subResps.length} dependencia${subResps.length === 1 ? '' : 's'}</span>
                               </div>
                               ${sub.descripcion ? `
-                                <div style="font-size: 0.76rem; color: #334155; margin-top: 5px; background: #ffffff; padding: 6px 12px; border-radius: 6px; border-left: 3px solid #006837; border: 1px solid rgba(15, 23, 42, 0.05); box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
-                                  <strong style="color: #006837; font-size: 0.70rem; text-transform: uppercase;">Requerimiento / Instrucción:</strong> ${escapeHtml(sub.descripcion)}
+                                <div style="font-size: 0.76rem; color: #334155; margin-top: 5px; background: #ffffff; padding: 6px 12px; border-radius: 6px; border-left: 3px solid #00594E; border: 1px solid rgba(15, 23, 42, 0.05); box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+                                  <strong style="color: #00594E; font-size: 0.70rem; text-transform: uppercase;">Requerimiento / Instrucción:</strong> ${escapeHtml(sub.descripcion)}
                                 </div>
                               ` : ''}
                             </div>
                           </div>
                           <div style="display: flex; align-items: center; gap: 10px;">
-                            <span style="font-size: 0.74rem; font-weight: 800; padding: 4px 12px; border-radius: 6px; border: 1px solid; ${allDeliveredInSub ? 'background: #ecfdf5; color: #047857; border-color: #a7f3d0;' : 'background: #fffbeb; color: #854d0e; border-color: #fde68a;'}">
+                            <span style="font-size: 0.74rem; font-weight: 800; padding: 4px 12px; border-radius: 6px; border: 1px solid; ${allDeliveredInSub ? 'background: #E6EFEF; color: #00594E; border-color: #B2CFCB;' : 'background: #F7F5EE; color: #786832; border-color: #DBD2B0;'}">
                               ${deliveredCount} de ${subResps.length} Aportes entregados
                             </span>
                             <div class="subcarpeta-chevron" style="width: 28px; height: 28px; border-radius: 6px; background: #ffffff; border: 1px solid rgba(15, 23, 42, 0.1); display: flex; align-items: center; justify-content: center; transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);">
@@ -2432,8 +2463,8 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                                         ${ofiCodigo ? `<span style="font-size: 0.70rem; color: #64748b;">(${escapeHtml(ofiCodigo)})</span>` : ''}
                                       </div>
                                       <div style="display: flex; align-items: center; gap: 6px;">
-                                        <span style="font-family: monospace; font-size: 0.74rem; font-weight: 800; color: #006837; background: #ffffff; padding: 2px 7px; border-radius: 4px; border: 1px solid #a7f3d0;" title="Código Único de Acceso">${escapeHtml(r.codigo_acceso || 'UPQ')}</span>
-                                        <span style="font-size: 0.70rem; font-weight: 800; padding: 2px 8px; border-radius: 4px; border: 1px solid; ${isDelivered ? 'background: #ecfdf5; color: #047857; border-color: #a7f3d0;' : 'background: #fffbeb; color: #854d0e; border-color: #fde68a;'}">
+                                        <span style="font-family: monospace; font-size: 0.74rem; font-weight: 800; color: #00594E; background: #ffffff; padding: 2px 7px; border-radius: 4px; border: 1px solid #B2CFCB;" title="Código Único de Acceso">${escapeHtml(r.codigo_acceso || 'UPQ')}</span>
+                                        <span style="font-size: 0.70rem; font-weight: 800; padding: 2px 8px; border-radius: 4px; border: 1px solid; ${isDelivered ? 'background: #E6EFEF; color: #00594E; border-color: #B2CFCB;' : 'background: #F7F5EE; color: #786832; border-color: #DBD2B0;'}">
                                           ${isDelivered ? 'Entregado' : 'Pendiente de aporte'}
                                         </span>
                                       </div>
@@ -2445,11 +2476,11 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                                         ${ofiAnexos.map((oa) => `
                                           <div style="background: #ffffff; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 6px; padding: 9px 12px; display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; gap: 10px;">
                                             <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
-                                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#006837" stroke-width="1.75" style="flex-shrink: 0;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00594E" stroke-width="1.75" style="flex-shrink: 0;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                                               <div style="min-width: 0;">
                                                 <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                                                   <strong style="color: #0f172a; word-break: break-all;">${escapeHtml(oa.nombre_archivo)}</strong>
-                                                  <span style="font-size: 0.66rem; font-weight: 750; color: #006837; background: #ecfdf5; padding: 1px 6px; border-radius: 3px; border: 1px solid #a7f3d0;">[${escapeHtml(subDisplayTitle)} • Enviado por: ${escapeHtml(ofiNombre)}]</span>
+                                                  <span style="font-size: 0.66rem; font-weight: 750; color: #00594E; background: #E6EFEF; padding: 1px 6px; border-radius: 3px; border: 1px solid #B2CFCB;">[${escapeHtml(subDisplayTitle)} • Enviado por: ${escapeHtml(ofiNombre)}]</span>
                                                 </div>
                                                 <div style="font-size: 0.68rem; color: #64748b; margin-top: 2px;">
                                                   ${formatFileSize(oa.tamano_bytes)}${oa.created_at ? ` • Subido el ${new Date(oa.created_at).toLocaleDateString('es-CO')}` : ''}
@@ -2463,7 +2494,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                                                 onclick="event.stopPropagation()" 
                                                 class="btn-download-discreet" 
                                                 style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; font-size: 0.74rem; font-weight: 600; border-radius: 6px; background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; text-decoration: none; transition: all 0.2s ease;"
-                                                onmouseover="this.style.borderColor='#006837'; this.style.color='#006837'; this.style.background='#ffffff';"
+                                                onmouseover="this.style.borderColor='#00594E'; this.style.color='#00594E'; this.style.background='#ffffff';"
                                                 onmouseout="this.style.borderColor='#cbd5e1'; this.style.color='#334155'; this.style.background='#f8fafc';"
                                                 title="Descargar archivo"
                                               >
@@ -2477,16 +2508,16 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                                     ` : `
                                       <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 8px; padding: 10px 12px; background: #ffffff; border: 1px dashed #cbd5e1; border-radius: 6px;">
                                         <span style="font-size: 0.76rem; color: #64748b; font-style: italic;">Pendiente de entrega (Sin archivos cargados aún)</span>
-                                        <button type="button" class="btn btn-secondary btn-sm btn-subir-soporte-manual" onclick="event.stopPropagation()" data-resp-id="${escapeHtml(r.id)}" data-sub-id="${escapeHtml(sub.id)}" data-sub-nombre="${escapeHtml(sub.nombre)}" data-ofi-nombre="${escapeHtml(ofiNombre)}" style="font-size: 0.72rem; padding: 4px 10px; font-weight: 750; border: 1px solid #006837; color: #006837; background: #f0fdf4;">
+                                        <button type="button" class="btn btn-secondary btn-sm btn-subir-soporte-manual" onclick="event.stopPropagation()" data-resp-id="${escapeHtml(r.id)}" data-sub-id="${escapeHtml(sub.id)}" data-sub-nombre="${escapeHtml(sub.nombre)}" data-ofi-nombre="${escapeHtml(ofiNombre)}" style="font-size: 0.72rem; padding: 4px 10px; font-weight: 750; border: 1px solid #00594E; color: #00594E; background: #E6EFEF;">
                                           Subir soporte manualmente
                                         </button>
                                       </div>
                                     `}
 
                                     ${showAporteObs ? `
-                                      <div style="margin-top: 10px; background: #ffffff; border: 1px solid rgba(15, 23, 42, 0.08); border-left: 3px solid #b8860b; border-radius: 6px; padding: 10px 14px; font-size: 0.78rem; color: #334155;">
+                                      <div style="margin-top: 10px; background: #ffffff; border: 1px solid rgba(15, 23, 42, 0.08); border-left: 3px solid #B5A160; border-radius: 6px; padding: 10px 14px; font-size: 0.78rem; color: #334155;">
                                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px;">
-                                          <strong style="color: #854d0e; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.3px;">Observación del Aporte:</strong>
+                                          <strong style="color: #786832; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.3px;">Observación del Aporte:</strong>
                                           ${r.fecha_entrega ? `<span style="font-size: 0.68rem; color: #64748b;">${new Date(r.fecha_entrega).toLocaleDateString('es-CO')}</span>` : ''}
                                         </div>
                                         <div style="line-height: 1.45;">"${escapeHtml(cleanObs)}"</div>
@@ -2532,7 +2563,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
               type="button" 
               class="btn btn-primary btn-open-responder-modal"
               data-id="${escapeHtml(peticion.id)}"
-              style="display: inline-flex; align-items: center; gap: 8px; font-weight: 800; font-size: 0.86rem; padding: 10px 22px; background: #006837; border-color: #006837; color: #ffffff; box-shadow: 0 3px 8px rgba(0, 104, 55, 0.25); cursor: pointer;"
+              style="display: inline-flex; align-items: center; gap: 8px; font-weight: 800; font-size: 0.86rem; padding: 10px 22px; background: #00594E; border-color: #00594E; color: #ffffff; box-shadow: 0 3px 8px rgba(0, 89, 78, 0.25); cursor: pointer;"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
               <span>Enviar Respuesta al Solicitante</span>
@@ -2556,9 +2587,9 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
               (b as HTMLElement).style.borderColor = '#cbd5e1';
             });
             btn.classList.add('active');
-            btn.style.background = '#006837';
+            btn.style.background = '#00594E';
             btn.style.color = '#ffffff';
-            btn.style.borderColor = '#006837';
+            btn.style.borderColor = '#00594E';
 
             const cards = document.querySelectorAll('.subfolder-bento-card');
             cards.forEach((card) => {
@@ -3258,7 +3289,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
 
             return `
               <label class="responder-file-card ${isChecked ? 'selected' : ''}">
-                <div style="display: flex; align-items: center; gap: 12px; min-width: 0; width: 100%;">
+                <div class="responder-file-left">
                   <input 
                     type="checkbox" 
                     name="responder_file_check" 
@@ -3267,17 +3298,17 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                     class="responder-file-checkbox" 
                   />
                   <div class="file-icon-badge">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                   </div>
-                  <div style="min-width: 0; flex: 1;">
-                    <div class="responder-file-name" title="${escapeHtml(cleanName)}">
+                  <div class="responder-file-title-wrap">
+                    <span class="responder-file-name" title="${escapeHtml(cleanName)}">
                       ${escapeHtml(cleanName)}
-                    </div>
-                    <div class="responder-file-meta">
-                      <span class="subfolder-chip">${escapeHtml(subLabel)}</span>
-                      <span>&bull; ${a.tamano_bytes ? (a.tamano_bytes / 1024).toFixed(0) + ' KB' : 'Soporte digital'}</span>
-                    </div>
+                    </span>
                   </div>
+                </div>
+                <div class="responder-file-right">
+                  <span class="subfolder-chip">${escapeHtml(subLabel)}</span>
+                  <span class="file-size-text">${a.tamano_bytes ? (a.tamano_bytes / 1024).toFixed(0) + ' KB' : 'Soporte digital'}</span>
                 </div>
               </label>
             `;
