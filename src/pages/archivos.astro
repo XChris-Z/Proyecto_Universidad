@@ -937,7 +937,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
             Revise los soportes consolidados del expediente. Los archivos marcados con casilla de verificación serán los únicos disponibles para descarga en el portal del solicitante.
           </p>
 
-          <div id="responder-archivos-container" class="responder-files-container">
+          <div id="responder-archivos-container" class="responder-files-container" style="max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 4px 2px;">
             <!-- Inyectado dinámicamente -->
           </div>
         </div>
@@ -1002,6 +1002,72 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
   </div>
 
   <script id="data-archivos-oficinas" type="application/json" set:html={JSON.stringify(oficinasCatalogo)} />
+
+  <style is:global>
+    /* Estilos Globales para elementos dinámicos del Modal de Respuesta al Solicitante */
+    .modal-file-item,
+    .responder-file-card {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 14px !important;
+      padding: 14px 18px !important;
+      margin-bottom: 10px !important;
+      background: #F2F7F6;
+      border: 1.5px solid #00594E;
+      border-radius: 12px !important;
+      cursor: pointer !important;
+      transition: all 0.2s ease !important;
+      user-select: none !important;
+      box-sizing: border-box !important;
+      width: 100% !important;
+    }
+
+    .modal-file-item.selected,
+    .responder-file-card.selected,
+    .modal-file-item:has(input[type="checkbox"]:checked),
+    .responder-file-card:has(input[type="checkbox"]:checked) {
+      background: #F2F7F6 !important;
+      border-color: #00594E !important;
+      box-shadow: 0 2px 6px rgba(0, 89, 78, 0.05) !important;
+      opacity: 1 !important;
+    }
+
+    .modal-file-item:not(.selected):not(:has(input[type="checkbox"]:checked)),
+    .responder-file-card:not(.selected):not(:has(input[type="checkbox"]:checked)) {
+      background: #FFFFFF !important;
+      border-color: #DCE4E3 !important;
+      box-shadow: none !important;
+      opacity: 0.75 !important;
+    }
+
+    .modal-file-item:hover,
+    .responder-file-card:hover {
+      border-color: #00594E !important;
+    }
+
+    .modal-file-item input[type="checkbox"],
+    .responder-file-checkbox {
+      accent-color: #00594E !important;
+      width: 19px !important;
+      height: 19px !important;
+      cursor: pointer !important;
+      flex-shrink: 0 !important;
+      margin: 0 !important;
+    }
+
+    .file-status-pill {
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 5px !important;
+      padding: 4px 10px !important;
+      border-radius: 8px !important;
+      font-size: 0.75rem !important;
+      font-weight: 700 !important;
+      flex-shrink: 0 !important;
+      transition: all 0.2s ease !important;
+    }
+  </style>
 
   <style>
     .drive-folder-card {
@@ -3228,16 +3294,43 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
     const responderMensajeInput = document.getElementById('responder-mensaje-input') as HTMLTextAreaElement | null;
     const btnToggleAllFiles = document.getElementById('btn-toggle-all-responder-files');
 
+    function updateFileCardState(card: HTMLElement, isChecked: boolean) {
+      if (isChecked) {
+        card.style.background = '#F2F7F6';
+        card.style.borderColor = '#00594E';
+        card.style.boxShadow = '0 2px 6px rgba(0, 89, 78, 0.05)';
+        card.style.opacity = '1';
+        card.classList.add('selected');
+      } else {
+        card.style.background = '#FFFFFF';
+        card.style.borderColor = '#DCE4E3';
+        card.style.boxShadow = 'none';
+        card.style.opacity = '0.75';
+        card.classList.remove('selected');
+      }
+      const pill = card.querySelector<HTMLElement>('.file-status-pill');
+      if (pill) {
+        if (isChecked) {
+          pill.textContent = 'Incluido';
+          pill.style.background = '#00594E';
+          pill.style.color = '#FFFFFF';
+        } else {
+          pill.textContent = 'Omitido';
+          pill.style.background = '#F1F5F9';
+          pill.style.color = '#64748B';
+        }
+      }
+    }
+
     let allFilesChecked = true;
     btnToggleAllFiles?.addEventListener('click', () => {
       allFilesChecked = !allFilesChecked;
       const cbs = document.querySelectorAll<HTMLInputElement>('input[name="responder_file_check"]');
       cbs.forEach((cb) => {
         cb.checked = allFilesChecked;
-        const card = cb.closest('.responder-file-card');
+        const card = cb.closest<HTMLElement>('.modal-file-item, .responder-file-card');
         if (card) {
-          if (allFilesChecked) card.classList.add('selected');
-          else card.classList.remove('selected');
+          updateFileCardState(card, allFilesChecked);
         }
       });
     });
@@ -3267,6 +3360,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
 
       // Renderizar checklist de archivos del expediente
       if (responderArchivosContainer) {
+        allFilesChecked = true;
         const anexos = Array.isArray(pet.peticion_anexos) ? pet.peticion_anexos : [];
         if (anexos.length === 0) {
           responderArchivosContainer.innerHTML = `
@@ -3286,41 +3380,61 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
             const isChecked = previouslyApproved ? previouslyApproved.has(a.id) || previouslyApproved.has(a.storage_path) || previouslyApproved.has(a.nombre_archivo) : true;
             const subTag = rawName.match(/^\[([^\]]+)\]/);
             const subLabel = subTag && subTag[1] ? subTag[1].trim() : (a.es_anexo_oficina ? 'Aporte de Dependencia' : 'Documento Inicial');
+            const sizeLabel = a.tamano_bytes ? (a.tamano_bytes / 1024).toFixed(0) + ' KB' : 'Soporte digital';
 
             return `
-              <label class="responder-file-card ${isChecked ? 'selected' : ''}">
-                <div class="responder-file-left">
-                  <input 
-                    type="checkbox" 
-                    name="responder_file_check" 
-                    value="${escapeHtml(a.id || a.storage_path || cleanName)}" 
-                    ${isChecked ? 'checked' : ''} 
-                    class="responder-file-checkbox" 
+              <label 
+                class="modal-file-item responder-file-card ${isChecked ? 'selected' : ''}" 
+                style="display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 18px; margin-bottom: 10px; background: ${isChecked ? '#F2F7F6' : '#FFFFFF'}; border: 1.5px solid ${isChecked ? '#00594E' : '#DCE4E3'}; border-radius: 12px; cursor: pointer; transition: all 0.2s ease; box-shadow: ${isChecked ? '0 2px 6px rgba(0, 89, 78, 0.05)' : 'none'}; opacity: ${isChecked ? '1' : '0.75'}; width: 100%; box-sizing: border-box;"
+              >
+                <!-- LADO IZQUIERDO: Checkbox Institucional + Icono en Caja + Info del Archivo -->
+                <div style="display: flex; align-items: center; gap: 14px; min-width: 0; flex: 1;">
+                  <!-- Checkbox con color institucional #00594E (NUNCA azul) -->
+                  <input
+                    type="checkbox"
+                    name="responder_file_check"
+                    value="${escapeHtml(a.id || a.storage_path || cleanName)}"
+                    ${isChecked ? 'checked' : ''}
+                    class="responder-file-checkbox"
+                    style="accent-color: #00594E; width: 19px; height: 19px; cursor: pointer; flex-shrink: 0; margin: 0;"
                   />
-                  <div class="file-icon-badge">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+
+                  <!-- Contenedor elegante para el icono SVG del documento -->
+                  <div style="width: 40px; height: 40px; border-radius: 10px; background: #FFFFFF; border: 1px solid #B2CFCB; color: #00594E; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00594E" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                   </div>
-                  <div class="responder-file-title-wrap">
-                    <span class="responder-file-name" title="${escapeHtml(cleanName)}">
+
+                  <!-- Nombre del archivo y metadatos en columna limpia -->
+                  <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1;">
+                    <span style="font-size: 0.92rem; font-weight: 700; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(cleanName)}">
                       ${escapeHtml(cleanName)}
                     </span>
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                      <!-- Badge de la Subcarpeta / Origen en Dorado/Verde Institucional -->
+                      <span style="display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 999px; font-size: 0.74rem; font-weight: 600; background: #F7F5EE; color: #786832; border: 1px solid #DBD2B0;">
+                        ${escapeHtml(subLabel)}
+                      </span>
+                      <span style="font-size: 0.76rem; font-weight: 500; color: #52606D;">
+                        • ${escapeHtml(sizeLabel)}
+                      </span>
+                    </div>
                   </div>
                 </div>
-                <div class="responder-file-right">
-                  <span class="subfolder-chip">${escapeHtml(subLabel)}</span>
-                  <span class="file-size-text">${a.tamano_bytes ? (a.tamano_bytes / 1024).toFixed(0) + ' KB' : 'Soporte digital'}</span>
-                </div>
+
+                <!-- LADO DERECHO: Indicador visual de estado seleccionado -->
+                <span class="file-status-pill" style="display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; background: ${isChecked ? '#00594E' : '#F1F5F9'}; color: ${isChecked ? '#FFFFFF' : '#64748B'}; flex-shrink: 0;">
+                  ${isChecked ? 'Incluido' : 'Omitido'}
+                </span>
               </label>
             `;
           }).join('');
 
-          // Actualizar clase .selected al interactuar con cada fila/checkbox
+          // Actualizar estado visual y clases al interactuar con cada fila/checkbox
           responderArchivosContainer.querySelectorAll<HTMLInputElement>('input[name="responder_file_check"]').forEach((cb) => {
             cb.addEventListener('change', () => {
-              const card = cb.closest('.responder-file-card');
+              const card = cb.closest<HTMLElement>('.modal-file-item, .responder-file-card');
               if (card) {
-                if (cb.checked) card.classList.add('selected');
-                else card.classList.remove('selected');
+                updateFileCardState(card, cb.checked);
               }
             });
           });

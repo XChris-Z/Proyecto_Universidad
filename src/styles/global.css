@@ -6700,5 +6700,70 @@ p, h1, h2, h3, h4, h5, h6, span, label, td, th {
   }
 }
 
+/* ==========================================================================
+   TARJETAS BENTO DE ARCHIVOS EN MODAL DE RESPUESTA OFICIAL (PRO MAX)
+   ========================================================================== */
+.modal-file-item,
+.responder-file-card {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 14px !important;
+  padding: 14px 18px !important;
+  margin-bottom: 10px !important;
+  border-radius: 12px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  user-select: none !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+}
+
+.modal-file-item.selected,
+.responder-file-card.selected,
+.modal-file-item:has(input[type="checkbox"]:checked),
+.responder-file-card:has(input[type="checkbox"]:checked) {
+  background: #F2F7F6 !important;
+  border: 1.5px solid #00594E !important;
+  box-shadow: 0 2px 6px rgba(0, 89, 78, 0.05) !important;
+  opacity: 1 !important;
+}
+
+.modal-file-item:not(.selected):not(:has(input[type="checkbox"]:checked)),
+.responder-file-card:not(.selected):not(:has(input[type="checkbox"]:checked)) {
+  background: #FFFFFF !important;
+  border: 1.5px solid #DCE4E3 !important;
+  box-shadow: none !important;
+  opacity: 0.75 !important;
+}
+
+.modal-file-item:hover,
+.responder-file-card:hover {
+  border-color: #00594E !important;
+}
+
+.modal-file-item input[type="checkbox"],
+.responder-file-checkbox {
+  accent-color: #00594E !important;
+  width: 19px !important;
+  height: 19px !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+  margin: 0 !important;
+}
+
+.file-status-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  padding: 4px 10px !important;
+  border-radius: 8px !important;
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  flex-shrink: 0 !important;
+  transition: all 0.2s ease !important;
+}
+
+
 
 
