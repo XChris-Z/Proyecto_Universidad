@@ -230,7 +230,7 @@ const pendientesCount = peticionesList.filter((p: any) => p.estado !== 'respondi
                           const foundMap: any = {};
                           const matches = cleanObs.matchAll(/\[([a-zA-Z0-9_\-\s]+)\]/g);
                           for (const m of matches) {
-                            const name = m[1]?.trim();
+                            const name = String(m?.[1] || '').trim();
                             if (name && esSubcarpetaValida(name) && !foundMap[name.toUpperCase()]) {
                               foundMap[name.toUpperCase()] = { id: `inf-${pet.id}-${name}`, nombre: name, peticion_id: pet.id };
                             }
@@ -238,7 +238,7 @@ const pendientesCount = peticionesList.filter((p: any) => p.estado !== 'respondi
                           (dbAnexos || []).filter((a: any) => a.peticion_id === pet.id).forEach((a: any) => {
                             const fm = (a.nombre_archivo || '').match(/\[([a-zA-Z0-9_\-\s]+)\]/i);
                             if (fm && fm[1]) {
-                              const name = (fm[1] || '').trim();
+                              const name = String(fm[1] || '').trim();
                               if (name && esSubcarpetaValida(name) && !foundMap[name.toUpperCase()]) {
                                 foundMap[name.toUpperCase()] = { id: `inf-${pet.id}-${name}`, nombre: name, peticion_id: pet.id };
                               }

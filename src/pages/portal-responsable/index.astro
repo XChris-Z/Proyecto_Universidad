@@ -1555,11 +1555,10 @@ import Layout from '@layouts/Layout.astro';
     // Parsear subcarpetas en formato [1.1]: ... [1.2]: ... o [Subcarpeta X]: ...
     const bracketPattern = /\[([^\]]+)\]:?\s*([^[|\n]+(?:\n(?![\[\s]*[0-9a-zA-Z._-]+\s*\]:)[^[|\n]+)*)/g;
     const parsedRequirementsMap = new Map<string, string>();
-    let m: RegExpExecArray | null;
-    while ((m = bracketPattern.exec(rawDescripcion)) !== null) {
-      if (!m) break;
-      const subKey = (m[1] ?? '').trim();
-      const subReq = (m[2] ?? '').trim();
+    const allBracketMatches = Array.from(rawDescripcion.matchAll(bracketPattern));
+    for (const match of allBracketMatches) {
+      const subKey = String(match?.[1] ?? '').trim();
+      const subReq = String(match?.[2] ?? '').trim();
       if (subKey && esSubcarpetaValida(subKey)) {
         parsedRequirementsMap.set(subKey.toLowerCase(), subReq);
       }
@@ -1577,9 +1576,10 @@ import Layout from '@layouts/Layout.astro';
       const newSubs: any[] = [];
       let sIdx = 0;
       for (const [subKey, subReq] of parsedRequirementsMap.entries()) {
-        const origKey = Array.from(rawDescripcion.matchAll(/\[(.*?)\]:/g))
-          .map(match => (match?.[1] ?? '').trim())
-          .find(k => k.toLowerCase() === subKey) || subKey;
+        const keyMatches = Array.from(rawDescripcion.matchAll(/\[(.*?)\]:/g));
+        const origKey = keyMatches
+          .map((match: any) => String(match?.[1] ?? '').trim())
+          .find((k: string) => k.toLowerCase() === subKey) || subKey;
           
         newSubs.push({
           id: `parsed-sub-${sIdx + 1}`,

@@ -201,8 +201,8 @@ function combineSubcarpetas(p: any, dbSubs: any[] = []): any[] {
     const withoutPin = textoLimpio.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '');
     const matches = withoutPin.matchAll(/\[([^\]\r\n]+)\](?:\s*:?\s*([^|\[\r\n]+))?/g);
     for (const m of matches) {
-      const name = (m[1] || '').trim();
-      const desc = (m[2] || '').trim() || null;
+      const name = String(m?.[1] || '').trim();
+      const desc = String(m?.[2] || '').trim() || null;
       if (name && esSubcarpetaValida({ nombre: name, descripcion: desc })) {
         const key = name.toUpperCase();
         const existing = foundSubs[key];
@@ -224,7 +224,7 @@ function combineSubcarpetas(p: any, dbSubs: any[] = []): any[] {
     const fileName = a?.nombre_archivo || '';
     const m = fileName.match(/\[([^\]\r\n]+)\]/i);
     if (m && m[1]) {
-      const name = (m[1] || '').trim();
+      const name = String(m[1] || '').trim();
       if (name && esSubcarpetaValida({ nombre: name })) {
         const key = name.toUpperCase();
         if (!foundSubs[key]) {
@@ -243,8 +243,8 @@ function combineSubcarpetas(p: any, dbSubs: any[] = []): any[] {
   if (cleanDesc) {
     const matches = cleanDesc.matchAll(/\[([^\]\r\n]+)\](?:\s*:?\s*([^|\[\r\n]+))?/g);
     for (const m of matches) {
-      const name = (m[1] || '').trim();
-      const desc = (m[2] || '').trim() || null;
+      const name = String(m?.[1] || '').trim();
+      const desc = String(m?.[2] || '').trim() || null;
       if (name && esSubcarpetaValida({ nombre: name, descripcion: desc })) {
         const key = name.toUpperCase();
         const existing = foundSubs[key];
@@ -863,151 +863,135 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
     </div>
   </div>
 
-  <!-- Modal: Enviar Respuesta Oficial al Solicitante (Bento Pro Max) -->
+  <!-- Modal: Enviar Respuesta Oficial al Solicitante (UI/UX Pro Max Sobrio) -->
   <div class="modal-backdrop" id="modal-responder-solicitante" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 2100; align-items: center; justify-content: center; padding: 16px;">
-    <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 860px; border-radius: var(--radius-md); box-shadow: 0 20px 40px rgba(0,0,0,0.2); overflow: hidden; max-height: 92vh; display: flex; flex-direction: column;">
+    <div class="modal-card responder-modal-card">
       
-      <!-- Encabezado Institucional del Modal -->
-      <div style="background: #006837; color: #ffffff; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #b8860b;">
-        <div>
-          <span style="font-size: 0.68rem; font-weight: 800; color: #fde68a; letter-spacing: 0.8px; text-transform: uppercase; display: block;">SGD Unitrópico &bull; Cierre del Ciclo Documental</span>
-          <h3 style="font-size: 1.15rem; font-weight: 800; margin: 2px 0 0 0; display: flex; align-items: center; gap: 8px;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            <span>Despacho de Respuesta Oficial al Solicitante</span>
-          </h3>
+      <!-- Encabezado Institucional del Modal (Bento Pro Max Limpio en Blanco) -->
+      <div class="responder-modal-header">
+        <div class="header-brand-block">
+          <div class="header-icon-box">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </div>
+          <div>
+            <span class="header-portal-tag">SGD Unitrópico &bull; Cierre del Ciclo Documental</span>
+            <h3 class="header-main-title">Despacho de Respuesta Oficial al Solicitante</h3>
+          </div>
         </div>
-        <button type="button" id="btn-close-responder-modal" style="background: transparent; border: none; font-size: 1.6rem; color: #ffffff; cursor: pointer; line-height: 1;">&times;</button>
+        <button type="button" id="btn-close-responder-modal" class="btn-close-responder-clean" title="Cerrar ventana">&times;</button>
       </div>
 
-      <form id="form-responder-solicitante" style="padding: 24px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto;">
+      <form id="form-responder-solicitante" class="responder-modal-body">
         <input type="hidden" id="responder-pet-id" />
 
-        <!-- BLOQUE A: DESTINATARIO Y VIGENCIA -->
-        <div style="display: flex; flex-direction: column; gap: 10px;">
-          <div style="font-size: 0.76rem; font-weight: 800; text-transform: uppercase; color: #006837; letter-spacing: 0.5px;">
-            Bloque A &bull; Datos del Solicitante y Vigencia Temporal
+        <!-- SECCIÓN 1: DATOS DEL SOLICITANTE Y VIGENCIA TEMPORAL -->
+        <div class="responder-section-block">
+          <div class="responder-section-heading">
+            <span class="heading-accent-bar"></span>
+            <h4>Datos del Solicitante y Vigencia Temporal</h4>
           </div>
           
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">
+          <div class="responder-meta-grid">
             <!-- Radicado & Asunto -->
-            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
-              <span style="font-size: 0.68rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Radicado y Asunto:</span>
-              <div id="responder-disp-radicado" style="font-size: 0.88rem; font-weight: 800; color: #006837; font-family: monospace; margin-top: 2px;">RAD-2026-XXXXX</div>
-              <div id="responder-disp-asunto" style="font-size: 0.78rem; color: #1e293b; font-weight: 600; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Asunto</div>
+            <div class="responder-meta-card">
+              <span class="meta-label">Radicado y Asunto:</span>
+              <div id="responder-disp-radicado" class="meta-radicado-val">RAD-2026-XXXXX</div>
+              <div id="responder-disp-asunto" class="meta-asunto-val">Asunto</div>
             </div>
 
             <!-- Solicitante & Correo editable -->
-            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
-              <span style="font-size: 0.68rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Solicitante:</span>
-              <div id="responder-disp-solicitante" style="font-size: 0.84rem; font-weight: 750; color: #0f172a; margin-top: 2px;">Nombre del Solicitante</div>
+            <div class="responder-meta-card">
+              <span class="meta-label">Solicitante:</span>
+              <div id="responder-disp-solicitante" class="meta-solicitante-val">Nombre del Solicitante</div>
               <div style="margin-top: 6px;">
-                <label style="font-size: 0.68rem; color: #64748b; font-weight: 600; display: block;">Correo de Notificación (Editable si requiere corrección):</label>
-                <input type="email" id="responder-solicitante-email" required class="form-input" style="padding: 5px 10px; font-size: 0.80rem; margin-top: 3px; font-weight: 600; background: #ffffff;" />
+                <label for="responder-solicitante-email" class="meta-sublabel">Correo de Notificación (Editable si requiere corrección):</label>
+                <input type="email" id="responder-solicitante-email" required class="responder-email-input" />
               </div>
             </div>
           </div>
 
           <!-- Banner de Vigencia Estricta 10 Días -->
-          <div style="background: #fefce8; border: 1px solid #fef08a; border-left: 4px solid #b8860b; border-radius: 8px; padding: 10px 14px; font-size: 0.78rem; color: #854d0e; display: flex; align-items: center; gap: 8px;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b8860b" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <div class="responder-vigencia-pill">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             <div>
               <strong>Candado de Vigencia Temporal (10 Días Calendario):</strong>
-              <span>El enlace de acceso y los archivos estarán habilitados para consulta y descarga pública hasta el <strong id="responder-disp-fecha-expira">--</strong>. Tras este plazo caducará automáticamente.</span>
+              <span> El enlace de acceso y los archivos estarán habilitados para consulta y descarga pública hasta el <strong id="responder-disp-fecha-expira">--</strong>. Tras este plazo caducará automáticamente.</span>
             </div>
           </div>
         </div>
 
-        <!-- BLOQUE B: TABLA / LISTA DE REVISIÓN DEL EXPEDIENTE A ENTREGAR -->
-        <div style="display: flex; flex-direction: column; gap: 10px;">
+        <!-- SECCIÓN 2: SELECCIÓN DE SOPORTES Y ANEXOS A HABILITAR -->
+        <div class="responder-section-block">
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-            <div style="font-size: 0.76rem; font-weight: 800; text-transform: uppercase; color: #006837; letter-spacing: 0.5px;">
-              Bloque B &bull; Selección de Soportes y Anexos a Habilitar
+            <div class="responder-section-heading">
+              <span class="heading-accent-bar"></span>
+              <h4>Selección de Soportes y Anexos a Habilitar</h4>
             </div>
-            <button type="button" id="btn-toggle-all-responder-files" style="background: transparent; border: none; font-size: 0.72rem; font-weight: 700; color: #006837; cursor: pointer; text-decoration: underline;">
-              Marcar / Desmarcar todos
+            <button type="button" id="btn-toggle-all-responder-files" class="btn-toggle-files-pill">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              <span>Marcar / Desmarcar todos</span>
             </button>
           </div>
 
-          <p style="margin: 0; font-size: 0.78rem; color: #64748b;">
+          <p class="responder-hint-text">
             Revise los soportes consolidados del expediente. Los archivos marcados con casilla de verificación serán los únicos disponibles para descarga en el portal del solicitante.
           </p>
 
-          <div id="responder-archivos-container" style="max-height: 200px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; background: #fafaf9; display: flex; flex-direction: column; gap: 8px;">
+          <div id="responder-archivos-container" class="responder-files-container">
             <!-- Inyectado dinámicamente -->
           </div>
-
-          <!-- Campo Opcional Enlace Drive -->
-          <div style="margin-top: 4px;">
-            <label style="font-size: 0.74rem; font-weight: 700; color: #334155; text-transform: uppercase;">
-              Enlace adicional a carpeta externa / Drive (Opcional):
-            </label>
-            <input 
-              type="url" 
-              id="responder-drive-url" 
-              class="form-input" 
-              placeholder="https://drive.google.com/drive/folders/..." 
-              style="font-size: 0.82rem; margin-top: 4px;" 
-            />
-          </div>
         </div>
 
-        <!-- BLOQUE C: TARJETA DE RESPUESTA OFICIAL DEL FUNCIONARIO -->
-        <div style="display: flex; flex-direction: column; gap: 10px;">
-          <div style="font-size: 0.76rem; font-weight: 800; text-transform: uppercase; color: #006837; letter-spacing: 0.5px;">
-            Bloque C &bull; Redacción del Pronunciamiento Oficial
+        <!-- SECCIÓN 3: REDACCIÓN DEL PRONUNCIAMIENTO OFICIAL (100% ANCHO, BENTO PRO MAX) -->
+        <div class="responder-section-block">
+          <div class="responder-section-heading">
+            <span class="heading-accent-bar"></span>
+            <h4>Redacción del Pronunciamiento Oficial</h4>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
-            <!-- Columna Izquierda: Redacción -->
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-              <div>
-                <label style="font-size: 0.72rem; font-weight: 700; color: #475569; text-transform: uppercase;">Funcionario / Oficina que emite:</label>
-                <input type="text" id="responder-funcionario-input" class="form-input" value="Oficina de Correspondencia y Gestión Documental" style="font-size: 0.80rem; font-weight: 600;" required />
-              </div>
-
-              <div>
-                <label style="font-size: 0.72rem; font-weight: 700; color: #475569; text-transform: uppercase;">Texto de la Respuesta Oficial *</label>
-                <textarea 
-                  id="responder-mensaje-input" 
-                  rows="6" 
-                  class="form-input" 
-                  placeholder="Redacte la respuesta formal al solicitante..." 
-                  style="font-size: 0.82rem; line-height: 1.6; resize: vertical;" 
-                  required
-                ></textarea>
-              </div>
+          <div class="responder-redaccion-bento">
+            <!-- Fila Funcionario / Dependencia -->
+            <div class="form-field-group">
+              <label for="responder-funcionario-input" class="responder-field-label">
+                Funcionario / Dependencia que emite la respuesta *
+              </label>
+              <input 
+                type="text" 
+                id="responder-funcionario-input" 
+                class="responder-input-text" 
+                value="Oficina de Correspondencia y Gestión Documental" 
+                placeholder="Ej: Oficina de Correspondencia y Gestión Documental"
+                required 
+              />
             </div>
 
-            <!-- Columna Derecha: Vista Previa en Vivo -->
-            <div style="display: flex; flex-direction: column; gap: 6px;">
-              <span style="font-size: 0.70rem; font-weight: 700; color: #64748b; text-transform: uppercase;">
-                Vista Previa en Vivo (Tarjeta Oficial del Solicitante):
-              </span>
-              <div style="background: #ffffff; border: 1px solid #e2e8f0; border-top: 3px solid #006837; border-radius: 8px; padding: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); height: 100%; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between;">
-                <div>
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span style="font-size: 0.65rem; font-weight: 800; color: #006837; background: #f0fdf4; padding: 2px 6px; border-radius: 4px;">RESPUESTA OFICIAL</span>
-                    <span style="font-size: 0.68rem; color: #64748b;" id="preview-funcionario">Oficina de Correspondencia</span>
-                  </div>
-                  <div id="preview-mensaje-body" style="font-size: 0.78rem; color: #1e293b; line-height: 1.55; white-space: pre-wrap; max-height: 140px; overflow-y: auto;">
-                    Escriba en el campo de la izquierda para previsualizar aquí el pronunciamiento...
-                  </div>
-                </div>
-                <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #cbd5e1; font-size: 0.68rem; color: #854d0e; display: flex; align-items: center; gap: 4px;">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#b8860b" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                  <span>Vigencia: 10 días calendario con candado temporal</span>
-                </div>
+            <!-- Fila Texto de la Respuesta Oficial -->
+            <div class="form-field-group">
+              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+                <label for="responder-mensaje-input" class="responder-field-label">
+                  Texto de la Respuesta Oficial *
+                </label>
+                <span style="font-size: 0.70rem; color: #52606D; font-weight: 500;">
+                  Se incluirá en el cuerpo del correo y portal oficial
+                </span>
               </div>
+              <textarea 
+                id="responder-mensaje-input" 
+                rows="6" 
+                class="responder-textarea-text" 
+                placeholder="Redacte la respuesta formal y de fondo al solicitante..." 
+                required
+              ></textarea>
             </div>
           </div>
         </div>
 
-        <!-- Botones de Acción -->
-        <div style="display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-top: 10px; border-top: 1px solid var(--border-subtle); padding-top: 16px;">
-          <button type="button" class="btn btn-secondary" id="btn-cancel-responder-modal">
+        <!-- Botones de Acción / Pie del Modal -->
+        <div class="responder-modal-footer">
+          <button type="button" class="btn-responder-cancel" id="btn-cancel-responder-modal">
             Cancelar
           </button>
-          <button type="submit" class="btn btn-primary" id="btn-submit-responder" style="background: #006837; border-color: #006837; font-weight: 800; font-size: 0.88rem; padding: 10px 24px; box-shadow: 0 2px 8px rgba(0, 104, 55, 0.25);">
+          <button type="submit" class="btn-responder-submit" id="btn-submit-responder">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
             <span id="btn-submit-responder-text">Confirmar y Enviar Respuesta Oficial</span>
           </button>
@@ -1089,6 +1073,454 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
     }
     .subfolder-box:hover {
       border-color: var(--verde-principal);
+    }
+
+    /* ==========================================================================
+       MODAL: DESPACHO DE RESPUESTA OFICIAL AL SOLICITANTE (UI/UX PRO MAX SOBRIO)
+       ========================================================================== */
+    .responder-modal-card {
+      background: #ffffff;
+      width: 100%;
+      max-width: 860px;
+      border-radius: 14px;
+      box-shadow: 0 24px 50px -12px rgba(0, 89, 78, 0.18), 0 10px 20px -5px rgba(0, 0, 0, 0.08);
+      overflow: hidden;
+      max-height: 92vh;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid #DCE4E3;
+      border-top: 4px solid #00594E;
+    }
+
+    .responder-modal-header {
+      background: #ffffff;
+      border-bottom: 1px solid #DCE4E3;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header-brand-block {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .header-icon-box {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      background: #F2F7F6;
+      border: 1px solid #B2CFCB;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #00594E;
+      flex-shrink: 0;
+    }
+
+    .header-portal-tag {
+      font-size: 0.68rem;
+      font-weight: 750;
+      color: #B5A160;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .header-main-title {
+      font-size: 1.18rem;
+      font-weight: 800;
+      color: #111827;
+      margin: 0;
+      letter-spacing: -0.01em;
+    }
+
+    .btn-close-responder-clean {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      color: #64748B;
+      cursor: pointer;
+      line-height: 1;
+      transition: all 0.2s ease;
+    }
+
+    .btn-close-responder-clean:hover {
+      background: #FEE2E2;
+      color: #DC2626;
+      border-color: #FECACA;
+    }
+
+    .responder-modal-body {
+      padding: 22px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      overflow-y: auto;
+    }
+
+    .responder-section-block {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .responder-section-heading {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .responder-section-heading h4 {
+      margin: 0;
+      font-size: 0.82rem;
+      font-weight: 800;
+      color: #111827;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .heading-accent-bar {
+      width: 4px;
+      height: 15px;
+      border-radius: 2px;
+      background: #00594E;
+      display: inline-block;
+    }
+
+    .responder-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+    }
+
+    .responder-meta-card {
+      background: #F2F7F6;
+      border: 1px solid #DCE4E3;
+      border-radius: 10px;
+      padding: 12px 16px;
+    }
+
+    .meta-label {
+      font-size: 0.68rem;
+      font-weight: 750;
+      color: #52606D;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .meta-sublabel {
+      font-size: 0.68rem;
+      color: #52606D;
+      font-weight: 600;
+      display: block;
+    }
+
+    .meta-radicado-val {
+      font-size: 0.90rem;
+      font-weight: 800;
+      color: #00594E;
+      font-family: monospace;
+      margin-top: 3px;
+    }
+
+    .meta-asunto-val {
+      font-size: 0.80rem;
+      color: #1E293B;
+      font-weight: 600;
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .meta-solicitante-val {
+      font-size: 0.86rem;
+      font-weight: 750;
+      color: #111827;
+      margin-top: 3px;
+    }
+
+    .responder-email-input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 6px 10px;
+      font-size: 0.82rem;
+      margin-top: 3px;
+      font-weight: 600;
+      background: #FFFFFF;
+      border: 1px solid #CBD5E1;
+      border-radius: 6px;
+      color: #111827;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .responder-email-input:focus {
+      border-color: #00594E;
+      box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.12);
+    }
+
+    .responder-vigencia-pill {
+      background: #FBF9F5;
+      border: 1px solid #DBD2B0;
+      border-left: 4px solid #B5A160;
+      border-radius: 8px;
+      padding: 11px 14px;
+      font-size: 0.78rem;
+      color: #854D0E;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      line-height: 1.45;
+    }
+
+    .responder-vigencia-pill svg {
+      color: #B5A160;
+      flex-shrink: 0;
+    }
+
+    .btn-toggle-files-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      color: #00594E;
+      background: #F2F7F6;
+      border: 1px solid #B2CFCB;
+      border-radius: 8px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-toggle-files-pill:hover {
+      background: #E6EFEF;
+      border-color: #00594E;
+    }
+
+    .responder-hint-text {
+      margin: 0;
+      font-size: 0.78rem;
+      color: #52606D;
+      line-height: 1.4;
+    }
+
+    .responder-files-container {
+      max-height: 220px;
+      overflow-y: auto;
+      border: 1px solid #DCE4E3;
+      border-radius: 10px;
+      padding: 10px;
+      background: #F8FAFC;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .responder-file-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #ffffff;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      padding: 9px 12px;
+      cursor: pointer;
+      gap: 12px;
+      transition: all 0.18s ease;
+      user-select: none;
+    }
+
+    .responder-file-card:hover {
+      border-color: #B2CFCB;
+      background: #FAFDFC;
+    }
+
+    .responder-file-card.selected,
+    .responder-file-card:has(input[type="checkbox"]:checked) {
+      border-color: #00594E;
+      background: #F2F7F6;
+    }
+
+    .responder-file-checkbox {
+      accent-color: #00594E;
+      width: 17px;
+      height: 17px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .file-icon-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      background: #E6EFEF;
+      color: #00594E;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .responder-file-name {
+      font-size: 0.82rem;
+      font-weight: 750;
+      color: #111827;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .responder-file-meta {
+      font-size: 0.69rem;
+      color: #52606D;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 1px;
+    }
+
+    .subfolder-chip {
+      background: #E6EFEF;
+      color: #00594E;
+      padding: 1px 7px;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 0.68rem;
+    }
+
+    .responder-redaccion-bento {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 14px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .form-field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .responder-field-label {
+      font-size: 0.74rem;
+      font-weight: 750;
+      color: #1E293B;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .responder-input-text {
+      width: 100%;
+      box-sizing: border-box;
+      background: #FFFFFF;
+      border: 1px solid #CBD5E1;
+      border-radius: 10px;
+      padding: 11px 14px;
+      font-size: 0.90rem;
+      color: #111827;
+      font-weight: 600;
+      font-family: inherit;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .responder-input-text:focus {
+      border-color: #00594E;
+      box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.12);
+    }
+
+    .responder-textarea-text {
+      min-height: 150px;
+      width: 100%;
+      box-sizing: border-box;
+      background: #FFFFFF;
+      border: 1px solid #CBD5E1;
+      border-left: 4px solid #00594E;
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-size: 0.92rem;
+      line-height: 1.65;
+      color: #111827;
+      font-family: inherit;
+      resize: vertical;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .responder-textarea-text:focus {
+      border-color: #00594E;
+      box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.12);
+    }
+
+    .responder-modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 12px;
+      margin-top: 4px;
+      border-top: 1px solid #DCE4E3;
+      padding-top: 16px;
+    }
+
+    .btn-responder-cancel {
+      background: #FFFFFF;
+      color: #52606D;
+      border: 1px solid #CBD5E1;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.86rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-responder-cancel:hover {
+      background: #F1F5F9;
+      color: #111827;
+    }
+
+    .btn-responder-submit {
+      background: #00594E;
+      border: 1px solid #00594E;
+      color: #FFFFFF;
+      padding: 11px 24px;
+      border-radius: 8px;
+      font-weight: 800;
+      font-size: 0.88rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(0, 89, 78, 0.25);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-responder-submit:hover:not(:disabled) {
+      background: #1A6A60;
+      border-color: #1A6A60;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(0, 89, 78, 0.35);
+    }
+
+    .btn-responder-submit:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
     }
   </style>
 
@@ -1179,8 +1611,8 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         const withoutPin = textoLimpio.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '');
         const matches = withoutPin.matchAll(/\[([^\]\r\n]+)\](?:\s*:?\s*([^|\[\r\n]+))?/g);
         for (const m of matches) {
-          const name = (m[1] || '').trim();
-          const desc = (m[2] || '').trim() || null;
+          const name = String(m?.[1] || '').trim();
+          const desc = String(m?.[2] || '').trim() || null;
           if (name && esSubcarpetaValida({ nombre: name, descripcion: desc })) {
             const key = name.toUpperCase();
             const existing = foundSubs[key];
@@ -1202,7 +1634,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         const fileName = a?.nombre_archivo || '';
         const m = fileName.match(/\[([^\]\r\n]+)\]/i);
         if (m && m[1]) {
-          const name = (m[1] || '').trim();
+          const name = String(m[1] || '').trim();
           if (name && esSubcarpetaValida({ nombre: name })) {
             const key = name.toUpperCase();
             if (!foundSubs[key]) {
@@ -1221,8 +1653,8 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       if (cleanDesc) {
         const matches = cleanDesc.matchAll(/\[([^\]\r\n]+)\](?:\s*:?\s*([^|\[\r\n]+))?/g);
         for (const m of matches) {
-          const name = (m[1] || '').trim();
-          const desc = (m[2] || '').trim() || null;
+          const name = String(m?.[1] || '').trim();
+          const desc = String(m?.[2] || '').trim() || null;
           if (name && esSubcarpetaValida({ nombre: name, descripcion: desc })) {
             const key = name.toUpperCase();
             const existing = foundSubs[key];
@@ -1504,10 +1936,10 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         const { textoLimpio: rawInstrucciones, respuestaMeta } = separarRespuestaMeta(peticion.instrucciones_anexos || peticion.descripcion || '');
         const bracketPattern = /\[([^\]]+)\]:?\s*([^[|\n]+(?:\n(?![\[\s]*[0-9a-zA-Z._-]+\s*\]:)[^[|\n]+)*)/g;
         const parsedInstruccionesMap = new Map<string, string>();
-        let im;
-        while ((im = bracketPattern.exec(rawInstrucciones)) !== null) {
-          const k = (im[1] || '').trim();
-          const v = (im[2] || '').trim();
+        const allInstruccionMatches = Array.from(rawInstrucciones.matchAll(bracketPattern));
+        for (const im of allInstruccionMatches) {
+          const k = String(im?.[1] ?? '').trim();
+          const v = String(im?.[2] ?? '').trim();
           if (k && esSubcarpetaValida(k)) {
             parsedInstruccionesMap.set(k.toLowerCase(), v);
           }
@@ -1527,9 +1959,10 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
           });
         } else if (parsedInstruccionesMap.size > 0) {
           subReqsList = Array.from(parsedInstruccionesMap.entries()).map(([k, v]) => {
-            const origKey = Array.from(rawInstrucciones.matchAll(/\[(.*?)\]:/g))
-              .map(m => (m[1] || '').trim())
-              .find(name => name.toLowerCase() === k) || k;
+            const origKeyMatches = Array.from(rawInstrucciones.matchAll(/\[(.*?)\]:/g));
+            const origKey = origKeyMatches
+              .map((m: any) => String(m?.[1] ?? '').trim())
+              .find((name: string) => name.toLowerCase() === k) || k;
             return {
               nombre: origKey,
               descripcion: v
@@ -2760,28 +3193,22 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
     const responderEmailInput = document.getElementById('responder-solicitante-email') as HTMLInputElement | null;
     const responderExpiraLabel = document.getElementById('responder-disp-fecha-expira');
     const responderArchivosContainer = document.getElementById('responder-archivos-container');
-    const responderDriveInput = document.getElementById('responder-drive-url') as HTMLInputElement | null;
     const responderFuncionarioInput = document.getElementById('responder-funcionario-input') as HTMLInputElement | null;
     const responderMensajeInput = document.getElementById('responder-mensaje-input') as HTMLTextAreaElement | null;
-    const previewFuncionario = document.getElementById('preview-funcionario');
-    const previewMensajeBody = document.getElementById('preview-mensaje-body');
     const btnToggleAllFiles = document.getElementById('btn-toggle-all-responder-files');
-
-    function updateLivePreview() {
-      const funcionario = responderFuncionarioInput?.value.trim() || 'Oficina de Correspondencia y Gestión Documental';
-      const mensaje = responderMensajeInput?.value.trim() || 'Escriba en el campo de la izquierda para previsualizar aquí el pronunciamiento...';
-      if (previewFuncionario) previewFuncionario.textContent = funcionario;
-      if (previewMensajeBody) previewMensajeBody.textContent = mensaje;
-    }
-
-    responderFuncionarioInput?.addEventListener('input', updateLivePreview);
-    responderMensajeInput?.addEventListener('input', updateLivePreview);
 
     let allFilesChecked = true;
     btnToggleAllFiles?.addEventListener('click', () => {
       allFilesChecked = !allFilesChecked;
       const cbs = document.querySelectorAll<HTMLInputElement>('input[name="responder_file_check"]');
-      cbs.forEach((cb) => { cb.checked = allFilesChecked; });
+      cbs.forEach((cb) => {
+        cb.checked = allFilesChecked;
+        const card = cb.closest('.responder-file-card');
+        if (card) {
+          if (allFilesChecked) card.classList.add('selected');
+          else card.classList.remove('selected');
+        }
+      });
     });
 
     function openResponderModal(petId: string) {
@@ -2799,8 +3226,6 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       const expStr = expDate.toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
       if (responderExpiraLabel) responderExpiraLabel.textContent = expStr;
 
-      // Valores previos si ya se había respondido
-      if (responderDriveInput) responderDriveInput.value = pet.respuesta_drive_url || '';
       if (responderFuncionarioInput) {
         responderFuncionarioInput.value = pet.respuesta_funcionario || 'Oficina de Correspondencia y Gestión Documental';
       }
@@ -2808,7 +3233,6 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       // Plantilla por defecto para redactar
       const defaultMensaje = pet.respuesta_mensaje || `Estimado(a) ${pet.solicitante_nombre || 'solicitante'}, en atención a su comunicación oficial radicada bajo el N° ${pet.numero_radicado}, nos permitimos informarle que la institución ha emitido respuesta de fondo. Se anexan al presente expediente los soportes correspondientes debidamente certificados.`;
       if (responderMensajeInput) responderMensajeInput.value = defaultMensaje;
-      updateLivePreview();
 
       // Renderizar checklist de archivos del expediente
       if (responderArchivosContainer) {
@@ -2833,23 +3257,42 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
             const subLabel = subTag && subTag[1] ? subTag[1].trim() : (a.es_anexo_oficina ? 'Aporte de Dependencia' : 'Documento Inicial');
 
             return `
-              <label style="display: flex; align-items: center; justify-content: space-between; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 12px; cursor: pointer; gap: 10px;">
-                <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
-                  <input type="checkbox" name="responder_file_check" value="${escapeHtml(a.id || a.storage_path || cleanName)}" ${isChecked ? 'checked' : ''} style="accent-color: #006837; width: 16px; height: 16px; cursor: pointer; flex-shrink: 0;" />
-                  <div style="min-width: 0;">
-                    <div style="font-size: 0.80rem; font-weight: 750; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+              <label class="responder-file-card ${isChecked ? 'selected' : ''}">
+                <div style="display: flex; align-items: center; gap: 12px; min-width: 0; width: 100%;">
+                  <input 
+                    type="checkbox" 
+                    name="responder_file_check" 
+                    value="${escapeHtml(a.id || a.storage_path || cleanName)}" 
+                    ${isChecked ? 'checked' : ''} 
+                    class="responder-file-checkbox" 
+                  />
+                  <div class="file-icon-badge">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  </div>
+                  <div style="min-width: 0; flex: 1;">
+                    <div class="responder-file-name" title="${escapeHtml(cleanName)}">
                       ${escapeHtml(cleanName)}
                     </div>
-                    <div style="font-size: 0.68rem; color: #64748b; display: flex; align-items: center; gap: 6px; margin-top: 1px;">
-                      <span style="background: #f1f5f9; padding: 1px 6px; border-radius: 4px; font-weight: 600;">${escapeHtml(subLabel)}</span>
+                    <div class="responder-file-meta">
+                      <span class="subfolder-chip">${escapeHtml(subLabel)}</span>
                       <span>&bull; ${a.tamano_bytes ? (a.tamano_bytes / 1024).toFixed(0) + ' KB' : 'Soporte digital'}</span>
                     </div>
                   </div>
                 </div>
-                <span style="font-size: 0.68rem; color: #006837; font-weight: 700; flex-shrink: 0;">Habilitar</span>
               </label>
             `;
           }).join('');
+
+          // Actualizar clase .selected al interactuar con cada fila/checkbox
+          responderArchivosContainer.querySelectorAll<HTMLInputElement>('input[name="responder_file_check"]').forEach((cb) => {
+            cb.addEventListener('change', () => {
+              const card = cb.closest('.responder-file-card');
+              if (card) {
+                if (cb.checked) card.classList.add('selected');
+                else card.classList.remove('selected');
+              }
+            });
+          });
         }
       }
 
@@ -2865,7 +3308,8 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       const email = responderEmailInput?.value.trim().toLowerCase() || '';
       const mensaje = responderMensajeInput?.value.trim() || '';
       const funcionario = responderFuncionarioInput?.value.trim() || '';
-      const driveUrl = responderDriveInput?.value.trim() || '';
+      const currentPet = petId ? (peticionesMap.get(petId) || allPeticiones.find((p) => p.id === petId)) : null;
+      const driveUrl = currentPet?.respuesta_drive_url || null;
 
       const checkedFiles: string[] = [];
       document.querySelectorAll<HTMLInputElement>('input[name="responder_file_check"]:checked').forEach((cb) => {
