@@ -405,14 +405,7 @@ export const POST: APIRoute = async ({ request }) => {
       }
     }
 
-    // 6. PASO C: Crear subcarpeta contenedora "Anexos y Requerimientos de Dependencias"
-    const anexosContainerFolder = await createDriveFolder(
-      drive,
-      'Anexos y Requerimientos de Dependencias',
-      mainFolder.id
-    );
-
-    // 7. PASO D: Crear cada subcarpeta requerida y subir sus respectivos aportes sin comprimir
+    // 6. PASO C: Crear cada subcarpeta requerida DIRECTAMENTE en la raíz del radicado (sin carpeta contenedora intermedia)
     const subcarpetasCreadasCount = subcarpetas.length;
     const uploadedAnexoIds = new Set<string>();
 
@@ -423,7 +416,8 @@ export const POST: APIRoute = async ({ request }) => {
         ? rawSubName
         : `Subcarpeta ${rawSubName}`;
 
-      const subFolderDrive = await createDriveFolder(drive, subFolderDisplayName, anexosContainerFolder.id);
+      // Hija directa de mainFolder.id (Estructura jerárquica directa y plana)
+      const subFolderDrive = await createDriveFolder(drive, subFolderDisplayName, mainFolder.id);
 
       // Filtrar anexos de dependencias asignados a esta subcarpeta
       const subAnexos = anexosDependencias.filter((a) => {
@@ -451,10 +445,10 @@ export const POST: APIRoute = async ({ request }) => {
       }
     }
 
-    // Si existen anexos que no quedaron clasificados en ninguna subcarpeta, subirlos a una carpeta de soportes adicionales
+    // Si existen anexos que no quedaron clasificados en ninguna subcarpeta, subirlos a una subcarpeta adicional directa
     const unclassifiedAnexos = anexosDependencias.filter((a) => !uploadedAnexoIds.has(a.id || a.storage_path));
     if (unclassifiedAnexos.length > 0) {
-      const otrosFolder = await createDriveFolder(drive, 'Subcarpeta Soportes Adicionales', anexosContainerFolder.id);
+      const otrosFolder = await createDriveFolder(drive, 'Subcarpeta Soportes Adicionales', mainFolder.id);
       for (const anexo of unclassifiedAnexos) {
         if (!anexo.storage_path) continue;
         try {
