@@ -1,0 +1,731 @@
+/* src/styles/consulta-respuesta.css - Estilos del Portal de Consulta */
+:root {
+    /* Color Primario 1: Verde Institucional (Pantone 329 CP) y sus derivados más claros */
+    --uni-green-primary: #00594E;
+    --uni-green-90: #1A6A60;
+    --uni-green-75: #397E75;
+    --uni-green-50: #6E9F98;
+    --uni-green-25: #B2CFCB;
+    --uni-green-10: #E6EFEF;
+    --uni-green-05: #F2F7F6;
+
+    /* Color Primario 2: Dorado / Ocre Institucional (Pantone 4515 CP) y sus derivados más claros */
+    --uni-gold-primary: #B5A160;
+    --uni-gold-90: #C0AE73;
+    --uni-gold-75: #CCC08E;
+    --uni-gold-50: #DBD2B0;
+    --uni-gold-25: #EDE8D7;
+    --uni-gold-10: #F7F5EE;
+    --uni-gold-05: #FBF9F5;
+
+    /* Blanco, Negro y Neutros para detalles tipográficos y bordes */
+    --uni-white: #FFFFFF;
+    --uni-black: #111827;
+    --uni-text-dark: #1E293B;
+    --uni-text-muted: #52606D;
+    --uni-border: #DCE4E3;
+
+    /* Aliases semánticos */
+    --green-main: var(--uni-green-primary);
+    --green-dark: #003E36;
+    --green-light: var(--uni-green-05);
+    --green-border: var(--uni-green-25);
+    --gold-main: var(--uni-gold-primary);
+    --gold-light: var(--uni-gold-05);
+    --gold-border: var(--uni-gold-25);
+    --slate-text: var(--uni-black);
+    --slate-muted: var(--uni-text-muted);
+    --bg-page: #F8FAFA;
+    --card-border: var(--uni-border);
+  }
+
+  .consulta-page-wrapper {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-page);
+    font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
+  }
+
+  /* BARRA DE NAVEGACIÓN INSTITUCIONAL (UI/UX PRO MAX BLANCA SOBRIA) */
+  .consulta-navbar {
+    background: var(--uni-white);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    border-top: 4px solid var(--uni-green-primary);
+    border-bottom: 1px solid var(--uni-border);
+    box-shadow: 0 2px 10px rgba(0, 89, 78, 0.05);
+  }
+  .navbar-content {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .brand-group {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .logo-box {
+    background: transparent;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .nav-logo {
+    height: 38px;
+    width: auto;
+    object-fit: contain;
+  }
+  .sub-portal-tag {
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: var(--uni-gold-primary);
+    letter-spacing: 0.8px;
+    display: block;
+    margin-bottom: 2px;
+  }
+  .portal-main-title {
+    font-size: 1.02rem;
+    font-weight: 800;
+    color: var(--uni-black);
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .badge-portal-status {
+    font-size: 0.72rem;
+    font-weight: 750;
+    color: var(--uni-green-primary);
+    background: var(--uni-green-05);
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--uni-green-25);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .consulta-main-content {
+    flex: 1;
+    max-width: 1100px;
+    width: 100%;
+    margin: 32px auto;
+    padding: 0 20px;
+    box-sizing: border-box;
+  }
+
+  /* PANTALLA 1: TARJETA DE ACCESO */
+  .auth-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px 0;
+  }
+  .auth-bento-card {
+    background: var(--uni-white);
+    border: 1px solid var(--uni-border);
+    border-top: 4px solid var(--uni-green-primary);
+    border-radius: 14px;
+    padding: 36px 32px;
+    max-width: 520px;
+    width: 100%;
+    box-shadow: 0 10px 30px rgba(0, 89, 78, 0.05);
+    text-align: center;
+  }
+  .auth-bento-card.expired {
+    border-top-color: #991b1b;
+  }
+  .auth-icon-circle {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--uni-green-05);
+    border: 1px solid var(--uni-green-25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px auto;
+    color: var(--uni-green-primary);
+  }
+  .expired-icon-circle {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px auto;
+  }
+  .auth-title {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: var(--uni-black);
+    margin: 0 0 8px 0;
+  }
+  .auth-subtitle {
+    font-size: 0.84rem;
+    color: var(--uni-text-muted);
+    line-height: 1.6;
+    margin: 0 0 20px 0;
+  }
+  .vigencia-info-pill {
+    background: var(--uni-gold-05);
+    border: 1px solid var(--uni-gold-25);
+    border-left: 3px solid var(--uni-gold-primary);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.78rem;
+    color: #854d0e;
+    text-align: left;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 24px;
+    line-height: 1.45;
+  }
+
+  .auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    text-align: left;
+  }
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .form-label {
+    font-size: 0.72rem;
+    font-weight: 750;
+    color: #334155;
+    letter-spacing: 0.5px;
+  }
+  .badge-anti-enum {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #854d0e;
+    background: var(--uni-gold-05);
+    border: 1px solid var(--uni-gold-25);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .input-icon-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .input-icon-wrapper svg {
+    position: absolute;
+    left: 12px;
+    pointer-events: none;
+    color: #94a3b8;
+  }
+  .form-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 11px 12px 11px 38px;
+    border: 1px solid var(--uni-border);
+    border-radius: 8px;
+    font-size: 0.88rem;
+    color: var(--uni-black);
+    background: var(--uni-white);
+    transition: all 0.2s ease;
+  }
+  .form-input:focus {
+    outline: none;
+    border-color: var(--uni-green-primary);
+    box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.12);
+  }
+
+  .auth-alert-box {
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.80rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    line-height: 1.4;
+  }
+  .auth-alert-box.error {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+  }
+
+  .btn-primary-consulta {
+    background: var(--uni-green-primary);
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 20px;
+    font-size: 0.88rem;
+    font-weight: 750;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 3px 10px rgba(0, 89, 78, 0.2);
+    transition: all 0.2s ease;
+  }
+  .btn-primary-consulta:hover {
+    background: var(--uni-green-90);
+  }
+  .btn-primary-consulta:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+
+  .auth-card-footer {
+    margin-top: 24px;
+    padding-top: 18px;
+    border-top: 1px solid #f1f5f9;
+    font-size: 0.72rem;
+    color: var(--uni-text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .expired-instruction-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 14px 16px;
+    text-align: left;
+    font-size: 0.82rem;
+  }
+
+  /* PANTALLA 2: VISTA EXPEDIENTE */
+  .expediente-container {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    animation: fadeIn 0.35s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .vigencia-banner {
+    background: var(--uni-white);
+    border: 1px solid var(--uni-border);
+    border-left: 4px solid var(--uni-green-primary);
+    border-radius: 10px;
+    padding: 14px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    box-shadow: 0 2px 6px rgba(0, 89, 78, 0.04);
+  }
+  .vigencia-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .pulse-dot {
+    width: 10px;
+    height: 10px;
+    background: var(--uni-green-primary);
+    border-radius: 50%;
+    box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.2);
+  }
+  .btn-logout {
+    background: var(--uni-green-05);
+    border: 1px solid var(--uni-green-25);
+    color: var(--uni-green-primary);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+  }
+  .btn-logout:hover {
+    background: var(--uni-green-10);
+    color: var(--uni-green-90);
+  }
+
+  /* TARJETA BENTO RESPUESTA OFICIAL */
+  .bento-card {
+    background: var(--uni-white);
+    border: 1px solid var(--uni-border);
+    border-radius: 12px;
+    padding: 28px 30px;
+    box-shadow: 0 4px 16px rgba(0, 89, 78, 0.04);
+  }
+  .respuesta-oficial-card {
+    border-top: 4px solid var(--uni-green-primary);
+  }
+  .respuesta-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .chips-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .chip-radicado {
+    background: var(--uni-green-05);
+    color: var(--uni-green-primary);
+    border: 1px solid var(--uni-green-25);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    font-family: monospace;
+    letter-spacing: 0.5px;
+  }
+  .chip-estado-respondida {
+    background: var(--uni-gold-05);
+    color: #854d0e;
+    border: 1px solid var(--uni-gold-25);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 750;
+  }
+  .emision-fecha {
+    font-size: 0.76rem;
+    color: var(--uni-text-muted);
+    font-weight: 600;
+  }
+  .asunto-title {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--uni-black);
+    margin: 0 0 14px 0;
+    line-height: 1.4;
+  }
+  .funcionario-sign-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--uni-gold-05);
+    border: 1px solid var(--uni-gold-25);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    color: #854d0e;
+    margin-bottom: 20px;
+  }
+  .funcionario-sign-badge svg {
+    stroke: var(--uni-gold-primary);
+  }
+
+  .respuesta-text-container {
+    background: var(--uni-white);
+    border: 1px solid var(--uni-border);
+    border-left: 4px solid var(--uni-green-primary);
+    border-radius: 8px;
+    padding: 22px 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 6px rgba(0, 89, 78, 0.02);
+  }
+  .respuesta-text-body {
+    font-size: 0.95rem;
+    color: var(--uni-text-dark);
+    line-height: 1.8;
+    white-space: pre-wrap;
+    font-family: inherit;
+  }
+
+  .drive-link-box {
+    background: var(--uni-green-05);
+    border: 1px solid var(--uni-green-25);
+    border-radius: 8px;
+    padding: 14px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .btn-external-drive {
+    background: var(--uni-green-primary);
+    color: #ffffff;
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 750;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 6px rgba(0, 89, 78, 0.2);
+    transition: all 0.2s ease;
+  }
+  .btn-external-drive:hover {
+    background: var(--uni-green-90);
+  }
+
+  .metadatos-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    padding-top: 18px;
+    border-top: 1px solid var(--uni-border);
+  }
+  .meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .meta-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--uni-text-muted);
+    letter-spacing: 0.5px;
+  }
+  .meta-val {
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: var(--uni-black);
+  }
+
+  /* EXPLORADOR DE SUBCARPETAS Y ARCHIVOS (ESTILO BENTO ACCORDION GLOBAL) */
+  .anexos-explorer-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .explorer-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .badge-total-files {
+    font-size: 0.74rem;
+    font-weight: 750;
+    color: var(--uni-green-primary);
+    background: var(--uni-green-10);
+    border: 1px solid var(--uni-green-25);
+    padding: 4px 12px;
+    border-radius: 12px;
+  }
+
+  .subcarpetas-container {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .subcarpeta-bento-card {
+    background: var(--uni-white);
+    border: 1px solid var(--uni-border);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 89, 78, 0.03);
+    transition: all 0.2s ease;
+  }
+  .subcarpeta-bento-card:hover {
+    border-color: var(--uni-green-50);
+  }
+  .subcarpeta-header {
+    background: var(--uni-green-05);
+    padding: 12px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 1px solid var(--uni-border);
+    transition: background 0.15s ease;
+  }
+  .subcarpeta-header:hover {
+    background: var(--uni-green-10);
+  }
+  .subcarpeta-title-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .subcarpeta-icon {
+    color: var(--uni-green-primary);
+  }
+  .subcarpeta-name {
+    font-size: 0.88rem;
+    font-weight: 800;
+    color: var(--uni-black);
+  }
+  .subcarpeta-count-badge {
+    font-size: 0.70rem;
+    font-weight: 750;
+    color: var(--uni-green-primary);
+    background: var(--uni-white);
+    border: 1px solid var(--uni-green-25);
+    padding: 2px 10px;
+    border-radius: 12px;
+  }
+  .chevron-icon {
+    transition: transform 0.2s ease;
+    color: var(--uni-text-muted);
+  }
+  .subcarpeta-bento-card.open .chevron-icon {
+    transform: rotate(180deg);
+  }
+  .subcarpeta-body {
+    padding: 14px 18px;
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--uni-white);
+  }
+  .subcarpeta-bento-card.open .subcarpeta-body {
+    display: flex;
+  }
+
+  .sub-instruction-text {
+    font-size: 0.80rem;
+    color: var(--uni-text-muted);
+    background: var(--uni-gold-05);
+    border-left: 3px solid var(--uni-gold-primary);
+    padding: 8px 12px;
+    border-radius: 4px;
+    line-height: 1.45;
+  }
+
+  .file-item-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--uni-white);
+    border: 1px solid var(--uni-border);
+    border-radius: 8px;
+    padding: 11px 16px;
+    gap: 12px;
+    transition: all 0.2s ease;
+  }
+  .file-item-row:hover {
+    background: var(--uni-green-05);
+    border-color: var(--uni-green-50);
+  }
+  .file-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+  .file-item-icon {
+    color: var(--uni-green-primary);
+    flex-shrink: 0;
+  }
+  .file-name {
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: var(--uni-text-dark);
+    word-break: break-all;
+  }
+  .file-meta {
+    font-size: 0.72rem;
+    color: var(--uni-text-muted);
+  }
+  .file-office-badge {
+    font-size: 0.70rem;
+    font-weight: 750;
+    color: var(--uni-green-primary);
+    background: var(--uni-green-10);
+    border: 1px solid var(--uni-green-25);
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .btn-download-clean {
+    background: var(--uni-green-05);
+    border: 1px solid var(--uni-green-25);
+    color: var(--uni-green-primary);
+    text-decoration: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 0.76rem;
+    font-weight: 750;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+  }
+  .btn-download-clean:hover {
+    background: var(--uni-green-primary);
+    color: var(--uni-white);
+    border-color: var(--uni-green-primary);
+    box-shadow: 0 2px 6px rgba(0, 89, 78, 0.2);
+  }
+
+  /* PIE DE PÁGINA */
+  .consulta-footer {
+    background: var(--uni-white);
+    border-top: 1px solid var(--uni-border);
+    padding: 24px 20px;
+    margin-top: 40px;
+  }
+  .footer-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  @media (max-width: 768px) {
+    .navbar-content {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .metadatos-grid {
+      grid-template-columns: 1fr;
+    }
+    .auth-bento-card {
+      padding: 24px 20px;
+    }
+    .respuesta-card-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .file-item-row {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .btn-download-clean {
+      align-self: flex-end;
+    }
+    .footer-inner {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }

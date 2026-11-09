@@ -1,0 +1,7 @@
+/* src/styles/callback.css - Estilos de la pantalla de callback OAuth */
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

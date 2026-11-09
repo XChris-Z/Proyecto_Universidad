@@ -1,0 +1,28 @@
+/* ==========================================================================
+  ESTILOS ESPECÍFICOS DE MI PERFIL (SGD UNITRÓPICO)
+   ========================================================================== */
+
+@media (max-width: 860px) {
+  .profile-grid-cols {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.form-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 0.86rem;
+  color: #111827;
+  transition: all 0.15s ease;
+}
+
+.form-input:focus,
+.profile-custom-input:focus {
+  outline: none;
+  border-color: #00594E !important;
+  box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.15) !important;
+  background: #FFFFFF !important;
+}
