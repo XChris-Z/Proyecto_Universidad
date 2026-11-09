@@ -1001,6 +1001,48 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
     </div>
   </div>
 
+  <!-- BANNER FLOTANTE / TOAST PRO MAX DE ÉXITO GOOGLE DRIVE -->
+  <div 
+    id="drive-success-toast" 
+    style="display: none; position: fixed; bottom: 24px; right: 24px; z-index: 2500; max-width: 440px; width: calc(100% - 48px); background: #FFFFFF; border: 1.5px solid #00594E; border-top: 5px solid #00594E; border-radius: 14px; box-shadow: 0 10px 30px rgba(0, 89, 78, 0.18); padding: 18px 20px;"
+  >
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="width: 36px; height: 36px; border-radius: 8px; background: #E6EFEF; color: #00594E; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid #B2CFCB;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00594E" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><polyline points="9 11 12 14 22 4"/></svg>
+        </div>
+        <div>
+          <h4 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: #0f172a;">Expediente Respaldado en Drive</h4>
+          <span style="font-size: 0.74rem; color: #786832; font-weight: 700;">Árbol de carpetas generado sin comprimir</span>
+        </div>
+      </div>
+      <button type="button" id="btn-close-drive-toast" style="background: transparent; border: none; font-size: 1.3rem; line-height: 1; color: #64748B; cursor: pointer; padding: 2px 6px;">&times;</button>
+    </div>
+    <p id="drive-toast-message" style="margin: 0 0 14px 0; font-size: 0.82rem; color: #334155; line-height: 1.45;">
+      Se ha creado la estructura completa con el documento radicado y los anexos organizados por subcarpeta.
+    </p>
+    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+      <a 
+        id="btn-drive-open-link" 
+        href="#" 
+        target="_blank" 
+        rel="noopener noreferrer" 
+        style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: #00594E; color: #FFFFFF; font-weight: 800; font-size: 0.80rem; border-radius: 8px; text-decoration: none; transition: background 0.2s; box-shadow: 0 2px 6px rgba(0, 89, 78, 0.2);"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        <span>Abrir Carpeta en Google Drive</span>
+      </a>
+      <button 
+        type="button" 
+        id="btn-drive-copy-link" 
+        style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; background: #F7F5EE; color: #786832; border: 1px solid #DBD2B0; font-weight: 700; font-size: 0.80rem; border-radius: 8px; cursor: pointer; transition: all 0.2s;"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        <span id="btn-drive-copy-text">Copiar Enlace</span>
+      </button>
+    </div>
+  </div>
+
   <script id="data-archivos-oficinas" type="application/json" set:html={JSON.stringify(oficinasCatalogo)} />
 
   <style is:global>
@@ -1066,6 +1108,19 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       font-weight: 700 !important;
       flex-shrink: 0 !important;
       transition: all 0.2s ease !important;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .spin-animation {
+      animation: spin 1s linear infinite !important;
+    }
+
+    @keyframes slideUpToast {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
     }
   </style>
 
@@ -2096,6 +2151,18 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
             <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
               <button 
                 type="button" 
+                class="btn btn-secondary btn-sm btn-export-drive" 
+                data-id="${escapeHtml(peticion.id)}"
+                data-radicado="${escapeHtml(peticion.numero_radicado)}"
+                title="Respaldar estructura completa de carpetas y archivos en Google Drive sin comprimir"
+                style="display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 0.82rem; padding: 7px 16px; background: #F2F7F6; border: 1.5px solid #00594E; color: #00594E; border-radius: 6px; cursor: pointer; transition: all 0.2s ease;"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><polyline points="12 11 12 17"/><polyline points="9 14 12 11 15 14"/></svg>
+                <span>Respaldar en Drive</span>
+              </button>
+
+              <button 
+                type="button" 
                 class="btn btn-primary btn-sm btn-open-responder-modal" 
                 data-id="${escapeHtml(peticion.id)}"
                 title="Despachar respuesta formal y habilitar portal temporal al solicitante"
@@ -2617,23 +2684,36 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
             </div>
           </div>
 
-          <!-- BARRA DE ACCIÓN INFERIOR: ENVIAR RESPUESTA AL SOLICITANTE -->
+          <!-- BARRA DE ACCIÓN INFERIOR: RESPALDO EN DRIVE Y DESPACHO DE RESPUESTA -->
           <div class="card" style="padding: 20px 24px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 20px; border-left: 5px solid var(--verde-principal);">
             <div>
-              <strong style="color: #0f172a; font-size: 0.94rem; display: block;">Despacho de Respuesta Oficial al Solicitante</strong>
+              <strong style="color: #0f172a; font-size: 0.94rem; display: block;">Acciones Oficiales del Expediente</strong>
               <p style="margin: 3px 0 0 0; font-size: 0.80rem; color: #64748b;">
-                Revise los soportes del expediente, redacte la respuesta institucional y habilite el portal seguro con vigencia de 10 días calendario.
+                ${peticion.respuesta_drive_url ? `Expediente respaldado en Google Drive: <a href="${escapeHtml(peticion.respuesta_drive_url)}" target="_blank" rel="noopener noreferrer" style="color: #00594E; font-weight: 700; text-decoration: underline;">Abrir carpeta en Drive &nearr;</a>` : 'Respalde la estructura completa sin comprimir en Google Drive o despache la respuesta oficial definitiva al solicitante.'}
               </p>
             </div>
-            <button 
-              type="button" 
-              class="btn btn-primary btn-open-responder-modal"
-              data-id="${escapeHtml(peticion.id)}"
-              style="display: inline-flex; align-items: center; gap: 8px; font-weight: 800; font-size: 0.86rem; padding: 10px 22px; background: #00594E; border-color: #00594E; color: #ffffff; box-shadow: 0 3px 8px rgba(0, 89, 78, 0.25); cursor: pointer;"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-              <span>Enviar Respuesta al Solicitante</span>
-            </button>
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <button 
+                type="button" 
+                class="btn btn-secondary btn-export-drive"
+                data-id="${escapeHtml(peticion.id)}"
+                data-radicado="${escapeHtml(peticion.numero_radicado)}"
+                title="Crear árbol de carpetas y subir archivos sin comprimir a Google Drive"
+                style="display: inline-flex; align-items: center; gap: 8px; font-weight: 800; font-size: 0.86rem; padding: 10px 18px; background: #F2F7F6; border: 1.5px solid #00594E; color: #00594E; border-radius: 8px; cursor: pointer; transition: all 0.2s ease;"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><polyline points="12 11 12 17"/><polyline points="9 14 12 11 15 14"/></svg>
+                <span>Respaldar en Drive</span>
+              </button>
+              <button 
+                type="button" 
+                class="btn btn-primary btn-open-responder-modal"
+                data-id="${escapeHtml(peticion.id)}"
+                style="display: inline-flex; align-items: center; gap: 8px; font-weight: 800; font-size: 0.86rem; padding: 10px 22px; background: #00594E; border-color: #00594E; color: #ffffff; box-shadow: 0 3px 8px rgba(0, 89, 78, 0.25); cursor: pointer;"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                <span>Enviar Respuesta al Solicitante</span>
+              </button>
+            </div>
           </div>
         `;
 
@@ -2888,6 +2968,19 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         e.stopPropagation();
         const petId = responderBtn.getAttribute('data-id') || '';
         if (petId) openResponderModal(petId);
+        return;
+      }
+
+      // D. Botón Respaldar Expediente en Google Drive
+      const driveBtn = target.closest('.btn-export-drive') as HTMLElement | null;
+      if (driveBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const petId = driveBtn.getAttribute('data-id') || '';
+        const radicado = driveBtn.getAttribute('data-radicado') || 'RAD';
+        if (petId) {
+          handleExportToGoogleDrive(petId, radicado, driveBtn);
+        }
         return;
       }
 
@@ -3538,6 +3631,132 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         }
       }
     });
+
+    // 7.3 Exportar Expediente a Google Drive (Estructura y Archivos sin comprimir)
+    let isExportingDrive = false;
+    async function handleExportToGoogleDrive(petId: string, radicado: string, clickedBtn: HTMLElement) {
+      if (isExportingDrive) return;
+
+      const allDriveBtns = document.querySelectorAll<HTMLButtonElement>(`.btn-export-drive[data-id="${petId}"]`);
+      isExportingDrive = true;
+      allDriveBtns.forEach((btn) => {
+        btn.disabled = true;
+        btn.innerHTML = `
+          <svg class="spin-animation" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+          <span>Creando carpetas y subiendo archivos a Drive...</span>
+        `;
+      });
+
+      if (typeof (window as any).showToast === 'function') {
+        (window as any).showToast(`Iniciando respaldo de ${radicado} en Google Drive...`, 'info');
+      }
+
+      try {
+        const res = await fetch('/api/exportar-drive', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ peticionId: petId }),
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok || !data.success) {
+          if (data.missingConfig) {
+            alert(
+              'ATENCIÓN: Credenciales de Google Drive no configuradas en el servidor.\n\n' +
+              'Para habilitar la exportación automática, configure las siguientes variables en el archivo .env o en Vercel:\n' +
+              '• GOOGLE_DRIVE_CLIENT_ID\n' +
+              '• GOOGLE_DRIVE_CLIENT_SECRET\n' +
+              '• GOOGLE_DRIVE_REFRESH_TOKEN\n\n' +
+              'Si no dispone de ellas, solicite al administrador la autorización OAuth institucional.'
+            );
+            if (typeof (window as any).showToast === 'function') {
+              (window as any).showToast('Faltan credenciales de Google Drive en el servidor.', 'warn');
+            }
+          } else {
+            const errorMsg = data.error || 'No se pudo exportar el expediente a Google Drive.';
+            alert('Error al exportar a Google Drive: ' + errorMsg);
+            if (typeof (window as any).showToast === 'function') {
+              (window as any).showToast(errorMsg, 'error');
+            }
+          }
+          return;
+        }
+
+        // Éxito: Actualizar en memoria el drive url
+        const pet = peticionesMap.get(petId) || allPeticiones.find((p) => p.id === petId);
+        if (pet) {
+          pet.respuesta_drive_url = data.webViewLink;
+          indexPeticion(pet);
+        }
+
+        // Mostrar notificación Toast flotante con acciones directas
+        showDriveSuccessToast(radicado, data.webViewLink, data.archivosSubidos || 0, data.subcarpetasCreadas || 0);
+
+        if (typeof (window as any).showToast === 'function') {
+          (window as any).showToast(`¡Expediente ${radicado} respaldado exitosamente en Google Drive!`, 'success');
+        }
+
+        allDriveBtns.forEach((btn) => {
+          btn.innerHTML = `
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00594E" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>✓ Respaldado en Drive</span>
+          `;
+          btn.style.background = '#E6EFEF';
+          btn.style.borderColor = '#00594E';
+          btn.style.color = '#00594E';
+        });
+      } catch (err: any) {
+        console.error('Error al exportar a Google Drive:', err);
+        alert('Error de conexión al comunicar con el servicio de Google Drive.');
+        if (typeof (window as any).showToast === 'function') {
+          (window as any).showToast('Error de red al conectar con Google Drive.', 'error');
+        }
+      } finally {
+        isExportingDrive = false;
+        allDriveBtns.forEach((btn) => {
+          btn.disabled = false;
+        });
+      }
+    }
+
+    function showDriveSuccessToast(radicado: string, webViewLink: string, archivosCount: number, subcarpetasCount: number) {
+      const toast = document.getElementById('drive-success-toast');
+      const openBtn = document.getElementById('btn-drive-open-link') as HTMLAnchorElement | null;
+      const copyBtn = document.getElementById('btn-drive-copy-link');
+      const copyText = document.getElementById('btn-drive-copy-text');
+      const msg = document.getElementById('drive-toast-message');
+
+      if (!toast) return;
+
+      if (openBtn) openBtn.href = webViewLink;
+      if (msg) {
+        msg.textContent = `Se ha creado en Google Drive la carpeta "${radicado}" con ${archivosCount} archivo(s) organizados en ${subcarpetasCount} subcarpeta(s) sin comprimir.`;
+      }
+
+      if (copyBtn) {
+        copyBtn.onclick = async () => {
+          try {
+            await navigator.clipboard.writeText(webViewLink);
+            if (copyText) copyText.textContent = '¡Enlace Copiado!';
+            setTimeout(() => {
+              if (copyText) copyText.textContent = 'Copiar Enlace';
+            }, 3000);
+          } catch {
+            alert('Enlace de Drive: ' + webViewLink);
+          }
+        };
+      }
+
+      const closeBtn = document.getElementById('btn-close-drive-toast');
+      if (closeBtn) {
+        closeBtn.onclick = () => {
+          toast.style.display = 'none';
+        };
+      }
+
+      toast.style.display = 'block';
+    }
 
     // 8. Auto-abrir carpeta si viene parámetro ?radicado=... o ?id=... en la URL
     const urlParams = new URLSearchParams(window.location.search);
