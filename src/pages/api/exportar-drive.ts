@@ -9,11 +9,46 @@ import { logSystemActivity } from '@lib/audit';
 import { filtrarSubcarpetasValidas, separarRespuestaMeta } from '@lib/subcarpetas';
 
 /**
+ * Limpia y normaliza cadenas de variables de entorno (elimina comillas circundantes y espacios)
+ */
+function cleanEnv(val: string | undefined | null): string {
+  if (!val) return '';
+  return String(val).trim().replace(/^["']|["']$/g, '').trim();
+}
+
+/**
+ * Infiere el MIME type a partir de la extensión del archivo
+ */
+function getMimeType(fileName: string, defaultType = 'application/octet-stream'): string {
+  const ext = (fileName.split('.').pop() || '').toLowerCase();
+  const map: Record<string, string> = {
+    pdf: 'application/pdf',
+    doc: 'application/msword',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    xls: 'application/vnd.ms-excel',
+    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    ppt: 'application/vnd.ms-powerpoint',
+    pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    gif: 'image/gif',
+    webp: 'image/webp',
+    txt: 'text/plain',
+    zip: 'application/zip',
+    rar: 'application/x-rar-compressed',
+    '7z': 'application/x-7z-compressed',
+  };
+  return map[ext] || defaultType;
+}
+
+/**
  * Crea una carpeta en Google Drive usando la API oficial v3
  */
 async function createDriveFolder(drive: any, name: string, parentId?: string) {
+  const cleanName = name.replace(/[/\\?%*:|"<>]/g, '-').trim() || 'Carpeta';
   const fileMetadata: any = {
-    name,
+    name: cleanName,
     mimeType: 'application/vnd.google-apps.folder',
   };
   if (parentId && parentId !== 'root') {
@@ -39,13 +74,16 @@ async function uploadFileToDrive(
   buffer: Buffer,
   parentId: string
 ) {
+  const safeName = fileName.replace(/[/\\?%*:|"<>]/g, '-').trim() || 'archivo.bin';
+  const safeMime = mimeType && mimeType !== 'application/octet-stream' ? mimeType : getMimeType(safeName);
+
   const res = await drive.files.create({
     requestBody: {
-      name: fileName,
+      name: safeName,
       parents: [parentId],
     },
     media: {
-      mimeType: mimeType || 'application/octet-stream',
+      mimeType: safeMime,
       body: Readable.from(buffer),
     },
     fields: 'id, name, webViewLink',
@@ -58,8 +96,24 @@ async function uploadFileToDrive(
  * Descarga el contenido binario del archivo desde el almacenamiento del sistema
  */
 async function downloadFileBuffer(storagePath: string): Promise<{ buffer: Buffer; mimeType: string }> {
-  const cleanPath = storagePath.replace(/^peticiones\//, '');
-  
+  const trimmedPath = (storagePath || '').trim();
+
+  // Si ya es una URL HTTP(S) absoluta, descargarla directamente
+  if (trimmedPath.startsWith('http://') || trimmedPath.startsWith('https://')) {
+    const res = await fetch(trimmedPath);
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status} al descargar archivo desde ${trimmedPath}`);
+    }
+    const arrayBuffer = await res.arrayBuffer();
+    const contentType = res.headers.get('content-type') || getMimeType(trimmedPath);
+    return {
+      buffer: Buffer.from(arrayBuffer),
+      mimeType: contentType,
+    };
+  }
+
+  const cleanPath = trimmedPath.replace(/^peticiones\//, '').replace(/^\/+/, '');
+
   // 1. Intentar descarga autenticada con cliente Supabase Storage
   try {
     const { data, error } = await supabase.storage.from('peticiones').download(cleanPath);
@@ -67,11 +121,11 @@ async function downloadFileBuffer(storagePath: string): Promise<{ buffer: Buffer
       const arrayBuffer = await data.arrayBuffer();
       return {
         buffer: Buffer.from(arrayBuffer),
-        mimeType: data.type || 'application/pdf',
+        mimeType: data.type || getMimeType(cleanPath, 'application/pdf'),
       };
     }
   } catch (err: any) {
-    console.warn('[Exportar Drive] Falló download directo de Supabase, intentando fetch:', err?.message);
+    console.warn('[Exportar Drive] Falló download directo de Supabase, probando URL pública:', err?.message);
   }
 
   // 2. Fallback: Descarga vía URL pública del bucket
@@ -81,7 +135,7 @@ async function downloadFileBuffer(storagePath: string): Promise<{ buffer: Buffer
     throw new Error(`No se pudo descargar el archivo desde ${storagePath} (HTTP ${resp.status})`);
   }
   const arrayBuffer = await resp.arrayBuffer();
-  const contentType = resp.headers.get('content-type') || 'application/octet-stream';
+  const contentType = resp.headers.get('content-type') || getMimeType(cleanPath, 'application/octet-stream');
   return {
     buffer: Buffer.from(arrayBuffer),
     mimeType: contentType,
@@ -205,30 +259,60 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // 1. Validar credenciales de Google OAuth en el entorno
-    const clientId = import.meta.env.GOOGLE_DRIVE_CLIENT_ID || process.env.GOOGLE_DRIVE_CLIENT_ID || import.meta.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
-    const clientSecret = import.meta.env.GOOGLE_DRIVE_CLIENT_SECRET || process.env.GOOGLE_DRIVE_CLIENT_SECRET || import.meta.env.GOOGLE_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET;
-    const refreshToken = import.meta.env.GOOGLE_DRIVE_REFRESH_TOKEN || process.env.GOOGLE_DRIVE_REFRESH_TOKEN;
-    const parentFolderId = import.meta.env.GOOGLE_DRIVE_PARENT_FOLDER_ID || process.env.GOOGLE_DRIVE_PARENT_FOLDER_ID || '';
+    // 1. Extraer y sanear credenciales de Google Drive
+    const clientId = cleanEnv(
+      import.meta.env.GOOGLE_DRIVE_CLIENT_ID ||
+      process.env.GOOGLE_DRIVE_CLIENT_ID ||
+      import.meta.env.GOOGLE_CLIENT_ID ||
+      process.env.GOOGLE_CLIENT_ID
+    );
+    const clientSecret = cleanEnv(
+      import.meta.env.GOOGLE_DRIVE_CLIENT_SECRET ||
+      process.env.GOOGLE_DRIVE_CLIENT_SECRET ||
+      import.meta.env.GOOGLE_CLIENT_SECRET ||
+      process.env.GOOGLE_CLIENT_SECRET
+    );
+    const refreshToken = cleanEnv(
+      import.meta.env.GOOGLE_DRIVE_REFRESH_TOKEN ||
+      process.env.GOOGLE_DRIVE_REFRESH_TOKEN
+    );
+    const parentFolderId = cleanEnv(
+      import.meta.env.GOOGLE_DRIVE_PARENT_FOLDER_ID ||
+      process.env.GOOGLE_DRIVE_PARENT_FOLDER_ID
+    );
 
     if (!clientId || !clientSecret || !refreshToken) {
       return new Response(
         JSON.stringify({
           success: false,
           missingConfig: true,
-          error: 'No se han configurado las credenciales de Google Drive en las variables de entorno. Por favor configure GOOGLE_DRIVE_CLIENT_ID, GOOGLE_DRIVE_CLIENT_SECRET y GOOGLE_DRIVE_REFRESH_TOKEN en el archivo .env o en el panel de Vercel.',
+          error: 'No se han configurado las credenciales de Google Drive en las variables de entorno. Configure GOOGLE_DRIVE_CLIENT_ID, GOOGLE_DRIVE_CLIENT_SECRET y GOOGLE_DRIVE_REFRESH_TOKEN en el archivo .env o en el panel de Vercel.',
         }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    // 2. Inicializar cliente autenticado de Google Drive
+    // 2. Inicializar cliente autenticado de Google Drive y verificar token
     const oauth2Client = new google.auth.OAuth2(
       clientId,
       clientSecret,
       'https://developers.google.com/oauthplayground'
     );
     oauth2Client.setCredentials({ refresh_token: refreshToken });
+
+    try {
+      await oauth2Client.getAccessToken();
+    } catch (authError: any) {
+      console.error('[Exportar Drive] Error verificando OAuth token:', authError);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Error de autenticación con Google Drive: ${authError?.message || 'Token expirado o revocado'}. Verifique el GOOGLE_DRIVE_REFRESH_TOKEN.`,
+        }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     const drive = google.drive({ version: 'v3', auth: oauth2Client });
 
     // 3. Consultar expediente completo en la base de datos
@@ -297,7 +381,6 @@ export const POST: APIRoute = async ({ request }) => {
     const anexosDependencias = anexos.filter((a: any) => a !== anexoPrincipal);
 
     // 4. PASO A: Crear carpeta principal del radicado en Google Drive
-    // Formato: [Número de Radicado] - [Título/Asunto]
     const cleanRadicado = String(peticion.numero_radicado || 'RAD-2026').trim();
     const cleanAsunto = String(peticion.asunto || 'Expediente Documental').replace(/[/\\?%*:|"<>]/g, '-').trim();
     const mainFolderName = `${cleanRadicado} - ${cleanAsunto}`;
@@ -388,7 +471,7 @@ export const POST: APIRoute = async ({ request }) => {
       }
     }
 
-    // 8. PASO E: Configurar permisos de lectura en la carpeta principal de Drive para visualización pública/institucional
+    // 8. PASO E: Configurar permisos de lectura en la carpeta principal de Drive (con fallback institucional)
     try {
       await drive.permissions.create({
         fileId: mainFolder.id,
@@ -399,7 +482,20 @@ export const POST: APIRoute = async ({ request }) => {
         supportsAllDrives: true,
       });
     } catch (permErr: any) {
-      console.warn('[Exportar Drive] Advertencia asignando permisos públicos en Google Drive:', permErr?.message);
+      console.warn('[Exportar Drive] Permiso "anyone" no permitido por la política, probando dominio unitropico.edu.co:', permErr?.message);
+      try {
+        await drive.permissions.create({
+          fileId: mainFolder.id,
+          requestBody: {
+            role: 'reader',
+            type: 'domain',
+            domain: 'unitropico.edu.co',
+          },
+          supportsAllDrives: true,
+        });
+      } catch (domainErr: any) {
+        console.warn('[Exportar Drive] Permiso de dominio falló (no fatal):', domainErr?.message);
+      }
     }
 
     // Obtener enlace web compartible actualizado

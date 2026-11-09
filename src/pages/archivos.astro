@@ -2037,7 +2037,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         if (!peticion) {
           console.warn('Expediente no encontrado para el identificador:', cleanTarget);
           if (typeof (window as any).showToast === 'function') {
-            (window as any).showToast(`No se encontró el expediente ${cleanTarget}`, 'warn');
+            (window as any).showToast(`No se encontró el expediente ${cleanTarget}`, 'warning');
           }
           return;
         }
@@ -3662,22 +3662,17 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
 
         if (!res.ok || !data.success) {
           if (data.missingConfig) {
-            alert(
-              'ATENCIÓN: Credenciales de Google Drive no configuradas en el servidor.\n\n' +
-              'Para habilitar la exportación automática, configure las siguientes variables en el archivo .env o en Vercel:\n' +
-              '• GOOGLE_DRIVE_CLIENT_ID\n' +
-              '• GOOGLE_DRIVE_CLIENT_SECRET\n' +
-              '• GOOGLE_DRIVE_REFRESH_TOKEN\n\n' +
-              'Si no dispone de ellas, solicite al administrador la autorización OAuth institucional.'
-            );
             if (typeof (window as any).showToast === 'function') {
-              (window as any).showToast('Faltan credenciales de Google Drive en el servidor.', 'warn');
+              (window as any).showToast(
+                'Credenciales de Google Drive no configuradas en el servidor. Configure GOOGLE_DRIVE_CLIENT_ID, GOOGLE_DRIVE_CLIENT_SECRET y GOOGLE_DRIVE_REFRESH_TOKEN en el archivo .env o en Vercel.',
+                'warning',
+                'Aviso del Sistema'
+              );
             }
           } else {
             const errorMsg = data.error || 'No se pudo exportar el expediente a Google Drive.';
-            alert('Error al exportar a Google Drive: ' + errorMsg);
             if (typeof (window as any).showToast === 'function') {
-              (window as any).showToast(errorMsg, 'error');
+              (window as any).showToast(errorMsg, 'error', 'Error de Exportación');
             }
           }
           return;
@@ -3708,9 +3703,8 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         });
       } catch (err: any) {
         console.error('Error al exportar a Google Drive:', err);
-        alert('Error de conexión al comunicar con el servicio de Google Drive.');
         if (typeof (window as any).showToast === 'function') {
-          (window as any).showToast('Error de red al conectar con Google Drive.', 'error');
+          (window as any).showToast('Error de comunicación con el servicio de Google Drive.', 'error', 'Error de Conexión');
         }
       } finally {
         isExportingDrive = false;
