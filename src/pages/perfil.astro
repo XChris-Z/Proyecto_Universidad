@@ -5,169 +5,199 @@ import { supabase } from '@lib/supabase';
 ---
 
 <AppLayout title="Mi Perfil Institucional" activeNav="perfil">
-  <div class="profile-container" style="max-width: 960px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px;">
+  <div class="profile-container" style="max-width: 1080px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px;">
     
-    <!-- Header del Perfil -->
-    <div class="card profile-header-card" style="padding: 28px; display: flex; gap: 24px; align-items: center; flex-wrap: wrap; border-left: 5px solid var(--verde-principal); background: #ffffff;">
-      <div class="avatar-upload-wrap" style="position: relative;">
-        <div class="avatar-preview-box" id="avatar-preview-box" style="width: 104px; height: 104px; border-radius: var(--radius-full); background: var(--verde-suave-bg); border: 3px solid var(--verde-borde); display: flex; align-items: center; justify-content: center; font-size: 2.2rem; font-weight: 800; color: var(--verde-principal); overflow: hidden; box-shadow: var(--shadow-sm);">
-          <span id="profile-avatar-initials">CL</span>
-          <img id="profile-avatar-img" src="" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; display: none;" />
-        </div>
-        <label for="avatar-file-input" class="btn-avatar-camera" title="Cambiar foto de perfil institucional" style="position: absolute; bottom: 0; right: 0; width: 34px; height: 34px; background: var(--dorado-principal); border-radius: var(--radius-full); display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid #ffffff; box-shadow: 0 2px 6px rgba(0,0,0,0.15); color: #ffffff;">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-        </label>
-        <input type="file" id="avatar-file-input" accept="image/png,image/jpeg,image/webp" style="display: none;" />
-      </div>
-
-      <div class="profile-info-main" style="flex: 1; min-width: 260px;">
-        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-          <h2 id="profile-name-display" style="font-size: 1.45rem; font-weight: 800; color: var(--text-main); margin: 0;">ING. Christian Lemus</h2>
-          <span class="role-badge admin" id="profile-role-badge">ADMINISTRADOR</span>
-        </div>
-        <p id="profile-cargo-display" style="font-size: 0.88rem; color: var(--text-muted); margin: 4px 0 12px 0;">Superusuario Root / Administrador del SGD</p>
-        
-        <div style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.78rem; background: var(--verde-suave-bg); color: var(--verde-principal); padding: 5px 12px; border-radius: var(--radius-sm); border: 1px solid var(--verde-borde);">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          <span>Identidad Institucional Oficial Verificada</span>
-        </div>
-      </div>
-
-      <div class="profile-quick-stats" style="display: flex; gap: 16px; border-left: 1px solid var(--border-color); padding-left: 20px;">
-        <div>
-          <div style="font-size: 0.72rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Estado de Cuenta</div>
-          <div style="font-size: 0.95rem; font-weight: 800; color: var(--verde-principal); display: flex; align-items: center; gap: 6px; margin-top: 2px;">
-            <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--verde-principal);"></span> Activo
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Grid de 2 Columnas: Datos Inmutables vs Cambio de Contraseña -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;" class="profile-grid-cols">
+    <!-- Contenedor Base con Contraste y Bordes Definidos -->
+    <div style="border: 1.5px solid #DCE4E3; border-radius: 20px; box-shadow: 0 4px 18px rgba(0, 89, 78, 0.06); background: #FAFCFB; overflow: hidden;">
       
-      <!-- Columna 1: Información Institucional (Email Bloqueado Estrictamente) -->
-      <div class="card" style="padding: 24px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--border-subtle);">
-          <div style="width: 32px; height: 32px; border-radius: var(--radius-sm); background: var(--verde-suave-bg); color: var(--verde-principal); display: flex; align-items: center; justify-content: center;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <!-- Banner / Header de Identidad del Funcionario (Verde #00594E + Dorado #B5A160) -->
+      <div style="background: linear-gradient(135deg, #003e36 0%, #00594E 55%, #0a695d 100%); padding: 32px 36px; border-bottom: 4px solid #B5A160; position: relative; overflow: hidden;">
+        <!-- Resplandor sutil dorado de fondo -->
+        <div style="position: absolute; right: -40px; top: -40px; width: 220px; height: 220px; background: radial-gradient(circle, rgba(181, 161, 96, 0.25) 0%, transparent 70%); pointer-events: none;"></div>
+
+        <div style="display: flex; gap: 26px; align-items: center; flex-wrap: wrap; position: relative; z-index: 1;">
+          
+          <!-- Avatar del Funcionario con botón de cámara en Dorado -->
+          <div class="avatar-upload-wrap" style="position: relative; flex-shrink: 0;">
+            <div class="avatar-preview-box" id="avatar-preview-box" style="width: 100px; height: 100px; border-radius: 50%; background: #E6EFEF; border: 3.5px solid #FFFFFF; box-shadow: 0 4px 14px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; font-size: 2.2rem; font-weight: 800; color: #00594E; overflow: hidden;">
+              <span id="profile-avatar-initials">CL</span>
+              <img id="profile-avatar-img" src="" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; display: none;" />
+            </div>
+            <label for="avatar-file-input" class="btn-avatar-camera" title="Cambiar foto institucional" style="position: absolute; bottom: 0; right: 0; width: 34px; height: 34px; background: #B5A160; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2.5px solid #FFFFFF; box-shadow: 0 2px 8px rgba(0,0,0,0.25); color: #FFFFFF; transition: transform 0.15s ease;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            </label>
+            <input type="file" id="avatar-file-input" accept="image/png,image/jpeg,image/webp" style="display: none;" />
           </div>
-          <div>
-            <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin: 0;">Datos del Funcionario</h3>
-            <span style="font-size: 0.74rem; color: var(--text-muted);">Edición de datos habilitados y campos protegidos</span>
+
+          <!-- Metadatos de Cabecera: Nombre en blanco, rol en dorado y dependencia -->
+          <div class="profile-info-main" style="flex: 1; min-width: 260px;">
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+              <h2 id="profile-name-display" style="font-size: 1.55rem; font-weight: 800; color: #FFFFFF; margin: 0; letter-spacing: -0.01em;">Cargando perfil...</h2>
+              <span class="role-badge admin" id="profile-role-badge" style="background: #F7F5EE; color: #786832; border: 1.5px solid #DBD2B0; font-weight: 800; font-size: 0.74rem; padding: 4px 12px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.5px;">ADMINISTRADOR</span>
+            </div>
+            
+            <p id="profile-cargo-display" style="font-size: 0.90rem; color: #E6EFEF; margin: 6px 0 14px 0; font-weight: 500;">
+              Despacho Institucional &bull; Sistema de Gestión Documental
+            </p>
+            
+            <div style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.78rem; font-weight: 700; background: rgba(255, 255, 255, 0.12); color: #FFFFFF; padding: 5px 14px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.25);">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#B5A160" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <span>Identidad Institucional Oficial SGD Unitrópico</span>
+            </div>
           </div>
+
+          <!-- Estado de Cuenta -->
+          <div style="border-left: 1.5px solid rgba(255, 255, 255, 0.2); padding-left: 24px; flex-shrink: 0;">
+            <div style="font-size: 0.70rem; text-transform: uppercase; color: #B5A160; font-weight: 800; letter-spacing: 0.5px;">Estado de Cuenta</div>
+            <div style="font-size: 0.95rem; font-weight: 800; color: #FFFFFF; display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+              <span style="width: 8px; height: 8px; border-radius: 50%; background: #34D399; box-shadow: 0 0 8px #34D399;"></span>
+              <span>Activo Oficial</span>
+            </div>
+          </div>
+
         </div>
+      </div>
 
-        <form id="form-profile-info" onsubmit="return false;" style="display: flex; flex-direction: column; gap: 16px;">
-          <!-- Campo Editable: Nombre Completo -->
-          <div class="form-group">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-main); text-transform: uppercase;">Nombre Completo (Editable)</label>
-              <span style="font-size: 0.70rem; font-weight: 700; color: var(--verde-principal); background: var(--verde-suave-bg); padding: 2px 8px; border-radius: var(--radius-sm);">Habilitado</span>
+      <!-- Distribución Bento Grid en 2 Columnas con Superficies Contrastadas -->
+      <div style="display: grid; grid-template-columns: 1fr 1.25fr; gap: 24px; padding: 28px;" class="profile-grid-cols">
+        
+        <!-- COLUMNA 1 (IZQUIERDA): Ficha Institucional del Usuario (Fondo #F2F7F6 y borde #B2CFCB) -->
+        <div style="background: #F2F7F6; border: 1.5px solid #B2CFCB; border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 18px; box-shadow: 0 2px 10px rgba(0, 89, 78, 0.03);">
+          
+          <div style="display: flex; align-items: center; gap: 10px; padding-bottom: 14px; border-bottom: 1.5px solid #B2CFCB;">
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: #FFFFFF; border: 1.5px solid #B2CFCB; color: #00594E; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </div>
-            <div style="display: flex; gap: 8px;">
-              <input type="text" id="input-full-name" class="form-input" value="ING. Christian Lemus" required placeholder="Nombre Completo Institucional" />
-              <button type="button" id="btn-save-name" class="btn btn-primary" style="white-space: nowrap; padding: 0 16px; font-weight: 700;">
-                Guardar
-              </button>
+            <div>
+              <h3 style="font-size: 1.05rem; font-weight: 800; color: #00594E; margin: 0;">Ficha Institucional</h3>
+              <span style="font-size: 0.74rem; color: #52606D;">Metadatos protegidos y asignaciones del SGD</span>
             </div>
-            <small id="name-save-status" style="font-size: 0.72rem; margin-top: 4px; display: none;"></small>
           </div>
 
-          <!-- Campo Bloqueado: Correo Institucional -->
-          <div class="form-group">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Correo Electrónico Institucional</label>
-              <span style="font-size: 0.70rem; font-weight: 700; color: #dc2626; background: #fee2e2; padding: 2px 8px; border-radius: var(--radius-sm);">Inmutable</span>
+          <!-- Caja 1: Correo Institucional Inmutable -->
+          <div style="background: #FFFFFF; border: 1.5px solid #DCE4E3; border-radius: 12px; padding: 14px 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <label style="font-size: 0.74rem; font-weight: 800; color: #52606D; text-transform: uppercase; letter-spacing: 0.5px;">Correo Institucional</label>
+              <span style="font-size: 0.68rem; font-weight: 800; color: #DC2626; background: #FEE2E2; border: 1px solid #FECACA; padding: 2px 8px; border-radius: 999px;">Inmutable</span>
             </div>
             <div style="position: relative;">
-              <input type="email" id="input-email-locked" class="form-input" value="christianlemus.es@unitropico.edu.co" readonly disabled style="background: #F8FAFC; color: #475569; border-color: #E2E8F0; cursor: not-allowed; padding-right: 36px; font-weight: 600;" />
-              <div style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted);" title="El correo electrónico es estrictamente inmutable por seguridad institucional.">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <input type="email" id="input-email-locked" class="form-input" value="cargando..." readonly disabled style="background: #F8FAFC; color: #111827; border: 1px solid #CBD5E1; cursor: not-allowed; padding-right: 36px; font-weight: 600; font-family: monospace; font-size: 0.82rem; width: 100%; box-sizing: border-box;" />
+              <div style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #64748B;" title="El correo electrónico es estrictamente inmutable por seguridad institucional.">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
               </div>
             </div>
-            <small style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; display: block;">
-              Protegido por política de seguridad institucional contra modificaciones no autorizadas.
+            <small style="font-size: 0.72rem; color: #52606D; margin-top: 5px; display: block; line-height: 1.35;">
+              Vinculado a la cuenta institucional y a la firma digital de radicaciones.
             </small>
           </div>
 
-          <!-- Campo Bloqueado: Rol en el Sistema -->
-          <div class="form-group">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Rol en el Sistema</label>
-              <span style="font-size: 0.70rem; font-weight: 700; color: var(--text-muted); background: #f1f5f9; padding: 2px 8px; border-radius: var(--radius-sm);">Solo Lectura</span>
+          <!-- Caja 2: Rol en el Sistema -->
+          <div style="background: #FFFFFF; border: 1.5px solid #DCE4E3; border-radius: 12px; padding: 14px 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <label style="font-size: 0.74rem; font-weight: 800; color: #52606D; text-transform: uppercase; letter-spacing: 0.5px;">Rol Asignado en el Sistema</label>
+              <span style="font-size: 0.68rem; font-weight: 800; color: #00594E; background: #E6EFEF; border: 1px solid #B2CFCB; padding: 2px 8px; border-radius: 999px;">Solo Lectura</span>
             </div>
-            <input type="text" id="input-role-title" class="form-input" value="Administrador General" readonly disabled style="background: #F8FAFC; color: #475569; border-color: #E2E8F0; cursor: not-allowed;" />
+            <input type="text" id="input-role-title" class="form-input" value="Administrador General" readonly disabled style="background: #F8FAFC; color: #111827; border: 1px solid #CBD5E1; cursor: not-allowed; font-weight: 600; font-size: 0.84rem; width: 100%; box-sizing: border-box;" />
           </div>
 
-          <!-- Campo Bloqueado: Dependencia / Despacho -->
-          <div class="form-group">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Dependencia / Despacho</label>
-              <span style="font-size: 0.70rem; font-weight: 700; color: var(--text-muted); background: #f1f5f9; padding: 2px 8px; border-radius: var(--radius-sm);">Solo Lectura</span>
+          <!-- Caja 3: Dependencia / Despacho -->
+          <div style="background: #FFFFFF; border: 1.5px solid #DCE4E3; border-radius: 12px; padding: 14px 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <label style="font-size: 0.74rem; font-weight: 800; color: #52606D; text-transform: uppercase; letter-spacing: 0.5px;">Dependencia / Despacho</label>
+              <span style="font-size: 0.68rem; font-weight: 800; color: #786832; background: #F7F5EE; border: 1px solid #DBD2B0; padding: 2px 8px; border-radius: 999px;">Solo Lectura</span>
             </div>
-            <input type="text" id="input-dependencia-title" class="form-input" value="Despacho de Rectoría" readonly disabled style="background: #F8FAFC; color: #475569; border-color: #E2E8F0; cursor: not-allowed;" />
+            <input type="text" id="input-dependencia-title" class="form-input" value="Despacho Institucional" readonly disabled style="background: #F8FAFC; color: #111827; border: 1px solid #CBD5E1; cursor: not-allowed; font-weight: 600; font-size: 0.84rem; width: 100%; box-sizing: border-box;" />
           </div>
-        </form>
-      </div>
 
-      <!-- Columna 2: Cambio de Contraseña con Validación Estricta -->
-      <div class="card" style="padding: 24px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--border-subtle);">
-          <div style="width: 32px; height: 32px; border-radius: var(--radius-sm); background: var(--dorado-suave-bg); color: var(--dorado-oscuro); display: flex; align-items: center; justify-content: center;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          </div>
-          <div>
-            <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin: 0;">Seguridad y Contraseña</h3>
-            <span style="font-size: 0.74rem; color: var(--text-muted);">Actualizar clave mediante Supabase Auth</span>
-          </div>
         </div>
 
-        <form id="form-change-password" style="display: flex; flex-direction: column; gap: 14px;">
-          <div class="form-group">
-            <label for="current-password" style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Contraseña Actual</label>
-            <input type="password" id="current-password" required placeholder="Ingresa tu contraseña actual" class="form-input" autocomplete="current-password" />
+        <!-- COLUMNA 2 (DERECHA): Configuración de Datos y Seguridad (Inputs claros, borde #00594E en foco) -->
+        <div style="background: #FFFFFF; border: 1.5px solid #DCE4E3; border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 22px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);">
+          
+          <!-- Bloque A: Edición de Nombre Completo -->
+          <div style="padding-bottom: 20px; border-bottom: 1.5px solid #E2E8F0;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;">
+              <div style="width: 32px; height: 32px; border-radius: 8px; background: #E6EFEF; color: #00594E; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </div>
+              <div>
+                <h3 style="font-size: 1.02rem; font-weight: 800; color: #111827; margin: 0;">Nombre del Funcionario</h3>
+                <span style="font-size: 0.74rem; color: #52606D;">Nombre formal que figurará en los radicados y oficios oficiales</span>
+              </div>
+            </div>
+
+            <form id="form-profile-info" onsubmit="return false;" style="display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; gap: 10px;">
+                <input type="text" id="input-full-name" class="form-input profile-custom-input" placeholder="Nombre Completo Institucional" required style="flex: 1; background: #F8FAFC; border: 1.5px solid #CBD5E1; border-radius: 10px; padding: 10px 14px; font-size: 0.88rem; color: #111827; font-weight: 600;" />
+                <button type="button" id="btn-save-name" style="background: #00594E; color: #FFFFFF; font-weight: 800; font-size: 0.85rem; padding: 0 20px; border: none; border-radius: 10px; cursor: pointer; box-shadow: 0 2px 6px rgba(0, 89, 78, 0.2); transition: all 0.15s ease; white-space: nowrap;">
+                  Guardar Nombre
+                </button>
+              </div>
+              <small id="name-save-status" style="font-size: 0.72rem; margin-top: 2px; display: none; font-weight: 700;"></small>
+            </form>
           </div>
 
-          <div class="form-group">
-            <label for="new-password" style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Nueva Contraseña</label>
-            <input type="password" id="new-password" required placeholder="Mínimo 8 caracteres seguros" class="form-input" autocomplete="new-password" />
+          <!-- Bloque B: Actualización de Contraseña Institucional -->
+          <div>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
+              <div style="width: 32px; height: 32px; border-radius: 8px; background: #F7F5EE; color: #786832; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </div>
+              <div>
+                <h3 style="font-size: 1.02rem; font-weight: 800; color: #111827; margin: 0;">Seguridad y Clave de Acceso</h3>
+                <span style="font-size: 0.74rem; color: #52606D;">Modificación segura de credenciales de acceso al SGD</span>
+              </div>
+            </div>
+
+            <form id="form-change-password" style="display: flex; flex-direction: column; gap: 14px;">
+              <div class="form-group">
+                <label for="current-password" style="font-size: 0.76rem; font-weight: 800; color: #52606D; text-transform: uppercase; margin-bottom: 4px; display: block;">Contraseña Actual</label>
+                <input type="password" id="current-password" required placeholder="Ingresa tu contraseña actual" class="form-input profile-custom-input" autocomplete="current-password" style="width: 100%; box-sizing: border-box; background: #F8FAFC; border: 1.5px solid #CBD5E1; border-radius: 10px; padding: 10px 14px; font-size: 0.86rem;" />
+              </div>
+
+              <div class="form-group">
+                <label for="new-password" style="font-size: 0.76rem; font-weight: 800; color: #52606D; text-transform: uppercase; margin-bottom: 4px; display: block;">Nueva Contraseña</label>
+                <input type="password" id="new-password" required placeholder="Mínimo 8 caracteres seguros" class="form-input profile-custom-input" autocomplete="new-password" style="width: 100%; box-sizing: border-box; background: #F8FAFC; border: 1.5px solid #CBD5E1; border-radius: 10px; padding: 10px 14px; font-size: 0.86rem;" />
+              </div>
+
+              <!-- Indicadores de política estricta -->
+              <div class="password-policy-box" style="background: #F8FAFC; padding: 12px 14px; border-radius: 10px; border: 1px solid #E2E8F0; font-size: 0.74rem; display: flex; flex-direction: column; gap: 6px;">
+                <div style="font-weight: 800; color: #111827; margin-bottom: 2px;">Criterios de Seguridad Requeridos:</div>
+                <div id="rule-length" style="color: #64748B; display: flex; align-items: center; gap: 6px;">
+                  <span class="policy-dot" style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #94A3B8;"></span> Mínimo 8 caracteres
+                </div>
+                <div id="rule-upper" style="color: #64748B; display: flex; align-items: center; gap: 6px;">
+                  <span class="policy-dot" style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #94A3B8;"></span> Al menos una letra mayúscula (A-Z)
+                </div>
+                <div id="rule-lower" style="color: #64748B; display: flex; align-items: center; gap: 6px;">
+                  <span class="policy-dot" style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #94A3B8;"></span> Al menos una letra minúscula (a-z)
+                </div>
+                <div id="rule-number" style="color: #64748B; display: flex; align-items: center; gap: 6px;">
+                  <span class="policy-dot" style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #94A3B8;"></span> Al menos un número (0-9)
+                </div>
+                <div id="rule-special" style="color: #64748B; display: flex; align-items: center; gap: 6px;">
+                  <span class="policy-dot" style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #94A3B8;"></span> Al menos un carácter especial (!@#$%^&*...)
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="confirm-password" style="font-size: 0.76rem; font-weight: 800; color: #52606D; text-transform: uppercase; margin-bottom: 4px; display: block;">Confirmar Nueva Contraseña</label>
+                <input type="password" id="confirm-password" required placeholder="Repite la nueva contraseña" class="form-input profile-custom-input" autocomplete="new-password" style="width: 100%; box-sizing: border-box; background: #F8FAFC; border: 1.5px solid #CBD5E1; border-radius: 10px; padding: 10px 14px; font-size: 0.86rem;" />
+                <div id="password-match-msg" style="font-size: 0.72rem; margin-top: 4px; display: none;"></div>
+              </div>
+
+              <div style="margin-top: 4px;">
+                <button type="submit" id="btn-submit-password" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: #00594E; border: none; border-radius: 10px; color: #FFFFFF; font-weight: 800; font-size: 0.88rem; cursor: pointer; box-shadow: 0 2px 8px rgba(0, 89, 78, 0.25); transition: background 0.15s ease;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                  <span>Actualizar Contraseña Institucional</span>
+                </button>
+              </div>
+              <div id="password-status-feedback" style="font-size: 0.82rem; text-align: center; font-weight: 700; margin-top: 6px; display: none;"></div>
+            </form>
           </div>
 
-          <!-- Indicadores visuales de política estricta -->
-          <div class="password-policy-box" style="background: var(--bg-surface-elevated); padding: 12px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); font-size: 0.74rem; display: flex; flex-direction: column; gap: 6px;">
-            <div style="font-weight: 700; color: var(--text-muted); margin-bottom: 2px;">Criterios de Seguridad Requeridos:</div>
-            <div id="rule-length" style="color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
-              <span class="policy-dot" style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted);"></span> Mínimo 8 caracteres
-            </div>
-            <div id="rule-upper" style="color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
-              <span class="policy-dot" style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted);"></span> Al menos una letra mayúscula (A-Z)
-            </div>
-            <div id="rule-lower" style="color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
-              <span class="policy-dot" style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted);"></span> Al menos una letra minúscula (a-z)
-            </div>
-            <div id="rule-number" style="color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
-              <span class="policy-dot" style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted);"></span> Al menos un número (0-9)
-            </div>
-            <div id="rule-special" style="color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
-              <span class="policy-dot" style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted);"></span> Al menos un carácter especial (!@#$%^&*...)
-            </div>
-          </div>
+        </div>
 
-          <div class="form-group">
-            <label for="confirm-password" style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Confirmar Nueva Contraseña</label>
-            <input type="password" id="confirm-password" required placeholder="Repite la nueva contraseña" class="form-input" autocomplete="new-password" />
-            <div id="password-match-msg" style="font-size: 0.72rem; margin-top: 4px; display: none;"></div>
-          </div>
-
-          <div style="margin-top: 6px;">
-            <button type="submit" id="btn-submit-password" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 11px;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-              <span>Actualizar Contraseña Institucional</span>
-            </button>
-          </div>
-          <div id="password-status-feedback" style="font-size: 0.8rem; text-align: center; font-weight: 700; margin-top: 4px; display: none;"></div>
-        </form>
       </div>
 
     </div>
@@ -175,7 +205,7 @@ import { supabase } from '@lib/supabase';
   </div>
 
   <style>
-    @media (max-width: 768px) {
+    @media (max-width: 860px) {
       .profile-grid-cols {
         grid-template-columns: 1fr !important;
       }
@@ -183,17 +213,19 @@ import { supabase } from '@lib/supabase';
     .form-input {
       width: 100%;
       padding: 10px 14px;
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-sm);
+      border: 1.5px solid #CBD5E1;
+      border-radius: 10px;
       font-family: inherit;
-      font-size: 0.85rem;
-      color: var(--text-main);
-      transition: var(--transition-normal);
+      font-size: 0.86rem;
+      color: #111827;
+      transition: all 0.15s ease;
     }
-    .form-input:focus {
+    .form-input:focus,
+    .profile-custom-input:focus {
       outline: none;
-      border-color: var(--verde-principal);
-      box-shadow: 0 0 0 3px var(--verde-suave-bg);
+      border-color: #00594E !important;
+      box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.15) !important;
+      background: #FFFFFF !important;
     }
   </style>
 

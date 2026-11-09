@@ -46,14 +46,19 @@ export function initAppLayout() {
 
   window.currentLoggedUser = activeUser;
 
-  // 2. Función global Toast ejecutiva y de alto nivel
+  // 2. Función global Toast ejecutiva y de alto nivel con auto-dismiss garantizado en 2.8s
   window.showToast = function (
     message: string,
     typeOrIsError: boolean | 'success' | 'error' | 'warning' | 'info' = 'success',
     customTitle?: string
   ) {
-    const container = document.getElementById('toast-container');
-    if (!container) return;
+    let container = document.getElementById('global-toast-container') || document.getElementById('toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'global-toast-container';
+      container.className = 'toast-container';
+      document.body.appendChild(container);
+    }
 
     let type: 'success' | 'error' | 'warning' | 'info' = 'success';
     if (typeof typeOrIsError === 'boolean') {
@@ -64,6 +69,21 @@ export function initAppLayout() {
       } else {
         type = typeOrIsError as any;
       }
+    }
+
+    // Si entra un nuevo toast y hay algún toast previo de "Iniciando/Cargando/Procesando", removerlo de inmediato
+    const activeToasts = container.querySelectorAll('.toast');
+    activeToasts.forEach((t) => {
+      const msg = t.querySelector('.toast-message')?.textContent || '';
+      if (msg.includes('Iniciando') || msg.includes('Cargando') || msg.includes('Procesando') || msg.includes('Respaldando')) {
+        t.remove();
+      }
+    });
+
+    // Máximo 2 Toasts visibles al mismo tiempo: si entra un 3.º, remover el más antiguo
+    const currentToasts = container.querySelectorAll('.toast');
+    if (currentToasts.length >= 2 && currentToasts[0]) {
+      currentToasts[0].remove();
     }
 
     const titles: Record<string, string> = {
@@ -95,33 +115,29 @@ export function initAppLayout() {
         </div>
         <div class="toast-message">${message}</div>
       </div>
-      <div class="toast-progress"></div>
+      <div class="toast-progress toast-progress-bar"></div>
     `;
 
+    let removed = false;
+    const removeToast = () => {
+      if (removed) return;
+      removed = true;
+      toast.style.animation = 'toastFadeOut 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+      setTimeout(() => {
+        try { toast.remove(); } catch (_) {}
+      }, 200);
+    };
+
     const btnClose = toast.querySelector('.toast-close-btn');
-    btnClose?.addEventListener('click', () => {
-      dismissToast();
+    btnClose?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      removeToast();
     });
 
-    let dismissTimer: any = null;
-    function dismissToast() {
-      if (dismissTimer) clearTimeout(dismissTimer);
-      toast.style.animation = 'toastFadeOut 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards';
-      setTimeout(() => toast.remove(), 300);
-    }
-
-    dismissTimer = setTimeout(dismissToast, 4000);
-
-    toast.addEventListener('mouseenter', () => {
-      if (dismissTimer) clearTimeout(dismissTimer);
-      const prog = toast.querySelector('.toast-progress') as HTMLElement;
-      if (prog) prog.style.animationPlayState = 'paused';
-    });
-    toast.addEventListener('mouseleave', () => {
-      dismissTimer = setTimeout(dismissToast, 2000);
-      const prog = toast.querySelector('.toast-progress') as HTMLElement;
-      if (prog) prog.style.animationPlayState = 'running';
-    });
+    // Auto-dismiss infalible en exactamente 2800ms (2.8 segundos)
+    setTimeout(() => {
+      removeToast();
+    }, 2800);
 
     container.appendChild(toast);
   };

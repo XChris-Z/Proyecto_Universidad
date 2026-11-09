@@ -14,10 +14,20 @@ export async function initAuditoria() {
 
   function updateCounters(filteredList: AuditLog[]) {
     const kpiTotal = document.getElementById('audit-kpi-total');
+    const kpiRadicaciones = document.getElementById('audit-kpi-radicaciones');
+    const kpiRespuestas = document.getElementById('audit-kpi-respuestas');
     const kpiCritical = document.getElementById('audit-kpi-critical');
     const kpiIntegrity = document.getElementById('audit-kpi-integrity');
 
     if (kpiTotal) kpiTotal.textContent = String(logs.length);
+    if (kpiRadicaciones) {
+      const rads = logs.filter(l => l.actionType === 'SUBIDA_ARCHIVO' || (l.action && l.action.toLowerCase().includes('radicac'))).length;
+      kpiRadicaciones.textContent = String(rads);
+    }
+    if (kpiRespuestas) {
+      const resps = logs.filter(l => l.actionType === 'RESPUESTA' || (l.action && l.action.toLowerCase().includes('respuesta'))).length;
+      kpiRespuestas.textContent = String(resps);
+    }
     if (kpiCritical) {
       const crit = logs.filter(l => l.severity === 'CRITICAL' || l.actionType === 'ELIMINACION').length;
       kpiCritical.textContent = String(crit);

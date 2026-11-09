@@ -139,25 +139,13 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
           title="Ver cumplimiento de términos SLA en Calendario Institucional"
         >
           <div class="capsule-icon-wrap mint">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
           </div>
           <div class="number tabular-nums" id="quick-sla-compliance">
             {slaSafePct}%
           </div>
           <div class="label">Cumplimiento SLA &bull; Términos en Plazo</div>
         </a>
-
-        <!-- Botones de Acción Ejecutiva Directa -->
-        <div class="hero-cta-buttons">
-          <a href="/subir" class="btn-hero-cta primary" title="Radicar nueva petición oficial">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            <span>Radicar Nueva Petición</span>
-          </a>
-          <a href="/archivos" class="btn-hero-cta secondary" title="Abrir gestor general de expedientes y carpetas">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-            <span>Abrir Gestor de Expedientes</span>
-          </a>
-        </div>
 
         <!-- Preservación segura de IDs DOM sin impacto visual -->
         <div style="display: none;" aria-hidden="true">
@@ -833,14 +821,19 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
   .hero-actions-container {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 16px;
-    flex-wrap: wrap;
     z-index: 1;
+    flex-shrink: 0;
   }
 
   .hero-sla-card {
-    min-width: 175px;
-    padding: 16px 22px;
+    min-width: 210px;
+    padding: 18px 26px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
   }
 
   .hero-cta-buttons {
