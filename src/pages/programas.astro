@@ -16,78 +16,86 @@ const countAcred = programasList.filter((p: any) => p.categoria === 'acreditacio
 ---
 
 <AppLayout title="Gestión Académica y Acreditación" activeNav="programas">
-  <div class="panel-box">
-    <div class="panel-header" style="flex-wrap: wrap; gap: 14px;">
-      <div>
-        <div class="panel-title">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222"/></svg>
-          <span>Gestión Académica y Acreditación Institucional</span>
+  <div style="display: flex; flex-direction: column; gap: 22px; max-width: 1280px; margin: 0 auto; width: 100%;">
+    
+    <!-- Cabecera Sobria y Ejecutiva (Bento Pro Max) -->
+    <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-top: 4px solid #00594E; border-radius: 16px; padding: 24px 28px; box-shadow: 0 2px 10px rgba(0, 89, 78, 0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 18px;">
+      <div style="min-width: 0; flex: 1;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <h1 style="font-size: 1.55rem; font-weight: 800; color: #111827; margin: 0; letter-spacing: -0.01em;">Gestión Académica y Acreditación Institucional</h1>
+          <span style="font-size: 0.72rem; font-weight: 800; background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; padding: 3px 10px; border-radius: 999px;">Acreditación MEN & CNA</span>
         </div>
-        <div style="font-size: 0.8rem; color: var(--secondary-light); font-weight: 600; margin-top: 4px;">
-          Historial de programas, actos administrativos MEN de aprobación y negación, radicados en SACES y acreditación de alta calidad CNA
-        </div>
+        <p style="font-size: 0.86rem; color: #52606D; margin: 6px 0 0 0;">
+          Historial de programas, actos administrativos MEN de aprobación y negación, radicados en SACES y acreditación de alta calidad CNA.
+        </p>
       </div>
 
-      <div style="display: flex; gap: 10px; align-items: center;">
-        <button class="btn btn-primary" id="btn-open-programa-modal">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <button class="btn btn-primary" id="btn-open-programa-modal" style="background: #00594E; border: 1.5px solid #00594E; color: #ffffff; font-weight: 800; font-size: 0.84rem; border-radius: 10px; padding: 10px 20px; box-shadow: 0 2px 8px rgba(0, 89, 78, 0.25); cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
           <span>Registrar Programa / Trámite MEN</span>
         </button>
       </div>
     </div>
 
-    <div class="module-tabs" id="programas-module-tabs">
-      <button class="module-tab-btn active" data-ptab="historial">
+    <!-- Pestañas de Navegación Estilizadas con Contadores -->
+    <div class="module-tabs" id="programas-module-tabs" style="display: flex; gap: 8px; flex-wrap: wrap; border-bottom: 2px solid #DCE4E3; padding-bottom: 12px;">
+      <button class="module-tab-btn active" data-ptab="historial" style="padding: 10px 18px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid transparent; transition: all 0.2s ease;">
         <span>Historial de Programas (Actos Aprobación y Negación)</span>
-        <span class="tab-count" id="prog-count-total">{countHistorial}</span>
+        <span class="tab-count" id="prog-count-total" style="background: #00594E; color: #ffffff; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;">{countHistorial}</span>
       </button>
-      <button class="module-tab-btn" data-ptab="saces">
+      <button class="module-tab-btn" data-ptab="saces" style="padding: 10px 18px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid transparent; transition: all 0.2s ease;">
         <span>Procesos Radicados SACES / MEN</span>
-        <span class="tab-count" id="prog-count-saces">{countSaces}</span>
+        <span class="tab-count" id="prog-count-saces" style="background: #B2CFCB; color: #00594E; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;">{countSaces}</span>
       </button>
-      <button class="module-tab-btn" data-ptab="acreditacion">
+      <button class="module-tab-btn" data-ptab="acreditacion" style="padding: 10px 18px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid transparent; transition: all 0.2s ease;">
         <span>Acreditación de Alta Calidad (CNA)</span>
-        <span class="tab-count" id="prog-count-cna">{countAcred}</span>
+        <span class="tab-count" id="prog-count-cna" style="background: #DBD2B0; color: #786832; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;">{countAcred}</span>
       </button>
     </div>
 
-    <!-- Buscador en tiempo real de Programas -->
-    <div style="display: flex; gap: 12px; margin-top: 18px; margin-bottom: 4px; flex-wrap: wrap;">
-      <div class="search-box" style="flex: 1; min-width: 260px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-        <input type="text" id="programas-search-input" placeholder="Buscar programa por nombre (Ej: Derecho, Medicina), código SNIES o número de acto...">
+    <!-- Barra de Búsqueda Institucional -->
+    <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-radius: 14px; padding: 14px 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+      <div style="position: relative; width: 100%;">
+        <input type="text" id="programas-search-input" placeholder="Buscar programa por nombre (Ej: Derecho, Medicina), código SNIES o número de acto..." class="form-input" style="padding-left: 38px; border-radius: 10px; border: 1.5px solid #DCE4E3; font-size: 0.85rem; height: 42px; width: 100%; box-sizing: border-box;" />
+        <div style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #64748B; display: flex; align-items: center; pointer-events: none;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        </div>
       </div>
     </div>
 
-    <div id="programas-tab-content">
-      <!-- Dinámico desde JS con datos de Supabase -->
+    <!-- Contenedor con Scroll Propio para Tarjetas de Programas (Conserva estructura intacta interna) -->
+    <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-radius: 14px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+      <div id="programas-tab-content" class="pro-scroll-container records-card-body" style="max-height: 600px; overflow-y: auto; overflow-x: auto; padding: 4px;">
+        <!-- Dinámico desde JS con datos de Supabase (Tarjetas individuales 100% conservadas) -->
+      </div>
     </div>
   </div>
 
   <!-- Modal: Registrar Programa / Trámite MEN -->
-  <div class="modal-backdrop" id="new-programa-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; align-items: center; justify-content: center; padding: 16px;">
-    <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 600px; border-radius: var(--radius-md); box-shadow: var(--shadow-md); overflow: hidden;">
-      <div class="modal-header" style="background: var(--verde-suave-bg); border-bottom: 1px solid var(--verde-borde); padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
-        <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--verde-principal); margin: 0; display: flex; align-items: center; gap: 8px;">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222"/></svg>
+  <div class="modal-backdrop" id="new-programa-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(2px);">
+    <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 620px; border-radius: 16px; box-shadow: 0 20px 45px rgba(0,0,0,0.2); overflow: hidden; border-top: 4px solid #00594E;">
+      <div class="modal-header" style="background: #F2F7F6; border-bottom: 1.5px solid #DCE4E3; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-size: 1.15rem; font-weight: 800; color: #00594E; margin: 0; display: flex; align-items: center; gap: 8px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222"/></svg>
           <span>Registrar Programa Académico / Trámite MEN</span>
         </h3>
-        <button type="button" class="btn-close-modal" id="btn-close-new-prog-modal" style="background: transparent; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer;">&times;</button>
+        <button type="button" class="btn-close-modal" id="btn-close-new-prog-modal" style="background: transparent; border: none; font-size: 1.5rem; color: #64748B; cursor: pointer; line-height: 1;">&times;</button>
       </div>
 
       <form id="form-new-programa" style="padding: 24px; display: flex; flex-direction: column; gap: 14px;">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
           <div class="form-group">
-            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Módulo / Pestaña *</label>
-            <select id="new-prog-categoria" class="form-input" style="cursor: pointer;" required>
+            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Módulo / Pestaña *</label>
+            <select id="new-prog-categoria" class="form-input" style="cursor: pointer; border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem;" required>
               <option value="historial" selected>Historial de Programas (Aprobados/Negados)</option>
               <option value="saces">Procesos Radicados SACES / MEN</option>
               <option value="acreditacion">Acreditación de Alta Calidad (CNA)</option>
             </select>
           </div>
           <div class="form-group">
-            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Nivel de Formación *</label>
-            <select id="new-prog-nivel" class="form-input" style="cursor: pointer;" required>
+            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Nivel de Formación *</label>
+            <select id="new-prog-nivel" class="form-input" style="cursor: pointer; border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem;" required>
               <option value="Pregrado Universitario">Pregrado Universitario</option>
               <option value="Especialización">Especialización</option>
               <option value="Maestría">Maestría</option>
@@ -97,47 +105,47 @@ const countAcred = programasList.filter((p: any) => p.categoria === 'acreditacio
         </div>
 
         <div class="form-group">
-          <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Nombre del Programa Académico *</label>
-          <input type="text" id="new-prog-nombre" class="form-input" placeholder="Ej: Derecho, Ingeniería de Sistemas, Medicina Veterinaria..." required />
+          <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Nombre del Programa Académico *</label>
+          <input type="text" id="new-prog-nombre" class="form-input" placeholder="Ej: Derecho, Ingeniería de Sistemas, Medicina Veterinaria..." style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 9px 12px; font-size: 0.85rem;" required />
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
           <div class="form-group">
-            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Código SNIES</label>
-            <input type="text" id="new-prog-snies" class="form-input" placeholder="Ej: 105432" />
+            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Código SNIES</label>
+            <input type="text" id="new-prog-snies" class="form-input" placeholder="Ej: 105432" style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem;" />
           </div>
           <div class="form-group">
-            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Facultad</label>
-            <input type="text" id="new-prog-facultad" class="form-input" placeholder="Ej: Facultad de Ciencias Jurídicas" />
+            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Facultad</label>
+            <input type="text" id="new-prog-facultad" class="form-input" placeholder="Ej: Facultad de Ciencias Jurídicas" style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem;" />
           </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 12px;">
           <div class="form-group">
-            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Resolución MEN o Radicado SACES</label>
-            <input type="text" id="new-prog-resolucion" class="form-input" placeholder="Ej: Res. 004812 / Radicado 98210" />
+            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Resolución MEN o Radicado SACES</label>
+            <input type="text" id="new-prog-resolucion" class="form-input" placeholder="Ej: Res. 004812 / Radicado 98210" style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem;" />
           </div>
           <div class="form-group">
-            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Fecha del Acto</label>
-            <input type="date" id="new-prog-fecha" class="form-input" />
+            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Fecha del Acto</label>
+            <input type="date" id="new-prog-fecha" class="form-input" style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem;" />
           </div>
         </div>
 
-        <!-- Carga de Documento de Soporte (Acto MEN / Evidencia SACES) -->
+        <!-- Carga de Documento de Soporte -->
         <div class="form-group">
-          <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; display: flex; justify-content: space-between;">
+          <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase; display: flex; justify-content: space-between;">
             <span>Documento de Soporte / Acto Administrativo (PDF, DOC, DOCX)</span>
-            <span style="font-size: 0.70rem; color: var(--verde-principal); font-weight: 600;">Opcional</span>
+            <span style="font-size: 0.70rem; color: #00594E; font-weight: 700;">Opcional</span>
           </label>
-          <input type="file" id="new-prog-archivo" class="form-input" accept=".pdf,.doc,.docx" style="padding: 7px 10px; font-size: 0.82rem;" />
-          <span style="font-size: 0.72rem; color: var(--text-muted); margin-top: 3px;">
-            El archivo se archivará automáticamente en el repositorio digital seguro institucional.
+          <input type="file" id="new-prog-archivo" class="form-input" accept=".pdf,.doc,.docx" style="padding: 7px 10px; font-size: 0.82rem; border-radius: 8px; border: 1.5px solid #DCE4E3;" />
+          <span style="font-size: 0.72rem; color: #64748B; margin-top: 3px; display: block;">
+            El archivo se custodiará automáticamente en el repositorio digital seguro institucional.
           </span>
         </div>
 
-        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px;">
-          <button type="button" class="btn btn-secondary" id="btn-cancel-new-prog">Cancelar</button>
-          <button type="submit" class="btn btn-primary" id="btn-submit-prog" style="font-weight: 700;">
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; padding-top: 14px; border-top: 1px solid #DCE4E3;">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-new-prog" style="border: 1.5px solid #DCE4E3; color: #52606D; background: #ffffff; font-weight: 700; border-radius: 8px; padding: 8px 16px; cursor: pointer;">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-prog" style="background: #00594E; border: none; color: #ffffff; font-weight: 800; border-radius: 8px; padding: 9px 20px; cursor: pointer; box-shadow: 0 2px 6px rgba(0,89,78,0.25);">
             Guardar Programa
           </button>
         </div>
@@ -147,53 +155,53 @@ const countAcred = programasList.filter((p: any) => p.categoria === 'acreditacio
 
   <!-- Modal: Detalle y Gestión del Programa Académico -->
   <div class="modal-backdrop" id="detail-programa-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1050; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(4px);">
-    <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 680px; border-radius: var(--radius-md); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04); overflow: hidden; max-height: 90vh; display: flex; flex-direction: column;">
-      <div class="modal-header" style="background: var(--verde-suave-bg); border-bottom: 1px solid var(--verde-borde); padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
+    <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 680px; border-radius: 16px; box-shadow: 0 20px 45px rgba(0,0,0,0.2); overflow: hidden; max-height: 90vh; display: flex; flex-direction: column; border-top: 4px solid #00594E;">
+      <div class="modal-header" style="background: #F2F7F6; border-bottom: 1.5px solid #DCE4E3; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
         <div style="display: flex; align-items: center; gap: 10px;">
-          <div style="width: 38px; height: 38px; border-radius: 8px; background: var(--verde-principal); color: #ffffff; display: flex; align-items: center; justify-content: center;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222"/></svg>
+          <div style="width: 38px; height: 38px; border-radius: 10px; background: #00594E; color: #ffffff; display: flex; align-items: center; justify-content: center;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222"/></svg>
           </div>
           <div>
-            <h3 id="modal-detail-prog-title" style="font-size: 1.15rem; font-weight: 800; color: var(--verde-principal); margin: 0;">Detalle del Programa</h3>
-            <span id="modal-detail-prog-nivel" style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600;">Pregrado Universitario</span>
+            <h3 id="modal-detail-prog-title" style="font-size: 1.15rem; font-weight: 800; color: #00594E; margin: 0;">Detalle del Programa</h3>
+            <span id="modal-detail-prog-nivel" style="font-size: 0.74rem; color: #52606D; font-weight: 600;">Pregrado Universitario</span>
           </div>
         </div>
-        <button type="button" class="btn-close-modal" id="btn-close-detail-modal" style="background: transparent; border: none; font-size: 1.6rem; color: var(--text-muted); cursor: pointer; line-height: 1;">&times;</button>
+        <button type="button" class="btn-close-modal" id="btn-close-detail-modal" style="background: transparent; border: none; font-size: 1.6rem; color: #64748B; cursor: pointer; line-height: 1;">&times;</button>
       </div>
 
       <div class="modal-body" style="padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 18px;">
         <!-- Ficha de Identificación -->
-        <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; font-size: 0.84rem;">
+        <div style="background: #F2F7F6; border: 1.5px solid #B2CFCB; border-radius: 12px; padding: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; font-size: 0.84rem;">
           <div>
-            <span style="font-size: 0.70rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block;">Código SNIES:</span>
-            <strong id="detail-snies" style="color: var(--text-main); font-family: monospace; font-size: 0.92rem;">--</strong>
+            <span style="font-size: 0.70rem; color: #52606D; text-transform: uppercase; font-weight: 750; display: block;">Código SNIES:</span>
+            <strong id="detail-snies" style="color: #111827; font-family: monospace; font-size: 0.92rem;">--</strong>
           </div>
           <div>
-            <span style="font-size: 0.70rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block;">Facultad:</span>
-            <span id="detail-facultad" style="color: var(--text-main); font-weight: 600;">--</span>
+            <span style="font-size: 0.70rem; color: #52606D; text-transform: uppercase; font-weight: 750; display: block;">Facultad:</span>
+            <span id="detail-facultad" style="color: #111827; font-weight: 600;">--</span>
           </div>
           <div>
-            <span style="font-size: 0.70rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block;">Estado de Vigencia:</span>
-            <span id="detail-estado-badge" style="display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 800; background: #DCFCE7; color: #15803D;">Activo</span>
+            <span style="font-size: 0.70rem; color: #52606D; text-transform: uppercase; font-weight: 750; display: block;">Estado de Vigencia:</span>
+            <span id="detail-estado-badge" style="display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 800; background: #DCFCE7; color: #00594E; border: 1px solid #B2CFCB;">Activo</span>
           </div>
           <div>
-            <span style="font-size: 0.70rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block;">Resolución MEN / Radicado:</span>
-            <span id="detail-resolucion" style="color: var(--primary); font-weight: 700;">--</span>
+            <span style="font-size: 0.70rem; color: #52606D; text-transform: uppercase; font-weight: 750; display: block;">Resolución MEN / Radicado:</span>
+            <span id="detail-resolucion" style="color: #00594E; font-weight: 700;">--</span>
           </div>
           <div>
-            <span style="font-size: 0.70rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block;">Fecha de Expedición:</span>
-            <span id="detail-fecha" style="color: var(--text-main);">--</span>
+            <span style="font-size: 0.70rem; color: #52606D; text-transform: uppercase; font-weight: 750; display: block;">Fecha de Expedición:</span>
+            <span id="detail-fecha" style="color: #111827;">--</span>
           </div>
           <div>
-            <span style="font-size: 0.70rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block;">Vigencia:</span>
-            <span id="detail-vigencia" style="color: var(--text-main);">7 Años</span>
+            <span style="font-size: 0.70rem; color: #52606D; text-transform: uppercase; font-weight: 750; display: block;">Vigencia:</span>
+            <span id="detail-vigencia" style="color: #111827;">7 Años</span>
           </div>
         </div>
 
         <!-- Sección de Documento de Soporte -->
-        <div style="border: 1px solid var(--border-color); border-radius: 8px; padding: 18px; background: #ffffff;">
-          <h4 style="margin: 0 0 10px 0; font-size: 0.88rem; font-weight: 800; color: var(--verde-principal); display: flex; align-items: center; gap: 8px;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <div style="border: 1.5px solid #DCE4E3; border-radius: 12px; padding: 18px; background: #ffffff;">
+          <h4 style="margin: 0 0 10px 0; font-size: 0.88rem; font-weight: 800; color: #00594E; display: flex; align-items: center; gap: 8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             <span>Expediente Documental de Soporte</span>
           </h4>
 
@@ -202,13 +210,13 @@ const countAcred = programasList.filter((p: any) => p.categoria === 'acreditacio
           </div>
 
           <!-- Formulario rápido para adjuntar o reemplazar documento -->
-          <div style="margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--border-color);">
-            <label style="font-size: 0.74rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; display: block; margin-bottom: 6px;">
+          <div style="margin-top: 14px; padding-top: 14px; border-top: 1px dashed #DCE4E3;">
+            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase; display: block; margin-bottom: 6px;">
               Adjuntar / Reemplazar Documento de Soporte (PDF, DOC, DOCX):
             </label>
             <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-              <input type="file" id="detail-upload-file-input" accept=".pdf,.doc,.docx" class="form-input" style="flex: 1; min-width: 200px; padding: 6px 10px; font-size: 0.80rem;" />
-              <button type="button" class="btn btn-secondary btn-sm" id="btn-detail-upload-doc" style="white-space: nowrap; font-weight: 700;">
+              <input type="file" id="detail-upload-file-input" accept=".pdf,.doc,.docx" class="form-input" style="flex: 1; min-width: 200px; padding: 6px 10px; font-size: 0.80rem; border-radius: 8px; border: 1.5px solid #DCE4E3;" />
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-detail-upload-doc" style="white-space: nowrap; font-weight: 750; border: 1.5px solid #B2CFCB; background: #F2F7F6; color: #00594E; border-radius: 8px; padding: 6px 14px; cursor: pointer;">
                 Subir Documento
               </button>
             </div>
@@ -216,14 +224,14 @@ const countAcred = programasList.filter((p: any) => p.categoria === 'acreditacio
         </div>
       </div>
 
-      <div class="modal-footer" style="padding: 16px 24px; background: var(--bg-surface); border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-        <button type="button" class="btn btn-danger btn-sm" id="btn-detail-delete-prog" style="display: inline-flex; align-items: center; gap: 6px;">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      <div class="modal-footer" style="padding: 16px 24px; background: #F8FAFC; border-top: 1.5px solid #DCE4E3; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <button type="button" class="btn btn-danger btn-sm" id="btn-detail-delete-prog" style="display: inline-flex; align-items: center; gap: 6px; background: #DC2626; color: #ffffff; border: none; border-radius: 8px; padding: 8px 16px; font-weight: 700; cursor: pointer;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
           <span>Eliminar Programa</span>
         </button>
 
         <div style="display: flex; gap: 10px;">
-          <button type="button" class="btn btn-secondary" id="btn-detail-close">Cerrar</button>
+          <button type="button" class="btn btn-secondary" id="btn-detail-close" style="border: 1.5px solid #DCE4E3; color: #52606D; background: #ffffff; border-radius: 8px; padding: 8px 16px; font-weight: 700; cursor: pointer;">Cerrar</button>
         </div>
       </div>
     </div>

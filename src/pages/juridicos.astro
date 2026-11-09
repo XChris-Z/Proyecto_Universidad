@@ -18,78 +18,85 @@ const countDirectivas = casosList.filter((c: any) => c.categoria === 'directivas
 ---
 
 <AppLayout title="Asuntos Jurídicos y Normativos" activeNav="juridicos">
-  <div class="panel-box">
-    <div class="panel-header" style="flex-wrap: wrap; gap: 14px;">
-      <div>
-        <div class="panel-title">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>
-          <span>Asuntos Jurídicos y Normativos</span>
+  <div style="display: flex; flex-direction: column; gap: 22px; max-width: 1280px; margin: 0 auto; width: 100%;">
+    
+    <!-- Cabecera Sobria y Ejecutiva (Bento Pro Max) -->
+    <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-top: 4px solid #00594E; border-radius: 16px; padding: 24px 28px; box-shadow: 0 2px 10px rgba(0, 89, 78, 0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 18px;">
+      <div style="min-width: 0; flex: 1;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <h1 style="font-size: 1.55rem; font-weight: 800; color: #111827; margin: 0; letter-spacing: -0.01em;">Asuntos Jurídicos y Normativos</h1>
+          <span style="font-size: 0.72rem; font-weight: 800; background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; padding: 3px 10px; border-radius: 999px;">Oficina Asesora Jurídica</span>
         </div>
-        <div style="font-size: 0.8rem; color: var(--secondary-light); font-weight: 600; margin-top: 4px;">
-          Oficina Asesora Jurídica: Conceptos, Litigios, Auditorías, Directivas, Circulares y Seguimiento a Obligaciones
-        </div>
+        <p style="font-size: 0.86rem; color: #52606D; margin: 6px 0 0 0;">
+          Conceptos jurídicos, litigios, auditorías de entes de control, directivas rectorales, circulares y seguimiento a obligaciones institucionales.
+        </p>
       </div>
 
-      <div style="display: flex; gap: 10px; align-items: center;">
-        <button class="btn btn-primary" id="btn-open-gap-modal">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <button class="btn btn-primary" id="btn-open-gap-modal" style="background: #00594E; border: 1.5px solid #00594E; color: #ffffff; font-weight: 800; font-size: 0.84rem; border-radius: 10px; padding: 10px 20px; box-shadow: 0 2px 8px rgba(0, 89, 78, 0.25); cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
           <span>Registrar Asunto Jurídico</span>
         </button>
       </div>
     </div>
 
-    <!-- Pestañas del Módulo Jurídico -->
-    <div class="module-tabs" id="juridicos-module-tabs">
-      <button class="module-tab-btn active" data-jtab="brechas">
+    <!-- Pestañas de Navegación Estilizadas con Contadores -->
+    <div class="module-tabs" id="juridicos-module-tabs" style="display: flex; gap: 8px; flex-wrap: wrap; border-bottom: 2px solid #DCE4E3; padding-bottom: 12px;">
+      <button class="module-tab-btn active" data-jtab="brechas" style="padding: 10px 16px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid transparent; transition: all 0.2s ease;">
         <span>Brechas Normativas (Legal Gap)</span>
-        <span class="tab-count" id="jcount-brechas">{countBrechas}</span>
+        <span class="tab-count" id="jcount-brechas" style="background: #00594E; color: #ffffff; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;">{countBrechas}</span>
       </button>
-      <button class="module-tab-btn" data-jtab="conceptos">
-        <span>Conceptos (Internos y Externos)</span>
-        <span class="tab-count" id="jcount-conceptos">{countConceptos}</span>
+      <button class="module-tab-btn" data-jtab="conceptos" style="padding: 10px 16px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid transparent; transition: all 0.2s ease;">
+        <span>Conceptos (Internos / Externos)</span>
+        <span class="tab-count" id="jcount-conceptos" style="background: #B2CFCB; color: #00594E; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;">{countConceptos}</span>
       </button>
-      <button class="module-tab-btn" data-jtab="litigios">
+      <button class="module-tab-btn" data-jtab="litigios" style="padding: 10px 16px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid transparent; transition: all 0.2s ease;">
         <span>Litigios y Asuntos Judiciales</span>
-        <span class="tab-count" id="jcount-litigios">{countLitigios}</span>
+        <span class="tab-count" id="jcount-litigios" style="background: #DBD2B0; color: #786832; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;">{countLitigios}</span>
       </button>
-      <button class="module-tab-btn" data-jtab="auditorias">
+      <button class="module-tab-btn" data-jtab="auditorias" style="padding: 10px 16px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid transparent; transition: all 0.2s ease;">
         <span>Auditorías de Entes de Control</span>
-        <span class="tab-count" id="jcount-auditorias">{countAuditorias}</span>
+        <span class="tab-count" id="jcount-auditorias" style="background: #E2E8F0; color: #475569; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;">{countAuditorias}</span>
       </button>
-      <button class="module-tab-btn" data-jtab="directivas">
+      <button class="module-tab-btn" data-jtab="directivas" style="padding: 10px 16px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid transparent; transition: all 0.2s ease;">
         <span>Directivas y Circulares</span>
-        <span class="tab-count" id="jcount-directivas">{countDirectivas}</span>
+        <span class="tab-count" id="jcount-directivas" style="background: #E2E8F0; color: #475569; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;">{countDirectivas}</span>
       </button>
     </div>
 
     <!-- Buscador en tiempo real de Asuntos Jurídicos -->
-    <div style="display: flex; gap: 12px; margin-top: 18px; margin-bottom: 4px; flex-wrap: wrap;">
-      <div class="search-box" style="flex: 1; min-width: 260px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-        <input type="text" id="juridicos-search-input" placeholder="Buscar asunto jurídico por título, expediente, despacho o responsable...">
+    <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-radius: 14px; padding: 14px 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+      <div style="position: relative; width: 100%;">
+        <input type="text" id="juridicos-search-input" placeholder="Buscar asunto jurídico por título, expediente, despacho o responsable..." class="form-input" style="padding-left: 38px; border-radius: 10px; border: 1.5px solid #DCE4E3; font-size: 0.85rem; height: 42px; width: 100%; box-sizing: border-box;" />
+        <div style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #64748B; display: flex; align-items: center; pointer-events: none;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        </div>
       </div>
     </div>
 
-    <div id="juridicos-tab-content" style="margin-top: 18px;">
-      <!-- Dinámico desde JS según pestaña activa con datos reales de Supabase -->
+    <!-- Tarjeta Contenedora Principal con Scrollbar Interna Propia -->
+    <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-radius: 14px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+      <div id="juridicos-tab-content" class="pro-scroll-container records-card-body" style="max-height: 580px; overflow-y: auto; overflow-x: auto; width: 100%; padding: 4px;">
+        <!-- Dinámico desde JS según pestaña activa con datos reales de Supabase -->
+      </div>
     </div>
   </div>
 
   <!-- Modal: Registrar Asunto Jurídico / Normativa Faltante -->
-  <div class="modal-backdrop" id="new-gap-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; align-items: center; justify-content: center; padding: 16px;">
-    <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 620px; border-radius: var(--radius-md); box-shadow: var(--shadow-md); overflow: hidden;">
-      <div class="modal-header" style="background: var(--verde-suave-bg); border-bottom: 1px solid var(--verde-borde); padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
-        <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--verde-principal); margin: 0; display: flex; align-items: center; gap: 8px;">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+  <div class="modal-backdrop" id="new-gap-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(2px);">
+    <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 640px; border-radius: 16px; box-shadow: 0 20px 45px rgba(0,0,0,0.2); overflow: hidden; border-top: 4px solid #00594E;">
+      <div class="modal-header" style="background: #F2F7F6; border-bottom: 1.5px solid #DCE4E3; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-size: 1.15rem; font-weight: 800; color: #00594E; margin: 0; display: flex; align-items: center; gap: 8px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
           <span>Registrar Expediente Jurídico</span>
         </h3>
-        <button type="button" class="btn-close-modal" id="btn-close-gap-modal" style="background: transparent; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer;">&times;</button>
+        <button type="button" class="btn-close-modal" id="btn-close-gap-modal" style="background: transparent; border: none; font-size: 1.5rem; color: #64748B; cursor: pointer; line-height: 1;">&times;</button>
       </div>
 
       <form id="form-new-gap" style="padding: 24px; display: flex; flex-direction: column; gap: 14px;">
         <div class="form-group">
-          <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Categoría del Asunto *</label>
-          <select id="new-gap-categoria" class="form-input" style="cursor: pointer;" required>
+          <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Categoría del Asunto *</label>
+          <select id="new-gap-categoria" class="form-input" style="cursor: pointer; border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem; width: 100%; box-sizing: border-box;" required>
             <option value="brechas" selected>Brecha Normativa (Vacío Legal)</option>
             <option value="conceptos">Concepto Jurídico (Interno / Externo)</option>
             <option value="litigios">Litigio o Proceso Judicial</option>
@@ -99,37 +106,34 @@ const countDirectivas = casosList.filter((c: any) => c.categoria === 'directivas
         </div>
 
         <div class="form-group">
-          <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Título del Asunto / Norma Requerida *</label>
-          <input type="text" id="new-gap-titulo" class="form-input" placeholder="Ej: Política Institucional de Protección de Datos Personales" required />
+          <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Título o Asunto del Expediente *</label>
+          <input type="text" id="new-gap-titulo" class="form-input" placeholder="Ej: Reglamentación de propiedad intelectual y patentes universitarias" style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem; width: 100%; box-sizing: border-box;" required />
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
           <div class="form-group">
-            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Mandato Legal / Radicado</label>
-            <input type="text" id="new-gap-mandato" class="form-input" placeholder="Ej: Ley 1581 de 2012 / Radicado 092" />
+            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Mandato de Ley / Radicado</label>
+            <input type="text" id="new-gap-mandato" class="form-input" placeholder="Ej: Ley 30 de 1992 / Circular 003" style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem; width: 100%; box-sizing: border-box;" />
           </div>
           <div class="form-group">
-            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Órgano / Ente Competente</label>
-            <select id="new-gap-organo" class="form-input" style="cursor: pointer;">
+            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Órgano Competente *</label>
+            <select id="new-gap-organo" class="form-input" style="cursor: pointer; border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem; width: 100%; box-sizing: border-box;" required>
               <option value="Consejo Superior Universitario">Consejo Superior Universitario (CSU)</option>
-              <option value="Consejo Académico">Consejo Académico (CA)</option>
+              <option value="Consejo Académico">Consejo Académico</option>
               <option value="Rectoría">Rectoría</option>
-              <option value="Juzgados / Tribunales Administrativos">Juzgados / Tribunales Administrativos</option>
-              <option value="Contraloría / Procuraduría">Contraloría / Procuraduría</option>
+              <option value="Oficina Asesora Jurídica">Oficina Asesora Jurídica</option>
             </select>
           </div>
         </div>
 
         <div class="form-group">
-          <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Justificación / Sustento Jurídico *</label>
-          <textarea id="new-gap-justificacion" class="form-input" rows="3" placeholder="Detalle la fundamentación jurídica, hechos relevantes o necesidad normativa..." required></textarea>
+          <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Justificación y Análisis Jurídico</label>
+          <textarea id="new-gap-justificacion" class="form-input" rows="3" placeholder="Sustentación jurídica del trámite, vacío legal o concepto..." style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem; width: 100%; box-sizing: border-box;"></textarea>
         </div>
 
-        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px;">
-          <button type="button" class="btn btn-secondary" id="btn-cancel-gap">Cancelar</button>
-          <button type="submit" class="btn btn-primary" id="btn-submit-gap" style="font-weight: 700;">
-            Guardar Caso Jurídico
-          </button>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; padding-top: 14px; border-top: 1px solid #DCE4E3;">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-gap" style="border: 1.5px solid #DCE4E3; color: #52606D; background: #ffffff; font-weight: 700; border-radius: 8px; padding: 8px 16px; cursor: pointer;">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-gap" style="background: #00594E; border: none; color: #ffffff; font-weight: 800; border-radius: 8px; padding: 9px 20px; cursor: pointer; box-shadow: 0 2px 6px rgba(0,89,78,0.25);">Guardar Asunto</button>
         </div>
       </form>
     </div>

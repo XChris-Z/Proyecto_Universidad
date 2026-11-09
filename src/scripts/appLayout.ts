@@ -124,7 +124,7 @@ export function initAppLayout() {
       removed = true;
       toast.style.animation = 'toastFadeOut 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards';
       setTimeout(() => {
-        try { toast.remove(); } catch (_) {}
+        try { toast.remove(); } catch (_) { }
       }, 200);
     };
 
@@ -324,10 +324,10 @@ export function initAppLayout() {
     const topbarAvatarImg = document.getElementById('topbar-avatar-img') as HTMLImageElement;
     const topbarUserName = document.getElementById('topbar-user-name');
 
-    const avatarUrl = u.avatar_url || 
-      (u as any).avatarUrl || 
-      localStorage.getItem('sgd_user_avatar') || 
-      localStorage.getItem(`sgd_avatar_${u.id}`) || 
+    const avatarUrl = u.avatar_url ||
+      (u as any).avatarUrl ||
+      localStorage.getItem('sgd_user_avatar') ||
+      localStorage.getItem(`sgd_avatar_${u.id}`) ||
       (u.email ? localStorage.getItem(`sgd_avatar_${u.email}`) : null);
 
     // Renderizado en el Sidebar
@@ -510,7 +510,7 @@ export function initAppLayout() {
           appSidebar.scrollTop = pos;
         }
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   // Guardar en evento scroll pasivo
@@ -547,7 +547,7 @@ export function initAppLayout() {
         link.classList.add('active');
       }
     });
-  } catch (e) {}
+  } catch (e) { }
 
   // 8. Cierre de sesión definitivo y purga integral de almacenamiento y cookies
   document.getElementById('btn-logout')?.addEventListener('click', async () => {

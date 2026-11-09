@@ -82,38 +82,40 @@ export async function initJuzgamiento() {
 
     filtered.forEach(c => {
       const tr = document.createElement('tr');
+      tr.style.borderBottom = '1px solid #E2E8F0';
+      tr.style.fontSize = '0.84rem';
       tr.innerHTML = `
-        <td>
-          <div style="font-weight: 700; font-size: 0.88rem; color: var(--text-main);">${c.implicado}</div>
-          <div style="font-size: 0.74rem; color: var(--text-muted);">${c.cargo || 'Funcionario'}</div>
-          <span style="font-family: monospace; font-size: 0.72rem; color: var(--primary); font-weight: 700;">${c.radicado}</span>
+        <td style="padding: 14px 16px;">
+          <div style="font-weight: 750; font-size: 0.88rem; color: #111827;">${c.implicado}</div>
+          <div style="font-size: 0.74rem; color: #52606D;">${c.cargo || 'Funcionario'}</div>
+          <span style="font-family: monospace; font-size: 0.74rem; color: #00594E; font-weight: 800; background: #F2F7F6; padding: 1px 6px; border-radius: 4px; border: 1px solid #B2CFCB;">${c.radicado}</span>
         </td>
-        <td>
-          <span class="badge" style="background: #f3e8ff; color: #7e22ce; font-size: 0.74rem; font-weight: 700;">
+        <td style="padding: 14px 16px;">
+          <span class="badge" style="background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; font-size: 0.74rem; font-weight: 800; padding: 3px 8px; border-radius: 6px;">
             ${c.tipo_acto}
           </span>
         </td>
-        <td style="max-width: 260px;">
-          <div style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.4;">
+        <td style="padding: 14px 16px; max-width: 260px; min-width: 0; overflow-wrap: anywhere;">
+          <div style="font-size: 0.80rem; color: #52606D; line-height: 1.45;">
             ${c.conducta || 'Sin descripción adicional'}
           </div>
         </td>
-        <td>
-          <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-main);">${c.etapa_procesal}</span>
+        <td style="padding: 14px 16px;">
+          <span style="font-size: 0.80rem; font-weight: 700; color: #111827;">${c.etapa_procesal}</span>
         </td>
-        <td>
-          <span style="font-size: 0.78rem; color: var(--text-muted);">${c.fecha_notificacion || 'Pendiente'}</span>
+        <td style="padding: 14px 16px;">
+          <span style="font-size: 0.78rem; color: #64748B;">${c.fecha_notificacion || 'Pendiente'}</span>
         </td>
-        <td>
-          <span style="font-size: 0.8rem; font-weight: 700; color: var(--primary);">${c.segunda_instancia || 'CSU / Rectoría'}</span>
+        <td style="padding: 14px 16px;">
+          <span style="font-size: 0.80rem; font-weight: 750; color: #00594E;">${c.segunda_instancia || 'CSU / Rectoría'}</span>
         </td>
-        <td>
-          <span class="badge ${c.dias_restantes <= 7 && c.dias_restantes > 0 ? 'status-critico' : c.dias_restantes === 0 ? '' : 'status-alerta'}" style="font-size: 0.72rem; padding: 2px 8px; border-radius: 4px;">
+        <td style="padding: 14px 16px;">
+          <span class="badge" style="font-size: 0.72rem; font-weight: 800; padding: 3px 8px; border-radius: 6px; ${c.dias_restantes <= 7 && c.dias_restantes > 0 ? 'background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA;' : 'background: #F7F5EE; color: #786832; border: 1px solid #DBD2B0;'}">
             ${c.dias_restantes > 0 ? `${c.dias_restantes} días restantes` : c.estado || 'En Términos'}
           </span>
         </td>
-        <td style="text-align: right;">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="(window as any).showToast('Expediente confidencial radicado: ${c.radicado}')">
+        <td style="padding: 14px 16px; text-align: right; white-space: nowrap;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="(window as any).showToast('Expediente confidencial radicado: ${c.radicado}')" style="border: 1.5px solid #B2CFCB; background: #F2F7F6; color: #00594E; font-weight: 750; font-size: 0.76rem; border-radius: 6px; padding: 6px 12px; cursor: pointer;">
             Ver Piezas
           </button>
         </td>

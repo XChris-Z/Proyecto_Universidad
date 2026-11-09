@@ -135,16 +135,16 @@ const pendientesCount = peticionesList.filter((p: any) => p.estado !== 'respondi
 
   <!-- Vista Principal: Tabla de Radicados con Semáforo SLA y Acciones Globales -->
   <div class="card" style="padding: 20px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
-    <div class="table-responsive">
+    <div class="table-responsive pro-scroll-container table-scroll-wrapper" style="max-height: 540px; overflow-y: auto; overflow-x: auto; border-radius: 12px;">
       <table class="doc-table" id="tabla-peticiones" style="width: 100%; border-collapse: collapse;">
-        <thead>
-          <tr style="border-bottom: 2px solid var(--border-color); text-align: left; color: var(--text-muted); font-size: 0.74rem; text-transform: uppercase;">
-            <th style="padding: 10px 8px;">Radicado / Asunto</th>
-            <th style="padding: 10px 8px;">Peticionario</th>
-            <th style="padding: 10px 8px; min-width: 180px;">Término General / SLA</th>
-            <th style="padding: 10px 8px;">Límite Oficinas (-5 Días)</th>
-            <th style="padding: 10px 8px;">Oficinas Responsables</th>
-            <th style="padding: 10px 8px; text-align: right;">Acciones</th>
+        <thead style="position: sticky; top: 0; z-index: 10;">
+          <tr style="border-bottom: 2px solid #DCE4E3; text-align: left; color: #52606D; font-size: 0.74rem; text-transform: uppercase;">
+            <th style="padding: 12px 10px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Radicado / Asunto</th>
+            <th style="padding: 12px 10px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Peticionario</th>
+            <th style="padding: 12px 10px; min-width: 180px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Término General / SLA</th>
+            <th style="padding: 12px 10px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Límite Oficinas (-5 Días)</th>
+            <th style="padding: 12px 10px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Oficinas Responsables</th>
+            <th style="padding: 12px 10px; text-align: right; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Acciones</th>
           </tr>
         </thead>
         <tbody>

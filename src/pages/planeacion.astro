@@ -15,120 +15,143 @@ const countRec = informesList.filter((i: any) => i.tipo === 'rectoral').length;
 ---
 
 <AppLayout title="Planeación y Gestión CSU" activeNav="planeacion">
-  <div class="panel-box">
-    <div class="panel-header" style="flex-wrap: wrap; gap: 14px;">
-      <div>
-        <div class="panel-title">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-          <span>Planeación Estratégica y Financiera ante el Consejo Superior (CSU)</span>
+  <div style="display: flex; flex-direction: column; gap: 22px; max-width: 1280px; margin: 0 auto; width: 100%;">
+    
+    <!-- Cabecera Sobria y Ejecutiva (Bento Pro Max) -->
+    <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-top: 4px solid #00594E; border-radius: 16px; padding: 24px 28px; box-shadow: 0 2px 10px rgba(0, 89, 78, 0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 18px;">
+      <div style="min-width: 0; flex: 1;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <h1 style="font-size: 1.55rem; font-weight: 800; color: #111827; margin: 0; letter-spacing: -0.01em;">Planeación Estratégica y Financiera CSU</h1>
+          <span style="font-size: 0.72rem; font-weight: 800; background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; padding: 3px 10px; border-radius: 999px;">Rendición y PDI</span>
         </div>
-        <div style="font-size: 0.8rem; color: var(--secondary-light); font-weight: 600; margin-top: 4px;">
-          Informes Financieros Mensuales e Informes de Gestión Rectoral del Plan de Desarrollo Institucional (PDI Unitrópico)
-        </div>
+        <p style="font-size: 0.86rem; color: #52606D; margin: 6px 0 0 0;">
+          Informes Financieros Mensuales e Informes de Gestión Rectoral del Plan de Desarrollo Institucional (PDI Unitrópico) ante el Consejo Superior Universitario.
+        </p>
       </div>
 
-      <div style="display: flex; gap: 10px; align-items: center;">
-        <button class="btn btn-primary" id="btn-open-planeacion-modal">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <button class="btn btn-primary" id="btn-open-planeacion-modal" style="background: #00594E; border: 1.5px solid #00594E; color: #ffffff; font-weight: 800; font-size: 0.84rem; border-radius: 10px; padding: 10px 20px; box-shadow: 0 2px 8px rgba(0, 89, 78, 0.25); cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
           <span>Radicar Informe ante CSU</span>
         </button>
       </div>
     </div>
 
-    <!-- KPIs de Informes y Rendición de Cuentas CSU -->
-    <div class="financial-kpi-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 20px;">
-      <div class="financial-stat-card" style="padding: 18px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-surface);">
-        <div class="label" style="font-size: 0.78rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Informes Financieros Mensuales</div>
-        <div class="value" style="font-size: 1.6rem; font-weight: 800; color: var(--verde-principal); margin: 4px 0;" id="plan-kpi-count-fin">{countFin}</div>
-        <div class="subtext" style="font-size: 0.72rem; color: var(--text-muted);">Radicados y verificados ante el Consejo Superior (CSU)</div>
+    <!-- KPIs de Informes y Rendición de Cuentas CSU (Bento Grid Pro Max) -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+      
+      <!-- KPI 1: Informes Financieros Mensuales -->
+      <div style="background: #F2F7F6; border: 1.5px solid #B2CFCB; border-radius: 14px; padding: 20px 22px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0, 89, 78, 0.04);">
+        <div>
+          <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #52606D; letter-spacing: 0.5px; display: block;">Informes Financieros Mensuales</span>
+          <div style="font-size: 1.9rem; font-weight: 800; color: #00594E; margin-top: 4px; line-height: 1;" id="plan-kpi-count-fin">{countFin}</div>
+          <span style="font-size: 0.74rem; font-weight: 600; color: #00594E; margin-top: 6px; display: inline-block;">Radicados y verificados ante el CSU</span>
+        </div>
+        <div style="width: 48px; height: 48px; border-radius: 12px; background: #FFFFFF; border: 1.5px solid #B2CFCB; display: flex; align-items: center; justify-content: center; color: #00594E; flex-shrink: 0;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
       </div>
-      <div class="financial-stat-card" style="padding: 18px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-surface);">
-        <div class="label" style="font-size: 0.78rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Informes de Gestión Rectoral</div>
-        <div class="value" style="font-size: 1.6rem; font-weight: 800; color: var(--dorado-oscuro); margin: 4px 0;" id="plan-kpi-count-rec">{countRec}</div>
-        <div class="subtext" style="font-size: 0.72rem; color: var(--text-muted);">Rendición periódica oficial del Plan de Desarrollo (PDI)</div>
+
+      <!-- KPI 2: Informes de Gestión Rectoral -->
+      <div style="background: #F7F5EE; border: 1.5px solid #DBD2B0; border-radius: 14px; padding: 20px 22px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(181, 161, 96, 0.06);">
+        <div>
+          <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #786832; letter-spacing: 0.5px; display: block;">Informes de Gestión Rectoral</span>
+          <div style="font-size: 1.9rem; font-weight: 800; color: #786832; margin-top: 4px; line-height: 1;" id="plan-kpi-count-rec">{countRec}</div>
+          <span style="font-size: 0.74rem; font-weight: 600; color: #786832; margin-top: 6px; display: inline-block;">Rendición periódica oficial del PDI</span>
+        </div>
+        <div style="width: 48px; height: 48px; border-radius: 12px; background: #FFFFFF; border: 1.5px solid #DBD2B0; display: flex; align-items: center; justify-content: center; color: #786832; flex-shrink: 0;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        </div>
       </div>
+
     </div>
 
-    <div class="module-tabs" id="planeacion-module-tabs">
-      <button class="module-tab-btn active" data-ptab="financieros">
+    <!-- Pestañas de Navegación Estilizadas con Contadores -->
+    <div class="module-tabs" id="planeacion-module-tabs" style="display: flex; gap: 8px; flex-wrap: wrap; border-bottom: 2px solid #DCE4E3; padding-bottom: 12px;">
+      <button class="module-tab-btn active" data-ptab="financieros" style="padding: 10px 18px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid transparent; transition: all 0.2s ease;">
         <span>Informes Financieros Mensuales CSU</span>
-        <span class="tab-count" id="plan-count-fin">{countFin}</span>
+        <span class="tab-count" id="plan-count-fin" style="background: #00594E; color: #ffffff; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;">{countFin}</span>
       </button>
-      <button class="module-tab-btn" data-ptab="rectorales">
+      <button class="module-tab-btn" data-ptab="rectorales" style="padding: 10px 18px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid transparent; transition: all 0.2s ease;">
         <span>Informes de Gestión Rectoral CSU</span>
-        <span class="tab-count" id="plan-count-rec">{countRec}</span>
+        <span class="tab-count" id="plan-count-rec" style="background: #DBD2B0; color: #786832; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;">{countRec}</span>
       </button>
     </div>
 
     <!-- Buscador en tiempo real de Informes CSU -->
-    <div style="display: flex; gap: 12px; margin-top: 18px; margin-bottom: 4px; flex-wrap: wrap;">
-      <div class="search-box" style="flex: 1; min-width: 260px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-        <input type="text" id="planeacion-search-input" placeholder="Buscar informe por período (Ej: 2026), radicado CSU, responsable o tema...">
+    <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-radius: 14px; padding: 14px 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+      <div style="position: relative; width: 100%;">
+        <input type="text" id="planeacion-search-input" placeholder="Buscar informe por período (Ej: 2026), radicado CSU, responsable o tema..." class="form-input" style="padding-left: 38px; border-radius: 10px; border: 1.5px solid #DCE4E3; font-size: 0.85rem; height: 42px; width: 100%; box-sizing: border-box;" />
+        <div style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #64748B; display: flex; align-items: center; pointer-events: none;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        </div>
       </div>
     </div>
 
-    <div id="planeacion-tab-content" style="margin-top: 18px;">
-      <!-- Dinámico desde JS con datos de Supabase -->
+    <!-- Tarjeta Contenedora Principal con Scrollbar Interna Propia -->
+    <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-radius: 14px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+      <div id="planeacion-tab-content" class="pro-scroll-container table-scroll-wrapper records-card-body" style="max-height: 540px; overflow-y: auto; overflow-x: auto; width: 100%;">
+        <!-- Dinámico desde JS con datos de Supabase -->
+      </div>
     </div>
   </div>
 
   <!-- Modal: Radicar Informe de Planeación ante CSU -->
-  <div class="modal-backdrop" id="new-planeacion-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; align-items: center; justify-content: center; padding: 16px;">
-    <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 600px; border-radius: var(--radius-md); box-shadow: var(--shadow-md); overflow: hidden;">
-      <div class="modal-header" style="background: var(--verde-suave-bg); border-bottom: 1px solid var(--verde-borde); padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
-        <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--verde-principal); margin: 0; display: flex; align-items: center; gap: 8px;">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+  <div class="modal-backdrop" id="new-planeacion-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(2px);">
+    <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 620px; border-radius: 16px; box-shadow: 0 20px 45px rgba(0,0,0,0.2); overflow: hidden; border-top: 4px solid #00594E;">
+      <div class="modal-header" style="background: #F2F7F6; border-bottom: 1.5px solid #DCE4E3; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-size: 1.15rem; font-weight: 800; color: #00594E; margin: 0; display: flex; align-items: center; gap: 8px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
           <span>Radicar Informe ante el Consejo Superior (CSU)</span>
         </h3>
-        <button type="button" class="btn-close-modal" id="btn-close-plan-modal" style="background: transparent; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer;">&times;</button>
+        <button type="button" class="btn-close-modal" id="btn-close-plan-modal" style="background: transparent; border: none; font-size: 1.5rem; color: #64748B; cursor: pointer; line-height: 1;">&times;</button>
       </div>
 
       <form id="form-new-planeacion" style="padding: 24px; display: flex; flex-direction: column; gap: 14px;">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
           <div class="form-group">
-            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Tipo de Informe *</label>
-            <select id="new-plan-tipo" class="form-input" style="cursor: pointer;" required>
+            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Tipo de Informe *</label>
+            <select id="new-plan-tipo" class="form-input" style="cursor: pointer; border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem;" required>
               <option value="financiero" selected>Informe Financiero Mensual CSU</option>
               <option value="rectoral">Informe de Gestión Rectoral PDI</option>
             </select>
           </div>
           <div class="form-group">
-            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Período / Vigencia *</label>
-            <input type="text" id="new-plan-periodo" class="form-input" placeholder="Ej: Octubre 2026 / Vigencia 2026" required />
+            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Período / Vigencia *</label>
+            <input type="text" id="new-plan-periodo" class="form-input" placeholder="Ej: Octubre 2026 / Vigencia 2026" style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem;" required />
           </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
           <div class="form-group">
-            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Radicado ante CSU</label>
-            <input type="text" id="new-plan-radicado" class="form-input" placeholder="Ej: CSU-INF-2026-012" />
+            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Radicado ante CSU</label>
+            <input type="text" id="new-plan-radicado" class="form-input" placeholder="Ej: CSU-INF-2026-012" style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem;" />
           </div>
           <div class="form-group">
-            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">% Ejecución Presupuestal</label>
-            <input type="number" id="new-plan-ejecucion" class="form-input" min="0" max="100" value="0" />
+            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">% Ejecución Presupuestal</label>
+            <input type="number" id="new-plan-ejecucion" class="form-input" min="0" max="100" value="0" style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem;" />
           </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
           <div class="form-group">
-            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Ingresos Totales (COP)</label>
-            <input type="text" id="new-plan-ingresos" class="form-input" placeholder="Ej: $4.250.000.000" />
+            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Ingresos Totales (COP)</label>
+            <input type="text" id="new-plan-ingresos" class="form-input" placeholder="Ej: $4.250.000.000" style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem;" />
           </div>
           <div class="form-group">
-            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Gastos Ejecutados (COP)</label>
-            <input type="text" id="new-plan-gastos" class="form-input" placeholder="Ej: $3.890.000.000" />
+            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Gastos Ejecutados (COP)</label>
+            <input type="text" id="new-plan-gastos" class="form-input" placeholder="Ej: $3.890.000.000" style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem;" />
           </div>
         </div>
 
         <div class="form-group">
-          <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Resumen Ejecutivo / Observaciones</label>
-          <textarea id="new-plan-observaciones" class="form-input" rows="3" placeholder="Síntesis de los logros alcanzados y ejecución reportada al Consejo Superior..."></textarea>
+          <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Resumen Ejecutivo / Observaciones</label>
+          <textarea id="new-plan-observaciones" class="form-input" rows="3" placeholder="Síntesis de los logros alcanzados y ejecución reportada al Consejo Superior..." style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem;"></textarea>
         </div>
 
-        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px;">
-          <button type="button" class="btn btn-secondary" id="btn-cancel-plan">Cancelar</button>
-          <button type="submit" class="btn btn-primary" id="btn-submit-plan" style="font-weight: 700;">
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; padding-top: 14px; border-top: 1px solid #DCE4E3;">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-plan" style="border: 1.5px solid #DCE4E3; color: #52606D; background: #ffffff; font-weight: 700; border-radius: 8px; padding: 8px 16px; cursor: pointer;">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-plan" style="background: #00594E; border: none; color: #ffffff; font-weight: 800; border-radius: 8px; padding: 9px 20px; cursor: pointer; box-shadow: 0 2px 6px rgba(0,89,78,0.25);">
             Radicar Informe
           </button>
         </div>

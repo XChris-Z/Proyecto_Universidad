@@ -120,18 +120,18 @@ const totalRespuestas = dbLogs?.filter(l => l.action_type === 'RESPUESTA' || (l.
       </div>
     </div>
 
-    <!-- Tabla Ejecutiva de Trazabilidad y Logs (Sin desbordamiento) -->
+    <!-- Tabla Ejecutiva de Trazabilidad y Logs (Con scrollbar interna propia y Sticky Header) -->
     <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
-      <div style="overflow-x: auto; width: 100%;">
+      <div class="pro-scroll-container audit-log-container audit-table-wrapper" style="max-height: 540px; overflow-y: auto; overflow-x: auto; width: 100%; position: relative;">
         <table class="doc-table audit-table" style="width: 100%; border-collapse: collapse; font-size: 0.86rem;">
-          <thead>
-            <tr style="background: #F8FAFC; border-bottom: 2px solid #DCE4E3; text-align: left; color: #52606D; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.5px;">
-              <th style="padding: 14px 18px; white-space: nowrap;">Fecha y Hora</th>
-              <th style="padding: 14px 16px;">Funcionario / Despacho</th>
-              <th style="padding: 14px 16px;">Acción Realizada</th>
-              <th style="padding: 14px 16px;">Módulo o Radicado</th>
-              <th style="padding: 14px 16px;">Detalle de la Operación</th>
-              <th style="padding: 14px 18px; white-space: nowrap;">Sello de Seguridad</th>
+          <thead style="position: sticky; top: 0; z-index: 10;">
+            <tr style="background: #F2F7F6; border-bottom: 2px solid #DCE4E3; text-align: left; color: #52606D; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.5px;">
+              <th style="padding: 14px 18px; white-space: nowrap; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Fecha y Hora</th>
+              <th style="padding: 14px 16px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Funcionario / Despacho</th>
+              <th style="padding: 14px 16px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Acción Realizada</th>
+              <th style="padding: 14px 16px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Módulo o Radicado</th>
+              <th style="padding: 14px 16px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Detalle de la Operación</th>
+              <th style="padding: 14px 18px; white-space: nowrap; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Sello de Seguridad</th>
             </tr>
           </thead>
           <tbody id="audit-logs-tbody">

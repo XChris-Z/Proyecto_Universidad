@@ -91,31 +91,31 @@ export async function initJuridicos() {
     container.innerHTML = `
       <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;">
         ${currentItems.map(c => `
-          <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 18px; display: flex; flex-direction: column; justify-content: space-between;">
+          <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.03); min-width: 0; overflow-wrap: anywhere; transition: all 0.2s ease;">
             <div>
-              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
-                <span class="badge" style="background: var(--verde-suave-bg); color: var(--verde-principal); font-size: 0.70rem; font-weight: 700;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; gap: 8px;">
+                <span class="badge" style="background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 6px;">
                   ${c.organo_competente || 'Oficina Jurídica'}
                 </span>
-                <span style="font-size: 0.68rem; font-weight: 700; color: #b45309; background: #fef3c7; padding: 2px 8px; border-radius: 4px;">
+                <span style="font-size: 0.70rem; font-weight: 800; color: #786832; background: #F7F5EE; border: 1px solid #DBD2B0; padding: 2px 8px; border-radius: 6px;">
                   ${c.estado || 'En Formulación'}
                 </span>
               </div>
-              <h4 style="font-size: 0.95rem; font-weight: 800; color: var(--text-main); margin: 0 0 4px 0;">
+              <h4 style="font-size: 1.02rem; font-weight: 800; color: #111827; margin: 4px 0 6px 0; line-height: 1.35;">
                 ${c.titulo}
               </h4>
               ${c.mandato_ley ? `
-                <div style="font-size: 0.74rem; color: var(--text-muted); margin-bottom: 8px;">
-                  Mandato / Radicado: <strong>${c.mandato_ley}</strong>
+                <div style="font-size: 0.74rem; color: #52606D; margin-bottom: 8px;">
+                  Mandato / Radicado: <strong style="color: #00594E;">${c.mandato_ley}</strong>
                 </div>
               ` : ''}
-              <p style="font-size: 0.82rem; color: var(--text-main); line-height: 1.4; margin: 0 0 12px 0;">
+              <p style="font-size: 0.82rem; color: #52606D; line-height: 1.45; margin: 0 0 12px 0;">
                 ${c.justificacion}
               </p>
             </div>
-            <div style="border-top: 1px solid var(--border-subtle); padding-top: 10px; font-size: 0.72rem; color: var(--text-muted); display: flex; justify-content: space-between;">
+            <div style="border-top: 1px solid #E2E8F0; padding-top: 12px; font-size: 0.74rem; color: #64748B; display: flex; justify-content: space-between; align-items: center;">
               <span>Registrado en Plataforma</span>
-              <span>${new Date(c.created_at).toLocaleDateString('es-CO')}</span>
+              <strong>${new Date(c.created_at).toLocaleDateString('es-CO')}</strong>
             </div>
           </div>
         `).join('')}

@@ -116,38 +116,38 @@ export async function initPlaneacion() {
       }
 
       container.innerHTML = `
-        <div class="table-responsive" style="border: 1px solid var(--border-color); border-radius: 8px; background: #ffffff;">
-          <table class="doc-table" style="width: 100%; border-collapse: collapse;">
-            <thead>
-              <tr style="background: #F8FAFC; border-bottom: 1px solid var(--border-color); text-align: left; font-size: 0.74rem; text-transform: uppercase; color: var(--text-muted);">
-                <th style="padding: 12px 14px;">Periodo / Vigencia</th>
-                <th style="padding: 12px 14px;">Radicado ante CSU</th>
-                <th style="padding: 12px 14px;">Ingresos Reportados</th>
-                <th style="padding: 12px 14px;">Gastos Ejecutados</th>
-                <th style="padding: 12px 14px;">% Ejecución</th>
-                <th style="padding: 12px 14px;">Estado Aprobación</th>
-                <th style="padding: 12px 14px; text-align: right;">Acciones</th>
+        <div class="pro-scroll-container table-scroll-wrapper" style="max-height: 520px; overflow-y: auto; overflow-x: auto; border: 1.5px solid #DCE4E3; border-radius: 12px; background: #ffffff;">
+          <table class="doc-table" style="width: 100%; border-collapse: collapse; font-size: 0.86rem;">
+            <thead style="position: sticky; top: 0; z-index: 10;">
+              <tr style="background: #F2F7F6; border-bottom: 2px solid #DCE4E3; text-align: left; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.5px; color: #52606D;">
+                <th style="padding: 14px 16px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3; white-space: nowrap;">Periodo / Vigencia</th>
+                <th style="padding: 14px 16px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3; white-space: nowrap;">Radicado ante CSU</th>
+                <th style="padding: 14px 16px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Ingresos Reportados</th>
+                <th style="padding: 14px 16px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Gastos Ejecutados</th>
+                <th style="padding: 14px 16px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">% Ejecución</th>
+                <th style="padding: 14px 16px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Estado Aprobación</th>
+                <th style="padding: 14px 16px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3; text-align: right;">Acciones</th>
               </tr>
             </thead>
             <tbody>
               ${finItems.map(inf => `
-                <tr style="border-bottom: 1px solid var(--border-subtle); font-size: 0.84rem;">
-                  <td style="padding: 12px 14px;"><strong>${inf.periodo}</strong></td>
-                  <td style="padding: 12px 14px;"><span style="font-family: monospace; font-size: 0.82rem; font-weight: 700; color: var(--primary);">${inf.radicado_csu || 'N/A'}</span></td>
-                  <td style="padding: 12px 14px;"><strong style="color: var(--status-safe);">${inf.ingresos || '$0 COP'}</strong></td>
-                  <td style="padding: 12px 14px;">${inf.gastos || '$0 COP'}</td>
-                  <td style="padding: 12px 14px;">
+                <tr style="border-bottom: 1px solid #E2E8F0; font-size: 0.84rem;">
+                  <td style="padding: 12px 16px; font-weight: 700; color: #111827;">${inf.periodo}</td>
+                  <td style="padding: 12px 16px;"><span style="font-family: monospace; font-size: 0.82rem; font-weight: 800; color: #00594E; background: #F2F7F6; padding: 2px 8px; border-radius: 6px; border: 1px solid #B2CFCB;">${inf.radicado_csu || 'N/A'}</span></td>
+                  <td style="padding: 12px 16px;"><strong style="color: #00594E;">${inf.ingresos || '$0 COP'}</strong></td>
+                  <td style="padding: 12px 16px; color: #52606D;">${inf.gastos || '$0 COP'}</td>
+                  <td style="padding: 12px 16px;">
                     <div style="display: flex; align-items: center; gap: 8px;">
-                      <div class="dist-progress-bg" style="width: 80px; height: 6px; background: #e2e8f0; border-radius: 4px; overflow: hidden;">
-                        <div class="dist-progress-fill" style="width: ${inf.ejecucion_pct || 0}%; background: var(--verde-principal); height: 100%;"></div>
+                      <div class="dist-progress-bg" style="width: 80px; height: 6px; background: #E2E8F0; border-radius: 4px; overflow: hidden;">
+                        <div class="dist-progress-fill" style="width: ${inf.ejecucion_pct || 0}%; background: #00594E; height: 100%;"></div>
                       </div>
-                      <span style="font-size: 0.76rem; font-weight: 700;">${inf.ejecucion_pct || 0}%</span>
+                      <span style="font-size: 0.76rem; font-weight: 800; color: #00594E;">${inf.ejecucion_pct || 0}%</span>
                     </div>
                   </td>
-                  <td style="padding: 12px 14px;"><span class="badge status-safe" style="font-size: 0.72rem;">${inf.estado || 'Aprobado CSU'}</span></td>
-                  <td style="padding: 12px 14px; text-align: right; white-space: nowrap;">
-                    <button type="button" class="btn btn-ghost btn-sm btn-del-informe" data-id="${inf.id}" data-nombre="${inf.radicado_csu || inf.periodo}" title="Eliminar informe" style="color: #dc2626; padding: 4px 8px;">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  <td style="padding: 12px 16px;"><span class="badge" style="font-size: 0.72rem; font-weight: 800; background: #DCFCE7; color: #00594E; border: 1px solid #B2CFCB; padding: 3px 8px; border-radius: 6px;">${inf.estado || 'Aprobado CSU'}</span></td>
+                  <td style="padding: 12px 16px; text-align: right; white-space: nowrap;">
+                    <button type="button" class="btn btn-ghost btn-sm btn-del-informe" data-id="${inf.id}" data-nombre="${inf.radicado_csu || inf.periodo}" title="Eliminar informe" style="color: #DC2626; padding: 4px 8px; border-radius: 6px; background: transparent; border: 1px solid transparent; cursor: pointer;">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                     </button>
                   </td>
                 </tr>
@@ -188,21 +188,21 @@ export async function initPlaneacion() {
       container.innerHTML = `
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;">
           ${recItems.map(inf => `
-            <div style="border: 1px solid var(--border-color); border-radius: 10px; padding: 18px; background: #ffffff; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <div style="border: 1.5px solid #DCE4E3; border-radius: 12px; padding: 20px; background: #ffffff; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.03); min-width: 0; overflow-wrap: anywhere;">
               <div>
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                  <span class="badge" style="background: var(--verde-suave-bg); color: var(--verde-principal); font-size: 0.75rem; font-weight: 700;">${inf.radicado_csu || 'GESTIÓN RECTORAL'}</span>
-                  <span class="badge status-safe" style="font-size: 0.72rem;">${inf.estado || 'Aprobado'}</span>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; gap: 8px;">
+                  <span class="badge" style="background: #F7F5EE; color: #786832; border: 1px solid #DBD2B0; font-size: 0.74rem; font-weight: 800; padding: 2px 8px; border-radius: 6px;">${inf.radicado_csu || 'GESTIÓN RECTORAL'}</span>
+                  <span class="badge" style="font-size: 0.72rem; font-weight: 800; background: #DCFCE7; color: #00594E; border: 1px solid #B2CFCB; padding: 2px 8px; border-radius: 6px;">${inf.estado || 'Aprobado'}</span>
                 </div>
-                <h4 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin-bottom: 6px;">${inf.periodo}</h4>
-                <p style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.45; margin-bottom: 12px;">
+                <h4 style="font-size: 1.05rem; font-weight: 800; color: #111827; margin: 4px 0 6px 0;">${inf.periodo}</h4>
+                <p style="font-size: 0.82rem; color: #52606D; line-height: 1.5; margin-bottom: 12px;">
                   ${inf.observaciones || 'Informe oficial de cumplimiento del Plan de Desarrollo Institucional (PDI Unitrópico).'}
                 </p>
               </div>
-              <div style="border-top: 1px solid var(--border-subtle); padding-top: 10px; font-size: 0.74rem; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
-                <span>Radicado el: ${new Date(inf.created_at).toLocaleDateString('es-CO')}</span>
-                <button type="button" class="btn btn-ghost btn-sm btn-del-informe" data-id="${inf.id}" data-nombre="${inf.radicado_csu || inf.periodo}" title="Eliminar informe" style="color: #dc2626; padding: 2px 6px;">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              <div style="border-top: 1px solid #E2E8F0; padding-top: 12px; font-size: 0.74rem; color: #64748B; display: flex; justify-content: space-between; align-items: center;">
+                <span>Radicado el: <strong>${new Date(inf.created_at).toLocaleDateString('es-CO')}</strong></span>
+                <button type="button" class="btn btn-ghost btn-sm btn-del-informe" data-id="${inf.id}" data-nombre="${inf.radicado_csu || inf.periodo}" title="Eliminar informe" style="color: #DC2626; padding: 4px 8px; border-radius: 6px; background: transparent; cursor: pointer;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                 </button>
               </div>
             </div>

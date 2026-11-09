@@ -12,137 +12,171 @@ const { data: dbProcesos } = await (supabase
 const procesosList = dbProcesos || [];
 const total = procesosList.length;
 const autosCount = procesosList.filter((p: any) => p.tipo_acto && p.tipo_acto.toLowerCase().includes('auto')).length;
-const apelCount = procesosList.filter((p: any) => p.tipo_acto && (p.tipo_acto.toLowerCase().includes('apelación') || p.etapa_procesal.toLowerCase().includes('segunda'))).length;
+const apelCount = procesosList.filter((p: any) => p.tipo_acto && (p.tipo_acto.toLowerCase().includes('apelación') || (p.etapa_procesal && p.etapa_procesal.toLowerCase().includes('segunda')))).length;
 ---
 
 <AppLayout title="Fase de Juzgamiento Disciplinario" activeNav="juzgamiento">
-  <div class="panel-box">
-    <div class="panel-header" style="flex-wrap: wrap; gap: 14px;">
-      <div>
-        <div class="panel-title">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-          <span>Fase de Juzgamiento y Régimen Disciplinario Institucional</span>
+  <div style="display: flex; flex-direction: column; gap: 22px; max-width: 1280px; margin: 0 auto; width: 100%;">
+    
+    <!-- Cabecera Sobria y Ejecutiva (Bento Pro Max) -->
+    <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-top: 4px solid #00594E; border-radius: 16px; padding: 24px 28px; box-shadow: 0 2px 10px rgba(0, 89, 78, 0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 18px;">
+      <div style="min-width: 0; flex: 1;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <h1 style="font-size: 1.55rem; font-weight: 800; color: #111827; margin: 0; letter-spacing: -0.01em;">Fase de Juzgamiento y Régimen Disciplinario</h1>
+          <span style="font-size: 0.72rem; font-weight: 800; background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; padding: 3px 10px; border-radius: 999px;">Ley 1952 de 2019 / 2094 de 2021</span>
         </div>
-        <div style="font-size: 0.8rem; color: var(--secondary-light); font-weight: 600; margin-top: 4px;">
-          Control Interno Disciplinario conforme a la Ley 1952 de 2019 / Ley 2094 de 2021: Autos y Apelaciones en Segunda Instancia
-        </div>
+        <p style="font-size: 0.86rem; color: #52606D; margin: 6px 0 0 0;">
+          Control Interno Disciplinario institucional: instrucción procesal, pliego de cargos, autos y apelaciones en segunda instancia ante el Consejo Superior Universitario y Rectoría.
+        </p>
       </div>
 
-      <div style="display: flex; gap: 10px; align-items: center;">
-        <button class="btn btn-primary" id="btn-open-juzgamiento-modal">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <button class="btn btn-primary" id="btn-open-juzgamiento-modal" style="background: #00594E; border: 1.5px solid #00594E; color: #ffffff; font-weight: 800; font-size: 0.84rem; border-radius: 10px; padding: 10px 20px; box-shadow: 0 2px 8px rgba(0, 89, 78, 0.25); cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
           <span>Radicar Auto / Apelación</span>
         </button>
       </div>
     </div>
 
-    <div class="juzgamiento-header-card" style="background: var(--bg-surface-elevated); padding: 16px; border-radius: 8px; margin-bottom: 18px;">
-      <div>
-        <div style="font-size: 0.88rem; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">Línea de Términos Procesales de Juzgamiento</div>
-        <div class="stage-tracker-row" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 0.78rem;">
-          <div class="stage-step active" style="font-weight: 700; color: var(--primary);">
-            <span class="stage-step-dot" style="display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--primary); color: #fff; text-align: center; line-height: 20px; margin-right: 4px;">1</span>
-            <span>Indagación Previa</span>
-          </div>
-          <span>&rarr;</span>
-          <div class="stage-step active" style="font-weight: 700; color: var(--primary);">
-            <span class="stage-step-dot" style="display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--primary); color: #fff; text-align: center; line-height: 20px; margin-right: 4px;">2</span>
-            <span>Pliego de Cargos</span>
-          </div>
-          <span>&rarr;</span>
-          <div class="stage-step active" style="font-weight: 700; color: var(--primary);">
-            <span class="stage-step-dot" style="display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--primary); color: #fff; text-align: center; line-height: 20px; margin-right: 4px;">3</span>
-            <span>Etapa Probatoria</span>
-          </div>
-          <span>&rarr;</span>
-          <div class="stage-step" style="color: var(--text-muted);">
-            <span class="stage-step-dot" style="display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--border-color); color: var(--text-main); text-align: center; line-height: 20px; margin-right: 4px;">4</span>
-            <span>Fallo 1ra Instancia</span>
-          </div>
-          <span>&rarr;</span>
-          <div class="stage-step" style="color: var(--text-muted);">
-            <span class="stage-step-dot" style="display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--border-color); color: var(--text-main); text-align: center; line-height: 20px; margin-right: 4px;">5</span>
-            <span>Apelación 2da Instancia (CSU / Rectoría)</span>
-          </div>
+    <!-- Barra de Etapas Procesales Institucionales (Bento Capsule Reemplazo de Línea Cortante) -->
+    <div style="background: #F2F7F6; border: 1.5px solid #B2CFCB; border-radius: 14px; padding: 16px 22px; box-shadow: 0 2px 8px rgba(0, 89, 78, 0.04);">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 10px;">
+        <span style="font-size: 0.76rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #00594E; display: inline-flex; align-items: center; gap: 6px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Flujo de Términos Procesales de Juzgamiento
+        </span>
+        <span style="font-size: 0.72rem; font-weight: 700; color: #52606D; background: #ffffff; border: 1px solid #B2CFCB; padding: 2px 8px; border-radius: 6px;">Debido Proceso Garantizado</span>
+      </div>
+      
+      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 0.78rem;">
+        <div style="background: #ffffff; border: 1px solid #00594E; color: #00594E; font-weight: 750; padding: 6px 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
+          <span style="background: #00594E; color: #ffffff; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 800;">1</span>
+          <span>Indagación Previa</span>
+        </div>
+        <span style="color: #6E9F98; font-weight: 700;">&rarr;</span>
+        <div style="background: #ffffff; border: 1px solid #00594E; color: #00594E; font-weight: 750; padding: 6px 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
+          <span style="background: #00594E; color: #ffffff; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 800;">2</span>
+          <span>Pliego de Cargos</span>
+        </div>
+        <span style="color: #6E9F98; font-weight: 700;">&rarr;</span>
+        <div style="background: #ffffff; border: 1px solid #00594E; color: #00594E; font-weight: 750; padding: 6px 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
+          <span style="background: #00594E; color: #ffffff; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 800;">3</span>
+          <span>Etapa Probatoria</span>
+        </div>
+        <span style="color: #6E9F98; font-weight: 700;">&rarr;</span>
+        <div style="background: #ffffff; border: 1px solid #CBD5E1; color: #52606D; font-weight: 600; padding: 6px 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
+          <span style="background: #E2E8F0; color: #52606D; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 800;">4</span>
+          <span>Fallo 1ra Instancia</span>
+        </div>
+        <span style="color: #6E9F98; font-weight: 700;">&rarr;</span>
+        <div style="background: #F7F5EE; border: 1px solid #DBD2B0; color: #786832; font-weight: 750; padding: 6px 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
+          <span style="background: #B5A160; color: #ffffff; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 800;">5</span>
+          <span>Apelación 2da Instancia (CSU / Rectoría)</span>
         </div>
       </div>
     </div>
 
-    <div class="module-tabs" id="juzgamiento-module-tabs">
-      <button class="module-tab-btn active" data-jstage="all">
+    <!-- Pestañas de Navegación Estilizadas con Contadores -->
+    <div class="module-tabs" id="juzgamiento-module-tabs" style="display: flex; gap: 8px; flex-wrap: wrap; border-bottom: 2px solid #DCE4E3; padding-bottom: 12px;">
+      <button class="module-tab-btn active" data-jstage="all" style="padding: 10px 18px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid transparent; transition: all 0.2s ease;">
         <span>Todos los Procesos</span>
-        <span class="tab-count" id="juzg-count-all">{total}</span>
+        <span class="tab-count" id="juzg-count-all" style="background: #00594E; color: #ffffff; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;">{total}</span>
       </button>
-      <button class="module-tab-btn" data-jstage="autos">
+      <button class="module-tab-btn" data-jstage="autos" style="padding: 10px 18px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid transparent; transition: all 0.2s ease;">
         <span>Autos Procesales</span>
-        <span class="tab-count" id="juzg-count-autos">{autosCount}</span>
+        <span class="tab-count" id="juzg-count-autos" style="background: #B2CFCB; color: #00594E; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;">{autosCount}</span>
       </button>
-      <button class="module-tab-btn" data-jstage="apelaciones">
+      <button class="module-tab-btn" data-jstage="apelaciones" style="padding: 10px 18px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid transparent; transition: all 0.2s ease;">
         <span>Apelaciones en Segunda Instancia</span>
-        <span class="tab-count" id="juzg-count-apelaciones">{apelCount}</span>
+        <span class="tab-count" id="juzg-count-apelaciones" style="background: #DBD2B0; color: #786832; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;">{apelCount}</span>
       </button>
     </div>
 
     <!-- Buscador en tiempo real de Juzgamiento -->
-    <div style="display: flex; gap: 12px; margin-bottom: 18px; flex-wrap: wrap;">
-      <div class="search-box" style="flex: 1; min-width: 260px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-        <input type="text" id="juzgamiento-search-input" placeholder="Buscar proceso por radicado (Ej: JUZ-2026), implicado, cargo o etapa...">
+    <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-radius: 14px; padding: 14px 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+      <div style="position: relative; width: 100%;">
+        <input type="text" id="juzgamiento-search-input" placeholder="Buscar proceso por radicado (Ej: JUZ-2026), implicado, cargo o etapa..." class="form-input" style="padding-left: 38px; border-radius: 10px; border: 1.5px solid #DCE4E3; font-size: 0.85rem; height: 42px; width: 100%; box-sizing: border-box;" />
+        <div style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #64748B; display: flex; align-items: center; pointer-events: none;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        </div>
       </div>
     </div>
 
-    <div class="table-responsive">
-      <table class="doc-table">
-        <thead>
-          <tr>
-            <th>Expediente / Implicado</th>
-            <th>Tipo de Acto / Auto</th>
-            <th>Conducta / Causal Investigada</th>
-            <th>Etapa Procesal</th>
-            <th>Fecha Notificación</th>
-            <th>Segunda Instancia</th>
-            <th>Estado de Términos</th>
-            <th style="text-align: right;">Acciones</th>
-          </tr>
-        </thead>
-        <tbody id="juzgamiento-table-body">
-          <!-- Renderizado dinámico desde JS con datos reales de Supabase -->
-        </tbody>
-      </table>
+    <!-- Tarjeta Principal de Expedientes con Scrollbar Interna Propia y Sticky Header -->
+    <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+      <div class="pro-scroll-container table-scroll-wrapper" style="max-height: 540px; overflow-y: auto; overflow-x: auto; width: 100%; position: relative;">
+        <table class="doc-table" style="width: 100%; border-collapse: collapse; font-size: 0.86rem;">
+          <thead style="position: sticky; top: 0; z-index: 10;">
+            <tr style="background: #F2F7F6; border-bottom: 2px solid #DCE4E3; text-align: left; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.5px; color: #52606D;">
+              <th style="padding: 14px 16px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3; white-space: nowrap;">Expediente / Implicado</th>
+              <th style="padding: 14px 16px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Tipo de Acto / Auto</th>
+              <th style="padding: 14px 16px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Conducta / Causal Investigada</th>
+              <th style="padding: 14px 16px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Etapa Procesal</th>
+              <th style="padding: 14px 16px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Fecha Notificación</th>
+              <th style="padding: 14px 16px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Segunda Instancia</th>
+              <th style="padding: 14px 16px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Estado de Términos</th>
+              <th style="padding: 14px 16px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3; text-align: right;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="juzgamiento-table-body">
+            <!-- Renderizado dinámico desde JS con datos reales de Supabase -->
+          </tbody>
+        </table>
+      </div>
     </div>
+
+    <!-- Pie de Módulo Bento Pro Max (Cierre Institucional Elegante sin Líneas Cortantes) -->
+    <div style="background: #F2F7F6; border: 1.5px solid #B2CFCB; border-radius: 14px; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="width: 40px; height: 40px; border-radius: 10px; background: #00594E; color: #ffffff; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+        </div>
+        <div>
+          <h4 style="font-size: 0.94rem; font-weight: 800; color: #00594E; margin: 0;">Control Interno Disciplinario y Reserva Legal</h4>
+          <p style="font-size: 0.78rem; color: #52606D; margin: 2px 0 0 0;">Los expedientes disciplinarios gozan de reserva legal en etapa de indagación e instrucción según la normatividad nacional.</p>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <a href="/dashboard" style="background: #ffffff; border: 1.5px solid #B2CFCB; color: #00594E; font-weight: 750; font-size: 0.82rem; border-radius: 8px; padding: 8px 16px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          <span>Retornar al Centro de Mando</span>
+        </a>
+      </div>
+    </div>
+
   </div>
 
   <!-- Modal: Radicar Auto / Apelación Oficial -->
-  <div class="modal-backdrop" id="new-juzgamiento-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; align-items: center; justify-content: center; padding: 16px;">
-    <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 640px; border-radius: var(--radius-md); box-shadow: var(--shadow-md); overflow: hidden;">
-      <div class="modal-header" style="background: var(--verde-suave-bg); border-bottom: 1px solid var(--verde-borde); padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
-        <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--verde-principal); margin: 0; display: flex; align-items: center; gap: 8px;">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+  <div class="modal-backdrop" id="new-juzgamiento-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(2px);">
+    <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 640px; border-radius: 16px; box-shadow: 0 20px 45px rgba(0,0,0,0.2); overflow: hidden; border-top: 4px solid #00594E;">
+      <div class="modal-header" style="background: #F2F7F6; border-bottom: 1.5px solid #DCE4E3; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-size: 1.15rem; font-weight: 800; color: #00594E; margin: 0; display: flex; align-items: center; gap: 8px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
           <span>Radicar Auto / Pieza Procesal Disciplinaria</span>
         </h3>
-        <button type="button" class="btn-close-modal" id="btn-close-new-juzg-modal" style="background: transparent; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer;">&times;</button>
+        <button type="button" class="btn-close-modal" id="btn-close-new-juzg-modal" style="background: transparent; border: none; font-size: 1.5rem; color: #64748B; cursor: pointer; line-height: 1;">&times;</button>
       </div>
 
       <form id="form-new-juzgamiento" style="padding: 24px; display: flex; flex-direction: column; gap: 14px;">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
           <div class="form-group">
-            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Radicado del Expediente *</label>
-            <input type="text" id="new-juzg-radicado" class="form-input" placeholder="Ej: EXP-DISC-2026-005" required />
+            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Radicado del Expediente *</label>
+            <input type="text" id="new-juzg-radicado" class="form-input" placeholder="Ej: EXP-DISC-2026-005" style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem;" required />
           </div>
           <div class="form-group">
-            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Funcionario / Implicado *</label>
-            <input type="text" id="new-juzg-implicado" class="form-input" placeholder="Nombre completo del investigado" required />
+            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Funcionario / Implicado *</label>
+            <input type="text" id="new-juzg-implicado" class="form-input" placeholder="Nombre completo del investigado" style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem;" required />
           </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
           <div class="form-group">
-            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Cargo o Dependencia</label>
-            <input type="text" id="new-juzg-cargo" class="form-input" placeholder="Ej: Profesor Ocasional / Auxiliar" />
+            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Cargo o Dependencia</label>
+            <input type="text" id="new-juzg-cargo" class="form-input" placeholder="Ej: Profesor Ocasional / Auxiliar" style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem;" />
           </div>
           <div class="form-group">
-            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Tipo de Acto / Auto *</label>
-            <select id="new-juzg-tipo" class="form-input" style="cursor: pointer;" required>
+            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Tipo de Acto / Auto *</label>
+            <select id="new-juzg-tipo" class="form-input" style="cursor: pointer; border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem;" required>
               <option value="Auto de Apertura de Indagación Previa">Auto de Apertura de Indagación Previa</option>
               <option value="Auto de Formulación de Cargos">Auto de Formulación de Cargos</option>
               <option value="Auto de Decreto de Pruebas Periciales">Auto de Decreto de Pruebas Periciales</option>
@@ -155,8 +189,8 @@ const apelCount = procesosList.filter((p: any) => p.tipo_acto && (p.tipo_acto.to
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
           <div class="form-group">
-            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Etapa Procesal *</label>
-            <select id="new-juzg-etapa" class="form-input" style="cursor: pointer;" required>
+            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Etapa Procesal *</label>
+            <select id="new-juzg-etapa" class="form-input" style="cursor: pointer; border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem;" required>
               <option value="Indagación Previa">1. Indagación Previa</option>
               <option value="Pliego de Cargos">2. Pliego de Cargos</option>
               <option value="Etapa Probatoria">3. Etapa Probatoria</option>
@@ -165,19 +199,19 @@ const apelCount = procesosList.filter((p: any) => p.tipo_acto && (p.tipo_acto.to
             </select>
           </div>
           <div class="form-group">
-            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Fecha de Notificación</label>
-            <input type="date" id="new-juzg-fecha" class="form-input" required />
+            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Fecha de Notificación</label>
+            <input type="date" id="new-juzg-fecha" class="form-input" style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem;" required />
           </div>
         </div>
 
         <div class="form-group">
-          <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Conducta o Causal Investigada</label>
-          <textarea id="new-juzg-conducta" class="form-input" rows="2" placeholder="Descripción sucinta de los hechos materia de indagación..."></textarea>
+          <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Conducta o Causal Investigada</label>
+          <textarea id="new-juzg-conducta" class="form-input" rows="2" placeholder="Descripción sucinta de los hechos materia de indagación..." style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem;"></textarea>
         </div>
 
-        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px;">
-          <button type="button" class="btn btn-secondary" id="btn-cancel-new-juzg">Cancelar</button>
-          <button type="submit" class="btn btn-primary" id="btn-submit-juzg" style="font-weight: 700;">
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; padding-top: 14px; border-top: 1px solid #DCE4E3;">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-new-juzg" style="border: 1.5px solid #DCE4E3; color: #52606D; background: #ffffff; font-weight: 700; border-radius: 8px; padding: 8px 16px; cursor: pointer;">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-juzg" style="background: #00594E; border: none; color: #ffffff; font-weight: 800; border-radius: 8px; padding: 9px 20px; cursor: pointer; box-shadow: 0 2px 6px rgba(0,89,78,0.25);">
             Incorporar Expediente
           </button>
         </div>

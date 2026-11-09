@@ -608,17 +608,17 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
 
       <!-- SECCIÓN B: MODO LISTA TABULAR DETALLADA -->
       <div id="drive-table-container" style="display: none !important;">
-        <div class="table-responsive">
+        <div class="table-responsive pro-scroll-container table-scroll-wrapper" style="max-height: 540px; overflow-y: auto; overflow-x: auto; border-radius: 12px;">
           <table class="doc-table">
-            <thead>
-              <tr>
-                <th>Carpeta / Expediente</th>
-                <th>Radicado</th>
-                <th>Fechas (Radicado - Límite)</th>
-                <th style="min-width: 170px;">Plazo General (SLA)</th>
-                <th>Oficinas Responsables</th>
-                <th>Estado</th>
-                <th style="text-align: right;">Acciones</th>
+            <thead style="position: sticky; top: 0; z-index: 10;">
+              <tr style="background: #F2F7F6; border-bottom: 2px solid #DCE4E3;">
+                <th style="position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Carpeta / Expediente</th>
+                <th style="position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Radicado</th>
+                <th style="position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Fechas (Radicado - Límite)</th>
+                <th style="min-width: 170px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Plazo General (SLA)</th>
+                <th style="position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Oficinas Responsables</th>
+                <th style="position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Estado</th>
+                <th style="text-align: right; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Acciones</th>
               </tr>
             </thead>
             <tbody id="documents-table-body">

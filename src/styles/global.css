@@ -71,20 +71,73 @@
   --transition-slow: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s ease;
 }
 
-/* Scrollbar */
+/* ==========================================================================
+   SCROLLBAR GLOBAL CROSS-BROWSER (CHROME, EDGE, BRAVE, OPERA, SAFARI Y FIREFOX)
+   ========================================================================== */
+
+/* 1. MOTOR PRINCIPAL PARA GOOGLE CHROME, EDGE, BRAVE, OPERA Y SAFARI (WebKit / Blink) */
 ::-webkit-scrollbar {
-  width: 7px;
-  height: 7px;
+  width: 9px;
+  height: 9px;
 }
 ::-webkit-scrollbar-track {
-  background: #F1F5F9;
+  background: #F2F7F6;
+  border-radius: 999px;
+  margin: 4px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
-  border-radius: var(--radius-full);
+  background: linear-gradient(180deg, #7BA8A2 0%, #00594E 100%);
+  border-radius: 999px;
+  border: 2px solid #F2F7F6;
+  min-height: 36px;
+  transition: all 0.2s ease;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--primary);
+  background: #00594E;
+  border-width: 1px;
+}
+::-webkit-scrollbar-thumb:active {
+  background: #003E36;
+}
+::-webkit-scrollbar-corner {
+  background: #F2F7F6;
+}
+
+/* 2. SOPORTE EXCLUSIVO PARA FIREFOX (Sin romper Google Chrome) */
+@supports (-moz-appearance: none) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #00594E #F2F7F6;
+  }
+}
+
+/* ==========================================================================
+   CONTENEDOR DE SCROLL PROPIO DE ALTO RENDIMIENTO (DOBLE SCROLL VERTICAL/HORIZONTAL)
+   ========================================================================== */
+.pro-scroll-container,
+.audit-log-container,
+.table-scroll-wrapper,
+.records-card-body {
+  max-height: 540px; /* Evita bajar eternamente por la página */
+  overflow-y: auto;  /* Scroll vertical propio dentro de la tarjeta */
+  overflow-x: auto;  /* Scroll horizontal siempre accesible al instante */
+  position: relative;
+  border-radius: 12px;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Cabeceras de tabla fijas (Sticky Header) para no perder títulos al scrollear */
+.pro-scroll-container table thead tr th,
+.audit-log-container table thead tr th,
+.table-scroll-wrapper table thead tr th,
+.records-card-body table thead tr th,
+.sticky-table-header th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #F2F7F6;
+  box-shadow: 0 1px 0 #DCE4E3;
 }
 
 /* Reset y estilos generales */
@@ -5961,41 +6014,23 @@ p, h1, h2, h3, h4, h5, h6, span, label, td, th {
 }
 
 .audit-table-wrapper {
-  max-height: calc(100dvh - 280px);
-  min-height: 480px;
+  max-height: 540px;
   overflow-y: auto;
   overflow-x: auto;
   position: relative;
-  border-radius: var(--radius-md);
+  border-radius: 12px;
   border: 1px solid var(--border-color);
   background: #ffffff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-.audit-table-wrapper::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-.audit-table-wrapper::-webkit-scrollbar-track {
-  background: #f1f5f9;
-}
-
-.audit-table-wrapper::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
-}
-
-.audit-table-wrapper::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  -webkit-overflow-scrolling: touch;
 }
 
 .audit-table th {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: #F8FAFC;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  background: #F2F7F6;
+  box-shadow: 0 1px 0 #DCE4E3;
   font-size: 0.76rem;
   font-weight: 800;
   text-transform: uppercase;

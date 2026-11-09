@@ -18,154 +18,176 @@ const nalCount = conveniosList.filter((c: any) => c.tipo === 'nacional').length;
 ---
 
 <AppLayout title="Relacionamiento Institucional y Convenios" activeNav="relacionamiento">
-  <div class="panel-box">
-    <div class="panel-header" style="flex-wrap: wrap; gap: 14px;">
-      <div>
-        <div class="panel-title">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
-          <span>Relacionamiento Institucional y Cooperación</span>
+  <div style="display: flex; flex-direction: column; gap: 22px; max-width: 1280px; margin: 0 auto; width: 100%;">
+    
+    <!-- Cabecera Sobria y Ejecutiva (Bento Pro Max) -->
+    <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-top: 4px solid #00594E; border-radius: 16px; padding: 24px 28px; box-shadow: 0 2px 10px rgba(0, 89, 78, 0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 18px;">
+      <div style="min-width: 0; flex: 1;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <h1 style="font-size: 1.55rem; font-weight: 800; color: #111827; margin: 0; letter-spacing: -0.01em;">Relacionamiento Institucional y Convenios</h1>
+          <span style="font-size: 0.72rem; font-weight: 800; background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; padding: 3px 10px; border-radius: 999px;">Alianzas Estratégicas</span>
         </div>
-        <div style="font-size: 0.8rem; color: var(--secondary-light); font-weight: 600; margin-top: 4px;">
-          Convenios con entes gubernamentales, cooperación nacional e internacional de la Universidad
-        </div>
+        <p style="font-size: 0.86rem; color: #52606D; margin: 6px 0 0 0;">
+          Convenios con entes gubernamentales, cooperación nacional e internacional de la Universidad Internacional del Trópico Americano.
+        </p>
       </div>
 
-      <div style="display: flex; gap: 10px; align-items: center;">
-        <button class="btn btn-primary" id="btn-open-convenio-modal">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <button class="btn btn-primary" id="btn-open-convenio-modal" style="background: #00594E; border: 1.5px solid #00594E; color: #ffffff; font-weight: 800; font-size: 0.84rem; border-radius: 10px; padding: 10px 20px; box-shadow: 0 2px 8px rgba(0, 89, 78, 0.25); cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
           <span>Registrar Nuevo Convenio</span>
         </button>
       </div>
     </div>
 
-    <div class="module-tabs" id="convenios-module-tabs">
-      <button class="module-tab-btn active" data-ctab="all">
+    <!-- Pestañas de Navegación Estilizadas con Contadores -->
+    <div class="module-tabs" id="convenios-module-tabs" style="display: flex; gap: 8px; flex-wrap: wrap; border-bottom: 2px solid #DCE4E3; padding-bottom: 12px;">
+      <button class="module-tab-btn active" data-ctab="all" style="padding: 10px 18px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid transparent; transition: all 0.2s ease;">
         <span>Todos los Convenios</span>
-        <span class="tab-count" id="conv-count-all">{totalCount}</span>
+        <span class="tab-count" id="conv-count-all" style="background: #00594E; color: #ffffff; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;">{totalCount}</span>
       </button>
-      <button class="module-tab-btn" data-ctab="gubernamental">
+      <button class="module-tab-btn" data-ctab="gubernamental" style="padding: 10px 18px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid transparent; transition: all 0.2s ease;">
         <span>Entes Gubernamentales</span>
-        <span class="tab-count" id="conv-count-gob">{gobCount}</span>
+        <span class="tab-count" id="conv-count-gob" style="background: #B2CFCB; color: #00594E; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;">{gobCount}</span>
       </button>
-      <button class="module-tab-btn" data-ctab="internacional">
+      <button class="module-tab-btn" data-ctab="internacional" style="padding: 10px 18px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid transparent; transition: all 0.2s ease;">
         <span>Cooperación Internacional</span>
-        <span class="tab-count" id="conv-count-int">{intCount}</span>
+        <span class="tab-count" id="conv-count-int" style="background: #DBD2B0; color: #786832; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;">{intCount}</span>
       </button>
-      <button class="module-tab-btn" data-ctab="nacional">
+      <button class="module-tab-btn" data-ctab="nacional" style="padding: 10px 18px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid transparent; transition: all 0.2s ease;">
         <span>Cooperación Nacional</span>
-        <span class="tab-count" id="conv-count-nal">{nalCount}</span>
+        <span class="tab-count" id="conv-count-nal" style="background: #E2E8F0; color: #475569; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;">{nalCount}</span>
       </button>
     </div>
 
     <!-- Buscador en tiempo real de Convenios -->
-    <div style="display: flex; gap: 12px; margin-bottom: 18px; flex-wrap: wrap;">
-      <div class="search-box" style="flex: 1; min-width: 260px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-        <input type="text" id="convenios-search-input" placeholder="Buscar convenio por número (Ej: CONV-2026), entidad, supervisor u objeto...">
+    <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-radius: 14px; padding: 14px 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+      <div style="position: relative; width: 100%;">
+        <input type="text" id="convenios-search-input" placeholder="Buscar convenio por número (Ej: CONV-2026), entidad, supervisor u objeto..." class="form-input" style="padding-left: 38px; border-radius: 10px; border: 1.5px solid #DCE4E3; font-size: 0.85rem; height: 42px; width: 100%; box-sizing: border-box;" />
+        <div style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #64748B; display: flex; align-items: center; pointer-events: none;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        </div>
       </div>
     </div>
 
-    <div class="convenios-grid" id="convenios-cards-grid">
-      {conveniosList.length > 0 ? (
-        conveniosList.map((c: any) => (
-          <div class="convenio-card" data-tipo={c.tipo}>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-              <span class={`convenio-type-badge ${c.tipo}`}>{c.tipo_label || c.tipo}</span>
-              <span class="norma-num-badge">{c.numero}</span>
-            </div>
-            <div class="convenio-entity">{c.entidad}</div>
-            <div class="convenio-objeto">{c.objeto}</div>
-            
-            <div class="convenio-meta-row">
-              <span>Vigencia:</span>
-              <strong>{formatNiceDate(c.inicio)} &rarr; {formatNiceDate(c.fin)}</strong>
-            </div>
-            <div class="convenio-meta-row">
-              <span>Aporte / Cuantía:</span>
-              <strong style="color: var(--primary);">{c.cuantia}</strong>
-            </div>
-            <div class="convenio-meta-row">
-              <span>Supervisor Institucional:</span>
-              <span>{c.supervisor}</span>
-            </div>
+    <!-- Tarjeta Contenedora Principal con Scrollbar Interna Propia -->
+    <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-radius: 14px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+      <div class="pro-scroll-container records-card-body" style="max-height: 580px; overflow-y: auto; overflow-x: auto; width: 100%; padding: 4px;">
+        <div class="convenios-grid" id="convenios-cards-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;">
+          {conveniosList.length > 0 ? (
+            conveniosList.map((c: any) => (
+              <div class="convenio-card" data-tipo={c.tipo} style="background: #ffffff; border: 1.5px solid #DCE4E3; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.03); min-width: 0; overflow-wrap: anywhere; transition: all 0.2s ease;">
+                <div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 8px;">
+                    <span class={`convenio-type-badge ${c.tipo}`} style="font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 6px; background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB;">
+                      {c.tipo_label || c.tipo}
+                    </span>
+                    <span class="norma-num-badge" style="font-family: monospace; font-size: 0.76rem; font-weight: 800; background: #F8FAFC; color: #00594E; border: 1px solid #DCE4E3; padding: 2px 8px; border-radius: 6px;">
+                      {c.numero}
+                    </span>
+                  </div>
+                  <h4 style="font-size: 1.02rem; font-weight: 800; color: #111827; margin: 4px 0 6px 0; line-height: 1.35;">
+                    {c.entidad}
+                  </h4>
+                  <p style="font-size: 0.82rem; color: #52606D; line-height: 1.45; margin: 0 0 12px 0;">
+                    {c.objeto}
+                  </p>
+                  
+                  <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; font-size: 0.78rem; margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between;">
+                      <span style="color: #64748B;">Vigencia:</span>
+                      <strong style="color: #111827;">{formatNiceDate(c.inicio)} &rarr; {formatNiceDate(c.fin)}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                      <span style="color: #64748B;">Cuantía / Aporte:</span>
+                      <strong style="color: #00594E;">{c.cuantia}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                      <span style="color: #64748B;">Supervisor:</span>
+                      <span style="color: #111827; font-weight: 600;">{c.supervisor}</span>
+                    </div>
+                  </div>
+                </div>
 
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-color);">
-              <span class="vigencia-pill vigente">{c.estado}</span>
-              <button class="btn btn-secondary btn-sm" onclick={`window.showToast('Descargando expediente ${c.numero}...')`} title="Descargar minuta y constancia formal">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                <span>Minuta Oficial</span>
-              </button>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid #E2E8F0;">
+                  <span class="badge" style="font-size: 0.70rem; font-weight: 800; background: #DCFCE7; color: #00594E; border: 1px solid #B2CFCB; padding: 2px 8px; border-radius: 6px;">
+                    {c.estado}
+                  </span>
+                  <button class="btn btn-secondary btn-sm" onclick={`window.showToast('Descargando expediente ${c.numero}...')`} title="Descargar minuta y constancia formal" style="border: 1px solid #DCE4E3; background: #ffffff; color: #00594E; font-weight: 750; font-size: 0.76rem; border-radius: 6px; padding: 5px 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <span>Minuta</span>
+                  </button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div style="grid-column: 1 / -1; text-align: center; padding: 48px 16px; color: #64748B; background: #F8FAFC; border-radius: 12px; border: 1px dashed #DCE4E3;">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#00594E" stroke-width="1.8" style="margin-bottom: 8px; display: inline-block;"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
+              <div style="font-weight: 800; color: #111827; font-size: 1rem;">No hay convenios registrados actualmente</div>
+              <p style="font-size: 0.85rem; margin-top: 4px; color: #52606D;">Utilice el botón superior para registrar y formalizar un nuevo convenio institucional.</p>
             </div>
-          </div>
-        ))
-      ) : (
-        <div style="grid-column: 1 / -1; text-align: center; padding: 48px 16px; color: var(--text-muted); background: var(--bg-surface-elevated); border-radius: var(--radius-md); border: 1px dashed var(--border-color);">
-          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--verde-principal); margin-bottom: 8px;"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
-          <div style="font-weight: 700; color: var(--text-main); font-size: 1rem;">No hay convenios registrados actualmente</div>
-          <p style="font-size: 0.85rem; margin-top: 4px;">Utilice el botón superior para registrar y formalizar un nuevo convenio institucional.</p>
+          )}
         </div>
-      )}
+      </div>
     </div>
   </div>
 
   <!-- Modal: Registrar Nuevo Convenio Institucional -->
-  <div class="modal-backdrop" id="new-convenio-modal" style="display: none;">
-    <div class="modal-card" style="max-width: 640px;">
-      <div class="modal-header">
-        <h3>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
+  <div class="modal-backdrop" id="new-convenio-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(2px);">
+    <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 640px; border-radius: 16px; box-shadow: 0 20px 45px rgba(0,0,0,0.2); overflow: hidden; border-top: 4px solid #00594E;">
+      <div class="modal-header" style="background: #F2F7F6; border-bottom: 1.5px solid #DCE4E3; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-size: 1.15rem; font-weight: 800; color: #00594E; margin: 0; display: flex; align-items: center; gap: 8px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
           <span>Registrar Nuevo Convenio Institucional</span>
         </h3>
-        <button class="btn-close-modal" id="btn-close-new-conv-modal">&times;</button>
+        <button class="btn-close-modal" id="btn-close-new-conv-modal" style="background: transparent; border: none; font-size: 1.5rem; color: #64748B; cursor: pointer; line-height: 1;">&times;</button>
       </div>
-      <form id="new-convenio-form">
-        <div class="modal-body">
-          <div class="form-row-2">
-            <div class="form-group">
-              <label class="form-label">Tipo de Cooperación *</label>
-              <select class="form-select" id="select-conv-tipo" required>
-                <option value="gubernamental">Ente Gubernamental (Gobernación / Alcaldía / Min)</option>
-                <option value="internacional">Cooperación Internacional</option>
-                <option value="nacional">Cooperación Nacional</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Número de Convenio *</label>
-              <input type="text" class="form-input" id="input-conv-numero" placeholder="Ej: CONV-GOB-2026-009" required>
-            </div>
+      <form id="new-convenio-form" style="padding: 24px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Tipo de Cooperación *</label>
+            <select class="form-select" id="select-conv-tipo" style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem; width: 100%; box-sizing: border-box;" required>
+              <option value="gubernamental">Ente Gubernamental (Gobernación / Alcaldía / Min)</option>
+              <option value="internacional">Cooperación Internacional</option>
+              <option value="nacional">Cooperación Nacional</option>
+            </select>
           </div>
           <div class="form-group">
-            <label class="form-label">Entidad o Institución Aliada *</label>
-            <input type="text" class="form-input" id="input-conv-entidad" placeholder="Ej: Gobernación de Casanare o Universidad Nacional Autónoma de México" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Objeto del Convenio *</label>
-            <textarea class="form-textarea" id="input-conv-objeto" rows="2" placeholder="Describa el objetivo de la cooperación institucional..." required></textarea>
-          </div>
-          <div class="form-row-2">
-            <div class="form-group">
-              <label class="form-label">Fecha de Inicio *</label>
-              <input type="date" class="form-input" id="input-conv-inicio" required>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Fecha de Terminación *</label>
-              <input type="date" class="form-input" id="input-conv-fin" required>
-            </div>
-          </div>
-          <div class="form-row-2">
-            <div class="form-group">
-              <label class="form-label">Supervisor Interno Unitrópico</label>
-              <input type="text" class="form-input" id="input-conv-supervisor" placeholder="Ej: Vicerrectoría de Investigación">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Aporte / Cuantía Estimada</label>
-              <input type="text" class="form-input" id="input-conv-cuantia" placeholder="Ej: $2.400.000.000 COP o Sin cuantía">
-            </div>
+            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Número de Convenio *</label>
+            <input type="text" class="form-input" id="input-conv-numero" placeholder="Ej: CONV-GOB-2026-009" style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem; width: 100%; box-sizing: border-box;" required>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-ghost" id="btn-cancel-new-conv">Cancelar</button>
-          <button type="submit" class="btn btn-primary" id="btn-submit-convenio">Guardar Convenio</button>
+        <div class="form-group">
+          <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Entidad o Institución Aliada *</label>
+          <input type="text" class="form-input" id="input-conv-entidad" placeholder="Ej: Gobernación de Casanare o Universidad Nacional Autónoma de México" style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem; width: 100%; box-sizing: border-box;" required>
+        </div>
+        <div class="form-group">
+          <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Objeto del Convenio *</label>
+          <textarea class="form-textarea" id="input-conv-objeto" rows="2" placeholder="Describa el objetivo de la cooperación institucional..." style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem; width: 100%; box-sizing: border-box;" required></textarea>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Fecha de Inicio *</label>
+            <input type="date" class="form-input" id="input-conv-inicio" style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem; width: 100%; box-sizing: border-box;" required>
+          </div>
+          <div class="form-group">
+            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Fecha de Terminación *</label>
+            <input type="date" class="form-input" id="input-conv-fin" style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem; width: 100%; box-sizing: border-box;" required>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Supervisor Interno Unitrópico</label>
+            <input type="text" class="form-input" id="input-conv-supervisor" placeholder="Ej: Vicerrectoría de Investigación" style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem; width: 100%; box-sizing: border-box;">
+          </div>
+          <div class="form-group">
+            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Aporte / Cuantía Estimada</label>
+            <input type="text" class="form-input" id="input-conv-cuantia" placeholder="Ej: $2.400.000.000 COP o Sin cuantía" style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem; width: 100%; box-sizing: border-box;">
+          </div>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; padding-top: 14px; border-top: 1px solid #DCE4E3;">
+          <button type="button" class="btn btn-ghost" id="btn-cancel-new-conv" style="border: 1.5px solid #DCE4E3; color: #52606D; background: #ffffff; font-weight: 700; border-radius: 8px; padding: 8px 16px; cursor: pointer;">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-convenio" style="background: #00594E; border: none; color: #ffffff; font-weight: 800; border-radius: 8px; padding: 9px 20px; cursor: pointer; box-shadow: 0 2px 6px rgba(0,89,78,0.25);">Guardar Convenio</button>
         </div>
       </form>
     </div>
