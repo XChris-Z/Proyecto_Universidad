@@ -103,11 +103,31 @@ export function esSubcarpetaValida(sub: any): boolean {
 }
 
 /**
- * Filtra una lista de subcarpetas asegurando que todas sean válidas y legítimas.
+ * Limpia el nombre de una carpeta quitando el prefijo forzado "Subcarpeta"
+ */
+export function limpiarNombreCarpeta(nombreCrudo: string | null | undefined): string {
+  return String(nombreCrudo ?? '').replace(/^subcarpeta\s+/i, '').trim();
+}
+
+/**
+ * Ordena un conjunto de carpetas con orden alfanumérico natural estricto ('1.1', '1.2', '1.3'...)
+ */
+export function ordenarCarpetasNaturalmente<T = any>(lista: T[]): T[] {
+  return [...lista].sort((a: any, b: any) => {
+    const nombreA = limpiarNombreCarpeta(a?.nombre ?? a?.name ?? a);
+    const nombreB = limpiarNombreCarpeta(b?.nombre ?? b?.name ?? b);
+    return nombreA.localeCompare(nombreB, 'es', { numeric: true, sensitivity: 'base' });
+  });
+}
+
+/**
+ * Filtra una lista de subcarpetas asegurando que todas sean válidas y legítimas,
+ * y retornándolas ordenadas con numeración natural estricta (1.1, 1.2, 1.3...).
  */
 export function filtrarSubcarpetasValidas<T = any>(
   lista: T[] | null | undefined
 ): T[] {
   if (!Array.isArray(lista)) return [];
-  return lista.filter(item => esSubcarpetaValida(item));
+  const validas = lista.filter(item => esSubcarpetaValida(item));
+  return ordenarCarpetasNaturalmente(validas);
 }

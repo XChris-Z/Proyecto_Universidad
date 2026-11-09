@@ -2137,7 +2137,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
             <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
               <button type="button" id="btn-back-to-explorer" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 800; font-size: 0.84rem; padding: 8px 16px; border: 1px solid var(--verde-borde); background: var(--verde-suave-bg); color: var(--verde-principal); cursor: pointer;">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                <span>&larr; Volver a todas las carpetas</span>
+                <span>Volver a todas las carpetas</span>
               </button>
 
               <div style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem;">
@@ -2276,46 +2276,6 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
               </div>
             </div>
 
-            ${(subReqsList.length > 0 || cleanGeneralInstruccion) ? `
-              <div style="background: #fafaf9; border: 1px solid #e7e5e4; border-left: 4px solid var(--dorado-principal, #d4a017); border-radius: 8px; padding: 12px 16px;">
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
-                  <div style="display: flex; align-items: center; gap: 6px; color: #854d0e; font-weight: 800; font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.4px;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                    <span>Instrucciones y Requerimientos Remitidos a Dependencias</span>
-                  </div>
-                  ${subReqsList.length > 0 ? `
-                    <span style="font-size: 0.68rem; font-weight: 800; color: #166534; background: #dcfce7; border: 1px solid #bbf7d0; padding: 2px 8px; border-radius: 9999px;">
-                      ${subReqsList.length} subcarpeta${subReqsList.length === 1 ? '' : 's'} requerida${subReqsList.length === 1 ? '' : 's'}
-                    </span>
-                  ` : ''}
-                </div>
-
-                ${cleanGeneralInstruccion ? `
-                  <p style="font-size: 0.80rem; color: #475569; line-height: 1.5; margin: 0 0 8px 0;">${escapeHtml(cleanGeneralInstruccion)}</p>
-                ` : ''}
-
-                ${subReqsList.length > 0 ? `
-                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px;">
-                    ${subReqsList.map(s => {
-                      const rawName = String(s.nombre || '').trim();
-                      const badgeLabel = rawName.toLowerCase().startsWith('subcarpeta') ? rawName : `Subcarpeta ${rawName}`;
-                      return `
-                        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; display: flex; flex-direction: column; gap: 3px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
-                          <div style="display: flex; align-items: center; gap: 5px;">
-                            <span style="font-size: 0.72rem; font-weight: 800; color: #00594E; background: #f0fdf4; border: 1px solid #b2cfcb; padding: 2px 7px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
-                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                              ${escapeHtml(badgeLabel)}
-                            </span>
-                          </div>
-                          <p style="font-size: 0.76rem; color: #334155; line-height: 1.4; margin: 0;">${escapeHtml(s.descripcion || 'Sin requerimiento específico.')}</p>
-                        </div>
-                      `;
-                    }).join('')}
-                  </div>
-                ` : ''}
-              </div>
-            ` : ''}
-
             ${(() => {
               const resMsg = peticion.respuesta_mensaje || respuestaMeta?.msg;
               if (!resMsg) return '';
@@ -2386,7 +2346,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                   style="display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 0.78rem; background: #00594E; border-color: #00594E; color: #ffffff;"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                  <span>+ Crear Subcarpeta y Asignar Dependencias</span>
+                  <span>Crear Carpeta y Asignar Dependencias</span>
                 </button>
                 <span style="font-size: 0.78rem; font-weight: 800; color: #00594E; background: #F2F7F6; padding: 4px 12px; border-radius: 6px; border: 1px solid #B2CFCB;">
                   ${responsables.length} asignacion${responsables.length === 1 ? '' : 'es'}
@@ -2442,13 +2402,13 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                   <!-- Barra de Pestañas / Filtro de Subcarpetas con Transición Fluida Crossfade -->
                   <div class="sub-filter-bar" style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch;">
                     <button type="button" class="btn-sub-filter-tab active" data-filter-sub="all" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 0.76rem; font-weight: 800; border-radius: 6px; border: 1px solid #00594E; background: #00594E; color: #ffffff; cursor: pointer; transition: all 0.2s ease;">
-                      <span>Todas las Subcarpetas</span>
+                      <span>Todas las Carpetas</span>
                       <span style="background: rgba(255,255,255,0.2); padding: 1px 6px; border-radius: 9999px; font-size: 0.68rem;">${subcarpetas.length}</span>
                     </button>
                     ${subcarpetas.map((s: any) => {
-                      const cleanSubTitle = s.nombre.toLowerCase().startsWith('subcarpeta') ? s.nombre : `Subcarpeta ${s.nombre}`;
+                      const cleanSubTitle = String(s.nombre || '').replace(/^subcarpeta\s+/i, '').trim();
                       return `
-                      <button type="button" class="btn-sub-filter-tab" data-filter-sub="${escapeHtml(s.nombre)}" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 0.76rem; font-weight: 750; border-radius: 6px; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; cursor: pointer; transition: all 0.2s ease;">
+                      <button type="button" class="btn-sub-filter-tab" data-filter-sub="${escapeHtml(cleanSubTitle)}" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 0.76rem; font-weight: 750; border-radius: 6px; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; cursor: pointer; transition: all 0.2s ease;">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                         <span>${escapeHtml(cleanSubTitle)}</span>
                       </button>
@@ -2538,10 +2498,10 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                     }).length;
 
                     const allDeliveredInSub = subResps.length > 0 && deliveredCount >= subResps.length;
-                    const subDisplayTitle = sub.nombre.toLowerCase().startsWith('subcarpeta') ? sub.nombre : `Subcarpeta ${sub.nombre}`;
+                    const subDisplayTitle = String(sub.nombre || '').replace(/^subcarpeta\s+/i, '').trim();
 
                     subcarpetaBlocks.push(`
-                      <div class="subfolder-bento-card" data-sub-name="${escapeHtml(sub.nombre)}" data-collapsed="false" style="border: 1px solid ${allDeliveredInSub ? '#a7f3d0' : 'rgba(15, 23, 42, 0.08)'}; border-radius: 12px; overflow: hidden; background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.02); transition: opacity 0.25s ease, transform 0.25s ease;">
+                      <div class="subfolder-bento-card" data-sub-name="${escapeHtml(subDisplayTitle)}" data-collapsed="false" style="border: 1px solid ${allDeliveredInSub ? '#a7f3d0' : 'rgba(15, 23, 42, 0.08)'}; border-radius: 12px; overflow: hidden; background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.02); transition: opacity 0.25s ease, transform 0.25s ease;">
                         <!-- Nivel 1: Encabezado Clickeable de la Subcarpeta (Acordeón Pro Max) -->
                         <div class="subcarpeta-header" data-sub-id="${escapeHtml(sub.id)}" style="background: ${allDeliveredInSub ? '#f0fdf4' : '#f8fafc'}; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; cursor: pointer; user-select: none; transition: background 0.2s ease;">
                           <div style="display: flex; align-items: center; gap: 10px;">
@@ -2684,38 +2644,6 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
             </div>
           </div>
         </div>
-
-          <!-- BARRA DE ACCIÓN INFERIOR: RESPALDO EN DRIVE Y DESPACHO DE RESPUESTA -->
-          <div class="card" style="padding: 20px 24px; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 20px; border-left: 5px solid var(--verde-principal);">
-            <div>
-              <strong style="color: #0f172a; font-size: 0.94rem; display: block;">Acciones Oficiales del Expediente</strong>
-              <p style="margin: 3px 0 0 0; font-size: 0.80rem; color: #64748b;">
-                ${peticion.respuesta_drive_url ? `Expediente respaldado en Google Drive: <a href="${escapeHtml(peticion.respuesta_drive_url)}" target="_blank" rel="noopener noreferrer" style="color: #00594E; font-weight: 700; text-decoration: underline;">Abrir carpeta en Drive &nearr;</a>` : 'Respalde la estructura completa sin comprimir en Google Drive o despache la respuesta oficial definitiva al solicitante.'}
-              </p>
-            </div>
-            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-              <button 
-                type="button" 
-                class="btn btn-secondary btn-export-drive"
-                data-id="${escapeHtml(peticion.id)}"
-                data-radicado="${escapeHtml(peticion.numero_radicado)}"
-                title="Crear árbol de carpetas y subir archivos sin comprimir a Google Drive"
-                style="display: inline-flex; align-items: center; gap: 8px; font-weight: 800; font-size: 0.86rem; padding: 10px 18px; background: #F2F7F6; border: 1.5px solid #00594E; color: #00594E; border-radius: 8px; cursor: pointer; transition: all 0.2s ease;"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><polyline points="12 11 12 17"/><polyline points="9 14 12 11 15 14"/></svg>
-                <span>Respaldar en Drive</span>
-              </button>
-              <button 
-                type="button" 
-                class="btn btn-primary btn-open-responder-modal"
-                data-id="${escapeHtml(peticion.id)}"
-                style="display: inline-flex; align-items: center; gap: 8px; font-weight: 800; font-size: 0.86rem; padding: 10px 22px; background: #00594E; border-color: #00594E; color: #ffffff; box-shadow: 0 3px 8px rgba(0, 89, 78, 0.25); cursor: pointer;"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                <span>Enviar Respuesta al Solicitante</span>
-              </button>
-            </div>
-          </div>
         `;
 
         // Registrar listener para el botón volver de la cabecera
@@ -3473,7 +3401,8 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
             const cleanName = rawName.replace(/^\[[^\]]+\]\s*/, '');
             const isChecked = previouslyApproved ? previouslyApproved.has(a.id) || previouslyApproved.has(a.storage_path) || previouslyApproved.has(a.nombre_archivo) : true;
             const subTag = rawName.match(/^\[([^\]]+)\]/);
-            const subLabel = subTag && subTag[1] ? subTag[1].trim() : (a.es_anexo_oficina ? 'Aporte de Dependencia' : 'Documento Inicial');
+            const rawSubLabel = subTag && subTag[1] ? subTag[1].trim() : (a.es_anexo_oficina ? 'Aporte de Dependencia' : 'Documento Inicial');
+            const subLabel = rawSubLabel.replace(/^subcarpeta\s+/i, '').trim() || rawSubLabel;
             const sizeLabel = a.tamano_bytes ? (a.tamano_bytes / 1024).toFixed(0) + ' KB' : 'Soporte digital';
 
             return `
@@ -3696,7 +3625,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         allDriveBtns.forEach((btn) => {
           btn.innerHTML = `
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00594E" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-            <span>✓ Respaldado en Drive</span>
+            <span>Respaldado en Drive</span>
           `;
           btn.style.background = '#E6EFEF';
           btn.style.borderColor = '#00594E';

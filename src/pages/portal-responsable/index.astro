@@ -1748,12 +1748,19 @@ import Layout from '@layouts/Layout.astro';
       obsTextarea.value = '';
     }
 
-    // Pestañas Compactas Pro Max en la Columna Lateral
+    // Ordenar carpetas de forma natural estricta (1.1, 1.2, 1.3...)
+    subs.sort((a: any, b: any) => {
+      const nombreA = String(a?.nombre ?? '').replace(/^subcarpeta\s+/i, '').trim();
+      const nombreB = String(b?.nombre ?? '').replace(/^subcarpeta\s+/i, '').trim();
+      return nombreA.localeCompare(nombreB, 'es', { numeric: true, sensitivity: 'base' });
+    });
+
+    // Pestañas Compactas Pro Max en la Columna Lateral (con nombres reales limpios)
     tabsContainer.innerHTML = subs.map((s: any, idx: number) => {
       const isActive = idx === activeSubIndex;
       const isDelivered = s.estado_entrega === 'Entregado' || (s.anexos && s.anexos.length > 0);
-      const rawName = String(s.nombre || `Subcarpeta ${idx + 1}`).trim();
-      const badgeLabel = rawName.toLowerCase().startsWith('subcarpeta') ? rawName : `Subcarpeta ${rawName}`;
+      const rawName = String(s.nombre || `${idx + 1}`).trim();
+      const badgeLabel = rawName.replace(/^subcarpeta\s+/i, '').trim() || rawName;
       const anexosCount = (s.anexos || []).length;
 
       return `

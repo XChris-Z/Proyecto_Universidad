@@ -6,7 +6,7 @@ import { google } from 'googleapis';
 import { Readable } from 'node:stream';
 import { supabase } from '@lib/supabase';
 import { logSystemActivity } from '@lib/audit';
-import { filtrarSubcarpetasValidas, separarRespuestaMeta } from '@lib/subcarpetas';
+import { filtrarSubcarpetasValidas, separarRespuestaMeta, limpiarNombreCarpeta } from '@lib/subcarpetas';
 
 /**
  * Limpia y normaliza cadenas de variables de entorno (elimina comillas circundantes y espacios)
@@ -411,12 +411,10 @@ export const POST: APIRoute = async ({ request }) => {
 
     for (let i = 0; i < subcarpetas.length; i++) {
       const sub = subcarpetas[i];
-      const rawSubName = String(sub.nombre || `Subcarpeta_${i + 1}`).trim();
-      const subFolderDisplayName = rawSubName.toLowerCase().startsWith('subcarpeta')
-        ? rawSubName
-        : `Subcarpeta ${rawSubName}`;
+      const rawSubName = String(sub.nombre || `${i + 1}`).trim();
+      const subFolderDisplayName = limpiarNombreCarpeta(rawSubName) || rawSubName;
 
-      // Hija directa de mainFolder.id (Estructura jerárquica directa y plana)
+      // Hija directa de mainFolder.id (Estructura jerárquica directa y plana con nombre real)
       const subFolderDrive = await createDriveFolder(drive, subFolderDisplayName, mainFolder.id);
 
       // Filtrar anexos de dependencias asignados a esta subcarpeta
@@ -448,7 +446,7 @@ export const POST: APIRoute = async ({ request }) => {
     // Si existen anexos que no quedaron clasificados en ninguna subcarpeta, subirlos a una subcarpeta adicional directa
     const unclassifiedAnexos = anexosDependencias.filter((a) => !uploadedAnexoIds.has(a.id || a.storage_path));
     if (unclassifiedAnexos.length > 0) {
-      const otrosFolder = await createDriveFolder(drive, 'Subcarpeta Soportes Adicionales', mainFolder.id);
+      const otrosFolder = await createDriveFolder(drive, 'Soportes Adicionales', mainFolder.id);
       for (const anexo of unclassifiedAnexos) {
         if (!anexo.storage_path) continue;
         try {
