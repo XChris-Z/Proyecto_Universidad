@@ -133,3 +133,4 @@ export function initAuthCallback(): void {
     handleCallback();
   }
 }
+

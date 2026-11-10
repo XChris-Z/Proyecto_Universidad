@@ -3,10 +3,10 @@
 export const prerender = false;
 
 import AppLayout from '@layouts/AppLayout.astro';
+import '@styles/usuarios.css';
 import { supabase } from '@lib/supabase';
 import { PERMISSIONS_CATALOG } from '@data/roles';
 import { SESSION_COOKIE_KEY } from '@lib/constants';
-import '../../styles/usuarios.css';
 
 // Validación estricta de rol: únicamente Administrador puede acceder
 const sessionUserId = Astro.cookies.get(SESSION_COOKIE_KEY)?.value;

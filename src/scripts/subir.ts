@@ -664,3 +664,4 @@ export function initSubir(): void {
     calculateFiveDaysRule();
   });
 }
+
