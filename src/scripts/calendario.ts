@@ -5,7 +5,6 @@ import {
   getUnifiedCalendarEvents,
   createGoogleCalendarEvent,
   connectGoogleCalendar,
-  disconnectGoogleCalendar,
 } from '@lib/calendar';
 import { logSystemActivity } from '@lib/audit';
 import type { CalendarioEvent, CalendarioEventType, EventUrgency } from '@lib/types';
@@ -112,92 +111,6 @@ export async function initCalendario() {
         }
       }
     }
-  });
-
-  // Botón Vincular Google Calendar
-  const btnConnect = document.getElementById('btn-connect-google') as HTMLButtonElement | null;
-  const btnLabel = document.getElementById('btn-connect-label');
-  if (btnConnect) {
-    btnConnect.addEventListener('click', async () => {
-      if (btnLabel) btnLabel.textContent = 'Conectando con Google...';
-      btnConnect.disabled = true;
-      try {
-        const userId = btnConnect.dataset.userId || 'usr-root';
-        await connectGoogleCalendar(userId);
-      } catch (err: any) {
-        console.error('Error conectando Google Calendar:', err);
-        if ((window as any).showToast) {
-          (window as any).showToast('No se pudo conectar: ' + (err.message || 'Error de red'), 'error');
-        }
-        if (btnLabel) btnLabel.textContent = 'Vincular Google Calendar';
-        btnConnect.disabled = false;
-      }
-    });
-  }
-
-  // Botón Desvincular Cuenta
-  const btnDisconnect = document.getElementById('btn-disconnect-calendar') as HTMLButtonElement | null;
-  if (btnDisconnect) {
-    btnDisconnect.addEventListener('click', async () => {
-      const confirmed = typeof (window as any).showConfirm === 'function'
-        ? await (window as any).showConfirm(
-            '¿Estás seguro de que deseas desvincular tu cuenta de Google Calendar institucional?',
-            'Desvincular Google Calendar'
-          )
-        : true;
-
-      if (!confirmed) return;
-      btnDisconnect.disabled = true;
-      try {
-        const userId = btnDisconnect.dataset.userId || 'usr-root';
-        const ok = await disconnectGoogleCalendar(userId);
-        if (ok) {
-          const stateDisconnected = document.getElementById('state-disconnected');
-          if (stateDisconnected) stateDisconnected.style.display = 'block';
-          if ((window as any).showToast) {
-            (window as any).showToast('Cuenta de Google Calendar desvinculada correctamente.', 'success');
-          }
-        }
-      } catch (err: any) {
-        if ((window as any).showToast) {
-          (window as any).showToast('Error al desvincular: ' + err.message, 'error');
-        }
-      } finally {
-        btnDisconnect.disabled = false;
-      }
-    });
-  }
-
-  // Alternador de Pestañas: Agenda y Semáforo SLA vs Google Workspace Embed
-  const tabBtnGoogle = document.getElementById('tab-btn-google-embed');
-  const tabBtnSemaforo = document.getElementById('tab-btn-semaforo');
-  const containerGoogle = document.getElementById('container-google-embed');
-  const containerSemaforo = document.getElementById('container-semaforo-view');
-
-  function switchCalendarTab(showSemaforo: boolean) {
-    if (showSemaforo) {
-      tabBtnSemaforo?.classList.add('active');
-      tabBtnGoogle?.classList.remove('active');
-      if (containerGoogle) containerGoogle.style.display = 'none';
-      if (containerSemaforo) containerSemaforo.style.display = 'block';
-    } else {
-      tabBtnGoogle?.classList.add('active');
-      tabBtnSemaforo?.classList.remove('active');
-      if (containerGoogle) containerGoogle.style.display = 'block';
-      if (containerSemaforo) containerSemaforo.style.display = 'none';
-    }
-  }
-
-  tabBtnGoogle?.addEventListener('click', () => switchCalendarTab(false));
-  tabBtnSemaforo?.addEventListener('click', () => switchCalendarTab(true));
-
-  // Activar cookies de Google si se requiere
-  document.getElementById('btn-activate-cookies')?.addEventListener('click', () => {
-    window.open(
-      'https://calendar.google.com/calendar/u/0/embed?ctz=America/Bogota',
-      'gcal_auth',
-      'width=660,height=640'
-    );
   });
 
   // Búsqueda en tiempo real

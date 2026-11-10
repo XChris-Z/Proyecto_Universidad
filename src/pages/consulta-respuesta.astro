@@ -3,7 +3,6 @@
 export const prerender = false;
 
 import Layout from '@layouts/Layout.astro';
-import '@styles/consulta-respuesta.css';
 ---
 
 <Layout title="Consulta de Respuesta Oficial — SGD Unitrópico">
@@ -273,7 +272,1076 @@ import '@styles/consulta-respuesta.css';
   </div>
 </Layout>
 
+<style is:global>
+  :root {
+    /* Color Primario 1: Verde Institucional (Pantone 329 CP) y sus derivados más claros */
+    --uni-green-primary: #00594E;
+    --uni-green-90: #1A6A60;
+    --uni-green-75: #397E75;
+    --uni-green-50: #6E9F98;
+    --uni-green-25: #B2CFCB;
+    --uni-green-10: #E6EFEF;
+    --uni-green-05: #F2F7F6;
+
+    /* Color Primario 2: Dorado / Ocre Institucional (Pantone 4515 CP) y sus derivados más claros */
+    --uni-gold-primary: #B5A160;
+    --uni-gold-90: #C0AE73;
+    --uni-gold-75: #CCC08E;
+    --uni-gold-50: #DBD2B0;
+    --uni-gold-25: #EDE8D7;
+    --uni-gold-10: #F7F5EE;
+    --uni-gold-05: #FBF9F5;
+
+    /* Blanco, Negro y Neutros para detalles tipográficos y bordes */
+    --uni-white: #FFFFFF;
+    --uni-black: #111827;
+    --uni-text-dark: #1E293B;
+    --uni-text-muted: #52606D;
+    --uni-border: #DCE4E3;
+
+    /* Aliases semánticos */
+    --green-main: var(--uni-green-primary);
+    --green-dark: #003E36;
+    --green-light: var(--uni-green-05);
+    --green-border: var(--uni-green-25);
+    --gold-main: var(--uni-gold-primary);
+    --gold-light: var(--uni-gold-05);
+    --gold-border: var(--uni-gold-25);
+    --slate-text: var(--uni-black);
+    --slate-muted: var(--uni-text-muted);
+    --bg-page: #F8FAFA;
+    --card-border: var(--uni-border);
+  }
+
+  .consulta-page-wrapper {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-page);
+    font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
+  }
+
+  /* BARRA DE NAVEGACIÓN INSTITUCIONAL (UI/UX PRO MAX BLANCA SOBRIA) */
+  .consulta-navbar {
+    background: var(--uni-white);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    border-top: 4px solid var(--uni-green-primary);
+    border-bottom: 1px solid var(--uni-border);
+    box-shadow: 0 2px 10px rgba(0, 89, 78, 0.05);
+  }
+  .navbar-content {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .brand-group {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .logo-box {
+    background: transparent;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .nav-logo {
+    height: 38px;
+    width: auto;
+    object-fit: contain;
+  }
+  .sub-portal-tag {
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: var(--uni-gold-primary);
+    letter-spacing: 0.8px;
+    display: block;
+    margin-bottom: 2px;
+  }
+  .portal-main-title {
+    font-size: 1.02rem;
+    font-weight: 800;
+    color: var(--uni-black);
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .badge-portal-status {
+    font-size: 0.72rem;
+    font-weight: 750;
+    color: var(--uni-green-primary);
+    background: var(--uni-green-05);
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--uni-green-25);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .consulta-main-content {
+    flex: 1;
+    max-width: 1100px;
+    width: 100%;
+    margin: 32px auto;
+    padding: 0 20px;
+    box-sizing: border-box;
+  }
+
+  /* PANTALLA 1: TARJETA DE ACCESO */
+  .auth-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px 0;
+  }
+  .auth-bento-card {
+    background: var(--uni-white);
+    border: 1px solid var(--uni-border);
+    border-top: 4px solid var(--uni-green-primary);
+    border-radius: 14px;
+    padding: 36px 32px;
+    max-width: 520px;
+    width: 100%;
+    box-shadow: 0 10px 30px rgba(0, 89, 78, 0.05);
+    text-align: center;
+  }
+  .auth-bento-card.expired {
+    border-top-color: #991b1b;
+  }
+  .auth-icon-circle {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--uni-green-05);
+    border: 1px solid var(--uni-green-25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px auto;
+    color: var(--uni-green-primary);
+  }
+  .expired-icon-circle {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px auto;
+  }
+  .auth-title {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: var(--uni-black);
+    margin: 0 0 8px 0;
+  }
+  .auth-subtitle {
+    font-size: 0.84rem;
+    color: var(--uni-text-muted);
+    line-height: 1.6;
+    margin: 0 0 20px 0;
+  }
+  .vigencia-info-pill {
+    background: var(--uni-gold-05);
+    border: 1px solid var(--uni-gold-25);
+    border-left: 3px solid var(--uni-gold-primary);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.78rem;
+    color: #854d0e;
+    text-align: left;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 24px;
+    line-height: 1.45;
+  }
+
+  .auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    text-align: left;
+  }
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .form-label {
+    font-size: 0.72rem;
+    font-weight: 750;
+    color: #334155;
+    letter-spacing: 0.5px;
+  }
+  .badge-anti-enum {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #854d0e;
+    background: var(--uni-gold-05);
+    border: 1px solid var(--uni-gold-25);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .input-icon-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .input-icon-wrapper svg {
+    position: absolute;
+    left: 12px;
+    pointer-events: none;
+    color: #94a3b8;
+  }
+  .form-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 11px 12px 11px 38px;
+    border: 1px solid var(--uni-border);
+    border-radius: 8px;
+    font-size: 0.88rem;
+    color: var(--uni-black);
+    background: var(--uni-white);
+    transition: all 0.2s ease;
+  }
+  .form-input:focus {
+    outline: none;
+    border-color: var(--uni-green-primary);
+    box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.12);
+  }
+
+  .auth-alert-box {
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.80rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    line-height: 1.4;
+  }
+  .auth-alert-box.error {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+  }
+
+  .btn-primary-consulta {
+    background: var(--uni-green-primary);
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 20px;
+    font-size: 0.88rem;
+    font-weight: 750;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 3px 10px rgba(0, 89, 78, 0.2);
+    transition: all 0.2s ease;
+  }
+  .btn-primary-consulta:hover {
+    background: var(--uni-green-90);
+  }
+  .btn-primary-consulta:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+
+  .auth-card-footer {
+    margin-top: 24px;
+    padding-top: 18px;
+    border-top: 1px solid #f1f5f9;
+    font-size: 0.72rem;
+    color: var(--uni-text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .expired-instruction-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 14px 16px;
+    text-align: left;
+    font-size: 0.82rem;
+  }
+
+  /* PANTALLA 2: VISTA EXPEDIENTE */
+  .expediente-container {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    animation: fadeIn 0.35s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .vigencia-banner {
+    background: var(--uni-white);
+    border: 1px solid var(--uni-border);
+    border-left: 4px solid var(--uni-green-primary);
+    border-radius: 10px;
+    padding: 14px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    box-shadow: 0 2px 6px rgba(0, 89, 78, 0.04);
+  }
+  .vigencia-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .pulse-dot {
+    width: 10px;
+    height: 10px;
+    background: var(--uni-green-primary);
+    border-radius: 50%;
+    box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.2);
+  }
+  .btn-logout {
+    background: var(--uni-green-05);
+    border: 1px solid var(--uni-green-25);
+    color: var(--uni-green-primary);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+  }
+  .btn-logout:hover {
+    background: var(--uni-green-10);
+    color: var(--uni-green-90);
+  }
+
+  /* TARJETA BENTO RESPUESTA OFICIAL */
+  .bento-card {
+    background: var(--uni-white);
+    border: 1px solid var(--uni-border);
+    border-radius: 12px;
+    padding: 28px 30px;
+    box-shadow: 0 4px 16px rgba(0, 89, 78, 0.04);
+  }
+  .respuesta-oficial-card {
+    border-top: 4px solid var(--uni-green-primary);
+  }
+  .respuesta-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .chips-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .chip-radicado {
+    background: var(--uni-green-05);
+    color: var(--uni-green-primary);
+    border: 1px solid var(--uni-green-25);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    font-family: monospace;
+    letter-spacing: 0.5px;
+  }
+  .chip-estado-respondida {
+    background: var(--uni-gold-05);
+    color: #854d0e;
+    border: 1px solid var(--uni-gold-25);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 750;
+  }
+  .emision-fecha {
+    font-size: 0.76rem;
+    color: var(--uni-text-muted);
+    font-weight: 600;
+  }
+  .asunto-title {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--uni-black);
+    margin: 0 0 14px 0;
+    line-height: 1.4;
+  }
+  .funcionario-sign-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--uni-gold-05);
+    border: 1px solid var(--uni-gold-25);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    color: #854d0e;
+    margin-bottom: 20px;
+  }
+  .funcionario-sign-badge svg {
+    stroke: var(--uni-gold-primary);
+  }
+
+  .respuesta-text-container {
+    background: var(--uni-white);
+    border: 1px solid var(--uni-border);
+    border-left: 4px solid var(--uni-green-primary);
+    border-radius: 8px;
+    padding: 22px 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 6px rgba(0, 89, 78, 0.02);
+  }
+  .respuesta-text-body {
+    font-size: 0.95rem;
+    color: var(--uni-text-dark);
+    line-height: 1.8;
+    white-space: pre-wrap;
+    font-family: inherit;
+  }
+
+  .drive-link-box {
+    background: var(--uni-green-05);
+    border: 1px solid var(--uni-green-25);
+    border-radius: 8px;
+    padding: 14px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .btn-external-drive {
+    background: var(--uni-green-primary);
+    color: #ffffff;
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 750;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 6px rgba(0, 89, 78, 0.2);
+    transition: all 0.2s ease;
+  }
+  .btn-external-drive:hover {
+    background: var(--uni-green-90);
+  }
+
+  .metadatos-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    padding-top: 18px;
+    border-top: 1px solid var(--uni-border);
+  }
+  .meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .meta-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--uni-text-muted);
+    letter-spacing: 0.5px;
+  }
+  .meta-val {
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: var(--uni-black);
+  }
+
+  /* EXPLORADOR DE SUBCARPETAS Y ARCHIVOS (ESTILO BENTO ACCORDION GLOBAL) */
+  .anexos-explorer-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .explorer-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .badge-total-files {
+    font-size: 0.74rem;
+    font-weight: 750;
+    color: var(--uni-green-primary);
+    background: var(--uni-green-10);
+    border: 1px solid var(--uni-green-25);
+    padding: 4px 12px;
+    border-radius: 12px;
+  }
+
+  .subcarpetas-container {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .subcarpeta-bento-card {
+    background: var(--uni-white);
+    border: 1px solid var(--uni-border);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 89, 78, 0.03);
+    transition: all 0.2s ease;
+  }
+  .subcarpeta-bento-card:hover {
+    border-color: var(--uni-green-50);
+  }
+  .subcarpeta-header {
+    background: var(--uni-green-05);
+    padding: 12px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 1px solid var(--uni-border);
+    transition: background 0.15s ease;
+  }
+  .subcarpeta-header:hover {
+    background: var(--uni-green-10);
+  }
+  .subcarpeta-title-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .subcarpeta-icon {
+    color: var(--uni-green-primary);
+  }
+  .subcarpeta-name {
+    font-size: 0.88rem;
+    font-weight: 800;
+    color: var(--uni-black);
+  }
+  .subcarpeta-count-badge {
+    font-size: 0.70rem;
+    font-weight: 750;
+    color: var(--uni-green-primary);
+    background: var(--uni-white);
+    border: 1px solid var(--uni-green-25);
+    padding: 2px 10px;
+    border-radius: 12px;
+  }
+  .chevron-icon {
+    transition: transform 0.2s ease;
+    color: var(--uni-text-muted);
+  }
+  .subcarpeta-bento-card.open .chevron-icon {
+    transform: rotate(180deg);
+  }
+  .subcarpeta-body {
+    padding: 14px 18px;
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--uni-white);
+  }
+  .subcarpeta-bento-card.open .subcarpeta-body {
+    display: flex;
+  }
+
+  .sub-instruction-text {
+    font-size: 0.80rem;
+    color: var(--uni-text-muted);
+    background: var(--uni-gold-05);
+    border-left: 3px solid var(--uni-gold-primary);
+    padding: 8px 12px;
+    border-radius: 4px;
+    line-height: 1.45;
+  }
+
+  .file-item-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--uni-white);
+    border: 1px solid var(--uni-border);
+    border-radius: 8px;
+    padding: 11px 16px;
+    gap: 12px;
+    transition: all 0.2s ease;
+  }
+  .file-item-row:hover {
+    background: var(--uni-green-05);
+    border-color: var(--uni-green-50);
+  }
+  .file-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+  .file-item-icon {
+    color: var(--uni-green-primary);
+    flex-shrink: 0;
+  }
+  .file-name {
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: var(--uni-text-dark);
+    word-break: break-all;
+  }
+  .file-meta {
+    font-size: 0.72rem;
+    color: var(--uni-text-muted);
+  }
+  .file-office-badge {
+    font-size: 0.70rem;
+    font-weight: 750;
+    color: var(--uni-green-primary);
+    background: var(--uni-green-10);
+    border: 1px solid var(--uni-green-25);
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .btn-download-clean {
+    background: var(--uni-green-05);
+    border: 1px solid var(--uni-green-25);
+    color: var(--uni-green-primary);
+    text-decoration: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 0.76rem;
+    font-weight: 750;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+  }
+  .btn-download-clean:hover {
+    background: var(--uni-green-primary);
+    color: var(--uni-white);
+    border-color: var(--uni-green-primary);
+    box-shadow: 0 2px 6px rgba(0, 89, 78, 0.2);
+  }
+
+  /* PIE DE PÁGINA */
+  .consulta-footer {
+    background: var(--uni-white);
+    border-top: 1px solid var(--uni-border);
+    padding: 24px 20px;
+    margin-top: 40px;
+  }
+  .footer-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  @media (max-width: 768px) {
+    .navbar-content {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .metadatos-grid {
+      grid-template-columns: 1fr;
+    }
+    .auth-bento-card {
+      padding: 24px 20px;
+    }
+    .respuesta-card-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .file-item-row {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .btn-download-clean {
+      align-self: flex-end;
+    }
+    .footer-inner {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+</style>
+
 <script>
-  import { initConsultaRespuesta } from '@scripts/consulta-respuesta';
-  initConsultaRespuesta();
+  // Script de gestión interactiva del portal público /consulta-respuesta
+  const authSection = document.getElementById('auth-section');
+  const expedienteSection = document.getElementById('expediente-section');
+  const expiredSection = document.getElementById('expired-section');
+
+  const formAuth = document.getElementById('form-consulta-auth') as HTMLFormElement | null;
+  const inputRadicado = document.getElementById('input-radicado') as HTMLInputElement | null;
+  const inputEmail = document.getElementById('input-email') as HTMLInputElement | null;
+  const inputPin = document.getElementById('input-pin') as HTMLInputElement | null;
+  const btnSubmit = document.getElementById('btn-submit-auth') as HTMLButtonElement | null;
+  const btnText = document.getElementById('btn-text');
+  const errorBox = document.getElementById('auth-error-box');
+  const errorMsg = document.getElementById('auth-error-msg');
+  const btnLogout = document.getElementById('btn-logout');
+
+  // 1. Prellenado automático desde URL (?radicado=...&correo=...&pin=...)
+  function checkUrlParams() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const rad = (urlParams.get('radicado') || urlParams.get('rad') || '').trim().toUpperCase();
+    const email = (urlParams.get('correo') || urlParams.get('email') || '').trim().toLowerCase();
+    const pin = (urlParams.get('pin') || urlParams.get('codigo') || '').replace(/\s+/g, '').trim();
+
+    if (rad && inputRadicado) inputRadicado.value = rad;
+    if (email && inputEmail) inputEmail.value = email;
+    if (pin && inputPin) inputPin.value = pin;
+
+    if (rad && email && pin) {
+      submitValidation(rad, email, pin);
+    } else if (rad && email && inputPin) {
+      inputPin.focus();
+    }
+  }
+
+  // 2. Ejecutar validación contra /api/consultar-respuesta
+  async function submitValidation(radicado: string, email: string, pin: string) {
+    const cleanRad = String(radicado || '').trim().toUpperCase();
+    const cleanEmail = String(email || '').trim().toLowerCase();
+    const cleanPin = String(pin || '').replace(/\s+/g, '').trim();
+
+    if (btnSubmit) {
+      btnSubmit.disabled = true;
+      if (btnText) btnText.textContent = 'Verificando y validando vigencia (10 días)...';
+    }
+    if (errorBox) errorBox.style.display = 'none';
+
+    try {
+      const res = await fetch('/api/consultar-respuesta', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ radicado: cleanRad, correo: cleanEmail, email: cleanEmail, pin: cleanPin }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data.success) {
+        if (data.code === 'EXPIRED') {
+          showExpiredScreen(data.error || 'El periodo de 10 días para consultar este expediente ha vencido.');
+          return;
+        }
+
+        if (errorBox && errorMsg) {
+          errorMsg.textContent = data.error || 'Las credenciales ingresadas (Correo o Código de 6 dígitos) no coinciden con este radicado.';
+          errorBox.style.display = 'flex';
+        }
+        return;
+      }
+
+      // Éxito: renderizar datos
+      renderExpediente(data);
+    } catch (err: any) {
+      if (errorBox && errorMsg) {
+        errorMsg.textContent = 'Error de conexión con el servidor institucional.';
+        errorBox.style.display = 'flex';
+      }
+    } finally {
+      if (btnSubmit) {
+        btnSubmit.disabled = false;
+        if (btnText) btnText.textContent = 'Consultar y Desbloquear Expediente';
+      }
+    }
+  }
+
+  // 3. Mostrar pantalla de caducidad
+  function showExpiredScreen(message: string) {
+    if (authSection) authSection.style.display = 'none';
+    if (expedienteSection) expedienteSection.style.display = 'none';
+    if (expiredSection) expiredSection.style.display = 'flex';
+    const detailText = document.getElementById('expired-detail-text');
+    if (detailText) detailText.textContent = message;
+  }
+
+  // 4. Renderizar Pantalla de Expediente Desbloqueado
+  function renderExpediente(data: any) {
+    const pet = data.peticion || {};
+    const resp = data.respuesta || {};
+    const subcarpetas = data.subcarpetas || [];
+    const anexos = data.anexos || [];
+
+    // Ocultar Auth y mostrar Expediente
+    if (authSection) authSection.style.display = 'none';
+    if (expiredSection) expiredSection.style.display = 'none';
+    if (expedienteSection) expedienteSection.style.display = 'flex';
+
+    // Banner de Vigencia Estricto (10 días)
+    const dispVigenciaText = document.getElementById('disp-vigencia-text');
+    if (dispVigenciaText) {
+      const diasLeft = resp.dias_restantes ?? resp.remaining_days ?? 10;
+      dispVigenciaText.textContent = `Acceso temporal activo • Disponible por ${diasLeft} día${diasLeft === 1 ? '' : 's'} más (Vence el ${resp.formatted_expira})`;
+    }
+
+    // Cabecera del pronunciamiento
+    const dispRadicado = document.getElementById('disp-radicado');
+    if (dispRadicado) dispRadicado.textContent = pet.numero_radicado || 'RAD-2026';
+
+    const dispAsunto = document.getElementById('disp-asunto');
+    if (dispAsunto) dispAsunto.textContent = pet.asunto || 'Sin asunto especificado';
+
+    const dispFechaEmision = document.getElementById('disp-fecha-emision');
+    if (dispFechaEmision) {
+      const fechaFormat = resp.fecha_envio ? new Date(resp.fecha_envio).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Reciente';
+      dispFechaEmision.textContent = `Fecha de emisión: ${fechaFormat}`;
+    }
+
+    const dispFuncionario = document.getElementById('disp-funcionario');
+    if (dispFuncionario) dispFuncionario.textContent = resp.funcionario || 'Oficina de Correspondencia y Gestión Documental';
+
+    const dispMensaje = document.getElementById('disp-mensaje-respuesta');
+    if (dispMensaje) dispMensaje.textContent = resp.mensaje || 'Se ha resuelto formalmente su petición.';
+
+    // Enlace a Drive si existe
+    const driveBox = document.getElementById('drive-link-box');
+    const driveBtn = document.getElementById('drive-link-btn') as HTMLAnchorElement | null;
+    if (resp.drive_url && driveBox && driveBtn) {
+      driveBox.style.display = 'flex';
+      driveBtn.href = resp.drive_url;
+    } else if (driveBox) {
+      driveBox.style.display = 'none';
+    }
+
+    // Metadatos
+    const dispSol = document.getElementById('disp-solicitante');
+    if (dispSol) dispSol.textContent = pet.solicitante_nombre || '--';
+
+    const dispTipoSol = document.getElementById('disp-tipo-sol');
+    if (dispTipoSol) dispTipoSol.textContent = pet.solicitante_tipo || 'Ciudadano';
+
+    const dispFechaRad = document.getElementById('disp-fecha-rad');
+    if (dispFechaRad) {
+      dispFechaRad.textContent = pet.fecha_radicacion ? new Date(pet.fecha_radicacion).toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric' }) : '--';
+    }
+
+    const dispCat = document.getElementById('disp-categoria');
+    if (dispCat) dispCat.textContent = pet.categoria || 'Petición General';
+
+    // Contador de archivos
+    const dispTotalFiles = document.getElementById('disp-total-files');
+    if (dispTotalFiles) {
+      dispTotalFiles.textContent = `${anexos.length} archivo${anexos.length === 1 ? '' : 's'} disponible${anexos.length === 1 ? '' : 's'}`;
+    }
+
+    // Renderizar subcarpetas y anexos
+    renderSubcarpetas(subcarpetas, anexos);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // Helper para agrupar y renderizar subcarpetas en el portal del solicitante
+  function renderSubcarpetas(subcarpetas: any[], anexos: any[]) {
+    const container = document.getElementById('subcarpetas-container');
+    if (!container) return;
+
+    const validSubcarpetas = (subcarpetas || []).filter((s: any) => {
+      const n = String(s?.nombre || '').trim();
+      if (!n || n.toUpperCase().includes('RESPUESTA_META') || n.includes('{"') || n.includes('"}') || n.includes('","') || /^["']?[0-9a-f]{8}-/i.test(n)) {
+        return false;
+      }
+      return true;
+    });
+
+    if (anexos.length === 0) {
+      container.innerHTML = `
+        <div style="background: #ffffff; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 24px; text-align: center; color: #64748b; font-size: 0.84rem;">
+          No se registraron documentos anexos descargables para este expediente. El pronunciamiento oficial consta en el texto superior.
+        </div>
+      `;
+      return;
+    }
+
+    // 1. Identificar documento original (no anexo de oficina)
+    const docOriginales = anexos.filter((a: any) => !a.es_anexo_oficina);
+    const anexosOficinas = anexos.filter((a: any) => a.es_anexo_oficina);
+
+    let html = '';
+
+    // Si hay documento original de la petición
+    if (docOriginales.length > 0) {
+      html += `
+        <div class="subcarpeta-bento-card open">
+          <div class="subcarpeta-header">
+            <div class="subcarpeta-title-group">
+              <svg class="subcarpeta-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <span class="subcarpeta-name">Documento Original de la Petición</span>
+              <span class="subcarpeta-count-badge">${docOriginales.length} doc</span>
+            </div>
+            <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="subcarpeta-body">
+            ${docOriginales.map((doc: any) => renderFileRow(doc)).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // 2. Si no hay subcarpetas estructuradas pero hay archivos de oficinas
+    if (validSubcarpetas.length === 0 && anexosOficinas.length > 0) {
+      html += `
+        <div class="subcarpeta-bento-card open">
+          <div class="subcarpeta-header">
+            <div class="subcarpeta-title-group">
+              <svg class="subcarpeta-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <span class="subcarpeta-name">Soportes y Anexos Institucionales</span>
+              <span class="subcarpeta-count-badge">${anexosOficinas.length} doc</span>
+            </div>
+            <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="subcarpeta-body">
+            ${anexosOficinas.map((doc: any) => renderFileRow(doc)).join('')}
+          </div>
+        </div>
+      `;
+    } else {
+      // 3. Ordenar carpetas de forma natural estricta y renderizar cada una
+      validSubcarpetas.sort((a: any, b: any) => {
+        const nombreA = String(a?.nombre ?? '').replace(/^subcarpeta\s+/i, '').trim();
+        const nombreB = String(b?.nombre ?? '').replace(/^subcarpeta\s+/i, '').trim();
+        return nombreA.localeCompare(nombreB, 'es', { numeric: true, sensitivity: 'base' });
+      });
+
+      validSubcarpetas.forEach((sub: any, idx: number) => {
+        const rawName = String(sub.nombre || `${idx + 1}`).trim();
+        const cleanName = rawName.replace(/^subcarpeta\s+/i, '').trim() || rawName;
+        const subId = sub.id;
+
+        // Archivos asociados a esta subcarpeta
+        const subFiles = anexosOficinas.filter((a: any) => {
+          if (a.subcarpeta_id && a.subcarpeta_id === subId) return true;
+          const fileName = (a.nombre_archivo || '').toLowerCase();
+          const cleanSub = cleanName.toLowerCase();
+          return fileName.includes(`[${cleanSub}]`) || fileName.includes(`[subcarpeta ${cleanSub}]`);
+        });
+
+        html += `
+          <div class="subcarpeta-bento-card open">
+            <div class="subcarpeta-header">
+              <div class="subcarpeta-title-group">
+                <svg class="subcarpeta-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                <span class="subcarpeta-name">${cleanName}</span>
+                <span class="subcarpeta-count-badge">${subFiles.length} soporte${subFiles.length === 1 ? '' : 's'}</span>
+              </div>
+              <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <div class="subcarpeta-body">
+              ${sub.descripcion ? `<div class="sub-instruction-text"><strong>Finalidad:</strong> ${sub.descripcion}</div>` : ''}
+              ${subFiles.length > 0 
+                ? subFiles.map((doc: any) => renderFileRow(doc)).join('')
+                : `<div style="font-size: 0.78rem; color: #94a3b8; font-style: italic; padding: 6px 0;">No se registraron archivos de soporte adjuntos para esta subcarpeta.</div>`
+              }
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    container.innerHTML = html;
+
+    // Toggle interactivo para desplegar/replegar subcarpetas
+    container.querySelectorAll('.subcarpeta-header').forEach((hdr) => {
+      hdr.addEventListener('click', () => {
+        const card = hdr.closest('.subcarpeta-bento-card');
+        if (card) card.classList.toggle('open');
+      });
+    });
+  }
+
+  function renderFileRow(doc: any): string {
+    const rawName = String(doc?.nombre_archivo || 'Documento_Adjunto.pdf');
+    // Limpiar tags [1.1], [Soportes Técnicos], etc. si existen
+    const cleanDisplayName = rawName.replace(/^\[[^\]]+\]\s*/, '').trim();
+    const downloadUrl = doc?.download_url || '#';
+    const fecha = doc?.created_at ? new Date(doc.created_at).toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric' }) : '';
+    const oficina = doc?.oficina_nombre ? String(doc.oficina_nombre).trim() : '';
+    const observacion = doc?.observacion ? String(doc.observacion).trim() : '';
+    const fileTitle = oficina ? `[Aporte de: ${oficina}] - ${cleanDisplayName}` : cleanDisplayName;
+
+    return `
+      <div class="file-item-row">
+        <div class="file-left">
+          <svg class="file-item-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <div style="flex: 1; min-width: 0;">
+            <div class="file-name" style="word-break: break-all; font-weight: 700;">${fileTitle}</div>
+            <div class="file-meta" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 3px;">
+              ${oficina ? `<span class="file-office-badge">Aporte de: ${oficina}</span>` : ''}
+              ${fecha ? `<span>Radicado el: ${fecha}</span>` : ''}
+            </div>
+            ${observacion ? `<div style="font-size: 0.75rem; color: var(--uni-text-muted); font-style: italic; margin-top: 4px; line-height: 1.4;">&ldquo;${observacion}&rdquo;</div>` : ''}
+          </div>
+        </div>
+        <a href="${downloadUrl}" download="${cleanDisplayName}" class="btn-download-clean" target="_blank" rel="noopener noreferrer" title="Descargar documento">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span>Descargar</span>
+        </a>
+      </div>
+    `;
+  }
+
+  // Listeners
+  formAuth?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const rad = inputRadicado ? inputRadicado.value.trim().toUpperCase() : '';
+    const email = inputEmail ? inputEmail.value.trim().toLowerCase() : '';
+    const pin = inputPin ? inputPin.value.replace(/\s+/g, '').trim() : '';
+    if (!rad || !email || !pin) return;
+    submitValidation(rad, email, pin);
+  });
+
+  btnLogout?.addEventListener('click', () => {
+    if (expedienteSection) expedienteSection.style.display = 'none';
+    if (authSection) authSection.style.display = 'flex';
+    if (inputPin) inputPin.value = '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // Ejecutar verificación de params al cargar
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', checkUrlParams);
+  } else {
+    checkUrlParams();
+  }
 </script>
+

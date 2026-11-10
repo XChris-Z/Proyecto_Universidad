@@ -92,7 +92,6 @@ export function initAppLayout() {
       warning: 'Aviso del Sistema',
       warn: 'Aviso del Sistema',
       info: 'Notificación Oficial',
-      danger: 'Atención Requerida',
     };
 
     const icons: Record<string, string> = {
@@ -111,7 +110,7 @@ export function initAppLayout() {
       </div>
       <div class="toast-content-col">
         <div class="toast-header-row">
-          <span class="toast-category">${(typeof customTitle === 'string' && customTitle.trim()) ? customTitle.trim() : (titles[type] || 'Notificación Oficial')}</span>
+          <span class="toast-category">${customTitle || titles[type]}</span>
           <button type="button" class="toast-close-btn" title="Cerrar">&times;</button>
         </div>
         <div class="toast-message">${message}</div>

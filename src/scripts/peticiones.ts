@@ -1,226 +1,149 @@
-// src/scripts/peticiones.ts - Lógica de cliente para el Módulo de Peticiones y PQRS
+// src/scripts/peticiones.ts
+// Lógica de cliente para el Módulo de Derechos de Petición y PQRS
 
-export function initPeticiones(): void {
-  // 1. FILTRO DE PESTAÑAS Y BUSCADOR EN TIEMPO REAL
-  const filterButtons = document.querySelectorAll('#peticiones-filter-tabs .filter-tab');
-  const tableRows = document.querySelectorAll<HTMLTableRowElement>('#tabla-peticiones tbody tr');
-  const searchInput = document.getElementById('peticiones-search-input') as HTMLInputElement | null;
-  let currentFilterMode = 'all';
+import { documents } from '@data/documents';
+import { INSTITUTIONAL_USERS } from '@data/users';
+import { calculateDeadlineProgress } from '@lib/utils';
+import type { Document } from '@lib/types';
 
-  function applyPeticionesFilters() {
-    const q = (searchInput?.value || '').toLowerCase().trim();
-    tableRows.forEach((row) => {
-      if (row.id && row.id.startsWith('row-pet-')) {
-        const estado = row.getAttribute('data-estado');
-        const isPendiente = estado !== 'respondida' && estado !== 'completada';
-        const matchesTab = currentFilterMode === 'all' || (currentFilterMode === 'pendientes' && isPendiente);
-        const text = row.textContent?.toLowerCase() || '';
-        const matchesQ = !q || text.includes(q);
+let currentFilter = 'all';
 
-        row.style.display = (matchesTab && matchesQ) ? 'table-row' : 'none';
-      }
+export function initPeticiones() {
+  const tbody = document.getElementById('peticiones-table-body');
+  const filterTabs = document.querySelectorAll('#peticiones-filter-tabs .filter-tab');
+
+  function getPetitions(): Document[] {
+    return documents.filter(d => d.category === 'Derecho de Petición');
+  }
+
+  function updateCounts() {
+    const petitions = getPetitions();
+    const total = petitions.length;
+    const particular = petitions.filter(d => d.originRight.includes('Particular')).length;
+    const general = petitions.filter(d => d.originRight.includes('General')).length;
+    const info = petitions.filter(d => d.slaDays === 10 || d.originRight.includes('Información')).length;
+    const consulta = petitions.filter(d => d.slaDays === 30 || d.originRight.includes('Consulta')).length;
+    const pendientes = petitions.filter(d => d.responseStatus === 'pendiente').length;
+
+    const elAll = document.getElementById('pcount-all');
+    const elPart = document.getElementById('pcount-particular');
+    const elGen = document.getElementById('pcount-general');
+    const elInfo = document.getElementById('pcount-info');
+    const elCon = document.getElementById('pcount-consulta');
+    const elPend = document.getElementById('pcount-pendientes');
+
+    if (elAll) elAll.textContent = String(total);
+    if (elPart) elPart.textContent = String(particular);
+    if (elGen) elGen.textContent = String(general);
+    if (elInfo) elInfo.textContent = String(info);
+    if (elCon) elCon.textContent = String(consulta);
+    if (elPend) elPend.textContent = String(pendientes);
+  }
+
+  function renderTable() {
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    const petitions = getPetitions();
+
+    const filtered = petitions.filter(doc => {
+      if (currentFilter === 'all') return true;
+      if (currentFilter === 'particular') return doc.originRight.includes('Particular');
+      if (currentFilter === 'general') return doc.originRight.includes('General');
+      if (currentFilter === 'informacion') return doc.slaDays === 10 || doc.originRight.includes('Información');
+      if (currentFilter === 'consulta') return doc.slaDays === 30 || doc.originRight.includes('Consulta');
+      if (currentFilter === 'pendientes') return doc.responseStatus === 'pendiente';
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="8" style="text-align: center; padding: 36px; color: var(--text-muted);">
+            No se registran derechos de petición para la categoría seleccionada.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    filtered.forEach(doc => {
+      const progress = calculateDeadlineProgress(doc.uploadDate, doc.dueDate);
+      const responsible = INSTITUTIONAL_USERS.find(u => u.id === doc.responsibleId) || INSTITUTIONAL_USERS[0]!;
+      const isResponded = doc.responseStatus === 'respondida';
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>
+          <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-main); margin-bottom: 2px;">
+            ${doc.title}
+          </div>
+          <div style="font-size: 0.76rem; color: var(--text-muted);">
+            Peticionario: <strong>${doc.applicant}</strong> (${doc.applicantType})
+          </div>
+        </td>
+        <td>
+          <span style="font-family: monospace; font-size: 0.82rem; font-weight: 700; color: var(--primary);">
+            ${doc.radicado}
+          </span>
+        </td>
+        <td>
+          <span class="badge" style="background: var(--primary-subtle); color: var(--primary); font-size: 0.72rem; padding: 2px 8px; border-radius: 4px;">
+            ${doc.originRight}
+          </span>
+        </td>
+        <td>
+          <span style="font-weight: 700; font-size: 0.82rem; color: var(--text-main);">
+            ${doc.slaDays} Días Hábiles
+          </span>
+        </td>
+        <td>
+          <div style="min-width: 130px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.72rem; margin-bottom: 3px;">
+              <span class="badge ${progress.statusClass}" style="font-size: 0.68rem; padding: 1px 6px; border-radius: 4px;">
+                ${progress.statusBadge}
+              </span>
+              <span>${progress.percentage}%</span>
+            </div>
+            <div class="dist-progress-bg" style="height: 6px;">
+              <div class="dist-progress-fill" style="width: ${progress.percentage}%; background: ${progress.percentage > 80 ? 'var(--status-critical)' : progress.percentage > 50 ? 'var(--status-warn)' : 'var(--status-safe)'};"></div>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 28px; height: 28px; border-radius: 50%; background: ${responsible.avatarColor}; color: #fff; font-size: 0.72rem; font-weight: 700; display: flex; align-items: center; justify-content: center;">
+              ${responsible.initials}
+            </div>
+            <div style="font-size: 0.78rem;">
+              <div style="font-weight: 600; color: var(--text-main);">${responsible.name}</div>
+              <div style="font-size: 0.7rem; color: var(--text-muted);">${responsible.role}</div>
+            </div>
+          </div>
+        </td>
+        <td>
+          <span class="badge-response-status ${isResponded ? 'responded' : 'pending'}" style="font-size: 0.72rem; padding: 4px 8px; border-radius: 4px;">
+            ${isResponded ? '✓ Respondida' : '⏳ En Trámite'}
+          </span>
+        </td>
+        <td style="text-align: right;">
+          <a href="/archivos" class="btn btn-secondary btn-sm" style="text-decoration: none; font-size: 0.78rem;">
+            Ver en Archivos
+          </a>
+        </td>
+      `;
+      tbody.appendChild(tr);
     });
   }
 
-  filterButtons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      filterButtons.forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active');
-      currentFilterMode = btn.getAttribute('data-pfilter') || 'all';
-      applyPeticionesFilters();
+  filterTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      filterTabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      currentFilter = tab.getAttribute('data-pfilter') || 'all';
+      renderTable();
     });
   });
 
-  searchInput?.addEventListener('input', applyPeticionesFilters);
-
-  // 2. MODAL DE EDICIÓN
-  const editModal = document.getElementById('modal-edit-peticion');
-  const editTitle = document.getElementById('edit-modal-title');
-  const inputId = document.getElementById('edit-pet-id') as HTMLInputElement | null;
-  const inputAsunto = document.getElementById('edit-pet-asunto') as HTMLInputElement | null;
-  const inputSolicitante = document.getElementById('edit-pet-solicitante') as HTMLInputElement | null;
-  const selectTipo = document.getElementById('edit-pet-tipo') as HTMLSelectElement | null;
-  const selectPrioridad = document.getElementById('edit-pet-prioridad') as HTMLSelectElement | null;
-  const selectEstado = document.getElementById('edit-pet-estado') as HTMLSelectElement | null;
-  const inputEntrega = document.getElementById('edit-pet-entrega') as HTMLInputElement | null;
-  const formEdit = document.getElementById('form-edit-peticion') as HTMLFormElement | null;
-
-  const closeEdit = () => {
-    if (editModal) editModal.style.display = 'none';
-  };
-  document.getElementById('btn-close-edit-modal')?.addEventListener('click', closeEdit);
-  document.getElementById('btn-cancel-edit-pet')?.addEventListener('click', closeEdit);
-
-  // 3. DELEGACIÓN GLOBAL DE ACCIONES (Abrir Carpeta, Editar, Eliminar y Reenviar)
-  document.addEventListener('click', async (e) => {
-    const target = e.target as HTMLElement | null;
-    if (!target) return;
-
-    // A. Botón Abrir Carpeta
-    const abrirBtn = target.closest('.btn-abrir-carpeta') as HTMLAnchorElement | null;
-    if (abrirBtn && abrirBtn.href) {
-      return;
-    }
-
-    // B. Botón Editar
-    const editBtn = target.closest('.btn-edit-pet') as HTMLElement | null;
-    if (editBtn) {
-      e.preventDefault();
-      e.stopPropagation();
-      const id = editBtn.dataset.id || '';
-      const radicado = editBtn.dataset.radicado || '';
-      const asunto = editBtn.dataset.asunto || '';
-      const solicitante = editBtn.dataset.solicitante || '';
-      const tipo = editBtn.dataset.tipo || 'Ciudadano';
-      const prioridad = editBtn.dataset.prioridad || 'Media';
-      const estado = editBtn.dataset.estado || 'en_tramite';
-      const entrega = editBtn.dataset.entrega || '';
-
-      if (editTitle) editTitle.textContent = `Editar Radicado ${radicado}`;
-      if (inputId) inputId.value = id;
-      if (inputAsunto) inputAsunto.value = asunto;
-      if (inputSolicitante) inputSolicitante.value = solicitante;
-      if (selectTipo) selectTipo.value = tipo;
-      if (selectPrioridad) selectPrioridad.value = prioridad;
-      if (selectEstado) selectEstado.value = estado;
-      if (inputEntrega) inputEntrega.value = entrega;
-
-      if (editModal) editModal.style.display = 'flex';
-      return;
-    }
-
-    // C. Botón Eliminar
-    const deleteBtn = target.closest('.btn-delete-pet') as HTMLElement | null;
-    if (deleteBtn) {
-      e.preventDefault();
-      e.stopPropagation();
-      const id = deleteBtn.dataset.id;
-      const radicado = deleteBtn.dataset.radicado;
-      if (!id) return;
-
-      const confirmed = typeof (window as any).showConfirm === 'function'
-        ? await (window as any).showConfirm(
-            `¿Está seguro de que desea eliminar definitivamente el radicado ${radicado}?\n\nEsta acción purgará los registros de oficinas asignadas, archivos en el repositorio y registrará el evento de eliminación en la Auditoría institucional.`,
-            'Confirmar Eliminación'
-          )
-        : true;
-      if (!confirmed) return;
-
-      deleteBtn.setAttribute('disabled', 'true');
-
-      try {
-        const res = await fetch('/api/peticiones/eliminar', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id }),
-        });
-
-        const data = await res.json();
-        if (!res.ok || !data.success) {
-          (window as any).showToast('Error al eliminar: ' + (data.error || 'No se pudo procesar la eliminación'), 'error');
-          deleteBtn.removeAttribute('disabled');
-          return;
-        }
-
-        const row = document.getElementById(`row-pet-${id}`);
-        if (row) {
-          row.style.transition = 'opacity 0.3s ease';
-          row.style.opacity = '0';
-          setTimeout(() => row.remove(), 300);
-        }
-
-        (window as any).showToast(`El radicado ${radicado} ha sido eliminado satisfactoriamente.`, 'success');
-      } catch (err: any) {
-        (window as any).showToast('Error al comunicarse con el servidor para la eliminación.', 'error');
-        deleteBtn.removeAttribute('disabled');
-      }
-      return;
-    }
-
-    // D. Botón Reenviar Correo SMTP
-    const resendBtn = target.closest('.btn-resend-mail') as HTMLButtonElement | null;
-    if (resendBtn) {
-      e.preventDefault();
-      e.stopPropagation();
-      const id = resendBtn.dataset.id;
-      const radicado = resendBtn.dataset.radicado;
-      if (!id) return;
-
-      resendBtn.disabled = true;
-      const originalContent = resendBtn.innerHTML;
-      resendBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite;"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>`;
-
-      try {
-        const res = await fetch('/api/peticiones/reenviar-correo', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id }),
-        });
-
-        const data = await res.json();
-        if (!res.ok || !data.success) {
-          (window as any).showToast(
-            `Fallo en el envío SMTP para ${radicado}: ${data.error || 'No se pudo conectar con el servidor de correo'}`,
-            'error',
-            'Diagnóstico SMTP'
-          );
-        } else {
-          (window as any).showToast(
-            `Notificación enviada exitosamente para ${radicado}.`,
-            'success',
-            'Despacho de Correo'
-          );
-        }
-      } catch (err: any) {
-        (window as any).showToast('Error de red al intentar conectar con el servicio de correo.', 'error');
-      } finally {
-        resendBtn.disabled = false;
-        resendBtn.innerHTML = originalContent;
-      }
-      return;
-    }
-  });
-
-  formEdit?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const saveBtn = document.getElementById('btn-save-edit-pet') as HTMLButtonElement | null;
-    if (saveBtn) {
-      saveBtn.disabled = true;
-      saveBtn.textContent = 'Actualizando...';
-    }
-
-    try {
-      const payload = {
-        id: inputId ? inputId.value : '',
-        asunto: inputAsunto ? inputAsunto.value.trim() : '',
-        solicitante_nombre: inputSolicitante ? inputSolicitante.value.trim() : '',
-        solicitante_tipo: selectTipo ? selectTipo.value : 'Ciudadano',
-        prioridad: selectPrioridad ? selectPrioridad.value : 'Media',
-        estado: selectEstado ? selectEstado.value : 'en_tramite',
-        fecha_limite_entrega: inputEntrega ? inputEntrega.value : '',
-      };
-
-      const res = await fetch('/api/peticiones/editar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        (window as any).showToast('Error al actualizar: ' + (data.error || 'No se pudo guardar la modificación'), 'error');
-        return;
-      }
-
-      (window as any).showToast('Petición actualizada con éxito.', 'success');
-      setTimeout(() => window.location.reload(), 600);
-    } catch (err: any) {
-      (window as any).showToast('Error de conexión al actualizar la petición.', 'error');
-    } finally {
-      if (saveBtn) {
-        saveBtn.disabled = false;
-        saveBtn.textContent = 'Guardar Cambios';
-      }
-    }
-  });
+  updateCounts();
+  renderTable();
 }
