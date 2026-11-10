@@ -38,44 +38,6 @@ const apelCount = procesosList.filter((p: any) => p.tipo_acto && (p.tipo_acto.to
       </div>
     </div>
 
-    <!-- Barra de Etapas Procesales Institucionales (Bento Capsule Reemplazo de Línea Cortante) -->
-    <div style="background: #F2F7F6; border: 1.5px solid #B2CFCB; border-radius: 14px; padding: 16px 22px; box-shadow: 0 2px 8px rgba(0, 89, 78, 0.04);">
-      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 10px;">
-        <span style="font-size: 0.76rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #00594E; display: inline-flex; align-items: center; gap: 6px;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          Flujo de Términos Procesales de Juzgamiento
-        </span>
-        <span style="font-size: 0.72rem; font-weight: 700; color: #52606D; background: #ffffff; border: 1px solid #B2CFCB; padding: 2px 8px; border-radius: 6px;">Debido Proceso Garantizado</span>
-      </div>
-      
-      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 0.78rem;">
-        <div style="background: #ffffff; border: 1px solid #00594E; color: #00594E; font-weight: 750; padding: 6px 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
-          <span style="background: #00594E; color: #ffffff; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 800;">1</span>
-          <span>Indagación Previa</span>
-        </div>
-        <span style="color: #6E9F98; font-weight: 700;">&rarr;</span>
-        <div style="background: #ffffff; border: 1px solid #00594E; color: #00594E; font-weight: 750; padding: 6px 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
-          <span style="background: #00594E; color: #ffffff; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 800;">2</span>
-          <span>Pliego de Cargos</span>
-        </div>
-        <span style="color: #6E9F98; font-weight: 700;">&rarr;</span>
-        <div style="background: #ffffff; border: 1px solid #00594E; color: #00594E; font-weight: 750; padding: 6px 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
-          <span style="background: #00594E; color: #ffffff; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 800;">3</span>
-          <span>Etapa Probatoria</span>
-        </div>
-        <span style="color: #6E9F98; font-weight: 700;">&rarr;</span>
-        <div style="background: #ffffff; border: 1px solid #CBD5E1; color: #52606D; font-weight: 600; padding: 6px 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
-          <span style="background: #E2E8F0; color: #52606D; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 800;">4</span>
-          <span>Fallo 1ra Instancia</span>
-        </div>
-        <span style="color: #6E9F98; font-weight: 700;">&rarr;</span>
-        <div style="background: #F7F5EE; border: 1px solid #DBD2B0; color: #786832; font-weight: 750; padding: 6px 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
-          <span style="background: #B5A160; color: #ffffff; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 800;">5</span>
-          <span>Apelación 2da Instancia (CSU / Rectoría)</span>
-        </div>
-      </div>
-    </div>
-
     <!-- Pestañas de Navegación Estilizadas con Contadores -->
     <div class="module-tabs" id="juzgamiento-module-tabs" style="display: flex; gap: 8px; flex-wrap: wrap; border-bottom: 2px solid #DCE4E3; padding-bottom: 12px;">
       <button class="module-tab-btn active" data-jstage="all" style="padding: 10px 18px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid transparent; transition: all 0.2s ease;">
@@ -124,26 +86,6 @@ const apelCount = procesosList.filter((p: any) => p.tipo_acto && (p.tipo_acto.to
         </table>
       </div>
     </div>
-
-    <!-- Pie de Módulo Bento Pro Max (Cierre Institucional Elegante sin Líneas Cortantes) -->
-    <div style="background: #F2F7F6; border: 1.5px solid #B2CFCB; border-radius: 14px; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
-      <div style="display: flex; align-items: center; gap: 12px;">
-        <div style="width: 40px; height: 40px; border-radius: 10px; background: #00594E; color: #ffffff; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
-        </div>
-        <div>
-          <h4 style="font-size: 0.94rem; font-weight: 800; color: #00594E; margin: 0;">Control Interno Disciplinario y Reserva Legal</h4>
-          <p style="font-size: 0.78rem; color: #52606D; margin: 2px 0 0 0;">Los expedientes disciplinarios gozan de reserva legal en etapa de indagación e instrucción según la normatividad nacional.</p>
-        </div>
-      </div>
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <a href="/dashboard" style="background: #ffffff; border: 1.5px solid #B2CFCB; color: #00594E; font-weight: 750; font-size: 0.82rem; border-radius: 8px; padding: 8px 16px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-          <span>Retornar al Centro de Mando</span>
-        </a>
-      </div>
-    </div>
-
   </div>
 
   <!-- Modal: Radicar Auto / Apelación Oficial -->

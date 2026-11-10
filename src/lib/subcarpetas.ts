@@ -11,6 +11,9 @@ export interface SubcarpetaMetaParsed {
     drive?: string | null;
     fecha_envio?: string;
     correo?: string | null;
+    archivo_respuesta?: any;
+    respuesta_archivo?: any;
+    [key: string]: any;
   } | null;
   allPins: string[];
   allMetas: any[];

@@ -9,11 +9,15 @@ import { logSystemActivity } from '@lib/audit';
 import { filtrarSubcarpetasValidas, separarRespuestaMeta, limpiarNombreCarpeta } from '@lib/subcarpetas';
 
 /**
- * Limpia y normaliza cadenas de variables de entorno (elimina comillas circundantes y espacios)
+ * Limpia y normaliza cadenas de variables de entorno (elimina comillas circundantes, espacios y saltos de línea)
  */
 function cleanEnv(val: string | undefined | null): string {
   if (!val) return '';
-  return String(val).trim().replace(/^["']|["']$/g, '').trim();
+  return String(val)
+    .replace(/^["'`]|["'`]$/g, '')
+    .replace(/[\r\n]/g, '')
+    .replace(/;+$/, '')
+    .trim();
 }
 
 /**
@@ -113,33 +117,45 @@ async function downloadFileBuffer(storagePath: string): Promise<{ buffer: Buffer
   }
 
   const cleanPath = trimmedPath.replace(/^peticiones\//, '').replace(/^\/+/, '');
+  const decodedPath = decodeURIComponent(cleanPath);
 
-  // 1. Intentar descarga autenticada con cliente Supabase Storage
-  try {
-    const { data, error } = await supabase.storage.from('peticiones').download(cleanPath);
-    if (!error && data) {
-      const arrayBuffer = await data.arrayBuffer();
-      return {
-        buffer: Buffer.from(arrayBuffer),
-        mimeType: data.type || getMimeType(cleanPath, 'application/pdf'),
-      };
-    }
-  } catch (err: any) {
-    console.warn('[Exportar Drive] Falló download directo de Supabase, probando URL pública:', err?.message);
+  // 1. Intentar descarga autenticada con cliente Supabase Storage (probando ruta estándar y decodificada)
+  for (const pathAttempt of [cleanPath, decodedPath]) {
+    try {
+      const { data, error } = await supabase.storage.from('peticiones').download(pathAttempt);
+      if (!error && data) {
+        const arrayBuffer = await data.arrayBuffer();
+        return {
+          buffer: Buffer.from(arrayBuffer),
+          mimeType: data.type || getMimeType(cleanPath, 'application/pdf'),
+        };
+      }
+    } catch (_) {}
   }
 
-  // 2. Fallback: Descarga vía URL pública del bucket
-  const publicUrl = `https://irjjpjtvhxoakiazfswn.supabase.co/storage/v1/object/public/peticiones/${cleanPath}`;
-  const resp = await fetch(publicUrl);
-  if (!resp.ok) {
-    throw new Error(`No se pudo descargar el archivo desde ${storagePath} (HTTP ${resp.status})`);
+  // 2. Fallback: Descarga vía URL pública del bucket con múltiples candidatos
+  const { data: publicData } = supabase.storage.from('peticiones').getPublicUrl(cleanPath);
+  const candidateUrls = [
+    publicData?.publicUrl,
+    `https://irjjpjtvhxoakiazfswn.supabase.co/storage/v1/object/public/peticiones/${cleanPath}`,
+    `https://irjjpjtvhxoakiazfswn.supabase.co/storage/v1/object/public/peticiones/${encodeURIComponent(cleanPath)}`,
+  ].filter(Boolean) as string[];
+
+  for (const pUrl of candidateUrls) {
+    try {
+      const resp = await fetch(pUrl);
+      if (resp.ok) {
+        const arrayBuffer = await resp.arrayBuffer();
+        const contentType = resp.headers.get('content-type') || getMimeType(cleanPath, 'application/octet-stream');
+        return {
+          buffer: Buffer.from(arrayBuffer),
+          mimeType: contentType,
+        };
+      }
+    } catch (_) {}
   }
-  const arrayBuffer = await resp.arrayBuffer();
-  const contentType = resp.headers.get('content-type') || getMimeType(cleanPath, 'application/octet-stream');
-  return {
-    buffer: Buffer.from(arrayBuffer),
-    mimeType: contentType,
-  };
+
+  throw new Error(`No se pudo descargar el archivo desde ${storagePath} en el almacenamiento institucional.`);
 }
 
 /**
@@ -259,26 +275,40 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // 1. Extraer y sanear credenciales de Google Drive
+    // 1. Extraer y sanear credenciales de Google Drive con compatibilidad total de variables
     const clientId = cleanEnv(
-      import.meta.env.GOOGLE_DRIVE_CLIENT_ID ||
       process.env.GOOGLE_DRIVE_CLIENT_ID ||
+      import.meta.env.GOOGLE_DRIVE_CLIENT_ID ||
+      process.env.GOOGLE_CLIENT_ID ||
       import.meta.env.GOOGLE_CLIENT_ID ||
-      process.env.GOOGLE_CLIENT_ID
+      process.env.DRIVE_CLIENT_ID ||
+      import.meta.env.DRIVE_CLIENT_ID
     );
     const clientSecret = cleanEnv(
-      import.meta.env.GOOGLE_DRIVE_CLIENT_SECRET ||
       process.env.GOOGLE_DRIVE_CLIENT_SECRET ||
+      import.meta.env.GOOGLE_DRIVE_CLIENT_SECRET ||
+      process.env.GOOGLE_CLIENT_SECRET ||
       import.meta.env.GOOGLE_CLIENT_SECRET ||
-      process.env.GOOGLE_CLIENT_SECRET
+      process.env.DRIVE_CLIENT_SECRET ||
+      import.meta.env.DRIVE_CLIENT_SECRET
     );
     const refreshToken = cleanEnv(
+      process.env.GOOGLE_DRIVE_REFRESH_TOKEN ||
       import.meta.env.GOOGLE_DRIVE_REFRESH_TOKEN ||
-      process.env.GOOGLE_DRIVE_REFRESH_TOKEN
+      process.env.GOOGLE_REFRESH_TOKEN ||
+      import.meta.env.GOOGLE_REFRESH_TOKEN ||
+      process.env.DRIVE_REFRESH_TOKEN ||
+      import.meta.env.DRIVE_REFRESH_TOKEN
     );
     const parentFolderId = cleanEnv(
+      process.env.GOOGLE_DRIVE_PARENT_FOLDER_ID ||
       import.meta.env.GOOGLE_DRIVE_PARENT_FOLDER_ID ||
-      process.env.GOOGLE_DRIVE_PARENT_FOLDER_ID
+      process.env.GOOGLE_PARENT_FOLDER_ID ||
+      import.meta.env.GOOGLE_PARENT_FOLDER_ID ||
+      process.env.DRIVE_FOLDER_ID ||
+      import.meta.env.DRIVE_FOLDER_ID ||
+      process.env.GOOGLE_DRIVE_FOLDER_ID ||
+      import.meta.env.GOOGLE_DRIVE_FOLDER_ID
     );
 
     if (!clientId || !clientSecret || !refreshToken) {
@@ -376,32 +406,68 @@ export const POST: APIRoute = async ({ request }) => {
     const anexos: any[] = Array.isArray(peticion.peticion_anexos) ? peticion.peticion_anexos : [];
     const responsables: any[] = Array.isArray(peticion.peticion_responsables) ? peticion.peticion_responsables : [];
 
-    // Identificar documento original del expediente (el que no es anexo de oficina o el primero)
-    const anexoPrincipal = anexos.find((a: any) => !a.es_anexo_oficina) || anexos[0] || null;
-    const anexosDependencias = anexos.filter((a: any) => a !== anexoPrincipal);
+    // Identificar Respuesta Final Oficial si existe en el expediente
+    const { respuestaMeta } = separarRespuestaMeta(peticion.instrucciones_anexos);
+    const respMetaObj = respuestaMeta?.archivo_respuesta || respuestaMeta?.respuesta_archivo || null;
+    let anexoRespuestaFinal: any = null;
+    if (respMetaObj && respMetaObj.storage_path) {
+      anexoRespuestaFinal = respMetaObj;
+    } else {
+      const respAnexo = anexos.find((a: any) => a.storage_path && a.storage_path.includes('/respuesta_final/'));
+      if (respAnexo) anexoRespuestaFinal = respAnexo;
+    }
+
+    // Identificar documento original del expediente (excluyendo la respuesta final y anexos de oficina)
+    const anexoPrincipal = anexos.find((a: any) => 
+      !a.es_anexo_oficina && (!anexoRespuestaFinal || (a.id !== anexoRespuestaFinal.id && a.storage_path !== anexoRespuestaFinal.storage_path))
+    ) || (anexos[0] && (!anexoRespuestaFinal || (anexos[0].id !== anexoRespuestaFinal.id && anexos[0].storage_path !== anexoRespuestaFinal.storage_path)) ? anexos[0] : null);
+
+    const anexosDependencias = anexos.filter((a: any) => a !== anexoPrincipal && a !== anexoRespuestaFinal && (!anexoRespuestaFinal || a.storage_path !== anexoRespuestaFinal.storage_path));
 
     // 4. PASO A: Crear carpeta principal del radicado en Google Drive
     const cleanRadicado = String(peticion.numero_radicado || 'RAD-2026').trim();
     const cleanAsunto = String(peticion.asunto || 'Expediente Documental').replace(/[/\\?%*:|"<>]/g, '-').trim();
     const mainFolderName = `${cleanRadicado} - ${cleanAsunto}`;
 
-    const mainFolder = await createDriveFolder(drive, mainFolderName, parentFolderId || undefined);
+    let mainFolder: any;
+    if (parentFolderId) {
+      try {
+        mainFolder = await createDriveFolder(drive, mainFolderName, parentFolderId);
+      } catch (parentErr: any) {
+        console.warn(`[Exportar Drive] Falló crear en carpeta contenedora (${parentFolderId}):`, parentErr?.message, 'Creando en raíz de Google Drive...');
+        mainFolder = await createDriveFolder(drive, mainFolderName, undefined);
+      }
+    } else {
+      mainFolder = await createDriveFolder(drive, mainFolderName, undefined);
+    }
+
     if (!mainFolder?.id) {
       throw new Error('No se pudo crear la carpeta raíz del radicado en Google Drive.');
     }
 
     let archivosSubidosCount = 0;
 
-    // 5. PASO B: Descargar y subir Documento Original directamente a la carpeta principal
+    // 5. PASO B: Descargar y subir Documento Original directamente a la carpeta principal (nombre original limpio)
     if (anexoPrincipal && anexoPrincipal.storage_path) {
       try {
         const { buffer, mimeType } = await downloadFileBuffer(anexoPrincipal.storage_path);
         const originalCleanName = (anexoPrincipal.nombre_archivo || 'Documento_Original.pdf').replace(/^\[[^\]]+\]\s*/, '');
-        const driveFileName = `[Documento Radicado] - ${originalCleanName}`;
-        await uploadFileToDrive(drive, driveFileName, mimeType || anexoPrincipal.mime_type, buffer, mainFolder.id);
+        await uploadFileToDrive(drive, originalCleanName, mimeType || anexoPrincipal.mime_type, buffer, mainFolder.id);
         archivosSubidosCount++;
       } catch (origErr: any) {
         console.warn('[Exportar Drive] Advertencia subiendo documento principal:', origErr?.message);
+      }
+    }
+
+    // 5.1 PASO B.2: Si tiene Respuesta Final Oficial, subirla directamente a la carpeta principal conservando su nombre 100% original
+    if (anexoRespuestaFinal && anexoRespuestaFinal.storage_path) {
+      try {
+        const { buffer, mimeType } = await downloadFileBuffer(anexoRespuestaFinal.storage_path);
+        const respuestaCleanName = (anexoRespuestaFinal.nombre_archivo || 'Respuesta_Oficial.pdf').replace(/^\[[^\]]+\]\s*/, '');
+        await uploadFileToDrive(drive, respuestaCleanName, mimeType || anexoRespuestaFinal.mime_type, buffer, mainFolder.id);
+        archivosSubidosCount++;
+      } catch (respErr: any) {
+        console.warn('[Exportar Drive] Advertencia subiendo respuesta final oficial:', respErr?.message);
       }
     }
 
@@ -415,7 +481,16 @@ export const POST: APIRoute = async ({ request }) => {
       const subFolderDisplayName = limpiarNombreCarpeta(rawSubName) || rawSubName;
 
       // Hija directa de mainFolder.id (Estructura jerárquica directa y plana con nombre real)
-      const subFolderDrive = await createDriveFolder(drive, subFolderDisplayName, mainFolder.id);
+      let subFolderDrive: any = null;
+      try {
+        subFolderDrive = await createDriveFolder(drive, subFolderDisplayName, mainFolder.id);
+      } catch (subErr: any) {
+        console.warn(`[Exportar Drive] Advertencia creando subcarpeta ${subFolderDisplayName}:`, subErr?.message);
+        try {
+          subFolderDrive = await createDriveFolder(drive, `Subcarpeta ${i + 1}`, mainFolder.id);
+        } catch (_) {}
+      }
+      if (!subFolderDrive?.id) continue;
 
       // Filtrar anexos de dependencias asignados a esta subcarpeta
       const subAnexos = anexosDependencias.filter((a) => {

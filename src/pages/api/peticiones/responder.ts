@@ -65,8 +65,10 @@ export const POST: APIRoute = async ({ request, url }) => {
     const cleanMensaje = String(respuesta_mensaje).trim();
     const cleanDrive = String(respuesta_drive_url || '').trim();
 
-    // Limpiar estrictamente cualquier bloque RESPUESTA_META anterior antes de anexar el nuevo
-    const { textoLimpio } = separarRespuestaMeta(peticion.instrucciones_anexos || '');
+    // Limpiar estrictamente cualquier bloque RESPUESTA_META anterior antes de anexar el nuevo, preservando el archivo de respuesta si existía
+    const { textoLimpio, respuestaMeta: prevMeta } = separarRespuestaMeta(peticion.instrucciones_anexos || '');
+    const finalRespArchivo = body.archivo_respuesta || prevMeta?.archivo_respuesta || prevMeta?.respuesta_archivo || null;
+
     const metaPackage = JSON.stringify({
       pin: pinSolicitante,
       expira: expiraAt,
@@ -76,6 +78,8 @@ export const POST: APIRoute = async ({ request, url }) => {
       drive: cleanDrive || null,
       fecha_envio: fechaEnvioIso,
       correo: effectiveEmail,
+      archivo_respuesta: finalRespArchivo,
+      respuesta_archivo: finalRespArchivo,
     });
 
     const cleanInst = textoLimpio.trim();
@@ -163,12 +167,31 @@ export const POST: APIRoute = async ({ request, url }) => {
     const baseUrl = `${proto}://${host}`;
     const consultaUrl = `${baseUrl}/consulta-respuesta?radicado=${encodeURIComponent(peticion.numero_radicado)}&correo=${encodeURIComponent(effectiveEmail)}`;
 
-    // 6. Enviar Correo Institucional al Solicitante
+    // 6. Preparar adjunto de Respuesta Final Oficial para el correo (si existe)
+    let archivoAdjuntoEmail: { filename: string; content: Buffer; contentType?: string } | null = null;
+    if (finalRespArchivo && finalRespArchivo.storage_path) {
+      try {
+        const cleanPath = finalRespArchivo.storage_path.replace(/^peticiones\//, '').replace(/^\/+/, '');
+        const { data: fileBlob, error: dlErr } = await supabase.storage.from('peticiones').download(cleanPath);
+        if (!dlErr && fileBlob) {
+          const ab = await fileBlob.arrayBuffer();
+          archivoAdjuntoEmail = {
+            filename: (finalRespArchivo.nombre_archivo || 'Respuesta_Oficial.pdf').replace(/^\[[^\]]+\]\s*/, ''),
+            content: Buffer.from(ab),
+            contentType: finalRespArchivo.mime_type || 'application/pdf',
+          };
+        }
+      } catch (dlException: any) {
+        console.warn('[RESPONDER] Advertencia obteniendo buffer de adjunto para correo:', dlException?.message);
+      }
+    }
+
+    // 7. Enviar Correo Institucional al Solicitante
     const emailResult = await sendRespuestaSolicitanteEmail({
       toEmail: effectiveEmail,
       solicitanteNombre: peticion.solicitante_nombre || 'Ciudadano(a)',
       numeroRadicado: peticion.numero_radicado,
-      asunto: peticion.asunto || 'Petición Oficial',
+      asunto: body.asunto || peticion.asunto || 'Petición Oficial',
       mensajeRespuesta: cleanMensaje,
       funcionarioNombre: funcionarioResp,
       pinSolicitante,
@@ -176,6 +199,7 @@ export const POST: APIRoute = async ({ request, url }) => {
       consultaUrl,
       driveUrl: cleanDrive || null,
       totalArchivos: Array.isArray(respuesta_archivos_incluidos) ? respuesta_archivos_incluidos.length : 0,
+      archivoAdjunto: archivoAdjuntoEmail,
     });
 
     return new Response(

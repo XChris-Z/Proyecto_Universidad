@@ -413,6 +413,11 @@ export interface EmailRespuestaSolicitanteParams {
   consultaUrl: string;
   driveUrl?: string | null;
   totalArchivos?: number;
+  archivoAdjunto?: {
+    filename: string;
+    content: Buffer;
+    contentType?: string;
+  } | null;
 }
 
 /**
@@ -491,6 +496,17 @@ export async function sendRespuestaSolicitanteEmail(
             <p class="respuesta-text">${params.mensajeRespuesta}</p>
           </div>
 
+          ${params.archivoAdjunto ? `
+            <!-- TARJETA DE ARCHIVO ADJUNTO DE RESPUESTA FINAL -->
+            <div style="background: #f0fdf4; border: 1.5px solid #00594E; border-radius: 8px; padding: 14px 18px; margin: 18px 0; display: flex; align-items: center; justify-content: space-between;">
+              <div>
+                <span style="font-size: 11px; font-weight: 800; color: #00594E; text-transform: uppercase; letter-spacing: 0.5px;">📎 DOCUMENTO ADJUNTO DE RESPUESTA OFICIAL</span>
+                <div style="font-size: 14px; font-weight: 700; color: #111827; margin-top: 4px;">${params.archivoAdjunto.filename}</div>
+                <div style="font-size: 12px; color: #475569; margin-top: 2px;">El documento oficial se encuentra adjunto directamente a este correo electrónico.</div>
+              </div>
+            </div>
+          ` : ''}
+
           <!-- AVISO DE CADUCIDAD 10 DÍAS -->
           <div class="expira-card">
             <strong style="display: block; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; color: #92400e;">
@@ -554,12 +570,22 @@ export async function sendRespuestaSolicitanteEmail(
 
   const { transporter, sender, creds } = smtpInfo;
 
-  const mailOptions = {
+  const mailOptions: any = {
     from: `"Correspondencia Oficial Unitrópico" <${sender}>`,
     to: params.toEmail,
     subject,
     html: htmlContent,
   };
+
+  if (params.archivoAdjunto && params.archivoAdjunto.content) {
+    mailOptions.attachments = [
+      {
+        filename: params.archivoAdjunto.filename,
+        content: params.archivoAdjunto.content,
+        contentType: params.archivoAdjunto.contentType || 'application/pdf',
+      },
+    ];
+  }
 
   try {
     let info;

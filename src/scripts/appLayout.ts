@@ -49,7 +49,7 @@ export function initAppLayout() {
   // 2. Función global Toast ejecutiva y de alto nivel con auto-dismiss garantizado en 2.8s
   window.showToast = function (
     message: string,
-    typeOrIsError: boolean | 'success' | 'error' | 'warning' | 'info' = 'success',
+    typeOrIsError: boolean | 'success' | 'error' | 'warning' | 'info' | string = 'success',
     customTitle?: string
   ) {
     let container = document.getElementById('global-toast-container') || document.getElementById('toast-container');
@@ -63,34 +63,46 @@ export function initAppLayout() {
     let type: 'success' | 'error' | 'warning' | 'info' = 'success';
     if (typeof typeOrIsError === 'boolean') {
       type = typeOrIsError ? 'error' : 'success';
-    } else if (typeOrIsError) {
-      if ((typeOrIsError as string) === 'warn') {
+    } else if (typeof typeOrIsError === 'string') {
+      const lower = typeOrIsError.toLowerCase().trim();
+      if (lower === 'error' || lower === 'danger' || lower === 'err' || lower === 'fail' || lower === 'fallo') {
+        type = 'error';
+      } else if (lower === 'warning' || lower === 'warn' || lower === 'alerta' || lower === 'aviso') {
         type = 'warning';
+      } else if (lower === 'info' || lower === 'informacion' || lower === 'blue') {
+        type = 'info';
       } else {
-        type = typeOrIsError as any;
+        type = 'success';
       }
     }
 
-    // Si entra un nuevo toast y hay algún toast previo de "Iniciando/Cargando/Procesando", removerlo de inmediato
+    // Si entra un nuevo toast de resultado (éxito, error o advertencia), remover de inmediato cualquier loader/info en progreso
     const activeToasts = container.querySelectorAll('.toast');
     activeToasts.forEach((t) => {
-      const msg = t.querySelector('.toast-message')?.textContent || '';
-      if (msg.includes('Iniciando') || msg.includes('Cargando') || msg.includes('Procesando') || msg.includes('Respaldando')) {
-        t.remove();
+      const msg = (t.querySelector('.toast-message')?.textContent || '').toLowerCase();
+      if (
+        msg.includes('iniciando') ||
+        msg.includes('cargando') ||
+        msg.includes('procesando') ||
+        msg.includes('respaldando') ||
+        msg.includes('subiendo') ||
+        type === 'error' ||
+        type === 'warning'
+      ) {
+        try { t.remove(); } catch (_) {}
       }
     });
 
     // Máximo 2 Toasts visibles al mismo tiempo: si entra un 3.º, remover el más antiguo
     const currentToasts = container.querySelectorAll('.toast');
     if (currentToasts.length >= 2 && currentToasts[0]) {
-      currentToasts[0].remove();
+      try { currentToasts[0].remove(); } catch (_) {}
     }
 
     const titles: Record<string, string> = {
       success: 'Operación Exitosa',
       error: 'Atención Requerida',
       warning: 'Aviso del Sistema',
-      warn: 'Aviso del Sistema',
       info: 'Notificación Oficial',
     };
 
@@ -98,9 +110,12 @@ export function initAppLayout() {
       success: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
       error: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`,
       warning: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
-      warn: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
       info: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,
     };
+
+    const resolvedTitle = (customTitle && typeof customTitle === 'string' && customTitle.trim() && customTitle.trim().toLowerCase() !== 'undefined')
+      ? customTitle.trim()
+      : (titles[type] || 'Notificación Oficial');
 
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
@@ -110,7 +125,7 @@ export function initAppLayout() {
       </div>
       <div class="toast-content-col">
         <div class="toast-header-row">
-          <span class="toast-category">${customTitle || titles[type]}</span>
+          <span class="toast-category">${resolvedTitle}</span>
           <button type="button" class="toast-close-btn" title="Cerrar">&times;</button>
         </div>
         <div class="toast-message">${message}</div>
@@ -134,10 +149,10 @@ export function initAppLayout() {
       removeToast();
     });
 
-    // Auto-dismiss infalible en exactamente 2800ms (2.8 segundos)
+    // Auto-dismiss infalible en exactamente 3200ms (3.2 segundos)
     setTimeout(() => {
       removeToast();
-    }, 2800);
+    }, 3200);
 
     container.appendChild(toast);
   };
@@ -293,14 +308,25 @@ export function initAppLayout() {
   window.alert = function (message: any) {
     const str = String(message ?? '');
     const lower = str.toLowerCase();
+    let type: 'success' | 'error' | 'warning' | 'info' = 'info';
+    let title = 'Notificación Institucional';
+
     if (lower.includes('exitos') || lower.includes('éxito') || lower.includes('correctamente') || lower.includes('copiad')) {
-      window.showToast(str, 'success');
+      type = 'success';
+      title = 'Operación Exitosa';
     } else if (lower.includes('error') || lower.includes('no se pudo') || lower.includes('fall')) {
-      window.showToast(str, 'error');
-    } else if (lower.includes('aviso') || lower.includes('atención') || lower.includes('criterio') || lower.includes('coincide')) {
-      window.showToast(str, 'warning');
+      type = 'error';
+      title = 'Error del Sistema';
+    } else if (lower.includes('aviso') || lower.includes('atención') || lower.includes('criterio') || lower.includes('coincide') || lower.includes('advertencia')) {
+      type = 'warning';
+      title = 'Aviso del Sistema';
+    }
+
+    // Si el mensaje es largo o contiene saltos de línea, mostrar el modal institucional para lectura cómoda
+    if ((str.length > 140 || str.includes('\n')) && typeof window.showAlert === 'function') {
+      window.showAlert(str, type, title);
     } else {
-      window.showToast(str, 'info');
+      window.showToast(str, type, title);
     }
   };
 
