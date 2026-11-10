@@ -24,15 +24,26 @@ export const onRequest = defineMiddleware(async ({ url, cookies, redirect }, nex
 
   // Redirección de la raíz /
   if (pathname === '/' || pathname === '') {
+    // Si la URL contiene parámetros de consulta de radicado o pin, redirigir directo al portal de consulta
+    const hasConsultaParams = url.searchParams.has('radicado') || url.searchParams.has('pin') || url.searchParams.has('modo');
+    if (hasConsultaParams) {
+      return applySecurityHeaders(redirect(`/consulta-respuesta${url.search}`), false);
+    }
+
     const session = cookies.get(SESSION_COOKIE_KEY);
     if (session?.value) {
       return applySecurityHeaders(redirect('/dashboard'), true);
     }
-    return applySecurityHeaders(redirect('/login'), false);
+    return applySecurityHeaders(redirect(`/login${url.search}`), false);
   }
 
-  // Si ya tiene sesión activa e intenta acceder a /login, redirigir al dashboard
+  // Si intenta acceder a /login pero trae parámetros de consulta de solicitante
   if (pathname === '/login') {
+    const hasConsultaParams = url.searchParams.has('radicado') || url.searchParams.has('pin');
+    if (hasConsultaParams) {
+      return applySecurityHeaders(redirect(`/consulta-respuesta${url.search}`), false);
+    }
+
     const session = cookies.get(SESSION_COOKIE_KEY);
     if (session?.value) {
       return applySecurityHeaders(redirect('/dashboard'), true);

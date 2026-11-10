@@ -2394,6 +2394,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
               const fEnvioFormatted = fEnvio ? safeFormatDate(fEnvio) : 'Reciente';
               const queryParams = new URLSearchParams({
                 radicado: peticion.numero_radicado || '',
+                pin: pinSol || '',
                 correo: peticion.solicitante_email || ''
               }).toString();
               return `

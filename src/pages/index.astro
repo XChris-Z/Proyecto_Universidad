@@ -2,11 +2,17 @@
 // src/pages/index.astro
 import { SESSION_COOKIE_KEY } from '@lib/constants';
 
+const url = Astro.url;
+const hasConsultaParams = url.searchParams.has('radicado') || url.searchParams.has('pin') || url.searchParams.has('modo');
+if (hasConsultaParams) {
+  return Astro.redirect(`/consulta-respuesta${url.search}`);
+}
+
 const session = Astro.cookies.get(SESSION_COOKIE_KEY);
 if (session?.value) {
   return Astro.redirect('/dashboard');
 } else {
-  return Astro.redirect('/login');
+  return Astro.redirect(`/login${url.search}`);
 }
 ---
 

@@ -20,16 +20,16 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    if (!rawEmail || !rawEmail.includes('@')) {
+    if (!rawPin || rawPin.length < 4) {
       return new Response(
-        JSON.stringify({ success: false, code: 'MISSING_EMAIL', error: 'Por favor ingrese un correo electrónico válido.' }),
+        JSON.stringify({ success: false, code: 'MISSING_PIN', error: 'Por favor ingrese el código de seguridad de 6 dígitos.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    if (!rawPin || rawPin.length < 4) {
+    if (rawEmail && !rawEmail.includes('@')) {
       return new Response(
-        JSON.stringify({ success: false, code: 'MISSING_PIN', error: 'Por favor ingrese el código de seguridad de 6 dígitos.' }),
+        JSON.stringify({ success: false, code: 'MISSING_EMAIL', error: 'Por favor ingrese un correo electrónico válido.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
@@ -59,26 +59,28 @@ export const POST: APIRoute = async ({ request }) => {
     const { respuestaMeta, allPins } = separarRespuestaMeta(peticion.instrucciones_anexos || peticion.descripcion || '');
     const metaRespuesta = respuestaMeta || {};
 
-    // 3. Validar Correo Electrónico del Solicitante de forma flexible
-    const emailsToCheck = [
-      peticion.solicitante_email,
-      peticion.correo_solicitante,
-      peticion.solicitante_correo,
-      peticion.correo,
-      peticion.email,
-      metaRespuesta.correo,
-    ].map((e: any) => String(e || '').trim().toLowerCase()).filter(Boolean);
+    // 3. Validar Correo Electrónico del Solicitante de forma flexible (si fue suministrado)
+    if (rawEmail) {
+      const emailsToCheck = [
+        peticion.solicitante_email,
+        peticion.correo_solicitante,
+        peticion.solicitante_correo,
+        peticion.correo,
+        peticion.email,
+        metaRespuesta.correo,
+      ].map((e: any) => String(e || '').trim().toLowerCase()).filter(Boolean);
 
-    const emailCoincide = emailsToCheck.length === 0 || emailsToCheck.includes(rawEmail);
-    if (!emailCoincide) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          code: 'INVALID_CREDENTIALS',
-          error: 'Las credenciales ingresadas (Correo o Código de 6 dígitos) no coinciden con este radicado.',
-        }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      );
+      const emailCoincide = emailsToCheck.length === 0 || emailsToCheck.includes(rawEmail);
+      if (!emailCoincide) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            code: 'INVALID_CREDENTIALS',
+            error: 'Las credenciales ingresadas (Correo o Código de 6 dígitos) no coinciden con este radicado.',
+          }),
+          { status: 401, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // 4. Validar PIN de Seguridad (6 dígitos) aceptando el PIN más reciente o históricos válidos

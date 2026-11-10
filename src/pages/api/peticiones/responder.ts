@@ -161,11 +161,11 @@ export const POST: APIRoute = async ({ request, url }) => {
       console.warn('[RESPONDER] Aviso de auditoría:', auditErr.message);
     }
 
-    // 5. Determinar URL pública de consulta (apunta exactamente a ?radicado=...&correo=...)
+    // 5. Determinar URL pública de consulta (apunta exactamente a ?radicado=...&pin=...&correo=...)
     const proto = request.headers.get('x-forwarded-proto') || url.protocol.replace(':', '') || 'https';
     const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || url.host;
     const baseUrl = `${proto}://${host}`;
-    const consultaUrl = `${baseUrl}/consulta-respuesta?radicado=${encodeURIComponent(peticion.numero_radicado)}&correo=${encodeURIComponent(effectiveEmail)}`;
+    const consultaUrl = `${baseUrl}/consulta-respuesta?radicado=${encodeURIComponent(peticion.numero_radicado)}&pin=${encodeURIComponent(pinSolicitante)}&correo=${encodeURIComponent(effectiveEmail)}`;
 
     // 6. Preparar adjunto de Respuesta Final Oficial para el correo (si existe)
     let archivoAdjuntoEmail: { filename: string; content: Buffer; contentType?: string } | null = null;
