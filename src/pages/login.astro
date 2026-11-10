@@ -7,16 +7,16 @@ import AuthLayout from "@layouts/AuthLayout.astro";
 <AuthLayout title="Acceso al Sistema — SGD Unitrópico">
   <div class="login-promax-wrapper">
     <!-- =====================================================================
-        ANEL IZQUIERDO: IDENTIDAD INSTITUCIONAL INMERSIVA (DESKTOP)
-        ===================================================================== -->
+         PANEL IZQUIERDO: IDENTIDAD INSTITUCIONAL INMERSIVA (DESKTOP)
+         ===================================================================== -->
     <aside
       class="login-brand-panel"
       aria-label="Identidad Institucional Unitrópico"
     >
       <div class="brand-panel-inner">
-        <!-- Cabecera de Marca -->
+        <!-- Bloque Superior de Identidad (Compacto y Centrado/Alineado) -->
         <div class="brand-header">
-          <div class="brand-logo-card">
+          <div class="login-brand-logo-wrap">
             <img
               src="/logo.png"
               alt="Logo Oficial Unitrópico"
@@ -24,90 +24,93 @@ import AuthLayout from "@layouts/AuthLayout.astro";
               loading="eager"
             />
           </div>
-          <div class="brand-gold-line"></div>
-          <span class="brand-institution-chip"
-            >Universidad Internacional del Trópico Americano &bull; Unitrópico</span
-          >
+          
+          <div class="brand-institution-pill">
+            <span class="brand-institution-dot"></span>
+            <span>GESTIÓN DOCUMENTAL &bull; UNITRÓPICO</span>
+          </div>
+
           <h1 class="brand-main-title">
             Sistema de Gestión Documental
           </h1>
           <p class="brand-subtitle">
-            Plataforma institucional para el control rectoral, radicación oficial, seguimiento y custodia de expedientes.
+            Plataforma institucional para la radicación, seguimiento y gestión de expedientes oficiales.
           </p>
         </div>
 
-        <!-- 3 Píldoras de Valor Institucional -->
-        <div class="brand-features-list">
-          <div class="brand-feature-item">
-            <div class="feature-icon-box gold">
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                ><circle cx="12" cy="12" r="10"></circle><polyline
-                  points="12 6 12 12 16 14"></polyline></svg
-              >
+        <!-- Micro-Bento Visual: Chart Element Ejecutivo de Flujo Documental -->
+        <div class="brand-chart-bento-card">
+          <div class="bento-chart-header">
+            <div class="bento-chart-titles">
+              <span class="chart-badge-title">Trazabilidad en Tiempo Real</span>
+              <span class="chart-badge-subtitle">Ciclo de vida del expediente documental</span>
             </div>
-            <div class="feature-text">
-              <strong>Control de Términos Ley 1755</strong>
-              <span
-                >Semáforo preventivo SLA de 15 días con alertas tempranas
-                automatizadas.</span
-              >
+            <span class="bento-status-pill">
+              <span class="live-pulse"></span>
+              <span>Operativo</span>
+            </span>
+          </div>
+
+          <!-- Gráfico y Barras de Flujo Documental -->
+          <div class="flow-chart-stages">
+            <!-- Etapa 1: Radicación Digital -->
+            <div class="flow-stage-row">
+              <div class="stage-label-group">
+                <div class="stage-indicator-icon gold">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                </div>
+                <span class="stage-name">Radicación Digital</span>
+              </div>
+              <div class="stage-bar-wrap">
+                <div class="stage-bar-track">
+                  <div class="stage-bar-fill gold" style="width: 100%;"></div>
+                </div>
+                <span class="stage-pct gold">100%</span>
+              </div>
+            </div>
+
+            <!-- Etapa 2: Gestión por Dependencias -->
+            <div class="flow-stage-row">
+              <div class="stage-label-group">
+                <div class="stage-indicator-icon emerald">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                </div>
+                <span class="stage-name">Gestión por Dependencias</span>
+              </div>
+              <div class="stage-bar-wrap">
+                <div class="stage-bar-track">
+                  <div class="stage-bar-fill emerald" style="width: 82%;"></div>
+                </div>
+                <span class="stage-pct emerald">En Curso</span>
+              </div>
+            </div>
+
+            <!-- Etapa 3: Despacho Oficial -->
+            <div class="flow-stage-row">
+              <div class="stage-label-group">
+                <div class="stage-indicator-icon verified">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+                <span class="stage-name">Despacho Oficial</span>
+              </div>
+              <div class="stage-bar-wrap">
+                <div class="stage-bar-track">
+                  <div class="stage-bar-fill verified" style="width: 100%;"></div>
+                </div>
+                <span class="stage-pct verified">Verificado</span>
+              </div>
             </div>
           </div>
 
-          <div class="brand-feature-item">
-            <div class="feature-icon-box emerald">
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                ><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"
-                ></path><polyline points="14 2 14 8 20 8"></polyline></svg
-              >
-            </div>
-            <div class="feature-text">
-              <strong>Expedientes Digitales Centralizados</strong>
-              <span
-                >Custodia y archivo digital con subcarpetas para cada oficina
-                requerida.</span
-              >
-            </div>
-          </div>
-
-          <div class="brand-feature-item">
-            <div class="feature-icon-box teal">
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                ><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
-                ></path></svg
-              >
-            </div>
-            <div class="feature-text">
-              <strong>Autenticación Cifrada y Trazabilidad</strong>
-              <span
-                >Seguridad con Supabase Auth y registro inmutable en bitácora de
-                auditoría.</span
-              >
-            </div>
+          <!-- Pie del Micro-Bento -->
+          <div class="bento-chart-footer">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#B5A160" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span>Control automatizado de términos y custodia digital</span>
           </div>
         </div>
 
         <!-- Footer del Panel de Marca -->
         <div class="brand-panel-footer">
-          
           <p class="brand-copy">
             &copy; {new Date().getFullYear()} Unitrópico &bull; Yopal, Casanare, Colombia
           </p>
@@ -122,12 +125,14 @@ import AuthLayout from "@layouts/AuthLayout.astro";
       <div class="login-form-wrapper">
         <!-- Logo en Móvil (Visible solo en pantallas pequeñas) -->
         <div class="login-mobile-header">
-          <img
-            src="/logo.png"
-            alt="Logo Oficial Unitrópico"
-            class="login-mobile-logo"
-            loading="eager"
-          />
+          <div class="login-brand-logo-wrap mobile">
+            <img
+              src="/logo.png"
+              alt="Logo Oficial Unitrópico"
+              class="login-mobile-logo"
+              loading="eager"
+            />
+          </div>
           <div class="brand-gold-line mobile"></div>
         </div>
 
@@ -140,8 +145,7 @@ import AuthLayout from "@layouts/AuthLayout.astro";
             </div>
             <h2 class="form-main-title">Iniciar Sesión</h2>
             <p class="form-main-subtitle">
-              Ingrese su correo institucional para acceder al panel de control
-              rectoral y gestión de expedientes.
+              Ingrese su correo institucional para acceder al panel de control rectoral y gestión de expedientes.
             </p>
           </div>
 
@@ -170,7 +174,7 @@ import AuthLayout from "@layouts/AuthLayout.astro";
             >
           </div>
 
-          <!-- Formulario Oficial de Autenticación con Supabase Auth -->
+          <!-- Formulario Oficial de Autenticación Institucional -->
           <form id="form-login" class="login-form-body" autocomplete="on">
             <!-- Campo: Correo Electrónico Institucional -->
             <div class="form-group-promax">
@@ -303,62 +307,43 @@ import AuthLayout from "@layouts/AuthLayout.astro";
 
           <!-- Separador Discreto -->
           <div class="login-divider-promax">
-            <span>Acceso Externo para Dependencias</span>
+            <span>Accesos Complementarios</span>
           </div>
 
-          <!-- Banner del Portal Externo de Responsables -->
-          <div class="portal-banner-promax">
-            <div class="portal-banner-content">
-              <div class="portal-banner-title">
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.2"
-                >
-                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
-                  <polyline points="10 17 15 12 10 7"></polyline>
-                  <line x1="15" y1="12" x2="3" y2="12"></line>
+          <!-- Accesos Complementarios: Ciudadanos y Dependencias -->
+          <div class="login-secondary-portals">
+            <!-- 1. Consulta Ciudadana / Solicitantes -->
+            <a href="/consulta-respuesta" class="sec-portal-item citizen" title="Consultar Estado o Respuesta de Radicado">
+              <div class="sec-portal-icon citizen">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
                 </svg>
-                <span>Portal de Entrega de Anexos</span>
               </div>
-              <p class="portal-banner-desc">
-                ¿Tiene un código único temporal para aportar soportes a un
-                radicado?
-              </p>
-            </div>
-            <a href="/portal-responsable" class="btn-portal-promax">
-              <span>Ingresar con Código</span>
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-                ><line x1="5" y1="12" x2="19" y2="12"></line><polyline
-                  points="12 5 19 12 12 19"></polyline></svg
-              >
+              <div class="sec-portal-info">
+                <span class="sec-portal-badge citizen">Atención al Ciudadano</span>
+                <strong class="sec-portal-title">Consultar Respuesta con PIN</strong>
+              </div>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="sec-arrow"><polyline points="9 18 15 12 9 6"/></svg>
             </a>
-          </div>
 
-          <!-- Acceso alternativo móvil a los portales externos -->
-          <div class="login-mobile-portals">
-            <div class="login-divider-promax">
-              <span>Otros Portales de Acceso</span>
-            </div>
-            <div class="mobile-portals-buttons">
-              <a href="/consulta-respuesta" class="btn-mobile-portal">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00594E" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-                <span>Consultar Respuesta Solicitante</span>
-              </a>
-              <a href="/portal-responsable" class="btn-mobile-portal">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#B5A160" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                <span>Portal Dependencias (Código)</span>
-              </a>
-            </div>
+            <!-- 2. Portal Externo de Dependencias -->
+            <a href="/portal-responsable" class="sec-portal-item office" title="Portal de Entrega de Anexos">
+              <div class="sec-portal-icon office">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                  <polyline points="12 11 12 17"></polyline>
+                  <polyline points="9 14 12 11 15 14"></polyline>
+                </svg>
+              </div>
+              <div class="sec-portal-info">
+                <span class="sec-portal-badge office">Dependencias</span>
+                <strong class="sec-portal-title">Aportar Soportes con Código</strong>
+              </div>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="sec-arrow"><polyline points="9 18 15 12 9 6"/></svg>
+            </a>
           </div>
         </div>
       </div>
@@ -368,7 +353,7 @@ import AuthLayout from "@layouts/AuthLayout.astro";
 
 <style>
   /* ==========================================================================
-     CONTENEDOR SPLIT SCREEN PRO MAX (SIN MANCHAS NI RAYONES)
+     CONTENEDOR SPLIT SCREEN PRO MAX
      ========================================================================== */
   .login-promax-wrapper {
     width: 100%;
@@ -403,22 +388,69 @@ import AuthLayout from "@layouts/AuthLayout.astro";
   }
 
   .brand-panel-inner {
-    max-width: 490px;
+    max-width: 480px;
     width: 100%;
+    margin: 0 auto;
     display: flex;
     flex-direction: column;
-    gap: 28px;
+    justify-content: center;
+    gap: 22px;
   }
 
-  .brand-logo-card {
+  /* Contenedor Elegante y Proporcionado del Logo Oficial */
+  .login-brand-logo-wrap {
     display: inline-flex;
     align-items: center;
-    background: #ffffff;
-    padding: 10px 18px;
-    border-radius: 12px;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.15);
-    margin-bottom: 8px;
-    border: 1px solid rgba(181, 161, 96, 0.3);
+    justify-content: center;
+    background: #FFFFFF;
+    padding: 12px 22px;
+    border-radius: 14px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(181, 161, 96, 0.35);
+    margin-bottom: 20px;
+    width: fit-content;
+  }
+
+  .login-brand-logo-wrap.mobile {
+    margin-bottom: 12px;
+    padding: 8px 18px;
+  }
+
+  .login-brand-logo-wrap img {
+    max-width: 190px;
+    max-height: 64px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    display: block;
+  }
+
+  .brand-header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  /* Píldora Dorada Superior */
+  .brand-institution-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: #B5A160;
+    background: rgba(181, 161, 96, 0.14);
+    border: 1px solid rgba(181, 161, 96, 0.35);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    margin-bottom: 10px;
+  }
+
+  .brand-institution-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #B5A160;
   }
 
   .brand-gold-line {
@@ -430,134 +462,225 @@ import AuthLayout from "@layouts/AuthLayout.astro";
   }
 
   .brand-gold-line.mobile {
-    margin: 12px auto;
-  }
-
-  .brand-institution-chip {
-    display: block;
-    font-size: 0.74rem;
-    font-weight: 750;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: #F7F5EE;
-    margin-bottom: 6px;
+    margin: 10px auto;
   }
 
   .brand-main-title {
-    font-size: 1.85rem;
-    font-weight: 850;
-    line-height: 1.25;
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1.15;
     letter-spacing: -0.025em;
     color: #ffffff;
-    margin: 0 0 10px 0;
+    margin: 4px 0 8px 0;
   }
 
   .brand-subtitle {
-    font-size: 0.88rem;
-    line-height: 1.55;
-    color: rgba(255, 255, 255, 0.88);
+    font-size: 0.92rem;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.82);
     margin: 0;
   }
 
-  /* Portales Directos Institucionales */
-  .brand-portals-grid {
+  /* ==========================================================================
+     MICRO-BENTO VISUAL: CHART ELEMENT EJECUTIVO DE FLUJO DOCUMENTAL
+     ========================================================================== */
+  .brand-chart-bento-card {
+    background: rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(181, 161, 96, 0.28);
+    border-radius: 16px;
+    padding: 18px 20px;
+    margin-top: 10px;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 16px;
+    box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.2);
+    animation: fadeSlideIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 
-  .brand-portal-card {
+  @keyframes fadeSlideIn {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .bento-chart-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .bento-chart-titles {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .chart-badge-title {
+    font-size: 0.84rem;
+    font-weight: 750;
+    color: #FFFFFF;
+    letter-spacing: -0.01em;
+  }
+
+  .chart-badge-subtitle {
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.68);
+  }
+
+  .bento-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(110, 231, 183, 0.15);
+    border: 1px solid rgba(110, 231, 183, 0.4);
+    color: #6EE7B7;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .live-pulse {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #6EE7B7;
+    box-shadow: 0 0 8px #6EE7B7;
+    animation: pulseLiveDot 1.8s infinite;
+  }
+
+  @keyframes pulseLiveDot {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.35); opacity: 0.6; }
+  }
+
+  .flow-chart-stages {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .flow-stage-row {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .stage-label-group {
     display: flex;
     align-items: center;
-    gap: 14px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    border-radius: 16px;
-    padding: 16px 18px;
-    text-decoration: none;
-    color: #ffffff;
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+    gap: 8px;
   }
 
-  .brand-portal-card:hover {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: #B5A160;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
-  }
-
-  .portal-card-icon {
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
+  .stage-indicator-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
   }
 
-  .portal-card-icon.citizen {
-    background: #F7F5EE;
-    color: #786832;
-    border: 1px solid #DBD2B0;
+  .stage-indicator-icon.gold {
+    background: rgba(181, 161, 96, 0.2);
+    color: #F7F5EE;
+    border: 1px solid rgba(181, 161, 96, 0.4);
   }
 
-  .portal-card-icon.office {
-    background: #F2F7F6;
-    color: #00594E;
-    border: 1px solid #B2CFCB;
+  .stage-indicator-icon.emerald {
+    background: rgba(110, 231, 183, 0.2);
+    color: #6EE7B7;
+    border: 1px solid rgba(110, 231, 183, 0.4);
   }
 
-  .portal-card-body {
+  .stage-indicator-icon.verified {
+    background: rgba(255, 255, 255, 0.16);
+    color: #FFFFFF;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+  }
+
+  .stage-name {
+    font-size: 0.78rem;
+    font-weight: 650;
+    color: rgba(255, 255, 255, 0.95);
     flex: 1;
+  }
+
+  .stage-bar-wrap {
     display: flex;
-    flex-direction: column;
-    gap: 3px;
+    align-items: center;
+    gap: 10px;
+    padding-left: 30px;
   }
 
-  .portal-card-tag {
-    font-size: 0.68rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-  }
-  .portal-card-tag.citizen { color: #fde68a; }
-  .portal-card-tag.office { color: #a7f3d0; }
-
-  .portal-card-heading {
-    font-size: 0.92rem;
-    font-weight: 800;
-    color: #ffffff;
-    line-height: 1.3;
+  .stage-bar-track {
+    flex: 1;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    overflow: hidden;
   }
 
-  .portal-card-text {
-    font-size: 0.76rem;
-    color: rgba(255, 255, 255, 0.82);
-    margin: 0;
-    line-height: 1.45;
+  .stage-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.6s ease;
   }
 
-  .portal-card-action {
-    color: rgba(255, 255, 255, 0.6);
-    flex-shrink: 0;
-    transition: transform 0.2s ease, color 0.2s ease;
+  .stage-bar-fill.gold {
+    background: linear-gradient(90deg, #B5A160, #e0d19f);
   }
 
-  .brand-portal-card:hover .portal-card-action {
-    transform: translateX(3px);
-    color: #B5A160;
+  .stage-bar-fill.emerald {
+    background: linear-gradient(90deg, #10B981, #6EE7B7);
   }
 
-  .brand-panel-footer {
+  .stage-bar-fill.verified {
+    background: linear-gradient(90deg, #00594E, #34D399);
+    box-shadow: 0 0 8px rgba(110, 231, 183, 0.4);
+  }
+
+  .stage-pct {
+    font-size: 0.72rem;
+    font-weight: 750;
+    min-width: 58px;
+    text-align: right;
+  }
+
+  .stage-pct.gold { color: #fde68a; }
+  .stage-pct.emerald { color: #6EE7B7; }
+  .stage-pct.verified { color: #FFFFFF; }
+
+  .bento-chart-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.75);
     padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  /* Footer del Panel */
+  .brand-panel-footer {
+    padding-top: 12px;
     border-top: 1px solid rgba(255, 255, 255, 0.14);
   }
 
   .brand-copy {
-    font-size: 0.74rem;
-    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.76rem;
+    color: rgba(255, 255, 255, 0.6);
     margin: 0;
   }
 
@@ -589,8 +712,10 @@ import AuthLayout from "@layouts/AuthLayout.astro";
   }
 
   .login-mobile-logo {
-    height: 48px;
+    max-height: 48px;
+    max-width: 170px;
     width: auto;
+    height: auto;
     object-fit: contain;
   }
 
@@ -598,7 +723,9 @@ import AuthLayout from "@layouts/AuthLayout.astro";
   .login-card-promax {
     width: 100%;
     background: #ffffff;
-    border-radius: 20px; border: 1px solid #DCE4E3; box-shadow: 0 20px 40px -15px rgba(0, 89, 78, 0.10);
+    border-radius: 20px;
+    border: 1px solid #DCE4E3;
+    box-shadow: 0 20px 40px -15px rgba(0, 89, 78, 0.10);
     padding: clamp(28px, 4vw, 40px);
     box-sizing: border-box;
     animation: promaxCardCrossfade 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -624,13 +751,14 @@ import AuthLayout from "@layouts/AuthLayout.astro";
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    background: #F2F7F6; border: 1px solid #B2CFCB; color: #00594E;
+    background: #F2F7F6;
+    border: 1px solid #B2CFCB;
+    color: #00594E;
     font-size: 0.72rem;
     font-weight: 750;
     padding: 3px 10px;
-    border-radius: 20px;
-    margin-bottom: 10px;
-    letter-spacing: 0.02em;
+    border-radius: 999px;
+    margin-bottom: 12px;
   }
 
   .badge-dot {
@@ -641,49 +769,33 @@ import AuthLayout from "@layouts/AuthLayout.astro";
   }
 
   .form-main-title {
-    font-size: 1.55rem;
-    font-weight: 850;
+    font-size: 1.6rem;
+    font-weight: 800;
     color: #0f172a;
-    letter-spacing: -0.025em;
+    letter-spacing: -0.02em;
     margin: 0 0 6px 0;
   }
 
   .form-main-subtitle {
     font-size: 0.84rem;
     color: #64748b;
-    margin: 0;
     line-height: 1.5;
+    margin: 0;
   }
 
   /* Alerta */
   .login-alert-promax {
-    background: #fef2f2;
-    border: 1px solid #fecaca;
-    border-left: 4px solid #dc2626;
-    border-radius: 10px;
-    padding: 12px 14px;
-    margin-bottom: 20px;
     display: flex;
     align-items: center;
     gap: 10px;
-    font-size: 0.82rem;
+    padding: 12px 14px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
     color: #991b1b;
+    font-size: 0.82rem;
     font-weight: 600;
-    line-height: 1.4;
-    animation: promaxShake 0.3s ease;
-  }
-
-  @keyframes promaxShake {
-    0%,
-    100% {
-      transform: translateX(0);
-    }
-    25% {
-      transform: translateX(-4px);
-    }
-    75% {
-      transform: translateX(4px);
-    }
+    margin-bottom: 20px;
   }
 
   .alert-icon {
@@ -691,7 +803,7 @@ import AuthLayout from "@layouts/AuthLayout.astro";
     color: #dc2626;
   }
 
-  /* Formulario */
+  /* Inputs */
   .login-form-body {
     display: flex;
     flex-direction: column;
@@ -704,12 +816,17 @@ import AuthLayout from "@layouts/AuthLayout.astro";
     gap: 6px;
   }
 
+  .label-row-promax {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
   .form-label-promax {
     font-size: 0.78rem;
-    font-weight: 750;
-    color: #1e293b;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
+    font-weight: 700;
+    color: #334155;
+    letter-spacing: -0.01em;
   }
 
   .input-container-promax {
@@ -729,21 +846,27 @@ import AuthLayout from "@layouts/AuthLayout.astro";
   .form-input-promax {
     width: 100%;
     padding: 12px 14px 12px 42px;
-    font-size: 0.9rem;
-    color: #0f172a;
     background: #f8fafc;
-    border: 1.5px solid #cbd5e1;
+    border: 1.5px solid #e2e8f0;
     border-radius: 10px;
-    outline: none;
+    font-size: 0.88rem;
+    font-weight: 550;
+    color: #0f172a;
     font-family: inherit;
-    font-weight: 500;
-    box-sizing: border-box;
     transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-sizing: border-box;
+  }
+
+  .form-input-promax::placeholder {
+    color: #94a3b8;
+    font-weight: 450;
   }
 
   .form-input-promax:focus {
     background: #ffffff;
-    border-color: #00594E; box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.12);
+    border-color: #00594E;
+    box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.12);
+    outline: none;
   }
 
   .input-container-promax:focus-within .input-icon-promax {
@@ -753,22 +876,21 @@ import AuthLayout from "@layouts/AuthLayout.astro";
   .btn-toggle-eye-promax {
     position: absolute;
     right: 12px;
-    background: transparent;
+    background: none;
     border: none;
     padding: 6px;
-    color: #94a3b8;
-    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
+    color: #94a3b8;
+    cursor: pointer;
     border-radius: 6px;
-    transition:
-      color 0.15s ease,
-      background 0.15s ease;
+    transition: all 0.15s ease;
   }
 
   .btn-toggle-eye-promax:hover {
-    color: #00594E; background: #F2F7F6;
+    color: #00594E;
+    background: #F2F7F6;
   }
 
   /* Opciones */
@@ -776,18 +898,18 @@ import AuthLayout from "@layouts/AuthLayout.astro";
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-top: 2px;
+    font-size: 0.78rem;
+    margin-top: -2px;
   }
 
   .remember-checkbox-promax {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     gap: 8px;
-    cursor: pointer;
-    font-size: 0.82rem;
     color: #475569;
+    font-weight: 600;
+    cursor: pointer;
     user-select: none;
-    font-weight: 500;
   }
 
   .remember-checkbox-promax input[type="checkbox"] {
@@ -826,222 +948,167 @@ import AuthLayout from "@layouts/AuthLayout.astro";
   }
 
   .btn-submit-promax:active:not(:disabled) {
-    transform: translateY(1px);
-    box-shadow: 0 2px 8px rgba(0, 104, 55, 0.25);
+    transform: translateY(0);
   }
 
   .btn-submit-promax:disabled {
-    opacity: 0.8;
+    opacity: 0.7;
     cursor: not-allowed;
   }
 
-  /* Spinner */
   .spinner-loader-promax {
-    width: 20px;
-    height: 20px;
-    border: 2.5px solid rgba(255, 255, 255, 0.35);
-    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
     border-top-color: #ffffff;
-    animation: promaxSpin 0.8s linear infinite;
+    border-radius: 50%;
+    animation: promaxSpin 0.75s linear infinite;
   }
 
   @keyframes promaxSpin {
-    to {
-      transform: rotate(360deg);
-    }
+    to { transform: rotate(360deg); }
   }
 
   /* Separador */
   .login-divider-promax {
     display: flex;
     align-items: center;
-    text-align: center;
-    margin: 24px 0 18px 0;
+    margin: 24px 0 16px 0;
+    color: #94a3b8;
+    font-size: 0.7rem;
+    font-weight: 750;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
   }
 
   .login-divider-promax::before,
   .login-divider-promax::after {
     content: "";
     flex: 1;
-    border-bottom: 1px solid #e2e8f0;
+    height: 1px;
+    background: #e2e8f0;
   }
 
   .login-divider-promax span {
     padding: 0 12px;
-    font-size: 0.72rem;
-    color: #94a3b8;
-    text-transform: uppercase;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-  }
-
-  /* Banner Portal Externo */
-  .portal-banner-promax {
-    background: #fefce8;
-    border: 1px solid #fef08a;
-    border-radius: 12px;
-    padding: 14px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    transition: all 0.2s ease;
-  }
-
-  .portal-banner-promax:hover {
-    border-color: #fde047;
-    box-shadow: 0 4px 12px rgba(184, 134, 11, 0.1);
-  }
-
-  .portal-banner-content {
-    flex: 1;
-  }
-
-  .portal-banner-title {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    font-size: 0.82rem;
-    font-weight: 800;
-    color: #854d0e;
-    margin-bottom: 3px;
-  }
-
-  .portal-banner-title svg {
-    color: #b8860b;
-    flex-shrink: 0;
-  }
-
-  .portal-banner-desc {
-    font-size: 0.75rem;
-    color: #713f12;
-    margin: 0;
-    line-height: 1.35;
-  }
-
-  .btn-portal-promax {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 14px;
-    background: #ffffff;
-    border: 1px solid #ca8a04;
-    color: #854d0e;
-    font-size: 0.76rem;
-    font-weight: 800;
-    border-radius: 8px;
-    text-decoration: none;
-    white-space: nowrap;
-    transition: all 0.2s ease;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  }
-
-  .btn-portal-promax:hover {
-    background: #fef08a;
-    color: #713f12;
-    transform: translateY(-1px);
-  }
-
-  /* Aviso de Seguridad */
-  .login-security-notice {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    margin-top: 20px;
-    font-size: 0.7rem;
-    color: #94a3b8;
-    text-align: center;
-    line-height: 1.4;
-  }
-
-  .login-security-notice svg {
-    color: #006837;
-    flex-shrink: 0;
   }
 
   /* ==========================================================================
-     RESPONSIVE BREAKPOINTS (MOBILE & TABLET)
+     ACCESOS COMPLEMENTARIOS (SOLICITANTES Y DEPENDENCIAS)
+     ========================================================================== */
+  .login-secondary-portals {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    width: 100%;
+  }
+
+  .sec-portal-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    text-decoration: none;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    color: #1E293B;
+  }
+
+  .sec-portal-item:hover {
+    background: #F2F7F6;
+    border-color: #00594E;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 89, 78, 0.08);
+  }
+
+  .sec-portal-item.citizen:hover {
+    border-color: #B5A160;
+  }
+
+  .sec-portal-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .sec-portal-icon.citizen {
+    background: #F7F5EE;
+    color: #786832;
+    border: 1px solid #DBD2B0;
+  }
+
+  .sec-portal-icon.office {
+    background: #F2F7F6;
+    color: #00594E;
+    border: 1px solid #B2CFCB;
+  }
+
+  .sec-portal-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .sec-portal-badge {
+    font-size: 0.65rem;
+    font-weight: 750;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .sec-portal-badge.citizen { color: #854d0e; }
+  .sec-portal-badge.office { color: #00594E; }
+
+  .sec-portal-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #0F172A;
+  }
+
+  .sec-arrow {
+    color: #94A3B8;
+    transition: transform 0.2s ease, color 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  .sec-portal-item:hover .sec-arrow {
+    transform: translateX(3px);
+    color: #00594E;
+  }
+
+  .sec-portal-item.citizen:hover .sec-arrow {
+    color: #786832;
+  }
+
+  /* ==========================================================================
+     RESPONSIVE
      ========================================================================== */
   @media (max-width: 1024px) {
     .login-brand-panel {
       display: none;
     }
-    .login-promax-wrapper {
-      background: linear-gradient(145deg, #052e16 0%, #064e3b 100%);
-      align-items: center;
-      justify-content: center;
-      padding: 20px 16px;
-    }
-    .login-form-panel {
-      background: transparent;
-      padding: 0;
-      width: 100%;
-    }
+
     .login-mobile-header {
-      display: block;
-    }
-    .login-card-promax {
-      box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.35);
-    }
-  }
-
-  @media (max-width: 480px) {
-    .login-card-promax {
-      padding: 24px 18px;
-      border-radius: 16px;
-    }
-    .portal-banner-promax {
+      display: flex;
       flex-direction: column;
-      align-items: flex-start;
+      align-items: center;
     }
-    .btn-portal-promax {
-      width: 100%;
-      justify-content: center;
+
+    .login-form-panel {
+      padding: 2rem 1.25rem;
     }
-  }
 
-  /* Mobile Portals */
-  .login-mobile-portals {
-    display: none;
-    width: 100%;
-    margin-top: 14px;
-  }
-
-  .mobile-portals-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .btn-mobile-portal {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 10px 14px;
-    background: #F8FAFC;
-    border: 1px solid #CBD5E1;
-    color: #334155;
-    border-radius: 8px;
-    text-decoration: none;
-    font-size: 0.78rem;
-    font-weight: 700;
-    transition: all 0.2s ease;
-  }
-
-  .btn-mobile-portal:hover {
-    background: #F2F7F6;
-    border-color: #00594E;
-    color: #00594E;
-  }
-
-  @media (max-width: 1024px) {
-    .login-mobile-portals {
-      display: block;
+    .login-card-promax {
+      padding: 28px 20px;
     }
   }
-
 </style>
 
 <script>
@@ -1135,7 +1202,7 @@ import AuthLayout from "@layouts/AuthLayout.astro";
     setLoading(true);
 
     try {
-      // 1. Autenticación oficial y cifrada con Supabase Auth
+      // 1. Autenticación con credenciales institucionales
       const { data: authData, error: authError } =
         await supabase.auth.signInWithPassword({
           email,
@@ -1143,7 +1210,7 @@ import AuthLayout from "@layouts/AuthLayout.astro";
         });
 
       if (authError || !authData.user) {
-        console.warn("Error de autenticación Supabase:", authError);
+        console.warn("Error de autenticación:", authError);
         const msg =
           authError?.message === "Invalid login credentials"
             ? "Credenciales incorrectas. Verifique su correo institucional y contraseña."
@@ -1154,7 +1221,7 @@ import AuthLayout from "@layouts/AuthLayout.astro";
         return;
       }
 
-      // 2. Consultar perfil institucional del usuario en Supabase PostgreSQL
+      // 2. Consultar perfil institucional del usuario en PostgreSQL
       const { data: profile } = await supabase
         .from("profiles")
         .select("*")
@@ -1213,7 +1280,7 @@ import AuthLayout from "@layouts/AuthLayout.astro";
       const maxAge = remember ? 7 * 24 * 3600 : 24 * 3600;
       document.cookie = `${SESSION_COOKIE_KEY}=${sessionUser.id}; path=/; max-age=${maxAge}; SameSite=Lax`;
 
-      // 4. Registro oficial de trazabilidad en la bitácora inmutable de auditoría
+      // 4. Registro oficial de trazabilidad en auditoría
       try {
         await logSystemActivity({
           actor: sessionUser,
@@ -1221,7 +1288,7 @@ import AuthLayout from "@layouts/AuthLayout.astro";
           actionType: "ACCESO",
           entity: "Control de Acceso Institucional",
           entityId: sessionUser.id,
-          details: `El usuario ${sessionUser.name} (${sessionUser.email}) inició sesión con credenciales institucionales verificadas en Supabase Auth.`,
+          details: `El usuario ${sessionUser.name} (${sessionUser.email}) inició sesión con credenciales institucionales verificadas.`,
           severity: "INFO",
         });
       } catch (auditErr) {
