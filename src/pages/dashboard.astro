@@ -977,10 +977,10 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
     right: 0;
     height: 3px;
   }
-  .kpi-accent-bar.gold { background: linear-gradient(90deg, #F59E0B, #B5A160); }
-  .kpi-accent-bar.emerald { background: linear-gradient(90deg, #10B981, #00594E); }
-  .kpi-accent-bar.teal { background: linear-gradient(90deg, #0D9488, #059669); }
-  .kpi-accent-bar.green { background: linear-gradient(90deg, #059669, #004239); }
+  .kpi-accent-bar.gold { background: linear-gradient(90deg, #B5A160, #786832); }
+  .kpi-accent-bar.emerald,
+  .kpi-accent-bar.teal,
+  .kpi-accent-bar.green { background: linear-gradient(90deg, #00594E, #004239); }
 
   .kpi-header {
     display: flex;
@@ -1002,10 +1002,10 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
     align-items: center;
     justify-content: center;
   }
-  .kpi-icon-wrap.gold { background: rgba(245, 158, 11, 0.12); color: #D97706; }
-  .kpi-icon-wrap.emerald { background: rgba(16, 185, 129, 0.12); color: #059669; }
-  .kpi-icon-wrap.teal { background: rgba(13, 148, 136, 0.12); color: #0D9488; }
-  .kpi-icon-wrap.green { background: rgba(5, 150, 105, 0.12); color: #00594E; }
+  .kpi-icon-wrap.gold { background: #F7F5EE; color: #786832; border: 1px solid #DBD2B0; }
+  .kpi-icon-wrap.emerald,
+  .kpi-icon-wrap.teal,
+  .kpi-icon-wrap.green { background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; }
 
   .kpi-value-row {
     display: flex;
@@ -1029,10 +1029,10 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
     border-radius: 6px;
     letter-spacing: 0.02em;
   }
-  .kpi-trend-badge.warning { background: #FEF3C7; color: #92400E; }
-  .kpi-trend-badge.success { background: #D1FAE5; color: #065F46; }
-  .kpi-trend-badge.info { background: #CCFBF1; color: #115E59; }
-  .kpi-trend-badge.subtle { background: #F1F5F9; color: #475569; }
+  .kpi-trend-badge.warning { background: #F7F5EE; color: #786832; border: 1px solid #DBD2B0; }
+  .kpi-trend-badge.success { background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; }
+  .kpi-trend-badge.info { background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; }
+  .kpi-trend-badge.subtle { background: #F8FAFC; color: #475569; border: 1px solid #E2E8F0; }
 
   .kpi-footer {
     display: flex;
@@ -1049,9 +1049,9 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
   .footer-val {
     font-weight: 750;
   }
-  .footer-val.gold { color: #D97706; }
-  .footer-val.emerald { color: #059669; }
-  .footer-val.teal { color: #0D9488; }
+  .footer-val.gold { color: #786832; }
+  .footer-val.emerald,
+  .footer-val.teal,
   .footer-val.green { color: #00594E; }
 
   /* ==========================================================================
@@ -1100,10 +1100,10 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
     align-items: center;
     justify-content: center;
   }
-  .panel-icon-wrap.gold { background: rgba(245, 158, 11, 0.12); color: #D97706; }
-  .panel-icon-wrap.emerald { background: rgba(16, 185, 129, 0.12); color: #059669; }
-  .panel-icon-wrap.mint { background: rgba(13, 148, 136, 0.12); color: #0D9488; }
-  .panel-icon-wrap.amber { background: rgba(217, 119, 6, 0.12); color: #B45309; }
+  .panel-icon-wrap.gold { background: #F7F5EE; color: #786832; border: 1px solid #DBD2B0; }
+  .panel-icon-wrap.emerald { background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; }
+  .panel-icon-wrap.mint { background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; }
+  .panel-icon-wrap.amber { background: #F7F5EE; color: #786832; border: 1px solid #DBD2B0; }
 
   .panel-heading-text {
     font-size: 1.15rem;
@@ -1398,9 +1398,9 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
     font-weight: 800;
     padding: 3px 9px;
     border-radius: 999px;
-    background: rgba(16, 185, 129, 0.12);
-    color: #065f46;
-    border: 1px solid rgba(16, 185, 129, 0.25);
+    background: #F2F7F6;
+    color: #00594E;
+    border: 1px solid #B2CFCB;
     text-decoration: none;
   }
   .widget-header-chip {
@@ -1483,8 +1483,8 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
     border-radius: 50%;
     flex-shrink: 0;
   }
-  .metric-dot.green { background: #10B981; }
-  .metric-dot.gold { background: #F59E0B; }
+  .metric-dot.green { background: #00594E; }
+  .metric-dot.gold { background: #B5A160; }
 
   .efficacy-metric-num {
     font-size: 1.15rem;
