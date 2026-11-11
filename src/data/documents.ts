@@ -8,15 +8,15 @@ export const DEFAULT_RESPONSE_TEMPLATES: ResponseTemplate[] = [
     category: 'Gestión Documental',
     decision: 'Favorable',
     subject: 'RE: [NUMERO_RADICADO] — [TITULO_DOCUMENTO]',
-    content: `En atención a su comunicación radicada, me permito informarle que una vez analizado el expediente, esta administración resuelve de manera favorable su solicitud, en el marco de las disposiciones legales vigentes y el reglamento institucional de la Universidad Internacional del Trópico Americano — Unitrópico.`,
+    content: `En atención a su comunicación radicada, me permito informarle que una vez analizado el expediente, esta administración resuelve de manera favorable su solicitud, en el marco de las disposiciones vigentes y el reglamento institucional de la Universidad Internacional del Trópico Americano — Unitrópico.`,
   },
   {
     id: 'tpl-peticion',
-    title: 'Respuesta Derecho de Petición',
-    category: 'Derechos de Petición',
+    title: 'Respuesta a Petición Institucional',
+    category: 'Gestión de Peticiones',
     decision: 'En estudio',
-    subject: 'Respuesta a Derecho de Petición — Radicado [NUMERO_RADICADO]',
-    content: `En cumplimiento de los términos establecidos en la Ley 1755 de 2015 y demás normas concordantes, procedemos a dar respuesta a la petición presentada bajo el radicado [NUMERO_RADICADO], referente a: [TITULO_DOCUMENTO]. Esta institución se compromete a resolver de fondo dentro de los términos de ley.`,
+    subject: 'Respuesta a Solicitud — Radicado [NUMERO_RADICADO]',
+    content: `Procedemos a dar respuesta a la petición presentada bajo el radicado [NUMERO_RADICADO], referente a: [TITULO_DOCUMENTO]. Esta institución emitirá respuesta de fondo dentro de los plazos institucionales establecidos.`,
   },
   {
     id: 'tpl-academica',
@@ -24,7 +24,7 @@ export const DEFAULT_RESPONSE_TEMPLATES: ResponseTemplate[] = [
     category: 'Asuntos Académicos',
     decision: 'Favorable',
     subject: 'Concepto Académico — Radicado [NUMERO_RADICADO]',
-    content: `La Vicerrectoría Académica de Unitrópico, previo estudio del expediente [NUMERO_RADICADO], emite el presente concepto académico, el cual es FAVORABLE, sustentado en el cumplimiento de los requisitos curriculares, la normativa académica interna vigente y las directrices del Ministerio de Educación Nacional.`,
+    content: `La Vicerrectoría Académica de Unitrópico, previo estudio del expediente [NUMERO_RADICADO], emite el presente concepto académico, el cual es FAVORABLE, sustentado en el cumplimiento de los requisitos curriculares, el reglamento académico interno vigente y las directrices del Ministerio de Educación Nacional.`,
   },
   {
     id: 'tpl-financiera',
@@ -40,7 +40,7 @@ export const DEFAULT_RESPONSE_TEMPLATES: ResponseTemplate[] = [
     category: 'Requerimientos Externos',
     decision: 'Recibido',
     subject: 'Acuse de Recibo — Requerimiento Externo [NUMERO_RADICADO]',
-    content: `La Universidad Internacional del Trópico Americano — Unitrópico acusa recibo del requerimiento identificado con radicado [NUMERO_RADICADO]. El ente institucional competente procederá a analizar el documento y dará respuesta de fondo en los plazos legales y reglamentarios aplicables.`,
+    content: `La Universidad Internacional del Trópico Americano — Unitrópico acusa recibo del requerimiento identificado con radicado [NUMERO_RADICADO]. El ente institucional competente procederá a analizar el documento y dará respuesta de fondo en los plazos institucionales y reglamentarios aplicables.`,
   },
 ];
 

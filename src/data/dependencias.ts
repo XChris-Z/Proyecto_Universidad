@@ -48,7 +48,7 @@ export const DEPENDENCIAS_DATA: Dependencia[] = [
     correo: 'juridica@unitropico.edu.co',
     ext: 'Ext. 110',
     color: '#dc2626',
-    competencias: 'Defensa judicial, emisión de conceptos jurídicos, respuesta a tutelas y derechos de petición de consulta, análisis de brechas normativas.',
+    competencias: 'Defensa judicial, emisión de conceptos jurídicos, respuesta a tutelas y peticiones de consulta, seguimiento reglamentario.',
     archivosActivos: 11,
     funcionarios: [
       { id: 'usr-oaj-1', nombre: 'Dr. Roberto Gómez Parra', cargo: 'Jefe Oficina Asesora Jurídica', email: 'juridica@unitropico.edu.co', ext: '110' },
@@ -119,7 +119,7 @@ export const DEPENDENCIAS_DATA: Dependencia[] = [
     correo: 'disciplinario@unitropico.edu.co',
     ext: 'Ext. 135',
     color: '#9333ea',
-    competencias: 'Instrucción y juzgamiento de procesos disciplinarios conforme a la Ley 1952/2019, sustanciación de autos y remisión de apelaciones.',
+    competencias: 'Instrucción y juzgamiento de procesos disciplinarios institucionales, sustanciación de autos y remisión de apelaciones.',
     archivosActivos: 3,
     funcionarios: [
       { id: 'usr-cid-1', nombre: 'Dr. Álvaro Rodríguez Niño', cargo: 'Jefe de Juzgamiento Disciplinario', email: 'disciplinario@unitropico.edu.co', ext: '135' },

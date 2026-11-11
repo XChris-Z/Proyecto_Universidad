@@ -175,8 +175,8 @@ h1, h2, h3, h4, .brand-font {
    Barra lateral (Sidebar)
    ========================================================================== */
 .sidebar {
-  width: 282px;
-  flex: 0 0 282px;
+  width: 258px;
+  flex: 0 0 258px;
   height: 100vh;
   position: sticky;
   top: 0;
@@ -193,12 +193,12 @@ h1, h2, h3, h4, .brand-font {
 }
 
 .brand-section {
-  padding: 9px 14px;
-  min-height: 54px;
+  padding: 10px 14px;
+  min-height: 60px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  justify-content: center;
+  gap: 8px;
   position: relative;
   border-bottom: 1px solid #DCE4E3;
   background: #ffffff;
@@ -209,15 +209,15 @@ h1, h2, h3, h4, .brand-font {
   text-decoration: none;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   overflow: hidden;
   flex: 1;
   min-width: 0;
 }
 
 .sidebar-brand-full {
-  max-height: 40px;
-  max-width: 170px;
+  max-height: 48px;
+  max-width: 175px;
   width: auto;
   height: auto;
   object-fit: contain;
@@ -322,15 +322,16 @@ h1, h2, h3, h4, .brand-font {
 .sidebar-link {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6.5px 12px;
+  gap: 9px;
+  padding: 6px 10px;
   margin-bottom: 0;
   border-radius: 10px;
   color: #334155;
   text-decoration: none;
-  font-size: 0.84rem;
+  font-size: 0.875rem;
   font-weight: 600;
-  line-height: 1.2;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
   white-space: nowrap;
   overflow: visible;
   text-overflow: clip;
@@ -366,9 +367,10 @@ h1, h2, h3, h4, .brand-font {
   stroke: #ffffff;
 }
 
-.nav-item svg {
-  width: 19px;
-  height: 19px;
+.nav-item svg,
+.sidebar-link svg {
+  width: 18px;
+  height: 18px;
   stroke-width: 2;
   stroke: #64748B;
   fill: none;
@@ -396,15 +398,15 @@ h1, h2, h3, h4, .brand-font {
 .user-profile-section,
 .sidebar-user-card,
 .sidebar-footer {
-  margin: auto 12px 12px 12px;
-  padding: 12px;
+  margin: auto 14px 12px 14px;
+  padding: 10px 12px;
   background: #F8FAFC;
   border: 1px solid #DCE4E3;
-  border-radius: 14px;
+  border-radius: 12px;
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   flex-shrink: 0;
   box-sizing: border-box;
 }
@@ -436,34 +438,58 @@ h1, h2, h3, h4, .brand-font {
   justify-content: center;
 }
 
-.sidebar .btn-logout {
+.sidebar .btn-logout,
+.sidebar .logout-btn,
+.sidebar button#btn-logout {
   width: 100%;
   padding: 7px 10px;
   font-size: 0.8rem;
   font-weight: 700;
   border-radius: 10px;
-  background: #FFFFFF;
-  border: 1px solid #E2E8F0;
-  color: #B91C1C;
-  transition: background 0.16s ease, border-color 0.16s ease;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #DC2626;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.sidebar .btn-logout:hover {
-  background: #FEF2F2;
-  border-color: #FECACA;
+.sidebar .btn-logout svg,
+.sidebar .logout-btn svg,
+.sidebar button#btn-logout svg {
+  stroke: #DC2626;
+  color: #DC2626;
+  transition: all 0.18s ease;
+}
+
+.sidebar .btn-logout:hover,
+.sidebar .logout-btn:hover,
+.sidebar button#btn-logout:hover {
+  background: #DC2626 !important;
+  border-color: #B91C1C !important;
+  color: #FFFFFF !important;
+}
+
+.sidebar .btn-logout:hover svg,
+.sidebar .btn-logout:hover span,
+.sidebar .logout-btn:hover svg,
+.sidebar .logout-btn:hover span,
+.sidebar button#btn-logout:hover svg,
+.sidebar button#btn-logout:hover span {
+  color: #FFFFFF !important;
+  stroke: #FFFFFF !important;
 }
 
 @media (max-height: 800px) and (min-width: 1024px) {
   .brand-section {
-    padding: 7px 14px;
-    min-height: 48px;
+    padding: 8px 12px;
+    min-height: 54px;
   }
   .sidebar-brand-full {
-    max-height: 34px;
+    max-height: 42px;
+    max-width: 165px;
   }
   .nav-menu,
   .sidebar-nav {
-    padding: 6px 12px;
+    padding: 6px 10px;
     gap: 1px;
   }
   .nav-label {
@@ -472,14 +498,15 @@ h1, h2, h3, h4, .brand-font {
   }
   .nav-item,
   .sidebar-link {
-    padding: 5px 12px;
-    font-size: 0.82rem;
+    padding: 5px 10px;
+    font-size: 0.84rem;
+    gap: 9px;
   }
   .user-profile-section,
   .sidebar-user-card,
   .sidebar-footer {
-    margin: auto 12px 10px 12px;
-    padding: 10px;
+    margin: auto 14px 10px 14px;
+    padding: 9px 12px;
     gap: 8px;
   }
 }
@@ -6645,8 +6672,8 @@ p, h1, h2, h3, h4, h5, h6, span, label, td, th {
     top: 0 !important;
     left: auto !important;
     height: 100vh !important;
-    width: 282px;
-    flex: 0 0 282px;
+    width: 258px;
+    flex: 0 0 258px;
     overflow: hidden;
     padding-bottom: 0 !important;
     transform: none !important;

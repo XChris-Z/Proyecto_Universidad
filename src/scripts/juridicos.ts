@@ -78,7 +78,7 @@ export async function initJuridicos() {
 
     if (currentItems.length === 0) {
       const labels: Record<string, string> = {
-        brechas: 'brechas normativas',
+        brechas: 'revisiones reglamentarias',
         conceptos: 'conceptos jurídicos',
         litigios: 'litigios o procesos judiciales',
         auditorias: 'auditorías de entes de control',
@@ -106,7 +106,7 @@ export async function initJuridicos() {
               </h4>
               ${c.mandato_ley ? `
                 <div style="font-size: 0.74rem; color: #52606D; margin-bottom: 8px;">
-                  Mandato / Radicado: <strong style="color: #00594E;">${c.mandato_ley}</strong>
+                  Referencia / Radicado: <strong style="color: #00594E;">${c.mandato_ley}</strong>
                 </div>
               ` : ''}
               <p style="font-size: 0.82rem; color: #52606D; line-height: 1.45; margin: 0 0 12px 0;">

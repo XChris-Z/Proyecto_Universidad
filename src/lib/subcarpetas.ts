@@ -144,21 +144,43 @@ export function isPeticionRespondida(p: any): boolean {
   if (
     st === 'respondida' ||
     st === 'respondido' ||
+    st === 'resuelta' ||
+    st === 'resuelto' ||
     st === 'finalizada' ||
     st === 'finalizado' ||
     st === 'completada' ||
-    st === 'completado'
+    st === 'completado' ||
+    st === 'cerrada' ||
+    st === 'cerrado' ||
+    st === 'despachada' ||
+    st === 'despachado'
   ) {
     return true;
   }
 
   if (
+    p.respondida === true ||
+    p.tiene_respuesta_audit === true ||
     p.fecha_respuesta ||
     p.respuesta_fecha_envio ||
     p.respuesta_oficial === true ||
     p.respuesta_enviada === true ||
     (typeof p.respuesta_mensaje === 'string' && p.respuesta_mensaje.trim().length > 0) ||
     p.respuesta_pin_solicitante
+  ) {
+    return true;
+  }
+
+  const anexos = Array.isArray(p.anexos)
+    ? p.anexos
+    : Array.isArray(p.peticion_anexos)
+      ? p.peticion_anexos
+      : [];
+  if (
+    anexos.some((a: any) => {
+      const tipo = String(a?.tipo || a?.categoria || '').toUpperCase().trim();
+      return a?.es_respuesta_final === true || tipo === 'RESPUESTA_FINAL';
+    })
   ) {
     return true;
   }

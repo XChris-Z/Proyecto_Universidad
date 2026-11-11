@@ -3,6 +3,7 @@
 
 import {
   getUnifiedCalendarEvents,
+  computeActivePeticionSlaCounts,
   createGoogleCalendarEvent,
   connectGoogleCalendar,
 } from '@lib/calendar';
@@ -283,9 +284,43 @@ function updateBentoActiveIndicator() {
 }
 
 /**
- * Carga los eventos unificados (Google Calendar + Supabase)
+ * Lee los eventos pre-renderizados desde el payload SSR para pintar sin latencia.
+ */
+function readSsrDeadlines(): CalendarioEvent[] {
+  try {
+    const ssrEl = document.getElementById('calendario-ssr-events');
+    if (!ssrEl || !ssrEl.textContent) return [];
+    const parsed = JSON.parse(ssrEl.textContent);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function updateSlaCountersFromEvents(events: CalendarioEvent[]) {
+  const { critCount, warnCount, safeCount } = computeActivePeticionSlaCounts(events);
+  const critEl = document.getElementById('gcal-crit-count');
+  const warnEl = document.getElementById('gcal-warn-count');
+  const safeEl = document.getElementById('gcal-safe-count');
+
+  if (critEl) critEl.textContent = String(critCount);
+  if (warnEl) warnEl.textContent = String(warnCount);
+  if (safeEl) safeEl.textContent = String(safeCount);
+}
+
+/**
+ * Carga los eventos unificados (SSR inmediato + Google Calendar + Supabase)
  */
 async function loadEvents() {
+  const ssrEvents = readSsrDeadlines();
+  if (allEvents.length === 0 && ssrEvents.length > 0) {
+    allEvents = [...ssrEvents].sort((a, b) => a.fecha.localeCompare(b.fecha));
+    updateSlaCountersFromEvents(allEvents);
+    renderCurrentView();
+    renderTimelineMonitor();
+    renderMiniCal();
+  }
+
   const syncBadge = document.getElementById('gcal-sync-badge');
   if (syncBadge) {
     syncBadge.textContent = 'Sincronizando...';
@@ -297,17 +332,12 @@ async function loadEvents() {
 
   try {
     const res = await getUnifiedCalendarEvents(timeMin, timeMax);
-    allEvents = res.events;
+    const liveIds = new Set(res.events.map((e) => e.id));
+    const missingSsrDeadlines = ssrEvents.filter((e) => !liveIds.has(e.id));
+    allEvents = [...res.events, ...missingSsrDeadlines].sort((a, b) => a.fecha.localeCompare(b.fecha));
     isGoogleConnected = res.isGoogleConnected;
 
-    // Actualizar badges del Bento Header
-    const critEl = document.getElementById('gcal-crit-count');
-    const warnEl = document.getElementById('gcal-warn-count');
-    const safeEl = document.getElementById('gcal-safe-count');
-
-    if (critEl) critEl.textContent = String(res.critCount);
-    if (warnEl) warnEl.textContent = String(res.warnCount);
-    if (safeEl) safeEl.textContent = String(res.safeCount);
+    updateSlaCountersFromEvents(allEvents);
 
     // Actualizar badge de sincronización con Google
     if (syncBadge) {
@@ -327,6 +357,10 @@ async function loadEvents() {
     renderMiniCal();
   } catch (err) {
     console.error('Error cargando eventos:', err);
+    if (allEvents.length === 0 && ssrEvents.length > 0) {
+      allEvents = [...ssrEvents];
+      updateSlaCountersFromEvents(allEvents);
+    }
     if (syncBadge) {
       syncBadge.innerHTML = `<span class="badge-dot-local"></span> Base de Datos Local`;
     }

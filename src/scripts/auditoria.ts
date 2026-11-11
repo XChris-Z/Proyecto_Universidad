@@ -219,7 +219,7 @@ export async function initAuditoria() {
 
     verificationLogs.push(`--------------------------------------------------------------------------------`);
     verificationLogs.push(`[RESULTADO FINAL] ${logs.length} registros auditados. Cero (0) manipulaciones detectadas.`);
-    verificationLogs.push(`[CERTIFICACIÓN] Cadena de custodia 100% íntegra y conforme a Ley 594 de 2000.`);
+    verificationLogs.push(`[CERTIFICACIÓN] Cadena de custodia 100% íntegra y conforme a los lineamientos institucionales de archivo.`);
 
     verifyModalBody.innerHTML = `
       <div class="verify-chain-container">

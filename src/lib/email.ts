@@ -497,7 +497,7 @@ export async function sendRadicacionSolicitanteEmail(
   const fechaRadicadoTxt = formatDateLongEs(params.fechaRadicacion);
   const fechaLimiteTxt = formatDateLongEs(params.fechaLimiteEntrega);
   const prioridadTxt = params.prioridad || 'Media';
-  const categoriaTxt = params.categoria || 'Petición General (CP art. 23)';
+  const categoriaTxt = params.categoria || 'Petición General';
 
   const bentoCard = buildBentoDataCard(
     [
@@ -508,7 +508,7 @@ export async function sendRadicacionSolicitanteEmail(
       { label: 'Fecha Límite de Respuesta', valueHtml: `<strong style="color:#00594E;">${escapeEmailHtml(fechaLimiteTxt)}</strong>` },
     ],
     {
-      label: 'Trazabilidad del Expediente (Ley 1755)',
+      label: 'Trazabilidad del Expediente Institucional',
       statusRight: 'Radicación Registrada',
       greenPct: 30,
       goldPct: 40,
@@ -579,7 +579,7 @@ export async function sendPeticionAssignmentEmail(
   const formattedEntrega = formatDateLongEs(params.fechaLimiteEntrega);
   const formattedResponsable = formatDateLongEs(params.fechaLimiteResponsable);
   const prioridadBadge = params.prioridad || 'Media';
-  const categoriaLegal = params.categoria || 'Petición General (CP art. 23)';
+  const categoriaLegal = params.categoria || 'Petición General';
   const instrucciones =
     params.instruccionesAnexos && params.instruccionesAnexos.trim().length > 0
       ? params.instruccionesAnexos.trim()
@@ -597,7 +597,7 @@ export async function sendPeticionAssignmentEmail(
       { label: 'Expiración General', valueHtml: escapeEmailHtml(formattedEntrega) },
     ],
     {
-      label: 'Distribución Operativa del Término Legal',
+      label: 'Distribución Operativa del Plazo Institucional',
       statusRight: 'Margen -5 días activo',
       greenPct: 67,
       goldPct: 33,

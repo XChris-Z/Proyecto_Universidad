@@ -17,14 +17,14 @@ const countAuditorias = casosList.filter((c: any) => c.categoria === 'auditorias
 const countDirectivas = casosList.filter((c: any) => c.categoria === 'directivas').length;
 ---
 
-<AppLayout title="Asuntos Jurídicos y Normativos" activeNav="juridicos">
+<AppLayout title="Asuntos Jurídicos" activeNav="juridicos">
   <div style="display: flex; flex-direction: column; gap: 22px; max-width: 1280px; margin: 0 auto; width: 100%;">
     
     <!-- Cabecera Sobria y Ejecutiva (Bento Pro Max) -->
     <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-top: 4px solid #00594E; border-radius: 16px; padding: 24px 28px; box-shadow: 0 2px 10px rgba(0, 89, 78, 0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 18px;">
       <div style="min-width: 0; flex: 1;">
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-          <h1 style="font-size: 1.55rem; font-weight: 800; color: #111827; margin: 0; letter-spacing: -0.01em;">Asuntos Jurídicos y Normativos</h1>
+          <h1 style="font-size: 1.55rem; font-weight: 800; color: #111827; margin: 0; letter-spacing: -0.01em;">Asuntos Jurídicos</h1>
           <span style="font-size: 0.72rem; font-weight: 800; background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; padding: 3px 10px; border-radius: 999px;">Oficina Asesora Jurídica</span>
         </div>
         <p style="font-size: 0.86rem; color: #52606D; margin: 6px 0 0 0;">
@@ -43,7 +43,7 @@ const countDirectivas = casosList.filter((c: any) => c.categoria === 'directivas
     <!-- Pestañas de Navegación Estilizadas con Contadores -->
     <div class="module-tabs" id="juridicos-module-tabs" style="display: flex; gap: 8px; flex-wrap: wrap; border-bottom: 2px solid #DCE4E3; padding-bottom: 12px;">
       <button class="module-tab-btn active" data-jtab="brechas" style="padding: 10px 16px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid transparent; transition: all 0.2s ease;">
-        <span>Brechas Normativas (Legal Gap)</span>
+        <span>Revisiones Reglamentarias</span>
         <span class="tab-count" id="jcount-brechas" style="background: #00594E; color: #ffffff; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;">{countBrechas}</span>
       </button>
       <button class="module-tab-btn" data-jtab="conceptos" style="padding: 10px 16px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid transparent; transition: all 0.2s ease;">
@@ -82,7 +82,7 @@ const countDirectivas = casosList.filter((c: any) => c.categoria === 'directivas
     </div>
   </div>
 
-  <!-- Modal: Registrar Asunto Jurídico / Normativa Faltante -->
+  <!-- Modal: Registrar Asunto Jurídico -->
   <div class="modal-backdrop" id="new-gap-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(2px);">
     <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 640px; border-radius: 16px; box-shadow: 0 20px 45px rgba(0,0,0,0.2); overflow: hidden; border-top: 4px solid #00594E;">
       <div class="modal-header" style="background: #F2F7F6; border-bottom: 1.5px solid #DCE4E3; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
@@ -97,7 +97,7 @@ const countDirectivas = casosList.filter((c: any) => c.categoria === 'directivas
         <div class="form-group">
           <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Categoría del Asunto *</label>
           <select id="new-gap-categoria" class="form-input" style="cursor: pointer; border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem; width: 100%; box-sizing: border-box;" required>
-            <option value="brechas" selected>Brecha Normativa (Vacío Legal)</option>
+            <option value="brechas" selected>Revisión Reglamentaria Institucional</option>
             <option value="conceptos">Concepto Jurídico (Interno / Externo)</option>
             <option value="litigios">Litigio o Proceso Judicial</option>
             <option value="auditorias">Auditoría de Entes de Control</option>
@@ -112,8 +112,8 @@ const countDirectivas = casosList.filter((c: any) => c.categoria === 'directivas
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
           <div class="form-group">
-            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Mandato de Ley / Radicado</label>
-            <input type="text" id="new-gap-mandato" class="form-input" placeholder="Ej: Ley 30 de 1992 / Circular 003" style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem; width: 100%; box-sizing: border-box;" />
+            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Referencia / Radicado</label>
+            <input type="text" id="new-gap-mandato" class="form-input" placeholder="Ej: Acuerdo 012 / Circular 003" style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem; width: 100%; box-sizing: border-box;" />
           </div>
           <div class="form-group">
             <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Órgano Competente *</label>
@@ -128,7 +128,7 @@ const countDirectivas = casosList.filter((c: any) => c.categoria === 'directivas
 
         <div class="form-group">
           <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Justificación y Análisis Jurídico</label>
-          <textarea id="new-gap-justificacion" class="form-input" rows="3" placeholder="Sustentación jurídica del trámite, vacío legal o concepto..." style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem; width: 100%; box-sizing: border-box;"></textarea>
+          <textarea id="new-gap-justificacion" class="form-input" rows="3" placeholder="Sustentación jurídica del trámite, requerimiento o concepto..." style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem; width: 100%; box-sizing: border-box;"></textarea>
         </div>
 
         <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; padding-top: 14px; border-top: 1px solid #DCE4E3;">

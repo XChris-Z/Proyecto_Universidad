@@ -49,12 +49,63 @@ export const POST: APIRoute = async ({ request }) => {
       .eq('id', id)
       .single() as any);
 
-    const { data: updated, error } = await (supabase
-      .from('peticiones' as any)
-      .update(updatePayload)
-      .eq('id', id)
-      .select()
-      .single() as any);
+    const isCheckConstraintError = (err: any) =>
+      err?.code === '23514' ||
+      /peticiones_estado_check|check constraint/i.test(String(err?.message || ''));
+
+    const normalizeEstadoCandidates = (raw?: string): string[] => {
+      if (!raw) return [];
+      const lower = String(raw).toLowerCase().trim();
+      const map: Record<string, string[]> = {
+        respondida: ['Respondida', 'respondida', 'resuelta', 'finalizada', 'cerrada'],
+        en_tramite: ['En Trámite', 'en_tramite', 'pendiente'],
+        pendiente: ['En Trámite', 'pendiente', 'en_tramite'],
+        revision: ['Revisión', 'revision'],
+        revisión: ['Revisión', 'revision'],
+        vencida: ['Vencida', 'vencida'],
+      };
+      return Array.from(new Set([raw, ...(map[lower] || [])]));
+    };
+
+    let updated: any = null;
+    let error: any = null;
+
+    if (updatePayload.estado !== undefined) {
+      const candidates = normalizeEstadoCandidates(String(updatePayload.estado));
+      for (const candidate of candidates) {
+        const res = await (supabase
+          .from('peticiones' as any)
+          .update({ ...updatePayload, estado: candidate })
+          .eq('id', id)
+          .select()
+          .single() as any);
+        updated = res.data;
+        error = res.error;
+        if (!error) break;
+        if (!isCheckConstraintError(error)) break;
+      }
+
+      if (error && isCheckConstraintError(error)) {
+        const { estado: _omitted, ...safePayload } = updatePayload;
+        const retryRes = await (supabase
+          .from('peticiones' as any)
+          .update(safePayload)
+          .eq('id', id)
+          .select()
+          .single() as any);
+        updated = retryRes.data;
+        error = retryRes.error;
+      }
+    } else {
+      const res = await (supabase
+        .from('peticiones' as any)
+        .update(updatePayload)
+        .eq('id', id)
+        .select()
+        .single() as any);
+      updated = res.data;
+      error = res.error;
+    }
 
     if (error) {
       return new Response(

@@ -117,12 +117,14 @@ export const POST: APIRoute = async ({ request, url }) => {
       ? `${cleanInst}\n\n[RESPUESTA_META]: ${metaPackage}`
       : `[RESPUESTA_META]: ${metaPackage}`;
 
-    // 3. Preparar payload de actualización en public.peticiones
-    const updatePayload: Record<string, any> = {
-      estado: 'respondida',
+    // 3. Preparar actualización en public.peticiones respetando el constraint CHECK de estado
+    const coreTemplate: Record<string, any> = {
       updated_at: fechaEnvioIso,
       solicitante_email: effectiveEmail,
       instrucciones_anexos: cleanUpdatedInst,
+    };
+    let payloadTemplate: Record<string, any> = {
+      ...coreTemplate,
       respuesta_mensaje: cleanMensaje,
       respuesta_funcionario: funcionarioResp,
       respuesta_fecha_envio: fechaEnvioIso,
@@ -132,40 +134,85 @@ export const POST: APIRoute = async ({ request, url }) => {
       respuesta_drive_url: cleanDrive || null,
     };
 
+    const isCheckConstraintError = (err: any) =>
+      err?.code === '23514' ||
+      /peticiones_estado_check|check constraint/i.test(String(err?.message || ''));
+
+    const isSchemaColError = (err: any) =>
+      err?.code === 'PGRST204' ||
+      err?.code === '42703' ||
+      /schema cache|column .* does not exist/i.test(String(err?.message || ''));
+
+    const candidateEstados = [
+      'Respondida',
+      'respondida',
+      'resuelta',
+      'finalizada',
+      'cerrada',
+      'completada',
+    ];
+
     let updateSuccess = false;
     let updateErrorMsg = '';
 
-    const { error: updateErr } = await (supabase
-      .from('peticiones' as any)
-      .update(updatePayload)
-      .eq('id', peticion_id) as any);
-
-    if (!updateErr) {
-      updateSuccess = true;
-    } else {
-      console.warn('[RESPONDER] Aviso: Nuevas columnas no detectadas en el schema cache de Supabase:', updateErr.message);
-      updateErrorMsg = updateErr.message;
-
-      // Fallback seguro: Si las columnas aún no existen físicamente en la BD,
-      // preservamos el estado 'respondida' y empaquetamos la metadata limpia en instrucciones_anexos
-      const fallbackPayload: Record<string, any> = {
-        estado: 'respondida',
-        updated_at: fechaEnvioIso,
-        solicitante_email: effectiveEmail,
-        instrucciones_anexos: cleanUpdatedInst,
-      };
-
-      const { error: fbErr } = await (supabase
+    for (const candidateEstado of candidateEstados) {
+      const { error: tryErr } = await (supabase
         .from('peticiones' as any)
-        .update(fallbackPayload)
+        .update({ ...payloadTemplate, estado: candidateEstado })
         .eq('id', peticion_id) as any);
 
-      if (!fbErr) {
+      if (!tryErr) {
         updateSuccess = true;
-        console.log('[RESPONDER] Fallback aplicado con éxito: metadata guardada en instrucciones_anexos y estado actualizado a respondida.');
+        break;
+      }
+
+      updateErrorMsg = tryErr.message;
+
+      if (isSchemaColError(tryErr)) {
+        payloadTemplate = coreTemplate;
+        const { error: coreTryErr } = await (supabase
+          .from('peticiones' as any)
+          .update({ ...payloadTemplate, estado: candidateEstado })
+          .eq('id', peticion_id) as any);
+
+        if (!coreTryErr) {
+          updateSuccess = true;
+          break;
+        }
+        updateErrorMsg = coreTryErr.message;
+        if (!isCheckConstraintError(coreTryErr)) {
+          break;
+        }
+        continue;
+      }
+
+      if (!isCheckConstraintError(tryErr)) {
+        break;
+      }
+    }
+
+    // Fallback definitivo: si todos los estados de cierre chocan con peticiones_estado_check,
+    // persiste [RESPUESTA_META] y datos de respuesta sin modificar la columna estado.
+    if (!updateSuccess) {
+      const { error: noEstadoErr } = await (supabase
+        .from('peticiones' as any)
+        .update(payloadTemplate)
+        .eq('id', peticion_id) as any);
+
+      if (!noEstadoErr) {
+        updateSuccess = true;
+      } else if (isSchemaColError(noEstadoErr)) {
+        const { error: noEstadoCoreErr } = await (supabase
+          .from('peticiones' as any)
+          .update(coreTemplate)
+          .eq('id', peticion_id) as any);
+        if (!noEstadoCoreErr) {
+          updateSuccess = true;
+        } else {
+          updateErrorMsg = noEstadoCoreErr.message || updateErrorMsg;
+        }
       } else {
-        console.error('[RESPONDER] Error en actualización fallback:', fbErr.message);
-        updateErrorMsg = fbErr.message || updateErr.message;
+        updateErrorMsg = noEstadoErr.message || updateErrorMsg;
       }
     }
 

@@ -537,6 +537,17 @@ export type Database = {
           descripcion: string | null
           instrucciones_anexos: string | null
           estado: string | null
+          pin_acceso?: string | null
+          respuesta_mensaje?: string | null
+          respuesta_funcionario?: string | null
+          respuesta_fecha_envio?: string | null
+          respuesta_expira_at?: string | null
+          respuesta_pin_solicitante?: string | null
+          respuesta_archivos_incluidos?: string[] | null
+          respuesta_drive_url?: string | null
+          fecha_respuesta?: string | null
+          respuesta_oficial?: boolean | null
+          respondida?: boolean | null
           fecha_limite_entrega: string
           fecha_limite_responsable: string
           fecha_radicacion: string | null
@@ -557,6 +568,17 @@ export type Database = {
           descripcion?: string | null
           instrucciones_anexos?: string | null
           estado?: string | null
+          pin_acceso?: string | null
+          respuesta_mensaje?: string | null
+          respuesta_funcionario?: string | null
+          respuesta_fecha_envio?: string | null
+          respuesta_expira_at?: string | null
+          respuesta_pin_solicitante?: string | null
+          respuesta_archivos_incluidos?: string[] | null
+          respuesta_drive_url?: string | null
+          fecha_respuesta?: string | null
+          respuesta_oficial?: boolean | null
+          respondida?: boolean | null
           fecha_limite_entrega: string
           fecha_limite_responsable: string
           fecha_radicacion?: string | null
@@ -577,6 +599,17 @@ export type Database = {
           descripcion?: string | null
           instrucciones_anexos?: string | null
           estado?: string | null
+          pin_acceso?: string | null
+          respuesta_mensaje?: string | null
+          respuesta_funcionario?: string | null
+          respuesta_fecha_envio?: string | null
+          respuesta_expira_at?: string | null
+          respuesta_pin_solicitante?: string | null
+          respuesta_archivos_incluidos?: string[] | null
+          respuesta_drive_url?: string | null
+          fecha_respuesta?: string | null
+          respuesta_oficial?: boolean | null
+          respondida?: boolean | null
           fecha_limite_entrega?: string
           fecha_limite_responsable?: string
           fecha_radicacion?: string | null

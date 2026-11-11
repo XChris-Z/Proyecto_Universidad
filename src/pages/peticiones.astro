@@ -72,20 +72,42 @@ try {
   }
 } catch {}
 
+let auditRespLogs: any[] = [];
+try {
+  const { data: auditData } = await (supabase
+    .from('audit_logs' as any)
+    .select('entity_id, details')
+    .eq('action_type', 'RESPUESTA')
+    .limit(400) as any);
+  if (auditData) auditRespLogs = auditData;
+} catch {}
+
 const peticionesList = ((dbPeticiones as any[]) || []).map((p: any) => {
   const respObs = p.peticion_responsables?.find((r: any) => r?.observaciones_entrega?.includes('PIN:'))?.observaciones_entrega;
   const pinMatch = respObs?.match(/PIN:\s*([0-9A-Z]{6})/i);
   const storedPin = pinMatch ? pinMatch[1] : null;
+
+  const auditMatch = auditRespLogs.some(
+    (log: any) =>
+      String(log.entity_id || '') === String(p.id) ||
+      (p.numero_radicado && String(log.details || '').includes(String(p.numero_radicado)))
+  );
 
   const enrichedResponsables = (p.peticion_responsables || []).map((r: any) => ({
     ...r,
     subcarpeta_id: r.subcarpeta_id || respSubcarpetasMap[r.id] || null,
   }));
 
-  return {
+  const enriched: any = {
     ...p,
+    tiene_respuesta_audit: auditMatch,
     peticion_responsables: enrichedResponsables,
     pin_acceso: storedPin || p.pin_acceso || getDeterministicPin(p.numero_radicado || p.id),
+  };
+
+  return {
+    ...enriched,
+    respondida: isPeticionRespondida(enriched),
   };
 });
 

@@ -201,13 +201,27 @@ export async function fetchSupabaseDeadlines(): Promise<CalendarioEvent[]> {
 
   try {
     // 1. Peticiones activas con SLA / fecha límite de respuesta y de dependencias
-    const { data: peticiones, error: petError } = await supabase
-      .from('peticiones')
-      .select('id, numero_radicado, asunto, fecha_limite_entrega, fecha_limite_responsable, estado, solicitante_nombre, instrucciones_anexos');
+    const { data: peticiones, error: petError } = await (supabase
+      .from('peticiones' as any)
+      .select(
+        'id, numero_radicado, asunto, fecha_limite_entrega, fecha_limite_responsable, estado, solicitante_nombre, instrucciones_anexos, respuesta_mensaje, respuesta_fecha_envio, respuesta_pin_solicitante, peticion_anexos(id, subcarpeta, nombre_archivo)'
+      ) as any);
+
+    const { data: auditRespData } = await (supabase
+      .from('audit_logs' as any)
+      .select('entity_id, details')
+      .eq('action_type', 'RESPUESTA')
+      .limit(400) as any);
+    const auditRespLogs = auditRespData || [];
 
     if (petitionsHasActiveRows(peticiones)) {
       (peticiones || []).forEach((pet: any) => {
-        if (isPeticionRespondida(pet)) return;
+        const auditMatch = auditRespLogs.some(
+          (log: any) =>
+            String(log.entity_id || '') === String(pet.id) ||
+            (pet.numero_radicado && String(log.details || '').includes(String(pet.numero_radicado)))
+        );
+        if (isPeticionRespondida({ ...pet, tiene_respuesta_audit: auditMatch })) return;
 
         const entregaFecha = normalizeCalendarDate(pet.fecha_limite_entrega);
         const radicadoUrl = pet.numero_radicado
@@ -225,7 +239,7 @@ export async function fetchSupabaseDeadlines(): Promise<CalendarioEvent[]> {
             responsable: pet.solicitante_nombre || 'SGD Unitrópico',
             urgencia,
             diasRestantes,
-            descripcion: `Petición oficial con plazo legal de entrega hasta el ${entregaFecha}.`,
+            descripcion: `Petición oficial con plazo institucional de entrega hasta el ${entregaFecha}.`,
             link: radicadoUrl,
             hora: '17:00 (Cierre de Despacho)',
           });
@@ -344,6 +358,52 @@ function petitionsHasActiveRows(rows: any[] | null | undefined): boolean {
 /**
  * Obtiene la lista unificada de eventos (Google Calendar + Base de Datos Real)
  */
+/**
+ * Calcula los contadores del semáforo SLA sobre peticiones activas únicas,
+ * evitando doble conteo entre expiración general (pet-) y límite de oficinas (pet-dep-).
+ */
+export function computeActivePeticionSlaCounts(events: CalendarioEvent[]): {
+  critCount: number;
+  warnCount: number;
+  safeCount: number;
+} {
+  const petUrgencies = new Map<string, 'danger' | 'warning' | 'safe'>();
+
+  (events || []).forEach((ev) => {
+    if (!ev || ev.tipo !== 'peticion') return;
+    if (String(ev.id || '').startsWith('pet-dep-')) return;
+    const key = String(ev.id || '').startsWith('pet-')
+      ? String(ev.id).slice(4)
+      : String(ev.id || '');
+    if (!key) return;
+    if (!petUrgencies.has(key)) {
+      petUrgencies.set(key, ev.urgencia);
+    }
+  });
+
+  // Fallback si existe pet-dep-<id> sin su evento general pet-<id>
+  (events || []).forEach((ev) => {
+    if (!ev || ev.tipo !== 'peticion') return;
+    if (!String(ev.id || '').startsWith('pet-dep-')) return;
+    const key = String(ev.id).slice(8);
+    if (key && !petUrgencies.has(key)) {
+      petUrgencies.set(key, ev.urgencia);
+    }
+  });
+
+  let critCount = 0;
+  let warnCount = 0;
+  let safeCount = 0;
+
+  petUrgencies.forEach((urg) => {
+    if (urg === 'danger') critCount++;
+    else if (urg === 'warning') warnCount++;
+    else safeCount++;
+  });
+
+  return { critCount, warnCount, safeCount };
+}
+
 export async function getUnifiedCalendarEvents(
   timeMin?: string,
   timeMax?: string
@@ -366,16 +426,7 @@ export async function getUnifiedCalendarEvents(
   // Ordenar cronológicamente
   allEvents.sort((a, b) => a.fecha.localeCompare(b.fecha));
 
-  // Contadores de Semáforo
-  let critCount = 0;
-  let warnCount = 0;
-  let safeCount = 0;
-
-  allEvents.forEach((ev) => {
-    if (ev.urgencia === 'danger') critCount++;
-    else if (ev.urgencia === 'warning') warnCount++;
-    else safeCount++;
-  });
+  const { critCount, warnCount, safeCount } = computeActivePeticionSlaCounts(allEvents);
 
   return {
     events: allEvents,

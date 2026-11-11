@@ -58,6 +58,21 @@ export interface SessionPayload {
 export type DocumentFormat = 'pdf' | 'docx' | 'xlsx';
 export type DocumentPriority = 'Alta' | 'Media' | 'Baja';
 export type ResponseStatus = 'pendiente' | 'respondida';
+export type PeticionEstadoDB =
+  | 'En Trámite'
+  | 'Revisión'
+  | 'Respondida'
+  | 'Vencida'
+  | 'en_tramite'
+  | 'pendiente'
+  | 'al_dia'
+  | 'por_vencer'
+  | 'vencida'
+  | 'respondida'
+  | 'resuelta'
+  | 'finalizada'
+  | 'cerrada'
+  | 'completada';
 
 export interface DocumentResponse {
   radicado: string;

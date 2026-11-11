@@ -5,7 +5,7 @@
 import AppLayout from "@layouts/AppLayout.astro";
 import { supabase } from "@lib/supabase";
 import { SESSION_COOKIE_KEY } from "@lib/constants";
-import { fetchSupabaseDeadlines } from "@lib/calendar";
+import { fetchSupabaseDeadlines, computeActivePeticionSlaCounts } from "@lib/calendar";
 
 // Obtener usuario autenticado desde la cookie de sesión del middleware
 const sessionUserId =
@@ -32,6 +32,11 @@ const errorParam = Astro.url.searchParams.get("error");
 // Preload SSR de plazos reales de Supabase para garantizar visibilidad inmediata sin depender de RLS anónimo
 const ssrDeadlines = await fetchSupabaseDeadlines();
 const ssrDeadlinesJson = JSON.stringify(ssrDeadlines).replace(/</g, "\\u003c");
+const {
+  critCount: ssrCritCount,
+  warnCount: ssrWarnCount,
+  safeCount: ssrSafeCount,
+} = computeActivePeticionSlaCounts(ssrDeadlines);
 ---
 
 <AppLayout
@@ -350,20 +355,19 @@ const ssrDeadlinesJson = JSON.stringify(ssrDeadlines).replace(/</g, "\\u003c");
                     y2="17"></line></svg
                 >
               </div>
-              <span class="bento-tag danger">Término Inmediato</span>
-              <span class="bento-active-badge" style="display: none;"
-                >Filtro Activo &times;</span
-              >
+              <div class="bento-card-bottom">
+                <h4 class="bento-card-title">
+                  Críticos / Vencidos
+                  <span class="bento-active-badge" style="display: none;">Filtro Activo &times;</span>
+                </h4>
+                <p class="bento-card-desc">
+                  Atención inmediata (&le; 0 días)
+                </p>
+              </div>
             </div>
             <div class="bento-card-kpi-row">
-              <span class="bento-kpi tabular-nums" id="gcal-crit-count">0</span>
+              <span class="bento-kpi tabular-nums" id="gcal-crit-count">{ssrCritCount}</span>
               <span class="bento-kpi-label">radicados</span>
-            </div>
-            <div class="bento-card-bottom">
-              <h4 class="bento-card-title">Críticos / Vencidos</h4>
-              <p class="bento-card-desc">
-                Atención inmediata (≤ 0 días restantes)
-              </p>
             </div>
           </article>
 
@@ -386,20 +390,19 @@ const ssrDeadlinesJson = JSON.stringify(ssrDeadlines).replace(/</g, "\\u003c");
                     points="12 6 12 12 16 14"></polyline></svg
                 >
               </div>
-              <span class="bento-tag warning">Alerta SLA</span>
-              <span class="bento-active-badge" style="display: none;"
-                >Filtro Activo &times;</span
-              >
+              <div class="bento-card-bottom">
+                <h4 class="bento-card-title">
+                  Próximos a Vencer
+                  <span class="bento-active-badge" style="display: none;">Filtro Activo &times;</span>
+                </h4>
+                <p class="bento-card-desc">
+                  Alerta temprana (1 a 5 días)
+                </p>
+              </div>
             </div>
             <div class="bento-card-kpi-row">
-              <span class="bento-kpi tabular-nums" id="gcal-warn-count">0</span>
+              <span class="bento-kpi tabular-nums" id="gcal-warn-count">{ssrWarnCount}</span>
               <span class="bento-kpi-label">radicados</span>
-            </div>
-            <div class="bento-card-bottom">
-              <h4 class="bento-card-title">Próximos a Vencer</h4>
-              <p class="bento-card-desc">
-                Ventana de alerta (1 a 5 días restantes)
-              </p>
             </div>
           </article>
 
@@ -422,20 +425,19 @@ const ssrDeadlinesJson = JSON.stringify(ssrDeadlines).replace(/</g, "\\u003c");
                     points="22 4 12 14.01 9 11.01"></polyline></svg
                 >
               </div>
-              <span class="bento-tag safe">SLA Cumplido</span>
-              <span class="bento-active-badge" style="display: none;"
-                >Filtro Activo &times;</span
-              >
+              <div class="bento-card-bottom">
+                <h4 class="bento-card-title">
+                  En Término Seguro
+                  <span class="bento-active-badge" style="display: none;">Filtro Activo &times;</span>
+                </h4>
+                <p class="bento-card-desc">
+                  Margen vigente (&gt; 5 días)
+                </p>
+              </div>
             </div>
             <div class="bento-card-kpi-row">
-              <span class="bento-kpi tabular-nums" id="gcal-safe-count">0</span>
+              <span class="bento-kpi tabular-nums" id="gcal-safe-count">{ssrSafeCount}</span>
               <span class="bento-kpi-label">radicados</span>
-            </div>
-            <div class="bento-card-bottom">
-              <h4 class="bento-card-title">En Término Seguro</h4>
-              <p class="bento-card-desc">
-                Dentro del plazo SLA (&gt; 5 días restantes)
-              </p>
             </div>
           </article>
         </section>
@@ -749,7 +751,7 @@ const ssrDeadlinesJson = JSON.stringify(ssrDeadlines).replace(/</g, "\\u003c");
           <div class="form-group">
             <label class="form-label-pro">Tipo de Compromiso *</label>
             <select id="select-cal-tipo" class="form-control-pro">
-              <option value="peticion">Petición / PQRS (Término Legal)</option>
+              <option value="peticion">Petición / PQRS (Plazo Institucional)</option>
               <option value="colegiado">Sesión Cuerpos Colegiados</option>
               <option value="reporte">Reporte a Entes de Control</option>
               <option value="academica">Actividad Académica</option>
@@ -1153,119 +1155,126 @@ const ssrDeadlinesJson = JSON.stringify(ssrDeadlines).replace(/</g, "\\u003c");
      ========================================================================== */
   .bento-header-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
+    grid-template-columns: repeat(3, minmax(220px, 310px));
+    justify-content: start;
+    gap: 20px;
+    width: 100%;
+  }
+
+  @media (max-width: 960px) {
+    .bento-header-grid {
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
   }
 
   .bento-sla-card {
     position: relative;
-    border-radius: 18px;
-    padding: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 12px 16px;
     cursor: pointer;
-    backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.04);
+    border: 1.5px solid #DCE4E3;
+    border-left-width: 4px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
     transition:
-      transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
-      box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1),
-      border-color 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+      transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+      border-color 0.22s cubic-bezier(0.16, 1, 0.3, 1);
     overflow: hidden;
   }
 
   .bento-sla-card:hover {
-    transform: translateY(-3px) scale(1.01);
+    transform: translateY(-2px);
   }
 
-  /* Card Críticos (Rojo Rubí) */
+  /* Card Críticos */
   .bento-sla-card.danger {
-    background: linear-gradient(
-      135deg,
-      rgba(254, 242, 242, 0.75) 0%,
-      rgba(255, 255, 255, 0.85) 100%
-    );
-    border-color: rgba(254, 202, 202, 0.9);
+    background: #ffffff;
+    border-color: #DCE4E3;
+    border-left-color: #DC2626;
   }
   .bento-sla-card.danger:hover {
-    box-shadow: 0 12px 28px -4px rgba(220, 38, 38, 0.16);
-    border-color: #ef4444;
+    box-shadow: 0 8px 18px rgba(220, 38, 38, 0.1);
+    border-color: #FCA5A5;
+    border-left-color: #DC2626;
   }
   .bento-sla-card.danger.active-filter {
-    border-color: #dc2626;
+    border-color: #DC2626;
     box-shadow:
-      0 0 0 2px #dc2626,
-      0 14px 32px -4px rgba(220, 38, 38, 0.25);
-    transform: translateY(-3px) scale(1.015);
+      0 0 0 2px rgba(220, 38, 38, 0.22),
+      0 8px 18px rgba(220, 38, 38, 0.14);
   }
 
-  /* Card Próximos (Ámbar / Dorado) */
+  /* Card Próximos (Dorado Institucional) */
   .bento-sla-card.warning {
-    background: linear-gradient(
-      135deg,
-      rgba(255, 251, 235, 0.75) 0%,
-      rgba(255, 255, 255, 0.85) 100%
-    );
-    border-color: rgba(253, 230, 138, 0.9);
+    background: #ffffff;
+    border-color: #DCE4E3;
+    border-left-color: #B5A160;
   }
   .bento-sla-card.warning:hover {
-    box-shadow: 0 12px 28px -4px rgba(217, 119, 6, 0.16);
-    border-color: #f59e0b;
+    box-shadow: 0 8px 18px rgba(181, 161, 96, 0.14);
+    border-color: #DBD2B0;
+    border-left-color: #B5A160;
   }
   .bento-sla-card.warning.active-filter {
-    border-color: #d97706;
+    border-color: #786832;
+    border-left-color: #786832;
     box-shadow:
-      0 0 0 2px #d97706,
-      0 14px 32px -4px rgba(217, 119, 6, 0.25);
-    transform: translateY(-3px) scale(1.015);
+      0 0 0 2px rgba(120, 104, 50, 0.22),
+      0 8px 18px rgba(181, 161, 96, 0.16);
   }
 
-  /* Card En Tiempo (Verde Esmeralda) */
+  /* Card En Tiempo (Verde Institucional) */
   .bento-sla-card.safe {
-    background: linear-gradient(
-      135deg,
-      rgba(236, 253, 245, 0.75) 0%,
-      rgba(255, 255, 255, 0.85) 100%
-    );
-    border-color: rgba(167, 243, 208, 0.9);
+    background: #ffffff;
+    border-color: #DCE4E3;
+    border-left-color: #00594E;
   }
   .bento-sla-card.safe:hover {
-    box-shadow: 0 12px 28px -4px rgba(5, 150, 105, 0.16);
-    border-color: #10b981;
+    box-shadow: 0 8px 18px rgba(0, 89, 78, 0.12);
+    border-color: #B2CFCB;
+    border-left-color: #00594E;
   }
   .bento-sla-card.safe.active-filter {
-    border-color: #059669;
+    border-color: #00594E;
     box-shadow:
-      0 0 0 2px #059669,
-      0 14px 32px -4px rgba(5, 150, 105, 0.25);
-    transform: translateY(-3px) scale(1.015);
+      0 0 0 2px rgba(0, 89, 78, 0.22),
+      0 8px 18px rgba(0, 89, 78, 0.14);
   }
 
   .bento-card-top {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 12px;
+    gap: 11px;
+    min-width: 0;
+    margin: 0;
   }
   .bento-icon-badge {
     position: relative;
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
   }
   .bento-icon-badge.danger {
-    background: rgba(220, 38, 38, 0.12);
-    color: #dc2626;
+    background: #FEF2F2;
+    color: #DC2626;
   }
   .bento-icon-badge.warning {
-    background: rgba(217, 119, 6, 0.12);
-    color: #d97706;
+    background: #F7F5EE;
+    color: #786832;
   }
   .bento-icon-badge.safe {
-    background: rgba(5, 150, 105, 0.12);
-    color: #059669;
+    background: #F2F7F6;
+    color: #00594E;
   }
 
   .live-radar-pulse {
@@ -1294,77 +1303,69 @@ const ssrDeadlinesJson = JSON.stringify(ssrDeadlines).replace(/</g, "\\u003c");
     }
   }
 
-  .bento-tag {
-    font-size: 0.68rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    padding: 3px 8px;
-    border-radius: 6px;
-  }
-  .bento-tag.danger {
-    background: #fee2e2;
-    color: #991b1b;
-  }
-  .bento-tag.warning {
-    background: #fef3c7;
-    color: #92400e;
-  }
-  .bento-tag.safe {
-    background: #d1fae5;
-    color: #065f46;
-  }
-
   .bento-active-badge {
-    font-size: 0.68rem;
+    font-size: 0.62rem;
     font-weight: 800;
-    background: #0f172a;
+    background: #111827;
     color: #ffffff;
-    padding: 2px 7px;
+    padding: 1px 6px;
     border-radius: 999px;
     align-items: center;
-    gap: 4px;
+    gap: 3px;
+    margin-left: 4px;
+    vertical-align: middle;
+  }
+
+  .bento-card-bottom {
+    min-width: 0;
   }
 
   .bento-card-kpi-row {
     display: flex;
-    align-items: baseline;
-    gap: 8px;
-    margin-bottom: 6px;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    flex-shrink: 0;
+    margin: 0;
+    gap: 1px;
   }
   .bento-kpi {
-    font-size: 2.2rem;
-    font-weight: 850;
+    font-size: 1.6rem;
+    font-weight: 800;
     line-height: 1;
-    letter-spacing: -0.04em;
+    letter-spacing: -0.03em;
     font-variant-numeric: tabular-nums;
   }
   .bento-sla-card.danger .bento-kpi {
-    color: #dc2626;
+    color: #DC2626;
   }
   .bento-sla-card.warning .bento-kpi {
-    color: #d97706;
+    color: #786832;
   }
   .bento-sla-card.safe .bento-kpi {
-    color: #059669;
+    color: #00594E;
   }
 
   .bento-kpi-label {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #64748b;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748B;
   }
 
   .bento-card-title {
-    font-size: 0.96rem;
+    font-size: 0.85rem;
     font-weight: 800;
-    color: #0f172a;
-    margin: 0 0 3px 0;
+    color: #111827;
+    margin: 0 0 2px 0;
+    line-height: 1.2;
   }
   .bento-card-desc {
-    font-size: 0.78rem;
-    color: #64748b;
+    font-size: 0.72rem;
+    color: #64748B;
     margin: 0;
+    line-height: 1.25;
   }
 
   /* ==========================================================================
@@ -2382,7 +2383,6 @@ const ssrDeadlinesJson = JSON.stringify(ssrDeadlines).replace(/</g, "\\u003c");
 
   if (btnForceSync) {
     btnForceSync.addEventListener("click", () => {
-      if (syncIcon) syncIcon.style.animation = "spin 0.8s linear infinite";
       if (iframe) {
         const currentSrc = iframe.src;
         iframe.src = "";
@@ -2390,16 +2390,6 @@ const ssrDeadlinesJson = JSON.stringify(ssrDeadlines).replace(/</g, "\\u003c");
           iframe.src = currentSrc;
         }, 100);
       }
-
-      setTimeout(() => {
-        if (syncIcon) syncIcon.style.animation = "none";
-        if ((window as any).showToast) {
-          (window as any).showToast(
-            "Calendario y Semáforo SLA sincronizados en tiempo real.",
-            "success",
-          );
-        }
-      }, 800);
     });
   }
 
