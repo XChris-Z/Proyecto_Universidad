@@ -83,7 +83,7 @@ const navItems = [
     </button>
   </div>
 
-  <nav class="nav-menu pro-scroll-container" id="sidebar-nav-menu">
+  <nav class="nav-menu sidebar-nav" id="sidebar-nav-menu">
     {navItems.map((item) => {
       if (item.group) {
         return <div class="nav-label">{item.group}</div>;
@@ -92,7 +92,7 @@ const navItems = [
       return (
         <a
           href={item.href}
-          class={`nav-item ${isActive ? 'active' : ''}`}
+          class={`nav-item sidebar-link ${isActive ? 'active' : ''}`}
           id={`nav-${item.id}`}
           data-tooltip={item.label}
           aria-label={item.label}
@@ -104,8 +104,8 @@ const navItems = [
     })}
   </nav>
 
-  <!-- Perfil de usuario institucional fijado al ras inferior del Sidebar -->
-  <div class="user-profile-section sidebar-footer">
+  <!-- Tarjeta de perfil institucional flotante redondeada al ras inferior del Sidebar -->
+  <div class="user-profile-section sidebar-user-card">
     <a href="/perfil" class="user-profile-header" data-tooltip="Mi Perfil Institucional" aria-label="Ver Mi Perfil institucional">
       <div class="user-avatar" id="avatar-initials">
         <span id="sidebar-avatar-text">CL</span>

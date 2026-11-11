@@ -30,6 +30,8 @@ export const POST: APIRoute = async ({ request, url }) => {
         instrucciones_anexos,
         prioridad,
         categoria,
+        fecha_radicacion,
+        created_at,
         fecha_limite_entrega,
         fecha_limite_responsable,
         peticion_anexos (
@@ -141,7 +143,7 @@ export const POST: APIRoute = async ({ request, url }) => {
       const pinMatch = resp.observaciones_entrega?.match(/PIN:\s*([0-9A-Z]{6})/i);
       const storedPin = pinMatch ? (pinMatch[1] || '').trim() : null;
       const effectivePin = storedPin || peticion.pin_acceso || getDeterministicPin(peticion.numero_radicado || peticion.id);
-      const portalUrl = `${baseUrl}/portal-responsable?codigo=${encodeURIComponent(resp.codigo_acceso)}&email=${encodeURIComponent(email)}&pin=${encodeURIComponent(effectivePin)}`;
+      const portalUrl = `${baseUrl}/portal-responsable?radicado=${encodeURIComponent(peticion.numero_radicado)}&codigo=${encodeURIComponent(resp.codigo_acceso)}&email=${encodeURIComponent(email)}&pin=${encodeURIComponent(effectivePin)}`;
 
       const emailResult = await sendPeticionAssignmentEmail({
         toEmail: email,
@@ -150,6 +152,7 @@ export const POST: APIRoute = async ({ request, url }) => {
         asunto: peticion.asunto,
         categoria: peticion.categoria,
         prioridad: peticion.prioridad,
+        fechaRadicacion: peticion.fecha_radicacion || peticion.created_at || null,
         subcarpetas: assignedSubs.length > 0 ? assignedSubs : undefined,
         instruccionesAnexos: peticion.instrucciones_anexos || peticion.descripcion,
         fechaLimiteEntrega: peticion.fecha_limite_entrega,

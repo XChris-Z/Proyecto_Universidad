@@ -235,7 +235,7 @@ export const POST: APIRoute = async ({ request, url }) => {
 
       if (ofi && targetEmail) {
         const safeCodigo = resp.codigo_acceso || 'UPQ';
-        const portalUrl = `${baseUrl}/portal-responsable?codigo=${encodeURIComponent(safeCodigo)}&email=${encodeURIComponent(targetEmail)}&pin=${encodeURIComponent(pinAcceso)}`;
+        const portalUrl = `${baseUrl}/portal-responsable?radicado=${encodeURIComponent(peticion.numero_radicado)}&codigo=${encodeURIComponent(safeCodigo)}&email=${encodeURIComponent(targetEmail)}&pin=${encodeURIComponent(pinAcceso)}`;
 
         const emailPromise = sendPeticionAssignmentEmail({
           toEmail: targetEmail,
@@ -244,6 +244,7 @@ export const POST: APIRoute = async ({ request, url }) => {
           asunto: peticion.asunto,
           categoria: peticion.categoria,
           prioridad: peticion.prioridad,
+          fechaRadicacion: peticion.fecha_radicacion || peticion.created_at || null,
           subcarpetas: [
             {
               nombre: cleanNombre,

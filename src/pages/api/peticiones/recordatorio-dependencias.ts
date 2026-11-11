@@ -80,6 +80,8 @@ async function runReminderSweep(originUrl: string): Promise<RecordatorioRunResul
       descripcion,
       instrucciones_anexos,
       estado,
+      fecha_radicacion,
+      created_at,
       fecha_limite_entrega,
       fecha_limite_responsable,
       peticion_anexos (
@@ -312,6 +314,7 @@ async function runReminderSweep(originUrl: string): Promise<RecordatorioRunResul
           tituloPeticion: pet.asunto || 'Solicitud Institucional',
           nombreSubcarpeta,
           instruccionSubcarpeta,
+          fechaRadicacion: pet.fecha_radicacion || pet.created_at || null,
           fechaLimiteDependencia: deadlineYmd,
           diasRestantes,
           codigoAccesoDependencia: codigoAcceso,

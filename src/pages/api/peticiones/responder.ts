@@ -299,6 +299,7 @@ export const POST: APIRoute = async ({ request, url }) => {
       mensajeRespuesta: cleanMensaje,
       funcionarioNombre: funcionarioResp,
       pinSolicitante,
+      fechaRadicacion: peticion.fecha_radicacion || peticion.created_at || null,
       fechaExpiracion: expiraAt,
       consultaUrl,
       driveUrl: cleanDrive || null,

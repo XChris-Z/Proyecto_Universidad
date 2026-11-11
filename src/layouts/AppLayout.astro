@@ -25,7 +25,7 @@ Astro.response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate
       } catch (e) {}
     })();
   </script>
-  <div class="app-container">
+  <div class="app-container" style="display: flex; width: 100%; min-height: 100vh;">
     <!-- Barra lateral -->
     <Sidebar activeNav={activeNav} />
 
@@ -33,7 +33,7 @@ Astro.response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate
     <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
 
     <!-- Contenido principal -->
-    <main class="main-wrapper">
+    <main class="main-wrapper" style="flex: 1 1 auto; min-width: 0;">
       <Topbar title={title} />
 
       <div class="content-body">

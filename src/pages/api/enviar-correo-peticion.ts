@@ -22,9 +22,10 @@ export const POST: APIRoute = async ({ request, url }) => {
       .select(`
         id,
         codigo_acceso,
+        observaciones_entrega,
         peticion_id,
         oficina:oficina_id (id, nombre, email_institucional),
-        peticion:peticion_id (id, numero_radicado, asunto, categoria, prioridad, instrucciones_anexos, descripcion, fecha_limite_entrega, fecha_limite_responsable)
+        peticion:peticion_id (id, numero_radicado, asunto, categoria, prioridad, instrucciones_anexos, descripcion, fecha_radicacion, fecha_limite_entrega, fecha_limite_responsable, pin_acceso, created_at)
       `);
 
     if (responsable_id) {
@@ -51,7 +52,13 @@ export const POST: APIRoute = async ({ request, url }) => {
 
       if (!ofi || !ofi.email_institucional) continue;
 
-      const portalUrl = `${baseUrl}/portal-responsable?codigo=${encodeURIComponent(item.codigo_acceso)}&email=${encodeURIComponent(ofi.email_institucional)}`;
+      const pinMatch = String(item.observaciones_entrega || '').match(/PIN:\s*([0-9A-Z]{6})/i);
+      const effectivePin = (pinMatch && pinMatch[1] ? pinMatch[1].trim() : null) || pet.pin_acceso || '';
+      const portalUrl =
+        `${baseUrl}/portal-responsable?radicado=${encodeURIComponent(pet.numero_radicado)}` +
+        `&codigo=${encodeURIComponent(item.codigo_acceso)}` +
+        `&email=${encodeURIComponent(ofi.email_institucional)}` +
+        (effectivePin ? `&pin=${encodeURIComponent(effectivePin)}` : '');
 
       const emailRes = await sendPeticionAssignmentEmail({
         toEmail: ofi.email_institucional,
@@ -61,9 +68,11 @@ export const POST: APIRoute = async ({ request, url }) => {
         categoria: pet.categoria,
         prioridad: pet.prioridad,
         instruccionesAnexos: pet.instrucciones_anexos || pet.descripcion,
+        fechaRadicacion: pet.fecha_radicacion || pet.created_at || null,
         fechaLimiteEntrega: pet.fecha_limite_entrega,
         fechaLimiteResponsable: pet.fecha_limite_responsable,
         codigoAcceso: item.codigo_acceso,
+        pinAcceso: effectivePin || null,
         portalUrl,
       });
 

@@ -3,7 +3,7 @@ export const prerender = false;
 
 import type { APIRoute } from 'astro';
 import { supabase } from '@lib/supabase';
-import { sendPeticionAssignmentEmail } from '@lib/email';
+import { sendPeticionAssignmentEmail, sendRadicacionSolicitanteEmail } from '@lib/email';
 import { logSystemActivity } from '@lib/audit';
 import { generatePin6 } from '@lib/security';
 import { MAX_FILE_SIZE_BYTES } from '@lib/constants';
@@ -538,7 +538,7 @@ export const POST: APIRoute = async ({ request, url }) => {
             descripcion: s.descripcion || 'Entrega de anexos oficiales para esta subcarpeta.',
           }));
 
-        const portalUrl = `${baseUrl}/portal-responsable?codigo=${encodeURIComponent(accessCode)}&email=${encodeURIComponent(targetEmail)}&pin=${encodeURIComponent(finalPinAcceso)}`;
+        const portalUrl = `${baseUrl}/portal-responsable?radicado=${encodeURIComponent(peticionData.numero_radicado)}&codigo=${encodeURIComponent(accessCode)}&email=${encodeURIComponent(targetEmail)}&pin=${encodeURIComponent(finalPinAcceso)}`;
 
         const emailPromise = sendPeticionAssignmentEmail({
           toEmail: targetEmail,
@@ -547,6 +547,7 @@ export const POST: APIRoute = async ({ request, url }) => {
           asunto: peticionData.asunto,
           categoria: peticionData.categoria,
           prioridad: peticionData.prioridad,
+          fechaRadicacion: peticionData.fecha_radicacion || peticionData.created_at || null,
           subcarpetas: assignedSubcarpetas,
           instruccionesAnexos: peticionData.instrucciones_anexos || peticionData.descripcion,
           fechaLimiteEntrega: peticionData.fecha_limite_entrega,
@@ -562,6 +563,30 @@ export const POST: APIRoute = async ({ request, url }) => {
 
         emailNotifications.push(emailPromise);
       }
+    }
+
+    // Enviar acuse de radicación oficial al correo del solicitante si es válido
+    const cleanSolicitanteEmail = String(solicitante_email || '').trim();
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanSolicitanteEmail)) {
+      const consultaUrl = `${baseUrl}/consulta-respuesta?radicado=${encodeURIComponent(peticionData.numero_radicado)}&pin=${encodeURIComponent(finalPinAcceso)}&correo=${encodeURIComponent(cleanSolicitanteEmail)}`;
+      const solicitanteEmailPromise = sendRadicacionSolicitanteEmail({
+        toEmail: cleanSolicitanteEmail,
+        solicitanteNombre: solicitante_nombre,
+        numeroRadicado: peticionData.numero_radicado,
+        asunto: peticionData.asunto,
+        categoria: peticionData.categoria,
+        prioridad: peticionData.prioridad,
+        fechaRadicacion: peticionData.fecha_radicacion || peticionData.created_at || null,
+        fechaLimiteEntrega: peticionData.fecha_limite_entrega,
+        pinAcceso: finalPinAcceso,
+        nombreDocumento: savedPrimaryFile?.nombre_archivo || fileName || null,
+        totalDependencias: oficinasData.length,
+        consultaUrl,
+      }).catch((err: any) => {
+        console.warn(`[EMAIL ERROR NO FATAL] Fallo correo de radicación al solicitante ${cleanSolicitanteEmail}:`, err.message);
+        return { success: false, error: err.message };
+      });
+      emailNotifications.push(solicitanteEmailPromise);
     }
 
     await Promise.allSettled(emailNotifications);
