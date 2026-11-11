@@ -2,7 +2,7 @@
 // Servicio de integración en tiempo real con Google Calendar API y Supabase
 
 import { supabase } from '@lib/supabase';
-import { isPeticionRespondida, getSlaBucket } from '@lib/subcarpetas';
+import { isPeticionRespondida, isAuditLogOfficialResponse, getSlaBucket } from '@lib/subcarpetas';
 import type { CalendarioEvent, CalendarioEventType, EventUrgency } from '@lib/types';
 
 /**
@@ -209,17 +209,15 @@ export async function fetchSupabaseDeadlines(): Promise<CalendarioEvent[]> {
 
     const { data: auditRespData } = await (supabase
       .from('audit_logs' as any)
-      .select('entity_id, details')
+      .select('action, entity_id, details')
       .eq('action_type', 'RESPUESTA')
       .limit(400) as any);
     const auditRespLogs = auditRespData || [];
 
     if (petitionsHasActiveRows(peticiones)) {
       (peticiones || []).forEach((pet: any) => {
-        const auditMatch = auditRespLogs.some(
-          (log: any) =>
-            String(log.entity_id || '') === String(pet.id) ||
-            (pet.numero_radicado && String(log.details || '').includes(String(pet.numero_radicado)))
+        const auditMatch = auditRespLogs.some((log: any) =>
+          isAuditLogOfficialResponse(log, pet)
         );
         if (isPeticionRespondida({ ...pet, tiene_respuesta_audit: auditMatch })) return;
 

@@ -175,8 +175,8 @@ h1, h2, h3, h4, .brand-font {
    Barra lateral (Sidebar)
    ========================================================================== */
 .sidebar {
-  width: var(--sidebar-width, 272px);
-  flex: 0 0 var(--sidebar-width, 272px);
+  width: var(--sidebar-width, 286px);
+  flex: 0 0 var(--sidebar-width, 286px);
   height: 100vh;
   position: sticky;
   top: 0;
@@ -315,21 +315,21 @@ body.sidebar-collapsed .sidebar-divider {
 .sidebar-link {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px !important;
   width: 100%;
   box-sizing: border-box;
-  padding: 8.5px 12px;
+  padding: 8px 10px !important;
   margin-bottom: 0;
   border-radius: 10px;
   color: #334155;
   text-decoration: none;
-  font-size: 0.845rem;
+  font-size: 0.835rem !important;
   font-weight: 600;
-  letter-spacing: -0.015em;
+  letter-spacing: -0.018em !important;
   line-height: 1.25;
-  white-space: nowrap;
+  white-space: nowrap !important;
   overflow: hidden;
-  text-overflow: ellipsis;
+  text-overflow: clip !important;
   cursor: pointer;
   transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
   border: 1px solid transparent;
@@ -348,7 +348,7 @@ body.sidebar-collapsed .sidebar-divider {
 .sidebar-link span {
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
+  text-overflow: clip;
   flex: 1 1 auto;
   min-width: 0;
 }
@@ -501,9 +501,9 @@ body.sidebar-collapsed .sidebar-divider {
   }
   .nav-item,
   .sidebar-link {
-    padding: 5px 10px;
-    font-size: 0.84rem;
-    gap: 9px;
+    padding: 5.5px 10px !important;
+    font-size: 0.83rem !important;
+    gap: 9px !important;
   }
   .user-profile-section,
   .sidebar-user-card,
@@ -6675,8 +6675,8 @@ p, h1, h2, h3, h4, h5, h6, span, label, td, th {
     top: 0 !important;
     left: auto !important;
     height: 100vh !important;
-    width: var(--sidebar-width, 272px);
-    flex: 0 0 var(--sidebar-width, 272px);
+    width: var(--sidebar-width, 286px);
+    flex: 0 0 var(--sidebar-width, 286px);
     overflow: hidden;
     padding-bottom: 0 !important;
     transform: none !important;
@@ -6754,12 +6754,13 @@ p, h1, h2, h3, h4, h5, h6, span, label, td, th {
     display: none;
   }
 
-  body.sidebar-collapsed .nav-item {
+  body.sidebar-collapsed .nav-item,
+  body.sidebar-collapsed .sidebar-link {
     width: 42px;
     height: 42px;
-    padding: 0;
-    justify-content: center;
-    gap: 0;
+    padding: 0 !important;
+    justify-content: center !important;
+    gap: 0 !important;
     border-radius: 10px;
     flex-shrink: 0;
   }

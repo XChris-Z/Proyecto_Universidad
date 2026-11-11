@@ -4,7 +4,7 @@
 import AppLayout from "@layouts/AppLayout.astro";
 import { supabase } from "@lib/supabase";
 import { calculateDeadlineProgress } from "@lib/utils";
-import { isPeticionRespondida } from "@lib/subcarpetas";
+import { isPeticionRespondida, isAuditLogOfficialResponse } from "@lib/subcarpetas";
 
 // 1. Consultar peticiones reales en base de datos PostgreSQL
 const { data: dbPeticiones } = await (supabase
@@ -37,7 +37,7 @@ const { data: dbPeticiones } = await (supabase
 
 const { data: dbAuditRespuestas } = await (supabase
   .from("audit_logs" as any)
-  .select("entity_id, details")
+  .select("action, entity_id, details")
   .eq("action_type", "RESPUESTA")
   .limit(400) as any);
 
@@ -56,11 +56,7 @@ const { data: dbConvenios } = await (supabase
   .order("created_at", { ascending: false }) as any);
 
 const peticiones = (dbPeticiones || []).map((p: any) => {
-  const auditMatch = auditRespuestas.some(
-    (log: any) =>
-      String(log.entity_id || "") === String(p.id) ||
-      (p.numero_radicado && String(log.details || "").includes(String(p.numero_radicado))),
-  );
+  const auditMatch = auditRespuestas.some((log: any) => isAuditLogOfficialResponse(log, p));
   const enriched = {
     ...p,
     tiene_respuesta_audit: auditMatch,

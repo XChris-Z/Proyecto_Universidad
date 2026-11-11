@@ -6,7 +6,7 @@ import AppLayout from '@layouts/AppLayout.astro';
 import { supabase } from '@lib/supabase';
 import { calculateDeadlineProgress } from '@lib/utils';
 import { getDeterministicPin } from '@lib/security';
-import { separarRespuestaMeta, esSubcarpetaValida, filtrarSubcarpetasValidas, isPeticionRespondida, getSlaBucket } from '@lib/subcarpetas';
+import { separarRespuestaMeta, esSubcarpetaValida, filtrarSubcarpetasValidas, isPeticionRespondida, isAuditLogOfficialResponse, getSlaBucket } from '@lib/subcarpetas';
 
 // Consultar peticiones reales en base de datos PostgreSQL
 const { data: dbPeticiones } = await (supabase
@@ -26,6 +26,9 @@ const { data: dbPeticiones } = await (supabase
     storage_folder_path,
     estado,
     prioridad,
+    respuesta_mensaje,
+    respuesta_fecha_envio,
+    respuesta_pin_solicitante,
     created_at,
     peticion_responsables (
       id,
@@ -76,7 +79,7 @@ let auditRespLogs: any[] = [];
 try {
   const { data: auditData } = await (supabase
     .from('audit_logs' as any)
-    .select('entity_id, details')
+    .select('action, entity_id, details')
     .eq('action_type', 'RESPUESTA')
     .limit(400) as any);
   if (auditData) auditRespLogs = auditData;
@@ -87,11 +90,7 @@ const peticionesList = ((dbPeticiones as any[]) || []).map((p: any) => {
   const pinMatch = respObs?.match(/PIN:\s*([0-9A-Z]{6})/i);
   const storedPin = pinMatch ? pinMatch[1] : null;
 
-  const auditMatch = auditRespLogs.some(
-    (log: any) =>
-      String(log.entity_id || '') === String(p.id) ||
-      (p.numero_radicado && String(log.details || '').includes(String(p.numero_radicado)))
-  );
+  const auditMatch = auditRespLogs.some((log: any) => isAuditLogOfficialResponse(log, p));
 
   const enrichedResponsables = (p.peticion_responsables || []).map((r: any) => ({
     ...r,
@@ -113,6 +112,7 @@ const peticionesList = ((dbPeticiones as any[]) || []).map((p: any) => {
 
 let pendientesCount = 0;
 let respondidasCount = 0;
+let safeCount = 0;
 let warnCount = 0;
 let criticalCount = 0;
 
@@ -126,7 +126,15 @@ peticionesList.forEach((p: any) => {
   const bucket = getSlaBucket(prog.daysRemaining);
   if (bucket === 'warn') warnCount++;
   else if (bucket === 'critical') criticalCount++;
+  else safeCount++;
 });
+
+const totalCount = peticionesList.length;
+const eficaciaPct = totalCount > 0 ? Math.round((respondidasCount / totalCount) * 100) : 0;
+const pctResp = totalCount > 0 ? (respondidasCount / totalCount) * 100 : 0;
+const pctSafe = totalCount > 0 ? (safeCount / totalCount) * 100 : 0;
+const pctWarn = totalCount > 0 ? (warnCount / totalCount) * 100 : 0;
+const pctCrit = totalCount > 0 ? (criticalCount / totalCount) * 100 : 0;
 
 function getPetSlaTone(bucket: string, responded: boolean) {
   if (responded) {
@@ -167,8 +175,51 @@ function getPetSlaTone(bucket: string, responded: boolean) {
 ---
 
 <AppLayout title="Peticiones Radicadas y Expedientes" activeNav="peticiones">
-  <div class="section-toolbar peticiones-toolbar-bento" style="margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+  <!-- Cabecera Bento Ejecutiva UI/UX Pro Max con Chart Element -->
+  <section class="peticiones-bento-header" aria-label="Resumen Ejecutivo de Peticiones">
+    <div style="display: flex; align-items: flex-start; gap: 14px; flex: 1 1 480px; min-width: 0;">
+      <div style="width: 42px; height: 42px; border-radius: 11px; background: #F2F7F6; border: 1px solid #B2CFCB; color: #00594E; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      </div>
+      <div style="flex: 1; min-width: 0;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <h2 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #111827; letter-spacing: -0.02em;">Control de Peticiones Radicadas</h2>
+          <span id="pcount-bento-total" style="background: #F7F5EE; color: #786832; border: 1px solid #DBD2B0; font-size: 0.72rem; font-weight: 700; padding: 2px 10px; border-radius: 999px; white-space: nowrap;">{totalCount} radicado(s)</span>
+        </div>
+        <p style="margin: 3px 0 9px; font-size: 0.8rem; color: #475569; line-height: 1.35;">Seguimiento centralizado de plazos, entregas por dependencia y despacho oficial</p>
+        <div style="height: 8px; width: 100%; max-width: 460px; background: #F1F5F9; border-radius: 999px; overflow: hidden; display: flex; gap: 2px;" role="img" aria-label="Distribución de estado de peticiones">
+          <div id="chart-seg-resp" style={`width: ${pctResp}%; background: #00594E; transition: width 0.35s ease;`} title={`Respondidas: ${respondidasCount}`}></div>
+          <div id="chart-seg-safe" style={`width: ${pctSafe}%; background: #B5A160; transition: width 0.35s ease;`} title={`En Trámite al día: ${safeCount}`}></div>
+          <div id="chart-seg-warn" style={`width: ${pctWarn}%; background: #D97706; transition: width 0.35s ease;`} title={`Próximas a Vencer: ${warnCount}`}></div>
+          <div id="chart-seg-crit" style={`width: ${pctCrit}%; background: #DC2626; transition: width 0.35s ease;`} title={`Vencidas: ${criticalCount}`}></div>
+        </div>
+        <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 7px; font-size: 0.73rem; color: #475569; font-weight: 600;">
+          <span style="display: inline-flex; align-items: center; gap: 5px;"><span style="width: 7px; height: 7px; border-radius: 50%; background: #00594E;"></span><strong id="bento-num-resp" style="color: #00594E;">{respondidasCount}</strong> respondidas</span>
+          <span style="color: #CBD5E1;">·</span>
+          <span style="display: inline-flex; align-items: center; gap: 5px;"><span style="width: 7px; height: 7px; border-radius: 50%; background: #B5A160;"></span><strong id="bento-num-pend" style="color: #786832;">{pendientesCount}</strong> en trámite</span>
+          <span style="color: #CBD5E1;">·</span>
+          <span style="display: inline-flex; align-items: center; gap: 5px;"><span style="width: 7px; height: 7px; border-radius: 50%; background: #D97706;"></span><strong id="bento-num-warn" style="color: #B45309;">{warnCount}</strong> por vencer</span>
+          <span style="color: #CBD5E1;">·</span>
+          <span style="display: inline-flex; align-items: center; gap: 5px;"><span style="width: 7px; height: 7px; border-radius: 50%; background: #DC2626;"></span><strong id="bento-num-crit" style="color: #DC2626;">{criticalCount}</strong> vencidas</span>
+        </div>
+      </div>
+    </div>
+
     <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+      <div style="background: #F2F7F6; border: 1px solid #B2CFCB; border-radius: 12px; padding: 9px 14px; display: flex; flex-direction: column; align-items: flex-end; min-width: 152px;">
+        <span style="font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #00594E;">Tasa de Atención / Eficacia</span>
+        <strong id="bento-eficacia-pct" style="font-size: 1.2rem; font-weight: 800; color: #00594E; line-height: 1.15;">{eficaciaPct}%</strong>
+        <span id="bento-eficacia-sub" style="font-size: 0.69rem; color: #475569; font-weight: 600;">{respondidasCount} de {totalCount} despachadas</span>
+      </div>
+      <a href="/peticiones/subir" class="btn-bento-cta" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px; background: #00594E; border: 1px solid #00594E; color: #FFFFFF; font-weight: 700; font-size: 0.82rem; padding: 10px 16px; border-radius: 10px; box-shadow: 0 4px 12px -2px rgba(0, 89, 78, 0.25); transition: all 0.18s ease; white-space: nowrap;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
+        <span>Subir Petición</span>
+      </a>
+    </div>
+  </section>
+
+  <div class="section-toolbar peticiones-toolbar-bento" style="margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; width: 100%;">
       <div class="filter-tabs" id="peticiones-filter-tabs">
         <button class="filter-tab active" data-pfilter="all">
           <span>Todas</span>
@@ -185,7 +236,7 @@ function getPetSlaTone(bucket: string, responded: boolean) {
           <span class="filter-count" id="pcount-respondidas">{respondidasCount}</span>
         </button>
         <button class="filter-tab" data-pfilter="warn">
-          <span class="dist-dot" style="background: #B5A160;"></span>
+          <span class="dist-dot" style="background: #D97706;"></span>
           <span>Próximas a Vencer</span>
           <span class="filter-count" id="pcount-warn">{warnCount}</span>
         </button>
@@ -197,32 +248,25 @@ function getPetSlaTone(bucket: string, responded: boolean) {
       </div>
 
       <!-- Buscador en tiempo real de Peticiones -->
-      <div style="position: relative; width: 270px; max-width: 100%;">
-        <input type="text" id="peticiones-search-input" placeholder="Buscar radicado, solicitante, asunto..." class="form-input" style="padding-left: 34px; height: 38px; font-size: 0.82rem;" />
+      <div style="position: relative; min-width: 295px; flex: 1; max-width: 380px;">
+        <input type="text" id="peticiones-search-input" placeholder="Buscar radicado, solicitante, asunto..." class="form-input" style="padding-left: 34px; height: 38px; font-size: 0.82rem; width: 100%;" />
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position: absolute; left: 11px; top: 12px; color: var(--text-muted);"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       </div>
-    </div>
-
-    <div>
-      <a href="/peticiones/subir" class="btn btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px; background: #00594E; border-color: #00594E; color: #FFFFFF; font-weight: 700;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-        <span>Subir Petición</span>
-      </a>
     </div>
   </div>
 
   <!-- Vista Principal: Tabla de Radicados con Semáforo SLA y Acciones Globales -->
-  <div class="card" style="padding: 20px; background: #ffffff; border: 1px solid #DCE4E3; border-radius: var(--radius-md);">
-    <div class="table-responsive pro-scroll-container table-scroll-wrapper" style="max-height: 560px; overflow-y: auto; overflow-x: auto; border-radius: 12px;">
+  <div class="card" style="padding: 20px; background: #ffffff; border: 1px solid #DCE4E3; border-radius: var(--radius-md); box-shadow: 0 4px 16px -6px rgba(15, 23, 42, 0.05);">
+    <div class="table-responsive pro-scroll-container table-scroll-wrapper" style="max-height: 540px; overflow-y: auto; overflow-x: auto; border-radius: 12px;">
       <table class="doc-table" id="tabla-peticiones" style="width: 100%; border-collapse: collapse;">
         <thead style="position: sticky; top: 0; z-index: 10;">
-          <tr style="border-bottom: 2px solid #DCE4E3; text-align: left; color: #475569; font-size: 0.74rem; text-transform: uppercase;">
-            <th style="padding: 12px 10px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Radicado / Asunto</th>
-            <th style="padding: 12px 10px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Peticionario</th>
-            <th style="padding: 12px 10px; min-width: 190px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Fecha de Expiración</th>
-            <th style="padding: 12px 10px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Límite Oficinas (-5 Días)</th>
-            <th style="padding: 12px 10px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Oficinas Responsables</th>
-            <th style="padding: 12px 10px; text-align: right; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Acciones</th>
+          <tr style="border-bottom: 1px solid #DCE4E3; text-align: left; color: #475569; font-size: 0.74rem; text-transform: uppercase;">
+            <th style="padding: 12px 10px; position: sticky; top: 0; z-index: 10; background: #F8FAFC; border-bottom: 1px solid #DCE4E3;">Radicado / Asunto</th>
+            <th style="padding: 12px 10px; position: sticky; top: 0; z-index: 10; background: #F8FAFC; border-bottom: 1px solid #DCE4E3;">Peticionario</th>
+            <th style="padding: 12px 10px; min-width: 190px; position: sticky; top: 0; z-index: 10; background: #F8FAFC; border-bottom: 1px solid #DCE4E3;">Fecha de Expiración</th>
+            <th style="padding: 12px 10px; position: sticky; top: 0; z-index: 10; background: #F8FAFC; border-bottom: 1px solid #DCE4E3;">Límite Oficinas (-5 Días)</th>
+            <th style="padding: 12px 10px; position: sticky; top: 0; z-index: 10; background: #F8FAFC; border-bottom: 1px solid #DCE4E3;">Oficinas Responsables</th>
+            <th style="padding: 12px 10px; text-align: right; position: sticky; top: 0; z-index: 10; background: #F8FAFC; border-bottom: 1px solid #DCE4E3;">Acciones</th>
           </tr>
         </thead>
         <tbody id="peticiones-table-body">
@@ -239,7 +283,7 @@ function getPetSlaTone(bucket: string, responded: boolean) {
                 : (prog.daysRemaining > 0 ? `${prog.daysRemaining} días restantes` : 'Término expirado');
 
               return (
-                <tr id={`row-pet-${pet.id}`} data-estado={pet.estado} data-responded={isResponded ? 'true' : 'false'} data-sla={slaBucket} style="border-bottom: 1px solid #DCE4E3; font-size: 0.84rem;">
+                <tr id={`row-pet-${pet.id}`} class="peticion-row" data-estado={pet.estado} data-responded={isResponded ? 'true' : 'false'} data-sla={slaBucket} style="border-bottom: 1px solid #DCE4E3; font-size: 0.84rem;">
                   <td style="padding: 12px 8px;">
                     <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                       <a 
@@ -371,30 +415,30 @@ function getPetSlaTone(bucket: string, responded: boolean) {
                           if (deliveredCount >= totalSubs) {
                             statusText = 'Entregado';
                             dotColor = '#00594E';
-                            badgeStyle = 'background: #E6EFEF; color: #00594E; border: 1px solid #B2CFCB;';
+                            badgeStyle = 'background: #E6F4EA; color: #00594E; border: 1px solid #B2CFCB;';
                           } else if (deliveredCount > 0) {
                             statusText = `Parcial (${deliveredCount}/${totalSubs})`;
                             dotColor = '#B5A160';
-                            badgeStyle = 'background: #F7F5EE; color: #786832; border: 1px solid #DBD2B0;';
+                            badgeStyle = 'background: #F7F5EE; color: #786832; border: 1px solid #B5A160;';
                           }
                         } else if (isEntregado || deliveredCount > 0) {
                           statusText = 'Entregado';
                           dotColor = '#00594E';
-                          badgeStyle = 'background: #E6EFEF; color: #00594E; border: 1px solid #B2CFCB;';
+                          badgeStyle = 'background: #E6F4EA; color: #00594E; border: 1px solid #B2CFCB;';
                         }
 
+                        const pillTooltip = cleanObs
+                          ? `Observación de ${ofiNombre}: "${cleanObs}"`
+                          : `${ofiNombre} · ${statusText}`;
+
                         return (
-                          <div style="display: flex; align-items: center; gap: 6px; font-size: 0.74rem;">
+                          <div
+                            title={pillTooltip}
+                            style={`display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 0.73rem; line-height: 1.25; max-width: 100%; ${cleanObs ? 'cursor: help;' : ''} ${badgeStyle}`}
+                          >
                             <span style={`width: 7px; height: 7px; border-radius: 50%; background: ${dotColor}; flex-shrink: 0;`}></span>
-                            <span style="color: #111827; font-weight: 600;">{ofiNombre}</span>
-                            <span style={`font-size: 0.65rem; padding: 1px 7px; border-radius: 4px; font-weight: 750; ${badgeStyle}`}>
-                              {statusText}
-                            </span>
-                            {cleanObs ? (
-                              <span title={`Observación de la oficina: "${cleanObs}"`} style="display: inline-flex; align-items: center; color: #786832; cursor: help;">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                              </span>
-                            ) : null}
+                            <span style="font-weight: 700; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{ofiNombre}</span>
+                            <span style="font-size: 0.67rem; font-weight: 800; white-space: nowrap; opacity: 0.92;">· {statusText}</span>
                           </div>
                         );
                       })}
@@ -408,11 +452,11 @@ function getPetSlaTone(bucket: string, responded: boolean) {
                       <!-- Botón Reenviar Correo / Diagnóstico Activo -->
                       <button 
                         type="button" 
-                        class="btn-icon-action btn-resend-mail" 
+                        class="btn-icon-action btn-action-mail btn-resend-mail" 
                         data-id={pet.id} 
                         data-radicado={pet.numero_radicado}
                         title="Reenviar Notificación por Correo a Responsables"
-                        style="width: 32px; height: 32px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: #ffffff; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s ease;"
+                        style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid #DCE4E3; background: #ffffff; color: #475569; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.18s ease;"
                       >
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                       </button>
@@ -420,10 +464,10 @@ function getPetSlaTone(bucket: string, responded: boolean) {
                       <!-- Botón Abrir Carpeta en Gestor de Archivos -->
                       <a 
                         href={`/archivos?radicado=${encodeURIComponent(pet.numero_radicado)}`}
-                        class="btn-icon-action btn-abrir-carpeta" 
+                        class="btn-icon-action btn-action-folder btn-abrir-carpeta" 
                         data-radicado={pet.numero_radicado}
                         title="Abrir Carpeta en Gestor de Archivos"
-                        style="width: 32px; height: 32px; border-radius: var(--radius-sm); border: 1px solid var(--verde-borde); background: var(--verde-suave-bg); color: var(--verde-principal); text-decoration: none; display: flex; align-items: center; justify-content: center; transition: all 0.15s ease;"
+                        style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid #B2CFCB; background: #F2F7F6; color: #00594E; text-decoration: none; display: flex; align-items: center; justify-content: center; transition: all 0.18s ease;"
                       >
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                       </a>
@@ -431,7 +475,7 @@ function getPetSlaTone(bucket: string, responded: boolean) {
                       <!-- Botón Editar Petición -->
                       <button 
                         type="button" 
-                        class="btn-icon-action btn-edit-pet" 
+                        class="btn-icon-action btn-action-edit btn-edit-pet" 
                         data-id={pet.id} 
                         data-radicado={pet.numero_radicado}
                         data-asunto={pet.asunto}
@@ -443,7 +487,7 @@ function getPetSlaTone(bucket: string, responded: boolean) {
                         data-estado={pet.estado || 'en_tramite'}
                         data-descripcion={separarRespuestaMeta(pet.descripcion || '').textoLimpio}
                         title="Editar Petición"
-                        style="width: 32px; height: 32px; border-radius: var(--radius-sm); border: 1px solid var(--dorado-borde); background: var(--dorado-suave-bg); color: var(--dorado-oscuro); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s ease;"
+                        style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid #DBD2B0; background: #F7F5EE; color: #786832; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.18s ease;"
                       >
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                       </button>
@@ -451,11 +495,11 @@ function getPetSlaTone(bucket: string, responded: boolean) {
                       <!-- Botón Eliminar Petición -->
                       <button 
                         type="button" 
-                        class="btn-icon-action btn-delete-pet" 
+                        class="btn-icon-action btn-action-delete btn-delete-pet" 
                         data-id={pet.id} 
                         data-radicado={pet.numero_radicado}
                         title="Eliminar Radicado Definitivamente"
-                        style="width: 32px; height: 32px; border-radius: var(--radius-sm); border: 1px solid #FECACA; background: #FEF2F2; color: #DC2626; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s ease;"
+                        style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid #FECACA; background: #FEF2F2; color: #DC2626; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.18s ease;"
                       >
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                       </button>
@@ -563,6 +607,7 @@ function getPetSlaTone(bucket: string, responded: boolean) {
       let all = 0;
       let pendientes = 0;
       let respondidas = 0;
+      let safe = 0;
       let warn = 0;
       let critical = 0;
       rows.forEach((row) => {
@@ -575,6 +620,7 @@ function getPetSlaTone(bucket: string, responded: boolean) {
           pendientes++;
           if (sla === 'warn') warn++;
           else if (sla === 'critical') critical++;
+          else safe++;
         }
       });
       const setCount = (id: string, val: number) => {
@@ -586,46 +632,56 @@ function getPetSlaTone(bucket: string, responded: boolean) {
       setCount('pcount-respondidas', respondidas);
       setCount('pcount-warn', warn);
       setCount('pcount-critical', critical);
+
+      // Sincronizar cabecera Bento y Chart Element
+      setCount('bento-num-resp', respondidas);
+      setCount('bento-num-pend', pendientes);
+      setCount('bento-num-warn', warn);
+      setCount('bento-num-crit', critical);
+
+      const bentoTotal = document.getElementById('pcount-bento-total');
+      if (bentoTotal) bentoTotal.textContent = `${all} radicado(s)`;
+
+      const eficPct = all > 0 ? Math.round((respondidas / all) * 100) : 0;
+      const eficEl = document.getElementById('bento-eficacia-pct');
+      if (eficEl) eficEl.textContent = `${eficPct}%`;
+      const eficSubEl = document.getElementById('bento-eficacia-sub');
+      if (eficSubEl) eficSubEl.textContent = `${respondidas} de ${all} despachadas`;
+
+      const setSegWidth = (id: string, count: number) => {
+        const seg = document.getElementById(id);
+        if (seg) seg.style.width = `${all > 0 ? (count / all) * 100 : 0}%`;
+      };
+      setSegWidth('chart-seg-resp', respondidas);
+      setSegWidth('chart-seg-safe', safe);
+      setSegWidth('chart-seg-warn', warn);
+      setSegWidth('chart-seg-crit', critical);
     }
 
-    function applyPeticionesFilters(useViewTransition = false) {
+    function applyPeticionesFilters(useCrossfade = false) {
       const q = (searchInput?.value || '').toLowerCase().trim();
       const rows = document.querySelectorAll<HTMLTableRowElement>('#tabla-peticiones tbody tr[id^="row-pet-"]');
 
-      const updateVisibility = () => {
-        rows.forEach((row) => {
-          const isResponded = row.getAttribute('data-responded') === 'true';
-          const sla = row.getAttribute('data-sla') || 'safe';
-          let matchesTab = true;
-          if (currentFilterMode === 'pendientes') matchesTab = !isResponded;
-          else if (currentFilterMode === 'respondidas') matchesTab = isResponded;
-          else if (currentFilterMode === 'warn') matchesTab = !isResponded && sla === 'warn';
-          else if (currentFilterMode === 'critical') matchesTab = !isResponded && sla === 'critical';
+      rows.forEach((row) => {
+        const isResponded = row.getAttribute('data-responded') === 'true';
+        const sla = row.getAttribute('data-sla') || 'safe';
+        let matchesTab = true;
+        if (currentFilterMode === 'pendientes') matchesTab = !isResponded;
+        else if (currentFilterMode === 'respondidas') matchesTab = isResponded;
+        else if (currentFilterMode === 'warn') matchesTab = !isResponded && sla === 'warn';
+        else if (currentFilterMode === 'critical') matchesTab = !isResponded && sla === 'critical';
 
-          const text = row.textContent?.toLowerCase() || '';
-          const matchesQ = !q || text.includes(q);
-          row.style.display = (matchesTab && matchesQ) ? 'table-row' : 'none';
-        });
-      };
+        const text = row.textContent?.toLowerCase() || '';
+        const matchesQ = !q || text.includes(q);
+        const visible = matchesTab && matchesQ;
+        row.style.display = visible ? 'table-row' : 'none';
 
-      if (useViewTransition && typeof document !== 'undefined' && 'startViewTransition' in document) {
-        try {
-          (document as any).startViewTransition(() => updateVisibility());
-          return;
-        } catch {}
-      }
-
-      if (useViewTransition && tableBody) {
-        tableBody.classList.add('tbody-crossfade-out');
-        requestAnimationFrame(() => {
-          updateVisibility();
-          tableBody.classList.remove('tbody-crossfade-out');
-          tableBody.classList.add('tbody-crossfade-in');
-          setTimeout(() => tableBody.classList.remove('tbody-crossfade-in'), 220);
-        });
-      } else {
-        updateVisibility();
-      }
+        row.classList.remove('is-crossfade');
+        if (visible && useCrossfade) {
+          void row.offsetWidth;
+          row.classList.add('is-crossfade');
+        }
+      });
     }
 
     filterButtons.forEach((btn) => {
@@ -856,17 +912,85 @@ function getPetSlaTone(bucket: string, responded: boolean) {
     @keyframes spin {
       100% { transform: rotate(360deg); }
     }
-    .tbody-crossfade-out {
-      opacity: 0.4;
-      transition: opacity 0.14s ease;
+    @keyframes proMaxCrossfade {
+      from {
+        opacity: 0;
+        transform: translateY(4px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
-    .tbody-crossfade-in {
-      opacity: 1;
-      transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    .peticiones-bento-header {
+      background: #FFFFFF;
+      border: 1px solid #DCE4E3;
+      border-top: 3px solid #00594E;
+      border-radius: 16px;
+      padding: 16px 22px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      box-shadow: 0 8px 24px -8px rgba(0, 89, 78, 0.07);
+    }
+    .btn-bento-cta:hover {
+      background: #00443B !important;
+      border-color: #00443B !important;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px -3px rgba(0, 89, 78, 0.34) !important;
+    }
+    .pro-scroll-container {
+      scrollbar-width: thin;
+      scrollbar-color: #00594E #F2F7F6;
+    }
+    .pro-scroll-container::-webkit-scrollbar {
+      width: 7px;
+      height: 7px;
+    }
+    .pro-scroll-container::-webkit-scrollbar-track {
+      background: #F2F7F6;
+      border-radius: 999px;
+    }
+    .pro-scroll-container::-webkit-scrollbar-thumb {
+      background: #00594E;
+      border-radius: 999px;
+      border: 1px solid #F2F7F6;
+    }
+    .pro-scroll-container::-webkit-scrollbar-thumb:hover {
+      background: #00443B;
+    }
+    tr.peticion-row {
+      transition: background-color 0.18s ease, box-shadow 0.18s ease;
+    }
+    tr.peticion-row:hover {
+      background-color: #F8FAFC;
+      box-shadow: inset 3.5px 0 0 #00594E;
+    }
+    tr.peticion-row.is-crossfade {
+      animation: proMaxCrossfade 0.32s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .btn-icon-action:hover {
       transform: translateY(-1px);
-      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      box-shadow: 0 3px 8px rgba(0, 89, 78, 0.14);
+    }
+    .btn-action-mail:hover,
+    .btn-action-folder:hover {
+      background: #00594E !important;
+      border-color: #00594E !important;
+      color: #FFFFFF !important;
+    }
+    .btn-action-edit:hover {
+      background: #B5A160 !important;
+      border-color: #B5A160 !important;
+      color: #FFFFFF !important;
+    }
+    .btn-action-delete:hover {
+      background: #DC2626 !important;
+      border-color: #DC2626 !important;
+      color: #FFFFFF !important;
     }
   </style>
 </AppLayout>

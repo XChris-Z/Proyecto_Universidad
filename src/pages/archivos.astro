@@ -7,7 +7,7 @@ import { supabase } from '@lib/supabase';
 import { calculateDeadlineProgress } from '@lib/utils';
 import { Buffer } from 'node:buffer';
 import { getDeterministicPin } from '@lib/security';
-import { separarRespuestaMeta, esSubcarpetaValida, filtrarSubcarpetasValidas, isPeticionRespondida, getSlaBucket } from '@lib/subcarpetas';
+import { separarRespuestaMeta, esSubcarpetaValida, filtrarSubcarpetasValidas, isPeticionRespondida, isAuditLogOfficialResponse, getSlaBucket } from '@lib/subcarpetas';
 
 // Interfaces estrictas para TypeScript
 export interface PeticionAnexo {
@@ -290,7 +290,7 @@ let auditRespLogs: any[] = [];
 try {
   const { data: auditData } = await (supabase
     .from('audit_logs' as any)
-    .select('entity_id, details')
+    .select('action, entity_id, details')
     .eq('action_type', 'RESPUESTA')
     .limit(400) as any);
   if (auditData) auditRespLogs = auditData;
@@ -301,11 +301,7 @@ const peticiones: PeticionExpediente[] = rawPeticiones.map((p) => {
   const pinMatch = respObs?.match(/PIN:\s*([0-9A-Z]{6})/i);
   const storedPin = pinMatch ? (pinMatch[1] || null) : null;
 
-  const auditMatch = auditRespLogs.some(
-    (log: any) =>
-      String(log.entity_id || '') === String(p.id) ||
-      (p.numero_radicado && String(log.details || '').includes(String(p.numero_radicado)))
-  );
+  const auditMatch = auditRespLogs.some((log: any) => isAuditLogOfficialResponse(log, p));
 
   const enrichedResponsables = (p.peticion_responsables || []).map((r: any) => ({
     ...r,

@@ -138,6 +138,37 @@ export function filtrarSubcarpetasValidas<T = any>(
 /**
  * Normaliza si una petición ya cuenta con respuesta oficial despachada al solicitante.
  */
+export const OFFICIAL_RESPONSE_AUDIT_ACTION = 'Envío de Respuesta Oficial al Solicitante';
+
+/**
+ * Determina si un registro de `audit_logs` corresponde a un despacho oficial real
+ * al solicitante (excluye ingresos al portal de dependencias y cargas previas).
+ */
+export function isAuditLogOfficialResponse(
+  log: { action?: string | null; entity_id?: string | null; details?: string | null } | null | undefined,
+  peticion: { id?: string | number | null; numero_radicado?: string | null }
+): boolean {
+  if (!log) return false;
+  const actionText = String(log.action || '').trim();
+  if (actionText !== OFFICIAL_RESPONSE_AUDIT_ACTION) {
+    return false;
+  }
+
+  const petId = peticion?.id ? String(peticion.id).trim() : '';
+  const radicado = peticion?.numero_radicado ? String(peticion.numero_radicado).trim() : '';
+  const entityId = String(log.entity_id || '').trim();
+  const details = String(log.details || '');
+
+  return Boolean(
+    (petId && entityId === petId) ||
+      (radicado && (entityId === radicado || details.includes(radicado)))
+  );
+}
+
+/**
+ * Determina de forma unificada en todo el sistema (Dashboard, Peticiones, Archivos,
+ * Calendario y APIs) si una petición ya cuenta con respuesta oficial despachada.
+ */
 export function isPeticionRespondida(p: any): boolean {
   if (!p) return false;
   const st = String(p.estado || '').toLowerCase().trim();
@@ -148,8 +179,6 @@ export function isPeticionRespondida(p: any): boolean {
     st === 'resuelto' ||
     st === 'finalizada' ||
     st === 'finalizado' ||
-    st === 'completada' ||
-    st === 'completado' ||
     st === 'cerrada' ||
     st === 'cerrado' ||
     st === 'despachada' ||
@@ -161,12 +190,12 @@ export function isPeticionRespondida(p: any): boolean {
   if (
     p.respondida === true ||
     p.tiene_respuesta_audit === true ||
-    p.fecha_respuesta ||
-    p.respuesta_fecha_envio ||
+    Boolean(p.fecha_respuesta) ||
+    Boolean(p.respuesta_fecha_envio) ||
     p.respuesta_oficial === true ||
     p.respuesta_enviada === true ||
     (typeof p.respuesta_mensaje === 'string' && p.respuesta_mensaje.trim().length > 0) ||
-    p.respuesta_pin_solicitante
+    Boolean(p.respuesta_pin_solicitante)
   ) {
     return true;
   }
