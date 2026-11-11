@@ -3,7 +3,12 @@ export const prerender = false;
 
 import type { APIRoute } from 'astro';
 import { supabase } from '@lib/supabase';
-import { sendPeticionAssignmentEmail, type EmailAttachment } from '@lib/email';
+import {
+  sendPeticionAssignmentEmail,
+  resolvePublicBaseUrl,
+  limpiarTextoRequerimiento,
+} from '@lib/email';
+import { separarRespuestaMeta, filtrarSubcarpetasValidas } from '@lib/subcarpetas';
 import { logSystemActivity } from '@lib/audit';
 import { getDeterministicPin } from '@lib/security';
 
@@ -20,42 +25,36 @@ export const POST: APIRoute = async ({ request, url }) => {
     }
 
     // 1. Consultar la petición y sus asignaciones
-    const { data: peticion, error: petErr } = await (supabase
-      .from('peticiones' as any)
-      .select(`
-        id,
-        numero_radicado,
-        asunto,
-        descripcion,
-        instrucciones_anexos,
-        prioridad,
-        categoria,
-        fecha_radicacion,
-        created_at,
-        fecha_limite_entrega,
-        fecha_limite_responsable,
-        peticion_anexos (
+    const buildPeticionQuery = (withSubcarpetaCol: boolean) => {
+      const respFields = withSubcarpetaCol
+        ? `id, subcarpeta_id, codigo_acceso, oficina_id, observaciones_entrega, oficinas ( id, nombre, codigo, email_institucional )`
+        : `id, codigo_acceso, oficina_id, observaciones_entrega, oficinas ( id, nombre, codigo, email_institucional )`;
+      return supabase
+        .from('peticiones' as any)
+        .select(`
           id,
-          nombre_archivo,
-          storage_path,
-          mime_type,
-          es_anexo_oficina
-        ),
-        peticion_responsables (
-          id,
-          codigo_acceso,
-          oficina_id,
-          observaciones_entrega,
-          oficinas (
-            id,
-            nombre,
-            codigo,
-            email_institucional
+          numero_radicado,
+          asunto,
+          descripcion,
+          instrucciones_anexos,
+          prioridad,
+          categoria,
+          fecha_radicacion,
+          created_at,
+          fecha_limite_entrega,
+          fecha_limite_responsable,
+          peticion_responsables (
+            ${respFields}
           )
-        )
-      `)
-      .eq('id', id)
-      .single() as any);
+        `)
+        .eq('id', id)
+        .single() as any;
+    };
+
+    let { data: peticion, error: petErr } = await buildPeticionQuery(true);
+    if (petErr && String(petErr.message || '').includes('subcarpeta_id')) {
+      ({ data: peticion, error: petErr } = await buildPeticionQuery(false));
+    }
 
     if (petErr || !peticion) {
       return new Response(
@@ -72,25 +71,24 @@ export const POST: APIRoute = async ({ request, url }) => {
       );
     }
 
-    // 2. Política de cero adjuntos físicos por correo: los soportes documentales se consultan en la plataforma
-    const emailAttachments: EmailAttachment[] | undefined = undefined;
-
-    // 3. Consultar subcarpetas asociadas si existen
+    // 2. Consultar subcarpetas asociadas si existen
     let subcarpetasData: any[] = [];
     try {
       const { data: subs } = await (supabase
         .from('peticion_subcarpetas' as any)
-        .select('*')
+        .select('id, nombre, descripcion')
         .eq('peticion_id', peticion.id) as any);
-      if (subs) subcarpetasData = subs;
+      if (subs) subcarpetasData = filtrarSubcarpetasValidas(subs);
     } catch {}
 
-    const baseUrl = url.origin;
+    const baseUrl = resolvePublicBaseUrl(request, url);
+    const { textoLimpio: rawInstLimpia } = separarRespuestaMeta(peticion.instrucciones_anexos || peticion.descripcion || '');
+    const cleanFallbackInst = limpiarTextoRequerimiento(rawInstLimpia);
     const resultados: any[] = [];
     let exitosos = 0;
     let fallidos = 0;
 
-    // 4. Reenviar correo a cada oficina asignada que tenga correo institucional configurado
+    // 3. Reenviar correo a cada oficina asignada que tenga correo institucional configurado
     for (const resp of responsables) {
       const ofi = resp.oficinas;
       const email = ofi?.email_institucional?.trim();
@@ -109,11 +107,32 @@ export const POST: APIRoute = async ({ request, url }) => {
       if (resp.subcarpeta_id) {
         const matched = subcarpetasData.find((s: any) => s.id === resp.subcarpeta_id);
         if (matched) {
-          assignedSubs = [{ nombre: matched.nombre, descripcion: matched.descripcion }];
+          assignedSubs = [{
+            nombre: matched.nombre,
+            descripcion: matched.descripcion ? limpiarTextoRequerimiento(matched.descripcion) : undefined,
+          }];
+        }
+      }
+      if (assignedSubs.length === 0) {
+        const { textoLimpio: cleanObs } = separarRespuestaMeta(resp.observaciones_entrega || '');
+        const obsWithoutPin = cleanObs.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '').trim();
+        const tagNames = Array.from(obsWithoutPin.matchAll(/\[([^\]\r\n]+)\]/g))
+          .map((m) => String(m?.[1] || '').trim())
+          .filter((name) => name && !name.toUpperCase().includes('RESPUESTA_META'));
+        if (tagNames.length > 0 && subcarpetasData.length > 0) {
+          assignedSubs = subcarpetasData
+            .filter((s: any) => tagNames.some((t) => t.toLowerCase() === String(s.nombre || '').trim().toLowerCase()))
+            .map((s: any) => ({
+              nombre: s.nombre,
+              descripcion: s.descripcion ? limpiarTextoRequerimiento(s.descripcion) : undefined,
+            }));
         }
       }
       if (assignedSubs.length === 0 && subcarpetasData.length > 0) {
-        assignedSubs = subcarpetasData.map((s: any) => ({ nombre: s.nombre, descripcion: s.descripcion }));
+        assignedSubs = subcarpetasData.map((s: any) => ({
+          nombre: s.nombre,
+          descripcion: s.descripcion ? limpiarTextoRequerimiento(s.descripcion) : undefined,
+        }));
       }
 
       const pinMatch = resp.observaciones_entrega?.match(/PIN:\s*([0-9A-Z]{6})/i);
@@ -130,13 +149,12 @@ export const POST: APIRoute = async ({ request, url }) => {
         prioridad: peticion.prioridad,
         fechaRadicacion: peticion.fecha_radicacion || peticion.created_at || null,
         subcarpetas: assignedSubs.length > 0 ? assignedSubs : undefined,
-        instruccionesAnexos: peticion.instrucciones_anexos || peticion.descripcion,
+        instruccionesAnexos: cleanFallbackInst,
         fechaLimiteEntrega: peticion.fecha_limite_entrega,
         fechaLimiteResponsable: peticion.fecha_limite_responsable,
         codigoAcceso: resp.codigo_acceso,
         pinAcceso: effectivePin,
         portalUrl,
-        attachments: emailAttachments,
       });
 
       if (emailResult.success) {

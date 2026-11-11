@@ -3,7 +3,7 @@ export const prerender = false;
 
 import type { APIRoute } from 'astro';
 import { supabase } from '@lib/supabase';
-import { sendRespuestaSolicitanteEmail } from '@lib/email';
+import { sendRespuestaSolicitanteEmail, resolvePublicBaseUrl } from '@lib/email';
 import { logSystemActivity } from '@lib/audit';
 import { separarRespuestaMeta } from '@lib/subcarpetas';
 
@@ -239,9 +239,7 @@ export const POST: APIRoute = async ({ request, url }) => {
     }
 
     // 5. Determinar URL pública de consulta directa (apunta exactamente a ?radicado=...&pin=...)
-    const proto = request.headers.get('x-forwarded-proto') || url.protocol.replace(':', '') || 'https';
-    const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || url.host;
-    const baseUrl = `${proto}://${host}`;
+    const baseUrl = resolvePublicBaseUrl(request, url);
     const consultaUrl = `${baseUrl}/consulta-respuesta?radicado=${encodeURIComponent(peticion.numero_radicado)}&pin=${encodeURIComponent(pinSolicitante)}`;
 
     // 6. Sin adjuntos físicos en el correo: todos los soportes seleccionados se consultan y descargan exclusivamente en el Portal

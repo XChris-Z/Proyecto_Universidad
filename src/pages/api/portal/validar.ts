@@ -6,6 +6,7 @@ import { supabase } from '@lib/supabase';
 import { logSystemActivity } from '@lib/audit';
 import { getDeterministicPin } from '@lib/security';
 import { separarRespuestaMeta, esSubcarpetaValida, filtrarSubcarpetasValidas } from '@lib/subcarpetas';
+import { limpiarTextoRequerimiento } from '@lib/email';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -354,22 +355,24 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Función auxiliar para extraer requerimiento específico de una subcarpeta
     const getSubRequirement = (subName: string, catalogDesc?: string | null, fullDesc?: string | null) => {
-      if (catalogDesc && catalogDesc.trim()) return catalogDesc.trim();
-      if (!fullDesc) return 'Cargue los documentos de soporte requeridos para esta subcarpeta.';
+      if (catalogDesc && catalogDesc.trim()) return limpiarTextoRequerimiento(catalogDesc);
+      const { textoLimpio: cleanFull } = separarRespuestaMeta(fullDesc || '');
+      if (!cleanFull) return 'Cargue los documentos de soporte requeridos para esta subcarpeta.';
       const escaped = subName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const reg = new RegExp(`\\[${escaped}\\]:?\\s*([^\\[|]+)`, 'i');
-      const match = fullDesc.match(reg);
-      if (match && match[1]?.trim()) return match[1].trim();
+      const match = cleanFull.match(reg);
+      if (match && match[1]?.trim()) return limpiarTextoRequerimiento(match[1]);
       return 'Cargue los documentos de soporte requeridos para esta subcarpeta.';
     };
 
     // Función auxiliar para extraer observación específica de una subcarpeta
     const getSubSpecificObs = (subName: string, rawText: string) => {
-      const cleanWithoutPin = rawText.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '').trim();
+      const { textoLimpio } = separarRespuestaMeta(rawText || '');
+      const cleanWithoutPin = textoLimpio.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '').trim();
       const escaped = subName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const reg = new RegExp(`\\[${escaped}\\]:?\\s*([^\\[\\|]+)`, 'i');
       const match = cleanWithoutPin.match(reg);
-      if (match && match[1]?.trim()) return match[1].trim();
+      if (match && match[1]?.trim()) return limpiarTextoRequerimiento(match[1]);
       if (!cleanWithoutPin.includes('[')) return cleanWithoutPin;
       return '';
     };
@@ -492,6 +495,7 @@ export const POST: APIRoute = async ({ request }) => {
         success: true,
         data: {
           ...resultado,
+          descripcion: resultado.descripcion ? separarRespuestaMeta(resultado.descripcion).textoLimpio : resultado.descripcion,
           documento_original: docOriginal || null,
           anexos: allAnexos,
           subcarpetas: subcarpetasResponse,

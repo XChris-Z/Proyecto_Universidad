@@ -3,7 +3,11 @@ export const prerender = false;
 
 import type { APIRoute } from 'astro';
 import { supabase } from '@lib/supabase';
-import { enviarCorreoRecordatorioDependencia } from '@lib/email';
+import {
+  enviarCorreoRecordatorioDependencia,
+  resolvePublicBaseUrl,
+  limpiarTextoRequerimiento,
+} from '@lib/email';
 import { logSystemActivity } from '@lib/audit';
 import { getDeterministicPin } from '@lib/security';
 import { separarRespuestaMeta, filtrarSubcarpetasValidas } from '@lib/subcarpetas';
@@ -77,6 +81,8 @@ async function runReminderSweep(originUrl: string): Promise<RecordatorioRunResul
       id,
       numero_radicado,
       asunto,
+      categoria,
+      prioridad,
       descripcion,
       instrucciones_anexos,
       estado,
@@ -255,7 +261,7 @@ async function runReminderSweep(originUrl: string): Promise<RecordatorioRunResul
         const subObj = subcarpetasPet.find((s: any) => String(s.id) === String(subId));
         if (subObj) {
           nombreSubcarpeta = String(subObj.nombre || '').trim();
-          instruccionSubcarpeta = String(subObj.descripcion || '').trim();
+          instruccionSubcarpeta = subObj.descripcion ? limpiarTextoRequerimiento(subObj.descripcion) : '';
         }
       }
 
@@ -273,7 +279,7 @@ async function runReminderSweep(originUrl: string): Promise<RecordatorioRunResul
           );
           if (matchedObjs.length > 0) {
             instruccionSubcarpeta = matchedObjs
-              .map((s: any) => (s.descripcion ? `${s.nombre}: ${s.descripcion}` : ''))
+              .map((s: any) => (s.descripcion ? limpiarTextoRequerimiento(s.descripcion) : ''))
               .filter(Boolean)
               .join('\n');
           }
@@ -287,9 +293,7 @@ async function runReminderSweep(originUrl: string): Promise<RecordatorioRunResul
       }
 
       if (!instruccionSubcarpeta) {
-        instruccionSubcarpeta =
-          instruccionesLimpias ||
-          'Remitir los documentos y anexos institucionales requeridos para responder oportunamente el radicado.';
+        instruccionSubcarpeta = limpiarTextoRequerimiento(instruccionesLimpias);
       }
 
       // Resolver PIN y credenciales de acceso
@@ -312,6 +316,8 @@ async function runReminderSweep(originUrl: string): Promise<RecordatorioRunResul
           oficinaNombre: ofiNombre,
           numeroRadicado: pet.numero_radicado,
           tituloPeticion: pet.asunto || 'Solicitud Institucional',
+          categoria: pet.categoria || null,
+          prioridad: pet.prioridad || null,
           nombreSubcarpeta,
           instruccionSubcarpeta,
           fechaRadicacion: pet.fecha_radicacion || pet.created_at || null,
@@ -385,10 +391,11 @@ async function runReminderSweep(originUrl: string): Promise<RecordatorioRunResul
   };
 }
 
-export const POST: APIRoute = async ({ url }) => {
+export const POST: APIRoute = async ({ request, url }) => {
   try {
+    const publicBaseUrl = resolvePublicBaseUrl(request, url);
     if (!activeRunPromise) {
-      activeRunPromise = runReminderSweep(url.origin).finally(() => {
+      activeRunPromise = runReminderSweep(publicBaseUrl).finally(() => {
         activeRunPromise = null;
       });
     }

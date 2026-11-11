@@ -2952,9 +2952,10 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
           subReqsList = peticion.subcarpetas.map((s: any) => {
             const sName = String(s.nombre || '').trim();
             const lowerName = sName.toLowerCase();
+            const rawSubDesc = separarRespuestaMeta(s.descripcion || '').textoLimpio.replace(/^\[[^\]]+\]:\s*/i, '').trim();
             return {
               nombre: sName,
-              descripcion: s.descripcion || parsedInstruccionesMap.get(lowerName) || 'Aportar soportes requeridos para esta subcarpeta.'
+              descripcion: rawSubDesc || parsedInstruccionesMap.get(lowerName) || 'Aportar soportes requeridos para esta subcarpeta.'
             };
           });
         } else if (parsedInstruccionesMap.size > 0) {

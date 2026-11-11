@@ -82,6 +82,8 @@ export interface EmailRecordatorioDependenciaParams {
   oficinaNombre: string;
   numeroRadicado: string;
   tituloPeticion: string;
+  categoria?: string | null;
+  prioridad?: string | null;
   nombreSubcarpeta: string;
   instruccionSubcarpeta?: string | null;
   fechaRadicacion?: string | null;
@@ -258,6 +260,83 @@ async function dispatchSmtpMail(options: {
   }
 }
 
+const PRODUCTION_PUBLIC_BASE_URL = 'https://proyecto-universidad-eosin.vercel.app';
+
+/**
+ * Resuelve la URL pública real de la aplicación evitando orígenes internos `localhost` en Vercel SSR.
+ */
+export function resolvePublicBaseUrl(request?: Request | null, url?: URL | null): string {
+  const metaEnv = typeof import.meta !== 'undefined' ? (import.meta as any).env || {} : {};
+  const envSite =
+    getEnvVar('PUBLIC_SITE_URL') ||
+    getEnvVar('SITE_URL') ||
+    (metaEnv.SITE ? String(metaEnv.SITE).replace(/\/+$/, '') : '');
+
+  const forwardedHost = request?.headers?.get('x-forwarded-host')?.split(',')[0]?.trim() || '';
+  const directHost = request?.headers?.get('host')?.trim() || url?.host || '';
+  const rawHost = forwardedHost || directHost;
+  const forwardedProto = request?.headers?.get('x-forwarded-proto')?.split(',')[0]?.trim() || '';
+
+  const isLocalHost =
+    !rawHost ||
+    /^localhost(:\d+)?$/i.test(rawHost) ||
+    /^127\.0\.0\.1(:\d+)?$/i.test(rawHost);
+
+  if (!isLocalHost) {
+    const proto = forwardedProto || (rawHost.includes('vercel.app') ? 'https' : url?.protocol?.replace(':', '') || 'https');
+    return `${proto}://${rawHost}`.replace(/\/+$/, '');
+  }
+
+  if (envSite && !/localhost|127\.0\.0\.1/i.test(envSite)) {
+    return envSite.replace(/\/+$/, '');
+  }
+
+  const vercelProdUrl = getEnvVar('VERCEL_PROJECT_PRODUCTION_URL');
+  if (vercelProdUrl && !/localhost|127\.0\.0\.1/i.test(vercelProdUrl)) {
+    return `https://${vercelProdUrl.replace(/^https?:\/\//i, '').replace(/\/+$/, '')}`;
+  }
+
+  const vercelUrl = getEnvVar('VERCEL_URL');
+  if (vercelUrl && !/localhost|127\.0\.0\.1/i.test(vercelUrl)) {
+    return `https://${vercelUrl.replace(/^https?:\/\//i, '').replace(/\/+$/, '')}`;
+  }
+
+  const isVercelRuntime = Boolean(getEnvVar('VERCEL') || getEnvVar('VERCEL_ENV'));
+  if (isVercelRuntime || !rawHost || !rawHost.includes(':')) {
+    return PRODUCTION_PUBLIC_BASE_URL;
+  }
+
+  const proto = forwardedProto || url?.protocol?.replace(':', '') || 'http';
+  return `${proto}://${rawHost}`.replace(/\/+$/, '');
+}
+
+function sanitizeEmailActionUrl(rawUrl: string): string {
+  const trimmed = String(rawUrl || '').trim();
+  if (!trimmed) return PRODUCTION_PUBLIC_BASE_URL;
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(\/|$|\?)/i.test(trimmed)) {
+    return trimmed.replace(/^https?:\/\/(localhost|127\.0\.0\.1)/i, resolvePublicBaseUrl());
+  }
+  return trimmed;
+}
+
+/**
+ * Sanitiza descripciones, observaciones e instrucciones eliminando bloques internos [RESPUESTA_META],
+ * otros metadatos técnicos y prefijos entre corchetes antes de renderizar en correos o vistas.
+ */
+export function limpiarTextoRequerimiento(raw?: string | null): string {
+  if (!raw) return 'Aportar los soportes documentales y pronunciamiento técnico correspondiente al radicado.';
+  const cleaned = String(raw)
+    // Eliminar cualquier bloque [RESPUESTA_META]: {...} hasta el final o salto
+    .replace(/\[RESPUESTA_META\]:\s*\{[\s\S]*?\}(?=\n|$)/gi, '')
+    .replace(/\[RESPUESTA_META\]:[\s\S]*$/gi, '')
+    // Eliminar otros bloques de metadatos internos si existen
+    .replace(/\[META_[A-Z_]+\]:[\s\S]*$/gi, '')
+    // Limpiar prefijos entre corchetes como [Soportes Técnicos y Concepto]:
+    .replace(/^\[[^\]]+\]:\s*/gim, '')
+    .trim();
+  return cleaned || 'Aportar los soportes documentales requeridos para este expediente.';
+}
+
 function escapeEmailHtml(value: string | null | undefined): string {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -265,163 +344,6 @@ function escapeEmailHtml(value: string | null | undefined): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
-}
-
-function formatDateLongEs(raw?: string | null): string {
-  if (!raw) {
-    return new Date().toLocaleDateString('es-CO', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  }
-  const normalized = raw.includes('T') ? raw : `${raw}T12:00:00`;
-  const parsed = new Date(normalized);
-  if (isNaN(parsed.getTime())) return String(raw);
-  return parsed.toLocaleDateString('es-CO', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-}
-
-interface BentoRowItem {
-  label: string;
-  valueHtml: string;
-}
-
-interface SlaBarConfig {
-  label: string;
-  statusRight: string;
-  greenPct: number;
-  goldPct: number;
-  legendLeft: string;
-  legendRight: string;
-}
-
-function buildBentoDataCard(rows: BentoRowItem[], sla?: SlaBarConfig): string {
-  const rowsHtml = rows
-    .map(
-      (row, idx) => `
-      <tr>
-        <td style="padding: 9px 0; width: 36%; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748B; vertical-align: top; ${idx < rows.length - 1 ? 'border-bottom: 1px solid #E2E8F0;' : ''}">
-          ${escapeEmailHtml(row.label)}
-        </td>
-        <td style="padding: 9px 0 9px 12px; font-size: 13.5px; font-weight: 600; color: #111827; vertical-align: top; line-height: 1.45; ${idx < rows.length - 1 ? 'border-bottom: 1px solid #E2E8F0;' : ''}">
-          ${row.valueHtml}
-        </td>
-      </tr>`
-    )
-    .join('');
-
-  const greenWidth = sla ? Math.max(0, Math.min(100, Math.round(sla.greenPct))) : 0;
-  const goldWidth = sla ? Math.max(0, Math.min(100 - greenWidth, Math.round(sla.goldPct))) : 0;
-  const trackWidth = sla ? Math.max(0, 100 - greenWidth - goldWidth) : 100;
-
-  const slaHtml = sla
-    ? `
-      <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #E2E8F0;">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 6px;">
-          <tr>
-            <td style="font-size: 11.5px; font-weight: 700; color: #475569; text-align: left;">
-              ${escapeEmailHtml(sla.label)}
-            </td>
-            <td style="font-size: 11.5px; font-weight: 800; color: #00594E; text-align: right;">
-              ${escapeEmailHtml(sla.statusRight)}
-            </td>
-          </tr>
-        </table>
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #E2E8F0; border-radius: 999px; overflow: hidden;">
-          <tr>
-            ${greenWidth > 0 ? `<td width="${greenWidth}%" style="height: 8px; background-color: #00594E; font-size: 0; line-height: 0;">&nbsp;</td>` : ''}
-            ${goldWidth > 0 ? `<td width="${goldWidth}%" style="height: 8px; background-color: #B5A160; font-size: 0; line-height: 0;">&nbsp;</td>` : ''}
-            ${trackWidth > 0 ? `<td width="${trackWidth}%" style="height: 8px; background-color: #E2E8F0; font-size: 0; line-height: 0;">&nbsp;</td>` : ''}
-          </tr>
-        </table>
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top: 6px;">
-          <tr>
-            <td style="font-size: 11px; color: #00594E; font-weight: 600; text-align: left;">
-              &#9679; ${escapeEmailHtml(sla.legendLeft)}
-            </td>
-            <td style="font-size: 11px; color: #786832; font-weight: 600; text-align: right;">
-              &#9679; ${escapeEmailHtml(sla.legendRight)}
-            </td>
-          </tr>
-        </table>
-      </div>`
-    : '';
-
-  return `
-    <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-left: 4px solid #00594E; border-radius: 12px; padding: 16px 18px; margin: 18px 0;">
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-        ${rowsHtml}
-      </table>
-      ${slaHtml}
-    </div>
-  `;
-}
-
-function buildCredentialsBox(options: {
-  heading: string;
-  email: string;
-  items: Array<{ label: string; value: string }>;
-  footnote: string;
-}): string {
-  const cellsHtml = options.items
-    .map(
-      (item) => `
-      <td style="padding: 6px; vertical-align: top;">
-        <div style="background-color: #FFFFFF; border: 1px solid #DBD2B0; border-radius: 10px; padding: 12px 14px; text-align: center;">
-          <div style="font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: #786832; margin-bottom: 5px;">
-            ${escapeEmailHtml(item.label)}
-          </div>
-          <div style="font-family: 'JetBrains Mono', Consolas, ui-monospace, monospace; font-size: 20px; font-weight: 800; letter-spacing: 2px; color: #00594E;">
-            ${escapeEmailHtml(item.value)}
-          </div>
-        </div>
-      </td>`
-    )
-    .join('');
-
-  return `
-    <div style="background-color: #F7F5EE; border: 1px solid #DBD2B0; border-radius: 12px; padding: 18px 20px; margin: 20px 0; text-align: center;">
-      <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; color: #786832; margin-bottom: 4px;">
-        ${escapeEmailHtml(options.heading)}
-      </div>
-      <div style="font-size: 12.5px; color: #475569; margin-bottom: 12px;">
-        Correo autorizado: <strong style="color: #111827;">${escapeEmailHtml(options.email)}</strong>
-      </div>
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-        <tr>
-          ${cellsHtml}
-        </tr>
-      </table>
-      <div style="font-size: 11.5px; color: #786832; margin-top: 10px; line-height: 1.45;">
-        ${escapeEmailHtml(options.footnote)}
-      </div>
-    </div>
-  `;
-}
-
-function buildCtaButton(href: string, label: string): string {
-  const safeHref = escapeEmailHtml(href);
-  return `
-    <div style="text-align: center; margin: 26px 0 18px 0;">
-      <a
-        href="${safeHref}"
-        target="_blank"
-        rel="noopener noreferrer"
-        style="display: inline-block; background-color: #00594E; border: 1.5px solid #B5A160; color: #FFFFFF !important; padding: 14px 28px; border-radius: 10px; font-size: 15px; font-weight: 700; text-decoration: none; letter-spacing: 0.2px;"
-      >
-        ${escapeEmailHtml(label)} &rarr;
-      </a>
-      <div style="font-size: 11.5px; color: #64748B; margin-top: 10px; line-height: 1.5;">
-        Si el botón no abre automáticamente, copie e ingrese en:<br />
-        <a href="${safeHref}" style="color: #00594E; word-break: break-all; font-weight: 600;">${safeHref}</a>
-      </div>
-    </div>
-  `;
 }
 
 function parseEmailDateSafe(dateInput?: string | Date | null): Date | null {
@@ -447,6 +369,19 @@ function formatDateCompactEs(dateInput?: string | Date | null): string {
   }).format(parsed);
 }
 
+function formatDateMediumWeekdayEs(dateInput?: string | Date | null): string {
+  const parsed = parseEmailDateSafe(dateInput);
+  if (!parsed) return 'No especificada';
+  const formatted = new Intl.DateTimeFormat('es-CO', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'America/Bogota',
+  }).format(parsed);
+  return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+}
+
 function formatDateShortSlashEs(dateInput?: string | Date | null): string {
   const parsed = parseEmailDateSafe(dateInput);
   if (!parsed) return 'No especificada';
@@ -460,6 +395,117 @@ function formatDateShortSlashEs(dateInput?: string | Date | null): string {
   const month = parts.find((p) => p.type === 'month')?.value || '01';
   const year = parts.find((p) => p.type === 'year')?.value || '2026';
   return `${day}/${month}/${year}`;
+}
+
+interface HorizontalBentoCell {
+  label: string;
+  valueHtml: string;
+}
+
+function buildHorizontalBentoGrid(cells: [HorizontalBentoCell, HorizontalBentoCell, HorizontalBentoCell, HorizontalBentoCell]): string {
+  const [topLeft, topRight, bottomLeft, bottomRight] = cells;
+  return `
+    <div style="background-color: #F8FAFC; border: 1px solid #DCE4E3; border-radius: 12px; overflow: hidden; margin: 14px 0;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td width="60%" valign="top" style="width: 60%; padding: 12px 16px; border-bottom: 1px solid #E2E8F0; border-right: 1px solid #E2E8F0;">
+            <div style="font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: #64748B; margin-bottom: 4px;">
+              ${escapeEmailHtml(topLeft.label)}
+            </div>
+            <div style="font-size: 13.5px; font-weight: 700; color: #111827; line-height: 1.4;">
+              ${topLeft.valueHtml}
+            </div>
+          </td>
+          <td width="40%" valign="top" style="width: 40%; padding: 12px 16px; border-bottom: 1px solid #E2E8F0;">
+            <div style="font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: #64748B; margin-bottom: 4px;">
+              ${escapeEmailHtml(topRight.label)}
+            </div>
+            <div style="font-size: 13.5px; font-weight: 700; color: #111827; line-height: 1.4;">
+              ${topRight.valueHtml}
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td width="60%" valign="top" style="width: 60%; padding: 12px 16px; border-right: 1px solid #E2E8F0;">
+            <div style="font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: #64748B; margin-bottom: 4px;">
+              ${escapeEmailHtml(bottomLeft.label)}
+            </div>
+            <div style="font-size: 13.5px; font-weight: 700; color: #111827; line-height: 1.4;">
+              ${bottomLeft.valueHtml}
+            </div>
+          </td>
+          <td width="40%" valign="top" style="width: 40%; padding: 12px 16px;">
+            <div style="font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: #64748B; margin-bottom: 4px;">
+              ${escapeEmailHtml(bottomRight.label)}
+            </div>
+            <div style="font-size: 13.5px; font-weight: 700; color: #111827; line-height: 1.4;">
+              ${bottomRight.valueHtml}
+            </div>
+          </td>
+        </tr>
+      </table>
+    </div>
+  `;
+}
+
+interface CredentialBoxDef {
+  widthPct: string;
+  label: string;
+  valueHtml: string;
+}
+
+function buildGoldCredentialsAndCtaCard(options: {
+  heading: string;
+  email: string;
+  boxes: [CredentialBoxDef, CredentialBoxDef, CredentialBoxDef];
+  ctaUrl: string;
+  ctaLabel: string;
+  helperText: string;
+}): string {
+  const safeHref = escapeEmailHtml(sanitizeEmailActionUrl(options.ctaUrl));
+  const [box1, box2, box3] = options.boxes;
+  const renderBox = (box: CredentialBoxDef) => `
+    <td width="${box.widthPct}" valign="middle" style="background-color: #FFFFFF; border: 1px solid #E7DFC4; border-radius: 10px; padding: 12px 10px; text-align: center; vertical-align: middle;">
+      <div style="font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: #64748B; margin-bottom: 5px;">
+        ${escapeEmailHtml(box.label)}
+      </div>
+      ${box.valueHtml}
+    </td>`;
+
+  return `
+    <div style="background-color: #FBF9F4; border: 1px solid #DBD2B0; border-radius: 14px; padding: 20px 24px; margin: 16px 0 8px 0;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width: 100%; margin-bottom: 14px;">
+        <tr>
+          <td align="left" valign="middle" style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: #786832; padding-right: 12px;">
+            ${escapeEmailHtml(options.heading)}
+          </td>
+          <td align="right" valign="middle" style="font-size: 12px; color: #475569; white-space: nowrap;">
+            Correo autorizado: <strong style="color: #111827;">${escapeEmailHtml(options.email)}</strong>
+          </td>
+        </tr>
+      </table>
+
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width: 100%;">
+        <tr>
+          ${renderBox(box1)}
+          <td width="2%" style="font-size: 0; line-height: 0;">&nbsp;</td>
+          ${renderBox(box2)}
+          <td width="2%" style="font-size: 0; line-height: 0;">&nbsp;</td>
+          ${renderBox(box3)}
+        </tr>
+      </table>
+
+      <div style="text-align: center; margin-top: 18px;">
+        <a href="${safeHref}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: #00594E; color: #FFFFFF !important; border: 1px solid #B5A160; border-radius: 10px; padding: 13px 28px; font-size: 14px; font-weight: 700; text-decoration: none; letter-spacing: 0.2px;">
+          ${escapeEmailHtml(options.ctaLabel)} &rarr;
+        </a>
+      </div>
+
+      <p style="margin: 12px 0 0 0; text-align: center; font-size: 11.5px; line-height: 1.45; color: #64748B;">
+        ${escapeEmailHtml(options.helperText)}
+      </p>
+    </div>
+  `;
 }
 
 function buildEmailLayout(options: {
@@ -519,7 +565,7 @@ function buildEmailLayout(options: {
 
           <!-- PIE DE CORREO INSTITUCIONAL LIMPIO -->
           <tr>
-            <td style="background-color: #F8FAFC; border-top: 1px solid #DCE4E3; padding: 20px 24px; text-align: center; font-size: 12px; color: #64748B; line-height: 1.6;">
+            <td style="background-color: #F8FAFC; border-top: 1px solid #DCE4E3; padding: 18px 24px; text-align: center; font-size: 12px; color: #64748B; line-height: 1.55;">
               Universidad Internacional del Trópico Americano - Unitrópico &middot; Sede Yopal, Casanare, Colombia &middot; Sistema Institucional de Gestión Documental
             </td>
           </tr>
@@ -538,33 +584,22 @@ export async function sendRadicacionSolicitanteEmail(
   params: EmailRadicacionSolicitanteParams
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const subject = `[Radicado ${params.numeroRadicado}] Confirmación de Radicación Oficial - Unitrópico`;
-  const fechaRadicadoTxt = formatDateLongEs(params.fechaRadicacion);
-  const fechaLimiteTxt = formatDateLongEs(params.fechaLimiteEntrega);
+  const fechaRadicadoTxt = formatDateCompactEs(params.fechaRadicacion);
+  const fechaLimiteSlash = formatDateShortSlashEs(params.fechaLimiteEntrega);
   const prioridadTxt = params.prioridad || 'Media';
   const categoriaTxt = params.categoria || 'Petición General';
 
-  const bentoCard = buildBentoDataCard(
-    [
-      { label: 'Asunto', valueHtml: escapeEmailHtml(params.asunto) },
-      { label: 'Solicitante', valueHtml: escapeEmailHtml(params.solicitanteNombre) },
-      { label: 'Clasificación y Prioridad', valueHtml: `${escapeEmailHtml(categoriaTxt)} &middot; <strong style="color:#00594E;">Prioridad ${escapeEmailHtml(prioridadTxt)}</strong>` },
-      { label: 'Fecha de Radicación', valueHtml: escapeEmailHtml(fechaRadicadoTxt) },
-      { label: 'Fecha Límite de Respuesta', valueHtml: `<strong style="color:#00594E;">${escapeEmailHtml(fechaLimiteTxt)}</strong>` },
-    ],
-    {
-      label: 'Trazabilidad del Expediente Institucional',
-      statusRight: 'Radicación Registrada',
-      greenPct: 30,
-      goldPct: 40,
-      legendLeft: 'Radicado y asignado a dependencias',
-      legendRight: `${params.totalDependencias || 1} dependencia(s) en gestión`,
-    }
-  );
+  const bentoCard = buildHorizontalBentoGrid([
+    { label: 'Asunto', valueHtml: escapeEmailHtml(params.asunto) },
+    { label: 'Fecha de Radicación', valueHtml: escapeEmailHtml(fechaRadicadoTxt) },
+    { label: 'Solicitante', valueHtml: `<strong style="color:#00594E;">${escapeEmailHtml(params.solicitanteNombre)}</strong>` },
+    { label: 'Clasificación y Prioridad', valueHtml: `${escapeEmailHtml(categoriaTxt)} &middot; <strong style="color:#786832;">Prioridad ${escapeEmailHtml(prioridadTxt)}</strong>` },
+  ]);
 
   const docBox = params.nombreDocumento
     ? `
-      <div style="background-color: #F2F7F6; border: 1px solid #B2CFCB; border-left: 4px solid #00594E; border-radius: 10px; padding: 12px 16px; margin: 16px 0;">
-        <div style="font-size: 11px; font-weight: 800; color: #00594E; text-transform: uppercase; letter-spacing: 0.6px;">
+      <div style="background-color: #F2F7F6; border: 1px solid #B2CFCB; border-left: 4px solid #00594E; border-radius: 10px; padding: 12px 16px; margin: 14px 0;">
+        <div style="font-size: 10.5px; font-weight: 800; color: #00594E; text-transform: uppercase; letter-spacing: 0.6px;">
           Documento Base Custodiado
         </div>
         <div style="font-size: 13.5px; font-weight: 700; color: #111827; margin-top: 3px;">
@@ -573,34 +608,47 @@ export async function sendRadicacionSolicitanteEmail(
       </div>`
     : '';
 
-  const credsBox = buildCredentialsBox({
+  const credentialsAndCtaCard = buildGoldCredentialsAndCtaCard({
     heading: 'Credenciales de Seguimiento Ciudadano',
     email: params.toEmail,
-    items: [
-      { label: 'Número de Radicado', value: params.numeroRadicado },
-      { label: 'PIN de Consulta', value: params.pinAcceso },
+    boxes: [
+      {
+        widthPct: '34%',
+        label: 'Número de Radicado',
+        valueHtml: `<div style="font-family: 'JetBrains Mono', Consolas, ui-monospace, monospace; font-size: 14.5px; font-weight: 800; color: #00594E; letter-spacing: 0.4px; white-space: nowrap;">${escapeEmailHtml(params.numeroRadicado)}</div>`,
+      },
+      {
+        widthPct: '30%',
+        label: 'PIN de Consulta',
+        valueHtml: `<div style="font-family: 'JetBrains Mono', Consolas, ui-monospace, monospace; font-size: 17px; font-weight: 800; color: #00594E; letter-spacing: 2.5px; white-space: nowrap;">${escapeEmailHtml(params.pinAcceso)}</div>`,
+      },
+      {
+        widthPct: '32%',
+        label: 'Límite de Respuesta',
+        valueHtml: `<div style="font-size: 11px; font-weight: 600; color: #64748B; line-height: 1.25;">${params.totalDependencias || 1} dependencia(s)</div><div style="font-size: 13px; font-weight: 800; color: #786832; margin-top: 2px; white-space: nowrap;">Hasta el ${escapeEmailHtml(fechaLimiteSlash)}</div>`,
+      },
     ],
-    footnote: 'Conserve este PIN de 6 dígitos para consultar el estado y descargar su respuesta oficial cuando sea emitida.',
+    ctaUrl: params.consultaUrl,
+    ctaLabel: 'Consultar Estado del Radicado',
+    helperText: 'Conserve este PIN de 6 dígitos o acceda desde el botón superior para verificar el estado de su trámite.',
   });
 
   const bodyHtml = `
-    <p style="margin: 0 0 10px 0; font-size: 16px; font-weight: 800; color: #00594E;">
+    <p style="margin: 0 0 6px 0; font-size: 16px; font-weight: 800; color: #00594E;">
       Estimado(a) ${escapeEmailHtml(params.solicitanteNombre)},
     </p>
-    <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.65; color: #475569;">
+    <p style="margin: 0 0 14px 0; font-size: 14px; line-height: 1.6; color: #475569;">
       Le confirmamos que su solicitud ha sido radicada oficialmente en el Sistema Institucional de Gestión Documental de la Universidad Internacional del Trópico Americano — Unitrópico y ya se encuentra en trámite ante las dependencias competentes.
     </p>
     ${bentoCard}
     ${docBox}
-    ${credsBox}
-    ${buildCtaButton(params.consultaUrl, 'Consultar Estado del Radicado')}
+    ${credentialsAndCtaCard}
   `;
 
   const html = buildEmailLayout({
     title: subject,
     headerTitle: 'Confirmación de Radicación Oficial',
     numeroRadicado: params.numeroRadicado,
-    badgeTag: 'Constancia de Ingreso al Expediente Digital',
     bodyHtml,
   });
 
@@ -619,99 +667,102 @@ export async function sendRadicacionSolicitanteEmail(
 export async function sendPeticionAssignmentEmail(
   params: EmailPeticionNotificationParams
 ): Promise<{ success: boolean; simulated?: boolean; messageId?: string; error?: string; needsSmtpConfig?: boolean }> {
-  const formattedRadicacion = formatDateLongEs(params.fechaRadicacion);
-  const formattedEntrega = formatDateLongEs(params.fechaLimiteEntrega);
-  const formattedResponsable = formatDateLongEs(params.fechaLimiteResponsable);
+  const formattedRadicacion = formatDateCompactEs(params.fechaRadicacion);
+  const formattedDeadline = formatDateMediumWeekdayEs(params.fechaLimiteResponsable || params.fechaLimiteEntrega);
   const prioridadBadge = params.prioridad || 'Media';
   const categoriaLegal = params.categoria || 'Petición General';
-  const instrucciones =
-    params.instruccionesAnexos && params.instruccionesAnexos.trim().length > 0
-      ? params.instruccionesAnexos.trim()
-      : 'Remitir los documentos, conceptos y antecedentes técnicos que sustenten la respuesta institucional.';
+  const cleanInstrucciones = limpiarTextoRequerimiento(params.instruccionesAnexos);
 
   const subject = `[Radicado ${params.numeroRadicado}] Asignación de Subcarpeta y Soportes - Prioridad ${prioridadBadge}`;
 
-  const bentoCard = buildBentoDataCard(
-    [
-      { label: 'Asunto', valueHtml: escapeEmailHtml(params.asunto) },
-      { label: 'Dependencia Asignada', valueHtml: `<strong style="color:#00594E;">${escapeEmailHtml(params.oficinaNombre)}</strong>` },
-      { label: 'Clasificación y Prioridad', valueHtml: `${escapeEmailHtml(categoriaLegal)} &middot; <strong style="color:#786832;">Prioridad ${escapeEmailHtml(prioridadBadge)}</strong>` },
-      { label: 'Fecha de Radicación', valueHtml: escapeEmailHtml(formattedRadicacion) },
-      { label: 'Límite Dependencias (-5 Días)', valueHtml: `<strong style="color:#00594E;">${escapeEmailHtml(formattedResponsable)} (23:59:59)</strong>` },
-      { label: 'Expiración General', valueHtml: escapeEmailHtml(formattedEntrega) },
-    ],
+  const bentoCard = buildHorizontalBentoGrid([
+    { label: 'Asunto', valueHtml: escapeEmailHtml(params.asunto) },
+    { label: 'Fecha de Radicación', valueHtml: escapeEmailHtml(formattedRadicacion) },
+    { label: 'Dependencia Asignada', valueHtml: `<strong style="color:#00594E;">${escapeEmailHtml(params.oficinaNombre)}</strong>` },
     {
-      label: 'Distribución Operativa del Plazo Institucional',
-      statusRight: 'Margen -5 días activo',
-      greenPct: 67,
-      goldPct: 33,
-      legendLeft: 'Cargue de soportes por dependencia',
-      legendRight: '5 días de consolidación institucional',
-    }
-  );
+      label: 'Clasificación y Prioridad',
+      valueHtml: `${escapeEmailHtml(categoriaLegal)} &middot; <strong style="color:#786832;">Prioridad ${escapeEmailHtml(prioridadBadge)}</strong>`,
+    },
+  ]);
 
-  const attachmentBanner = ''; // Los soportes documentales se consultan exclusivamente en la plataforma.
+  const validSubcarpetas = Array.isArray(params.subcarpetas)
+    ? params.subcarpetas.filter((s) => s && s.nombre && !String(s.nombre).toUpperCase().includes('RESPUESTA_META'))
+    : [];
 
   const subcarpetasHtml =
-    params.subcarpetas && params.subcarpetas.length > 0
+    validSubcarpetas.length > 0
       ? `
-        <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-left: 4px solid #B5A160; border-radius: 12px; padding: 16px 18px; margin: 18px 0;">
+        <div style="background-color: #FFFFFF; border: 1px solid #DCE4E3; border-left: 4px solid #B5A160; border-radius: 12px; padding: 15px 18px; margin: 14px 0;">
           <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: #786832; margin-bottom: 10px;">
-            Subcarpeta(s) Asignada(s) a su Dependencia (${params.subcarpetas.length})
+            Subcarpeta(s) Asignada(s) a su Dependencia (${validSubcarpetas.length})
           </div>
-          ${params.subcarpetas
-            .map(
-              (sub) => `
-              <div style="background-color: #FFFFFF; border: 1px solid #DCE4E3; border-left: 4px solid #00594E; border-radius: 8px; padding: 11px 14px; margin-bottom: 8px;">
+          ${validSubcarpetas
+            .map((sub) => {
+              const cleanSubDesc = sub.descripcion ? limpiarTextoRequerimiento(sub.descripcion) : '';
+              return `
+              <div style="background-color: #F8FAFC; border: 1px solid #DCE4E3; border-left: 4px solid #00594E; border-radius: 8px; padding: 10px 14px; margin-bottom: 8px;">
                 <div style="font-size: 13.5px; font-weight: 800; color: #00594E;">
                   ${escapeEmailHtml(sub.nombre)}
                 </div>
-                ${sub.descripcion ? `<div style="font-size: 12.5px; color: #475569; margin-top: 4px; line-height: 1.45;">${escapeEmailHtml(sub.descripcion)}</div>` : ''}
-              </div>`
-            )
+                ${cleanSubDesc ? `<div style="font-size: 13px; color: #334155; margin-top: 4px; line-height: 1.5; white-space: pre-wrap;">${escapeEmailHtml(cleanSubDesc)}</div>` : ''}
+              </div>`;
+            })
             .join('')}
         </div>`
       : `
-        <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-left: 4px solid #B5A160; border-radius: 12px; padding: 16px 18px; margin: 18px 0;">
+        <div style="background-color: #FFFFFF; border: 1px solid #DCE4E3; border-left: 4px solid #B5A160; border-radius: 12px; padding: 15px 18px; margin: 14px 0;">
           <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: #786832; margin-bottom: 6px;">
             Requerimiento y Anexos Solicitados
           </div>
-          <div style="font-size: 13.5px; color: #334155; line-height: 1.55; white-space: pre-wrap;">
-            ${escapeEmailHtml(instrucciones)}
-          </div>
+          <div style="font-size: 13.5px; color: #111827; line-height: 1.6; white-space: pre-wrap;">${escapeEmailHtml(cleanInstrucciones)}</div>
         </div>`;
 
-  const credItems = [{ label: 'Código Único de Dependencia', value: params.codigoAcceso }];
-  if (params.pinAcceso) {
-    credItems.push({ label: 'PIN de Expediente', value: params.pinAcceso });
-  }
+  const codigoPinHtml = params.pinAcceso
+    ? `<div style="font-family: 'JetBrains Mono', Consolas, ui-monospace, monospace; font-size: 14px; font-weight: 800; color: #00594E; letter-spacing: 0.3px; white-space: nowrap;">${escapeEmailHtml(params.codigoAcceso)}</div>
+       <div style="font-size: 11px; font-weight: 700; color: #475569; margin-top: 3px; white-space: nowrap;">PIN: <span style="font-family: 'JetBrains Mono', Consolas, ui-monospace, monospace; color: #00594E; font-weight: 800; letter-spacing: 1px;">${escapeEmailHtml(params.pinAcceso)}</span></div>`
+    : `<div style="font-family: 'JetBrains Mono', Consolas, ui-monospace, monospace; font-size: 15px; font-weight: 800; color: #00594E; letter-spacing: 0.5px; white-space: nowrap;">${escapeEmailHtml(params.codigoAcceso)}</div>`;
 
-  const credsBox = buildCredentialsBox({
+  const credentialsAndCtaCard = buildGoldCredentialsAndCtaCard({
     heading: 'Credenciales de Acceso al Portal de Dependencias',
     email: params.toEmail,
-    items: credItems,
-    footnote: 'El enlace permanece habilitado hasta el vencimiento interno (-5 días). Pasada esta fecha se bloqueará para consolidación rectoral.',
+    boxes: [
+      {
+        widthPct: '33%',
+        label: 'Número de Radicado',
+        valueHtml: `<div style="font-family: 'JetBrains Mono', Consolas, ui-monospace, monospace; font-size: 14.5px; font-weight: 800; color: #00594E; letter-spacing: 0.4px; white-space: nowrap;">${escapeEmailHtml(params.numeroRadicado)}</div>`,
+      },
+      {
+        widthPct: '32%',
+        label: 'Código / PIN de Acceso',
+        valueHtml: codigoPinHtml,
+      },
+      {
+        widthPct: '31%',
+        label: 'Fecha Límite de Entrega',
+        valueHtml: `<div style="font-size: 12.5px; font-weight: 800; color: #786832; line-height: 1.35;">${escapeEmailHtml(formattedDeadline)}</div><div style="font-size: 10.5px; font-weight: 600; color: #64748B; margin-top: 2px;">Hora límite: 23:59</div>`,
+      },
+    ],
+    ctaUrl: params.portalUrl,
+    ctaLabel: 'Ingresar al Portal y Cargar Soportes',
+    helperText: 'Ingrese desde el botón superior o utilice sus credenciales antes de la fecha límite indicada para cargar sus soportes.',
   });
 
   const bodyHtml = `
-    <p style="margin: 0 0 10px 0; font-size: 16px; font-weight: 800; color: #00594E;">
+    <p style="margin: 0 0 6px 0; font-size: 16px; font-weight: 800; color: #00594E;">
       Estimado(a) responsable de ${escapeEmailHtml(params.oficinaNombre)},
     </p>
-    <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.65; color: #475569;">
+    <p style="margin: 0 0 14px 0; font-size: 14px; line-height: 1.6; color: #475569;">
       Le notificamos formalmente la asignación de una solicitud institucional en la cual su dependencia debe aportar los soportes documentales y conceptos requeridos dentro del término establecido.
     </p>
     ${bentoCard}
-    ${attachmentBanner}
     ${subcarpetasHtml}
-    ${credsBox}
-    ${buildCtaButton(params.portalUrl, 'Ingresar al Portal y Cargar Soportes')}
+    ${credentialsAndCtaCard}
   `;
 
   const html = buildEmailLayout({
     title: subject,
     headerTitle: 'Asignación Oficial de Soportes Documentales',
     numeroRadicado: params.numeroRadicado,
-    badgeTag: `Prioridad ${prioridadBadge} · Portal de Dependencias`,
     bodyHtml,
   });
 
@@ -734,85 +785,88 @@ export async function enviarCorreoRecordatorioDependencia(
   const diasLabel = dias === 0 ? 'Vence Hoy' : dias === 1 ? 'Queda 1 día' : `Quedan ${dias} días`;
   const subject = `Recordatorio de Vencimiento Próximo (${diasLabel}) - Radicado ${params.numeroRadicado}`;
 
-  const formattedLimite = formatDateLongEs(params.fechaLimiteDependencia);
-  const formattedRadicacion = formatDateLongEs(params.fechaRadicacion);
-  const instruccionTexto =
-    params.instruccionSubcarpeta && params.instruccionSubcarpeta.trim().length > 0
-      ? params.instruccionSubcarpeta.trim()
-      : 'Remitir los documentos, conceptos técnicos o soportes institucionales requeridos para consolidar la respuesta del radicado.';
+  const formattedLimite = formatDateMediumWeekdayEs(params.fechaLimiteDependencia);
+  const formattedRadicacion = formatDateCompactEs(params.fechaRadicacion);
+  const categoriaTxt = params.categoria || 'Petición General';
+  const prioridadTxt = params.prioridad || 'Alta';
+  const instruccionTexto = limpiarTextoRequerimiento(params.instruccionSubcarpeta);
 
   const mensajeUrgencia =
     dias === 0
       ? `Le informamos que <strong>hoy vence el plazo interno</strong> asignado a su dependencia para cargar el soporte pendiente del radicado <strong>${escapeEmailHtml(params.numeroRadicado)}</strong>.`
       : `Le recordamos que faltan <strong>${dias} día${dias === 1 ? '' : 's'} calendario</strong> para que venza el plazo interno asignado a su dependencia para cargar el soporte pendiente del radicado <strong>${escapeEmailHtml(params.numeroRadicado)}</strong>.`;
 
-  const elapsedPct = dias === 0 ? 100 : dias === 1 ? 90 : dias === 2 ? 80 : 70;
-  const remainPct = 100 - elapsedPct;
-
-  const bentoCard = buildBentoDataCard(
-    [
-      { label: 'Asunto', valueHtml: escapeEmailHtml(params.tituloPeticion) },
-      { label: 'Dependencia Pendiente', valueHtml: `<strong style="color:#786832;">${escapeEmailHtml(params.oficinaNombre)}</strong>` },
-      { label: 'Fecha de Radicación', valueHtml: escapeEmailHtml(formattedRadicacion) },
-      { label: 'Fecha de Expiración (Oficina)', valueHtml: `<strong style="color:#00594E;">${escapeEmailHtml(formattedLimite)} (23:59:59)</strong>` },
-    ],
+  const bentoCard = buildHorizontalBentoGrid([
+    { label: 'Asunto', valueHtml: escapeEmailHtml(params.tituloPeticion) },
+    { label: 'Fecha de Radicación', valueHtml: escapeEmailHtml(formattedRadicacion) },
+    { label: 'Dependencia Asignada', valueHtml: `<strong style="color:#00594E;">${escapeEmailHtml(params.oficinaNombre)}</strong>` },
     {
-      label: 'Semáforo Preventivo de Plazo',
-      statusRight: diasLabel,
-      greenPct: Math.min(60, elapsedPct),
-      goldPct: Math.max(remainPct, elapsedPct - 60),
-      legendLeft: 'Tiempo transcurrido de gestión',
-      legendRight: `${diasLabel} para carga obligatoria`,
-    }
-  );
+      label: 'Clasificación y Prioridad',
+      valueHtml: `${escapeEmailHtml(categoriaTxt)} &middot; <strong style="color:#786832;">Prioridad ${escapeEmailHtml(prioridadTxt)}</strong>`,
+    },
+  ]);
 
   const subcarpetaBox = `
-    <div style="background-color: #FFFFFF; border: 1px solid #DCE4E3; border-left: 4px solid #B5A160; border-radius: 12px; padding: 15px 18px; margin: 18px 0;">
-      <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: #786832; margin-bottom: 5px;">
+    <div style="background-color: #FFFFFF; border: 1px solid #DCE4E3; border-left: 4px solid #B5A160; border-radius: 12px; padding: 15px 18px; margin: 14px 0;">
+      <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: #786832; margin-bottom: 6px;">
         Subcarpeta Asignada Pendiente de Soporte
       </div>
-      <div style="font-size: 14.5px; font-weight: 800; color: #00594E; margin-bottom: 5px;">
+      <div style="font-size: 14px; font-weight: 800; color: #00594E; margin-bottom: 4px;">
         ${escapeEmailHtml(params.nombreSubcarpeta)}
       </div>
-      <div style="font-size: 13px; color: #475569; line-height: 1.5; white-space: pre-wrap;">
-        ${escapeEmailHtml(instruccionTexto)}
-      </div>
+      <div style="font-size: 13px; color: #334155; line-height: 1.55; white-space: pre-wrap;">${escapeEmailHtml(instruccionTexto)}</div>
     </div>
   `;
 
-  const credItems = [{ label: 'Código Único de Dependencia', value: params.codigoAccesoDependencia }];
-  if (params.pinAcceso) {
-    credItems.push({ label: 'PIN de Expediente', value: params.pinAcceso });
-  }
+  const codigoPinHtml = params.pinAcceso
+    ? `<div style="font-family: 'JetBrains Mono', Consolas, ui-monospace, monospace; font-size: 14px; font-weight: 800; color: #00594E; letter-spacing: 0.3px; white-space: nowrap;">${escapeEmailHtml(params.codigoAccesoDependencia)}</div>
+       <div style="font-size: 11px; font-weight: 700; color: #475569; margin-top: 3px; white-space: nowrap;">PIN: <span style="font-family: 'JetBrains Mono', Consolas, ui-monospace, monospace; color: #00594E; font-weight: 800; letter-spacing: 1px;">${escapeEmailHtml(params.pinAcceso)}</span></div>`
+    : `<div style="font-family: 'JetBrains Mono', Consolas, ui-monospace, monospace; font-size: 15px; font-weight: 800; color: #00594E; letter-spacing: 0.5px; white-space: nowrap;">${escapeEmailHtml(params.codigoAccesoDependencia)}</div>`;
 
-  const credsBox = buildCredentialsBox({
-    heading: 'Credenciales Originales de Carga Directa',
+  const credentialsAndCtaCard = buildGoldCredentialsAndCtaCard({
+    heading: 'Credenciales de Acceso al Portal de Dependencias',
     email: params.toEmail,
-    items: credItems,
-    footnote: 'El sistema aún no registra aportes cargados para esta subcarpeta. Utilice estas credenciales para subir su soporte de inmediato.',
+    boxes: [
+      {
+        widthPct: '33%',
+        label: 'Número de Radicado',
+        valueHtml: `<div style="font-family: 'JetBrains Mono', Consolas, ui-monospace, monospace; font-size: 14.5px; font-weight: 800; color: #00594E; letter-spacing: 0.4px; white-space: nowrap;">${escapeEmailHtml(params.numeroRadicado)}</div>`,
+      },
+      {
+        widthPct: '32%',
+        label: 'Código / PIN de Acceso',
+        valueHtml: codigoPinHtml,
+      },
+      {
+        widthPct: '31%',
+        label: 'Fecha Límite de Entrega',
+        valueHtml: `<div style="font-size: 12.5px; font-weight: 800; color: #DC2626; line-height: 1.35;">${escapeEmailHtml(formattedLimite)}</div><div style="font-size: 10.5px; font-weight: 700; color: #786832; margin-top: 2px;">${escapeEmailHtml(diasLabel)}</div>`,
+      },
+    ],
+    ctaUrl: params.portalUrl,
+    ctaLabel: 'Subir Soporte Ahora en el Portal',
+    helperText: 'El sistema aún no registra aportes cargados para esta subcarpeta. Ingrese desde el botón superior antes de la fecha límite.',
   });
 
   const bodyHtml = `
-    <div style="display: inline-block; background-color: #F7F5EE; color: #786832; border: 1px solid #DBD2B0; border-radius: 999px; padding: 4px 12px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 12px;">
+    <div style="display: inline-block; background-color: #F7F5EE; color: #786832; border: 1px solid #DBD2B0; border-radius: 999px; padding: 4px 12px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px;">
       Recordatorio Preventivo &middot; ${escapeEmailHtml(diasLabel)}
     </div>
-    <p style="margin: 0 0 10px 0; font-size: 16px; font-weight: 800; color: #00594E;">
+    <p style="margin: 0 0 6px 0; font-size: 16px; font-weight: 800; color: #00594E;">
       Estimado(a) responsable de ${escapeEmailHtml(params.oficinaNombre)},
     </p>
-    <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.65; color: #475569;">
+    <p style="margin: 0 0 14px 0; font-size: 14px; line-height: 1.6; color: #475569;">
       ${mensajeUrgencia}
     </p>
     ${bentoCard}
     ${subcarpetaBox}
-    ${credsBox}
-    ${buildCtaButton(params.portalUrl, 'Subir Soporte Ahora en el Portal')}
+    ${credentialsAndCtaCard}
   `;
 
   const html = buildEmailLayout({
     title: subject,
     headerTitle: 'Aviso de Vencimiento Próximo',
     numeroRadicado: params.numeroRadicado,
-    badgeTag: `Gestión Pendiente · ${diasLabel}`,
     bodyHtml,
   });
 
@@ -826,125 +880,60 @@ export async function enviarCorreoRecordatorioDependencia(
 }
 
 /**
- * 4. Correo de Respuesta Oficial Final al Solicitante (con Respuesta Final + Anexos marcados con check)
+ * 4. Correo de Respuesta Oficial Final al Solicitante (diseño horizontal 720px sin adjuntos físicos)
  */
 export async function sendRespuestaSolicitanteEmail(
   params: EmailRespuestaSolicitanteParams
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const formattedExpiracionSlash = formatDateShortSlashEs(params.fechaExpiracion);
   const formattedRadicacion = formatDateCompactEs(params.fechaRadicacion);
+  const cleanPronunciamiento = String(params.mensajeRespuesta || '')
+    .replace(/\[RESPUESTA_META\]:\s*\{[\s\S]*?\}(?=\n|$)/gi, '')
+    .replace(/\[RESPUESTA_META\]:[\s\S]*$/gi, '')
+    .replace(/\[META_[A-Z_]+\]:[\s\S]*$/gi, '')
+    .trim();
   const subject = `[Radicado N° ${params.numeroRadicado}] Notificación oficial de respuesta a su petición - Unitrópico`;
 
-  const bentoCard = `
-    <div style="background-color: #F8FAFC; border: 1px solid #DCE4E3; border-radius: 12px; overflow: hidden; margin: 14px 0;">
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width: 100%; border-collapse: collapse;">
-        <tr>
-          <td width="60%" valign="top" style="width: 60%; padding: 12px 16px; border-bottom: 1px solid #E2E8F0; border-right: 1px solid #E2E8F0;">
-            <div style="font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: #64748B; margin-bottom: 4px;">
-              Asunto
-            </div>
-            <div style="font-size: 13.5px; font-weight: 700; color: #111827; line-height: 1.4;">
-              ${escapeEmailHtml(params.asunto)}
-            </div>
-          </td>
-          <td width="40%" valign="top" style="width: 40%; padding: 12px 16px; border-bottom: 1px solid #E2E8F0;">
-            <div style="font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: #64748B; margin-bottom: 4px;">
-              Fecha de Radicación
-            </div>
-            <div style="font-size: 13.5px; font-weight: 700; color: #111827; line-height: 1.4;">
-              ${escapeEmailHtml(formattedRadicacion)}
-            </div>
-          </td>
-        </tr>
-        <tr>
-          <td width="60%" valign="top" style="width: 60%; padding: 12px 16px; border-right: 1px solid #E2E8F0;">
-            <div style="font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: #64748B; margin-bottom: 4px;">
-              Emitido Por
-            </div>
-            <div style="font-size: 13.5px; font-weight: 800; color: #00594E; line-height: 1.4;">
-              ${escapeEmailHtml(params.funcionarioNombre)}
-            </div>
-          </td>
-          <td width="40%" valign="top" style="width: 40%; padding: 12px 16px;">
-            <div style="font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: #64748B; margin-bottom: 4px;">
-              Solicitante
-            </div>
-            <div style="font-size: 13.5px; font-weight: 700; color: #111827; line-height: 1.4;">
-              ${escapeEmailHtml(params.solicitanteNombre)}
-            </div>
-          </td>
-        </tr>
-      </table>
-    </div>
-  `;
+  const bentoCard = buildHorizontalBentoGrid([
+    { label: 'Asunto', valueHtml: escapeEmailHtml(params.asunto) },
+    { label: 'Fecha de Radicación', valueHtml: escapeEmailHtml(formattedRadicacion) },
+    { label: 'Emitido Por', valueHtml: `<strong style="color:#00594E;">${escapeEmailHtml(params.funcionarioNombre)}</strong>` },
+    { label: 'Solicitante', valueHtml: escapeEmailHtml(params.solicitanteNombre) },
+  ]);
 
   const respuestaMessageBox = `
     <div style="background-color: #FFFFFF; border: 1px solid #DCE4E3; border-left: 4px solid #00594E; border-radius: 12px; padding: 16px 20px; margin: 14px 0;">
       <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: #00594E; margin-bottom: 8px;">
         Pronunciamiento Oficial de la Institución
       </div>
-      <div style="font-size: 14px; color: #111827; line-height: 1.65; white-space: pre-wrap;">${escapeEmailHtml(params.mensajeRespuesta)}</div>
+      <div style="font-size: 14px; color: #111827; line-height: 1.65; white-space: pre-wrap;">${escapeEmailHtml(cleanPronunciamiento)}</div>
     </div>
   `;
 
-  const credentialsAndCtaCard = `
-    <div style="background-color: #FBF9F4; border: 1px solid #DBD2B0; border-radius: 14px; padding: 20px 24px; margin: 16px 0 8px 0;">
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width: 100%; margin-bottom: 14px;">
-        <tr>
-          <td align="left" valign="middle" style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: #786832; padding-right: 12px;">
-            Credenciales y Enlace de Consulta del Expediente
-          </td>
-          <td align="right" valign="middle" style="font-size: 12px; color: #475569; white-space: nowrap;">
-            Correo autorizado: <strong style="color: #111827;">${escapeEmailHtml(params.toEmail)}</strong>
-          </td>
-        </tr>
-      </table>
-
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width: 100%;">
-        <tr>
-          <td width="34%" valign="top" style="background-color: #FFFFFF; border: 1px solid #E7DFC4; border-radius: 10px; padding: 12px 10px; text-align: center;">
-            <div style="font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: #64748B; margin-bottom: 5px;">
-              Número de Radicado
-            </div>
-            <div style="font-family: 'JetBrains Mono', Consolas, ui-monospace, monospace; font-size: 14.5px; font-weight: 800; color: #00594E; letter-spacing: 0.4px; white-space: nowrap;">
-              ${escapeEmailHtml(params.numeroRadicado)}
-            </div>
-          </td>
-          <td width="2%" style="font-size: 0; line-height: 0;">&nbsp;</td>
-          <td width="30%" valign="top" style="background-color: #FFFFFF; border: 1px solid #E7DFC4; border-radius: 10px; padding: 12px 10px; text-align: center;">
-            <div style="font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: #64748B; margin-bottom: 5px;">
-              PIN de Consulta
-            </div>
-            <div style="font-family: 'JetBrains Mono', Consolas, ui-monospace, monospace; font-size: 17px; font-weight: 800; color: #00594E; letter-spacing: 2.5px; white-space: nowrap;">
-              ${escapeEmailHtml(params.pinSolicitante)}
-            </div>
-          </td>
-          <td width="2%" style="font-size: 0; line-height: 0;">&nbsp;</td>
-          <td width="32%" valign="top" style="background-color: #FFFFFF; border: 1px solid #E7DFC4; border-radius: 10px; padding: 12px 10px; text-align: center;">
-            <div style="font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: #64748B; margin-bottom: 3px;">
-              Expiración del Enlace
-            </div>
-            <div style="font-size: 11px; font-weight: 600; color: #64748B; line-height: 1.25;">
-              Vigencia: 10 días
-            </div>
-            <div style="font-size: 13px; font-weight: 800; color: #786832; margin-top: 2px; white-space: nowrap;">
-              Hasta el ${escapeEmailHtml(formattedExpiracionSlash)}
-            </div>
-          </td>
-        </tr>
-      </table>
-
-      <div style="text-align: center; margin-top: 18px;">
-        <a href="${escapeEmailHtml(params.consultaUrl)}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: #00594E; color: #FFFFFF !important; border: 1px solid #B5A160; border-radius: 10px; padding: 13px 28px; font-size: 14px; font-weight: 700; text-decoration: none; letter-spacing: 0.2px;">
-          Abrir Portal de Respuestas y Descargar Documentos &rarr;
-        </a>
-      </div>
-
-      <p style="margin: 12px 0 0 0; text-align: center; font-size: 11.5px; line-height: 1.45; color: #64748B;">
-        Ingrese desde el botón superior o digite su Número de Radicado y PIN antes de la fecha de expiración indicada.
-      </p>
-    </div>
-  `;
+  const credentialsAndCtaCard = buildGoldCredentialsAndCtaCard({
+    heading: 'Credenciales y Enlace de Consulta del Expediente',
+    email: params.toEmail,
+    boxes: [
+      {
+        widthPct: '34%',
+        label: 'Número de Radicado',
+        valueHtml: `<div style="font-family: 'JetBrains Mono', Consolas, ui-monospace, monospace; font-size: 14.5px; font-weight: 800; color: #00594E; letter-spacing: 0.4px; white-space: nowrap;">${escapeEmailHtml(params.numeroRadicado)}</div>`,
+      },
+      {
+        widthPct: '30%',
+        label: 'PIN de Consulta',
+        valueHtml: `<div style="font-family: 'JetBrains Mono', Consolas, ui-monospace, monospace; font-size: 17px; font-weight: 800; color: #00594E; letter-spacing: 2.5px; white-space: nowrap;">${escapeEmailHtml(params.pinSolicitante)}</div>`,
+      },
+      {
+        widthPct: '32%',
+        label: 'Expiración del Enlace',
+        valueHtml: `<div style="font-size: 11px; font-weight: 600; color: #64748B; line-height: 1.25;">Vigencia: 10 días</div><div style="font-size: 13px; font-weight: 800; color: #786832; margin-top: 2px; white-space: nowrap;">Hasta el ${escapeEmailHtml(formattedExpiracionSlash)}</div>`,
+      },
+    ],
+    ctaUrl: params.consultaUrl,
+    ctaLabel: 'Abrir Portal de Respuestas y Descargar Documentos',
+    helperText: 'Ingrese desde el botón superior o digite su Número de Radicado y PIN antes de la fecha de expiración indicada.',
+  });
 
   const driveHtml = params.driveUrl
     ? `

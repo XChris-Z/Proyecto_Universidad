@@ -3,7 +3,12 @@ export const prerender = false;
 
 import type { APIRoute } from 'astro';
 import { supabase } from '@lib/supabase';
-import { sendPeticionAssignmentEmail } from '@lib/email';
+import {
+  sendPeticionAssignmentEmail,
+  resolvePublicBaseUrl,
+  limpiarTextoRequerimiento,
+} from '@lib/email';
+import { separarRespuestaMeta } from '@lib/subcarpetas';
 import { logSystemActivity } from '@lib/audit';
 import { generatePin6, getDeterministicPin } from '@lib/security';
 
@@ -225,7 +230,9 @@ export const POST: APIRoute = async ({ request, url }) => {
     }
 
     // 6. PASO 4 OBLIGATORIO: Enviar notificaciones por correo SOLO tras confirmar persistencia en pasos 1 y 2
-    const baseUrl = url.origin;
+    const baseUrl = resolvePublicBaseUrl(request, url);
+    const { textoLimpio: fallbackPetInst } = separarRespuestaMeta(peticion.instrucciones_anexos || '');
+    const cleanSubDesc = limpiarTextoRequerimiento(cleanDescripcion || fallbackPetInst);
     const emailPromises = [];
 
     for (const resp of respInsertados) {
@@ -248,10 +255,10 @@ export const POST: APIRoute = async ({ request, url }) => {
           subcarpetas: [
             {
               nombre: cleanNombre,
-              descripcion: cleanDescripcion || 'Subcarpeta y requerimiento asignado al expediente.',
+              descripcion: cleanSubDesc,
             },
           ],
-          instruccionesAnexos: cleanDescripcion || peticion.instrucciones_anexos,
+          instruccionesAnexos: cleanSubDesc,
           fechaLimiteEntrega: peticion.fecha_limite_entrega,
           fechaLimiteResponsable: peticion.fecha_limite_responsable,
           codigoAcceso: safeCodigo,

@@ -3,7 +3,13 @@ export const prerender = false;
 
 import type { APIRoute } from 'astro';
 import { supabase } from '@lib/supabase';
-import { sendPeticionAssignmentEmail, sendRadicacionSolicitanteEmail } from '@lib/email';
+import {
+  sendPeticionAssignmentEmail,
+  sendRadicacionSolicitanteEmail,
+  resolvePublicBaseUrl,
+  limpiarTextoRequerimiento,
+} from '@lib/email';
+import { separarRespuestaMeta } from '@lib/subcarpetas';
 import { logSystemActivity } from '@lib/audit';
 import { generatePin6 } from '@lib/security';
 import { MAX_FILE_SIZE_BYTES } from '@lib/constants';
@@ -289,21 +295,6 @@ export const POST: APIRoute = async ({ request, url }) => {
           finalBytes = fileBuffer.length;
         }
 
-        // Descargar buffer si es necesario para el adjunto de Nodemailer (solo si <= 4 MB)
-        if (!fileBuffer && finalBytes > 0 && finalBytes <= 4 * 1024 * 1024) {
-          try {
-            const { data: downloadedBlob } = await supabase.storage
-              .from('peticiones')
-              .download(finalStoragePath);
-            if (downloadedBlob) {
-              const arrayBuf = await downloadedBlob.arrayBuffer();
-              fileBuffer = Buffer.from(arrayBuf);
-            }
-          } catch (dlErr: any) {
-            console.warn('No se pudo descargar buffer para adjunto:', dlErr.message);
-          }
-        }
-
         // Registrar en peticion_anexos como documento raíz inicial del radicado
         const { data: anexoPrincipal, error: anexoErr } = await (supabase
           .from('peticion_anexos' as any)
@@ -508,11 +499,12 @@ export const POST: APIRoute = async ({ request, url }) => {
     }
 
     // 6. Política de cero adjuntos físicos por correo: el memorial original se consulta y descarga en el portal
-    const emailAttachments = undefined;
 
     // 7. Enviar Notificación SMTP Inteligente y Consolidada por Dependencia
     // Si una oficina está asignada a 2 o más subcarpetas, recibe UN SOLO CORREO con el desglose de todas sus subcarpetas
-    const baseUrl = url.origin;
+    const baseUrl = resolvePublicBaseUrl(request, url);
+    const { textoLimpio: rawInstCrear } = separarRespuestaMeta(peticionData.instrucciones_anexos || peticionData.descripcion || '');
+    const cleanFallbackInst = limpiarTextoRequerimiento(rawInstCrear);
     const emailNotifications = [];
 
     for (const oficina of oficinasData) {
@@ -529,7 +521,7 @@ export const POST: APIRoute = async ({ request, url }) => {
           .filter((s) => s.oficina_ids.includes(oficina.id))
           .map((s) => ({
             nombre: s.nombre,
-            descripcion: s.descripcion || 'Entrega de anexos oficiales para esta subcarpeta.',
+            descripcion: limpiarTextoRequerimiento(s.descripcion || 'Entrega de anexos oficiales para esta subcarpeta.'),
           }));
 
         const portalUrl = `${baseUrl}/portal-responsable?radicado=${encodeURIComponent(peticionData.numero_radicado)}&codigo=${encodeURIComponent(accessCode)}&email=${encodeURIComponent(targetEmail)}&pin=${encodeURIComponent(finalPinAcceso)}`;
@@ -543,13 +535,12 @@ export const POST: APIRoute = async ({ request, url }) => {
           prioridad: peticionData.prioridad,
           fechaRadicacion: peticionData.fecha_radicacion || peticionData.created_at || null,
           subcarpetas: assignedSubcarpetas,
-          instruccionesAnexos: peticionData.instrucciones_anexos || peticionData.descripcion,
+          instruccionesAnexos: cleanFallbackInst,
           fechaLimiteEntrega: peticionData.fecha_limite_entrega,
           fechaLimiteResponsable: peticionData.fecha_limite_responsable,
           codigoAcceso: accessCode,
           pinAcceso: finalPinAcceso,
           portalUrl,
-          attachments: emailAttachments,
         }).catch((err: any) => {
           console.warn(`[EMAIL ERROR NO FATAL] Fallo correo a ${targetEmail}:`, err.message);
           return { success: false, error: err.message };

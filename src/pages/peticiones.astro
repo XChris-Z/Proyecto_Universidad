@@ -441,7 +441,7 @@ function getPetSlaTone(bucket: string, responded: boolean) {
                         data-prioridad={pet.prioridad || 'Media'}
                         data-entrega={pet.fecha_limite_entrega}
                         data-estado={pet.estado || 'en_tramite'}
-                        data-descripcion={pet.descripcion || ''}
+                        data-descripcion={separarRespuestaMeta(pet.descripcion || '').textoLimpio}
                         title="Editar Petición"
                         style="width: 32px; height: 32px; border-radius: var(--radius-sm); border: 1px solid var(--dorado-borde); background: var(--dorado-suave-bg); color: var(--dorado-oscuro); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s ease;"
                       >
