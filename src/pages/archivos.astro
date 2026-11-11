@@ -7,7 +7,7 @@ import { supabase } from '@lib/supabase';
 import { calculateDeadlineProgress } from '@lib/utils';
 import { Buffer } from 'node:buffer';
 import { getDeterministicPin } from '@lib/security';
-import { separarRespuestaMeta, esSubcarpetaValida, filtrarSubcarpetasValidas } from '@lib/subcarpetas';
+import { separarRespuestaMeta, esSubcarpetaValida, filtrarSubcarpetasValidas, isPeticionRespondida, getSlaBucket } from '@lib/subcarpetas';
 
 // Interfaces estrictas para TypeScript
 export interface PeticionAnexo {
@@ -311,17 +311,19 @@ const peticiones: PeticionExpediente[] = rawPeticiones.map((p) => {
   };
 });
 const totalCount = peticiones.length;
-const pendingCount = peticiones.filter((p) => p.estado !== 'respondida' && p.estado !== 'completada').length;
-const respondedCount = peticiones.filter((p) => p.estado === 'respondida' || p.estado === 'completada').length;
+const pendingCount = peticiones.filter((p) => !isPeticionRespondida(p)).length;
+const respondedCount = peticiones.filter((p) => isPeticionRespondida(p)).length;
 
 let safeCount = 0;
 let warnCount = 0;
 let criticalCount = 0;
 
 peticiones.forEach((p) => {
+  if (isPeticionRespondida(p)) return;
   const prog = calculateDeadlineProgress(p.fecha_radicacion || p.created_at, p.fecha_limite_entrega);
-  if (prog.daysRemaining > 7) safeCount++;
-  else if (prog.daysRemaining >= 3) warnCount++;
+  const bucket = getSlaBucket(prog.daysRemaining);
+  if (bucket === 'safe') safeCount++;
+  else if (bucket === 'warn') warnCount++;
   else criticalCount++;
 });
 
@@ -341,6 +343,22 @@ function getSlaTone(filterSla: string) {
     return { bar: '#B5A160', text: '#786832', badgeBg: '#F7F5EE', badgeBorder: '#DBD2B0', badgeText: '#786832' };
   }
   return { bar: '#00594E', text: '#00594E', badgeBg: '#F2F7F6', badgeBorder: '#B2CFCB', badgeText: '#00594E' };
+}
+
+function getCardSlaMeta(prog: any, isResponded: boolean) {
+  const filterSla = isResponded ? 'safe' : getSlaBucket(prog.daysRemaining);
+  const slaTone = getSlaTone(filterSla);
+  let cardBadgeText = prog.statusBadge;
+  if (isResponded) {
+    cardBadgeText = 'Respondida';
+  } else if (prog.daysRemaining <= 0) {
+    cardBadgeText = 'Vencido';
+  } else if (prog.daysRemaining <= 5) {
+    cardBadgeText = `Vence en ${prog.daysRemaining}d`;
+  }
+  const cardPct = isResponded ? 100 : prog.percentage;
+  const cardPctText = isResponded ? 'Despachada' : `${prog.percentage}% consumido`;
+  return { filterSla, slaTone, cardBadgeText, cardPct, cardPctText };
 }
 
 const peticionesJson = JSON.stringify(peticiones);
@@ -370,10 +388,10 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
             </div>
             <div class="archivos-header-subtitle">Directorio raíz de expedientes virtuales y control preventivo</div>
             {totalCount > 0 && (
-              <div class="archivos-sla-chart-strip" title={`Distribución SLA: ${safeCount} Saludable, ${warnCount} Próximo a Vencer, ${criticalCount} Crítico`}>
+              <div class="archivos-sla-chart-strip" title={`Distribución SLA: ${respondedCount} Respondida, ${safeCount} Saludable, ${warnCount} Próximo a Vencer, ${criticalCount} Crítico`}>
                 <div class="archivos-chart-bar" role="img" aria-label="Distribución de plazos de expedientes">
-                  {safeCount > 0 && (
-                    <span class="archivos-chart-seg is-safe" style={`width: ${Math.round((safeCount / totalCount) * 100)}%;`}></span>
+                  {(safeCount + respondedCount) > 0 && (
+                    <span class="archivos-chart-seg is-safe" style={`width: ${Math.round(((safeCount + respondedCount) / totalCount) * 100)}%;`}></span>
                   )}
                   {warnCount > 0 && (
                     <span class="archivos-chart-seg is-warn" style={`width: ${Math.round((warnCount / totalCount) * 100)}%;`}></span>
@@ -383,7 +401,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                   )}
                 </div>
                 <span class="archivos-chart-caption">
-                  <strong style="color: #00594E;">{safeCount}</strong> al día &middot; <strong style="color: #786832;">{warnCount}</strong> por vencer &middot; <strong style="color: #DC2626;">{criticalCount}</strong> crítico
+                  <strong style="color: #00594E;">{respondedCount}</strong> respondida{respondedCount === 1 ? '' : 's'} &middot; <strong style="color: #00594E;">{safeCount}</strong> al día &middot; <strong style="color: #786832;">{warnCount}</strong> por vencer &middot; <strong style="color: #DC2626;">{criticalCount}</strong> crítico
                 </span>
               </div>
             )}
@@ -462,13 +480,11 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       <div id="drive-grid-container" class="archivos-bento-grid">
         {peticiones.length > 0 ? (
           peticiones.map((doc) => {
-            const isResponded = doc.estado === 'respondida' || doc.estado === 'completada';
+            const isResponded = isPeticionRespondida(doc);
             const anexos = doc.peticion_anexos || [];
             const anexoPrincipal = anexos.find((a) => !a.es_anexo_oficina) || anexos[0];
             const prog = calculateDeadlineProgress(doc.fecha_radicacion || doc.created_at, doc.fecha_limite_entrega);
-            const filterSla = prog.daysRemaining <= 2 ? 'critical' : prog.daysRemaining <= 7 ? 'warn' : 'safe';
-
-            const slaTone = getSlaTone(filterSla);
+            const { filterSla, slaTone, cardBadgeText, cardPct, cardPctText } = getCardSlaMeta(prog, isResponded);
 
             return (
               <div 
@@ -497,8 +513,8 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                     </div>
                   </div>
 
-                  <span style={`font-size: 0.68rem; font-weight: 800; padding: 3px 9px; border-radius: 999px; background: ${slaTone.badgeBg}; color: ${slaTone.badgeText}; border: 1px solid ${slaTone.badgeBorder}; white-space: nowrap; flex-shrink: 0;`}>
-                    {prog.statusBadge}
+                  <span class="folder-sla-badge" style={`font-size: 0.68rem; font-weight: 800; padding: 3px 9px; border-radius: 999px; background: ${slaTone.badgeBg}; color: ${slaTone.badgeText}; border: 1px solid ${slaTone.badgeBorder}; white-space: nowrap; flex-shrink: 0;`}>
+                    {cardBadgeText}
                   </span>
                 </div>
 
@@ -514,31 +530,29 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                 <div class="sla-chart-card">
                   <div class="sla-chart-header">
                     <span class="sla-chart-label">Fecha de Expiración ({doc.fecha_limite_entrega || '--'}):</span>
-                    <span class="sla-chart-pct" style={`color: ${slaTone.text};`}>{prog.percentage}% consumido</span>
+                    <span class="sla-chart-pct" style={`color: ${slaTone.text};`}>{cardPctText}</span>
                   </div>
                   <div class="sla-chart-track">
-                    <div class="sla-chart-fill" style={`width: ${prog.percentage}%; background: ${slaTone.bar};`}></div>
+                    <div class="sla-chart-fill" style={`width: ${cardPct}%; background: ${slaTone.bar};`}></div>
                   </div>
                 </div>
 
-                <!-- Cápsula Bento Pro Max: ÚNICAMENTE PIN de Acceso -->
-                <div class="pin-bento-capsule">
-                  <span class="pin-bento-label">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#786832" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <!-- Cápsula Bento Pro Max: ÚNICAMENTE PIN de Acceso en una sola línea -->
+                <div class="pin-acceso-row">
+                  <span class="pin-acceso-label">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#786832" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                     <span>PIN de Acceso:</span>
                   </span>
-                  <div class="pin-bento-actions">
-                    <span class="pin-bento-pill">{doc.pin_acceso || '849201'}</span>
-                    <button
-                      type="button"
-                      class="btn-copy-pin pin-bento-copy-btn"
-                      data-pin={doc.pin_acceso || '849201'}
-                      title="Copiar PIN de 6 dígitos"
-                    >
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                      <span>Copiar</span>
-                    </button>
-                  </div>
+                  <span class="pin-acceso-code">{doc.pin_acceso || '849201'}</span>
+                  <button
+                    type="button"
+                    class="btn-copy-pin pin-copy-btn"
+                    data-pin={doc.pin_acceso || '849201'}
+                    title="Copiar PIN de 6 dígitos"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    <span>Copiar</span>
+                  </button>
                 </div>
 
                 <!-- Barra de Acciones de la Carpeta -->
@@ -641,11 +655,11 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
             <tbody id="documents-table-body">
               {peticiones.map((doc) => {
                 const prog = calculateDeadlineProgress(doc.fecha_radicacion || doc.created_at, doc.fecha_limite_entrega);
-                const isResponded = doc.estado === 'respondida' || doc.estado === 'completada';
+                const isResponded = isPeticionRespondida(doc);
                 const anexos = doc.peticion_anexos || [];
                 const anexoPrincipal = anexos.find((a) => !a.es_anexo_oficina) || anexos[0];
                 const responsables = doc.peticion_responsables || [];
-                const filterSla = prog.daysRemaining <= 2 ? 'critical' : prog.daysRemaining <= 7 ? 'warn' : 'safe';
+                const filterSla = isResponded ? 'safe' : getSlaBucket(prog.daysRemaining);
 
                 return (
                   <tr class="doc-row" id={`row-folder-${doc.id}`} data-id={doc.id} data-radicado={doc.numero_radicado} data-pin={doc.pin_acceso || '849201'} data-asunto={doc.asunto} data-solicitante={doc.solicitante_nombre} data-status={isResponded ? 'responded' : 'pending'} data-sla={filterSla}>
@@ -702,7 +716,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                       <div style="font-size: 0.70rem; color: var(--dorado-oscuro);">Límite: {doc.fecha_limite_responsable}</div>
                     </td>
                     <td>
-                      <span style={`font-size: 0.72rem; font-weight: 700; padding: 4px 8px; border-radius: 4px; ${isResponded ? 'background: #DCFCE7; color: #15803D;' : 'background: #FEF3C7; color: #92400E;'}`}>
+                      <span class="row-status-pill" style={`font-size: 0.72rem; font-weight: 700; padding: 4px 8px; border-radius: 4px; border: 1px solid ${isResponded ? '#B2CFCB' : '#DBD2B0'}; ${isResponded ? 'background: #E6EFEF; color: #00594E;' : 'background: #F7F5EE; color: #786832;'}`}>
                         {isResponded ? 'Respondida' : 'En Trámite'}
                       </span>
                     </td>
@@ -880,8 +894,8 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
     </div>
   </div>
 
-  <!-- Input oculto para carga de Respuesta Final Oficial (conservando nombre intacto) -->
-  <input type="file" id="input-subir-respuesta-final" accept=".pdf,.doc,.docx,.xls,.xlsx,.zip" style="display: none;" />
+  <!-- Input oculto para carga de Respuesta Final Oficial (conservando nombre intacto, hasta 500 MB) -->
+  <input type="file" id="input-subir-respuesta-final" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip" style="display: none;" />
 
   <!-- Modal: Compositor de Correo Electrónico Oficial (Webmail Ejecutivo UI/UX Pro Max) -->
   <div class="modal-backdrop" id="modal-responder-solicitante" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.72); z-index: 2100; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(5px);">
@@ -1770,62 +1784,64 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    /* Cápsula Bento Pro Max: Únicamente PIN de Acceso */
-    .pin-bento-capsule {
-      background: #F8FAFC;
-      border: 1px solid #E2E8F0;
-      border-radius: 10px;
-      padding: 8px 12px;
+    /* Fila de PIN de Acceso en una sola línea (nunca hace wrap) */
+    .pin-acceso-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 8px;
+      flex-wrap: nowrap;
+      padding: 7px 10px;
       margin: 10px 0 14px 0;
-    }
-
-    .pin-bento-label {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: #475569;
-    }
-
-    .pin-bento-actions {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .pin-bento-pill {
       background: #F7F5EE;
-      color: #786832;
       border: 1px solid #DBD2B0;
-      font-weight: 800;
-      font-family: monospace;
-      font-size: 0.76rem;
-      letter-spacing: 0.06em;
-      padding: 3px 9px;
-      border-radius: 6px;
+      border-radius: 8px;
+      min-width: 0;
     }
 
-    .pin-bento-copy-btn {
-      border: 1px solid #DCE4E3;
-      background: #FFFFFF;
-      border-radius: 6px;
-      padding: 4px 8px;
-      font-size: 0.70rem;
+    .pin-acceso-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.72rem;
       font-weight: 700;
-      cursor: pointer;
-      color: #475569;
+      color: #786832;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .pin-acceso-code {
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: #00594E;
+      background: #FFFFFF;
+      border: 1px solid #B2CFCB;
+      padding: 2px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .pin-copy-btn {
       display: inline-flex;
       align-items: center;
       gap: 4px;
+      padding: 3px 8px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      background: #FFFFFF;
+      color: #475569;
+      border: 1px solid #DCE4E3;
+      border-radius: 6px;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
       transition: all 0.15s ease;
     }
 
-    .pin-bento-copy-btn:hover {
+    .pin-copy-btn:hover {
       background: #F2F7F6;
       color: #00594E;
       border-color: #B2CFCB;
@@ -2351,7 +2367,9 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
 
   <!-- Lógica Interactiva del Explorador de Carpetas -->
   <script>
-    import { separarRespuestaMeta, esSubcarpetaValida, filtrarSubcarpetasValidas } from '@lib/subcarpetas';
+    import { separarRespuestaMeta, esSubcarpetaValida, filtrarSubcarpetasValidas, isPeticionRespondida, getSlaBucket } from '@lib/subcarpetas';
+    import { supabase } from '@lib/supabase';
+    import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from '@lib/constants';
 
     interface PeticionAnexo {
       id: string;
@@ -2415,6 +2433,120 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
 
     let allPeticiones: PeticionExpediente[] = [];
     const peticionesMap = new Map<string, PeticionExpediente>();
+
+    async function uploadFileToPeticionesStorage(file: File, relativePath: string): Promise<string | null> {
+      const cleanRelPath = relativePath.replace(/^peticiones\//, '').replace(/^\/+/, '');
+      try {
+        const signedRes = await fetch('/api/storage/signed-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bucket: 'peticiones', path: cleanRelPath }),
+        });
+        const signedData = await signedRes.json().catch(() => ({}));
+        if (signedRes.ok && signedData.success && signedData.signedUrl) {
+          const putRes = await fetch(signedData.signedUrl, {
+            method: 'PUT',
+            headers: { 'Content-Type': file.type || 'application/octet-stream' },
+            body: file,
+          });
+          if (putRes.ok) {
+            const storedRel = String(signedData.path || cleanRelPath).replace(/^peticiones\//, '');
+            return `peticiones/${storedRel}`;
+          }
+        }
+      } catch (signErr) {
+        console.warn('Fallo URL firmada, probando cliente directo Supabase Storage:', signErr);
+      }
+
+      try {
+        const { data: upData, error: upErr } = await supabase.storage
+          .from('peticiones')
+          .upload(cleanRelPath, file, { upsert: true, contentType: file.type || 'application/octet-stream' });
+        if (!upErr && upData?.path) {
+          return `peticiones/${upData.path.replace(/^peticiones\//, '')}`;
+        }
+      } catch (sdkErr) {
+        console.warn('Fallo cliente directo Supabase Storage:', sdkErr);
+      }
+
+      return null;
+    }
+
+    function syncExplorerCountsAndCard(updatedPet?: PeticionExpediente) {
+      if (updatedPet) {
+        const responded = isPeticionRespondida(updatedPet);
+        const card = document.getElementById(`card-folder-${updatedPet.id}`);
+        if (card) {
+          card.setAttribute('data-status', responded ? 'responded' : 'pending');
+          if (responded) {
+            card.setAttribute('data-sla', 'safe');
+            const badge = card.querySelector('.folder-sla-badge') as HTMLElement | null;
+            if (badge) {
+              badge.textContent = 'Respondida';
+              badge.style.background = '#F2F7F6';
+              badge.style.color = '#00594E';
+              badge.style.borderColor = '#B2CFCB';
+            }
+            const pct = card.querySelector('.sla-chart-pct') as HTMLElement | null;
+            if (pct) {
+              pct.textContent = 'Respondida';
+              pct.style.color = '#00594E';
+            }
+            const fill = card.querySelector('.sla-chart-fill') as HTMLElement | null;
+            if (fill) {
+              fill.style.width = '100%';
+              fill.style.background = '#00594E';
+            }
+          }
+        }
+        const row = document.getElementById(`row-folder-${updatedPet.id}`);
+        if (row) {
+          row.setAttribute('data-status', responded ? 'responded' : 'pending');
+          if (responded) {
+            row.setAttribute('data-sla', 'safe');
+            const pill = row.querySelector('.row-status-pill') as HTMLElement | null;
+            if (pill) {
+              pill.textContent = 'Respondida';
+              pill.style.background = '#E6EFEF';
+              pill.style.color = '#00594E';
+              pill.style.borderColor = '#B2CFCB';
+            }
+          }
+        }
+      }
+
+      let total = allPeticiones.length;
+      let pending = 0;
+      let responded = 0;
+      let safe = 0;
+      let warn = 0;
+      let critical = 0;
+      const now = Date.now();
+      allPeticiones.forEach((p) => {
+        if (isPeticionRespondida(p)) {
+          responded++;
+          return;
+        }
+        pending++;
+        const end = p.fecha_limite_entrega ? new Date(`${p.fecha_limite_entrega}T23:59:59`).getTime() : NaN;
+        const daysRemaining = !isNaN(end) ? Math.ceil((end - now) / 86400000) : 15;
+        const bucket = getSlaBucket(daysRemaining);
+        if (bucket === 'safe') safe++;
+        else if (bucket === 'warn') warn++;
+        else critical++;
+      });
+
+      const setCount = (id: string, val: number) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = String(val);
+      };
+      setCount('count-all', total);
+      setCount('count-pending', pending);
+      setCount('count-responded', responded);
+      setCount('count-safe', safe);
+      setCount('count-warn', warn);
+      setCount('count-critical', critical);
+    }
 
     function inferSubcarpetas(p: any): any[] {
       const dbSubs = (p.subcarpetas && Array.isArray(p.subcarpetas)) ? filtrarSubcarpetasValidas(p.subcarpetas) : [];
@@ -2741,25 +2873,29 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         const anexosOficinas = anexos.filter((a: any) => a && a.es_anexo_oficina);
         const responsables = Array.isArray(peticion.peticion_responsables) ? peticion.peticion_responsables : [];
 
-        // Calcular SLA
-        let slaPct = 0;
+        // Calcular SLA con regla uniforme Unitrópico
+        const isRespondidaFolder = isPeticionRespondida(peticion);
+        let slaPct = isRespondidaFolder ? 100 : 0;
         let daysRemaining = 0;
-        let slaColor = '#16a34a';
+        let slaColor = '#00594E';
         try {
           const startStr = peticion.fecha_radicacion || peticion.created_at || '';
           const endStr = peticion.fecha_limite_entrega || '';
           const start = startStr ? new Date(startStr).getTime() : NaN;
-          const end = endStr ? new Date(endStr).getTime() : NaN;
+          const end = endStr ? new Date(`${endStr}T23:59:59`).getTime() : NaN;
           const now = Date.now();
-          if (!isNaN(start) && !isNaN(end) && end > start) {
+          if (!isNaN(end)) {
+            daysRemaining = Math.ceil((end - now) / 86400000);
+          }
+          if (!isRespondidaFolder && !isNaN(start) && !isNaN(end) && end > start) {
             const totalDays = Math.max(1, Math.round((end - start) / 86400000));
             const elapsed = Math.max(0, Math.round((now - start) / 86400000));
-            daysRemaining = Math.max(0, Math.round((end - now) / 86400000));
             slaPct = Math.min(100, Math.round((elapsed / totalDays) * 100));
-            if (daysRemaining <= 2) {
-              slaColor = '#dc2626';
-            } else if (daysRemaining <= 7) {
-              slaColor = '#d97706';
+            const slaBucket = getSlaBucket(daysRemaining);
+            if (slaBucket === 'critical') {
+              slaColor = '#DC2626';
+            } else if (slaBucket === 'warn') {
+              slaColor = '#B5A160';
             }
           }
         } catch (err) {}
@@ -2874,13 +3010,13 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
               <div>
                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap;">
                   <span class="radicado-chip" style="font-size: 1.05rem; padding: 4px 12px;">${escapeHtml(peticion.numero_radicado)}</span>
-                  <span style="font-size: 0.74rem; font-weight: 800; padding: 4px 10px; border-radius: 4px; ${String(peticion.estado || '').toLowerCase() === 'respondida' ? 'background: #DCFCE7; color: #15803D;' : 'background: #FEF3C7; color: #92400E;'}">
-                    ${String(peticion.estado || '').toLowerCase() === 'respondida' ? 'Respondida' : 'En Trámite'}
+                  <span style="font-size: 0.74rem; font-weight: 800; padding: 4px 10px; border-radius: 4px; border: 1px solid ${isRespondidaFolder ? '#B2CFCB' : '#DBD2B0'}; ${isRespondidaFolder ? 'background: #E6EFEF; color: #00594E;' : 'background: #F7F5EE; color: #786832;'}">
+                    ${isRespondidaFolder ? 'Respondida' : 'En Trámite'}
                   </span>
                   ${(() => {
                     const fechaEnvio = peticion.respuesta_fecha_envio || respuestaMeta?.fecha_envio;
                     const expiraAt = peticion.respuesta_expira_at || respuestaMeta?.expira;
-                    if (fechaEnvio || String(peticion.estado || '').toLowerCase() === 'respondida') {
+                    if (fechaEnvio || isRespondidaFolder) {
                       const now = Date.now();
                       const exp = expiraAt ? new Date(expiraAt).getTime() : 0;
                       const isExpired = exp > 0 && now > exp;
@@ -2893,7 +3029,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                         `;
                       }
                       return `
-                        <span style="font-size: 0.74rem; font-weight: 750; background: #f0fdf4; color: #00594E; border: 1px solid #b2cfcb; padding: 4px 10px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
+                        <span style="font-size: 0.74rem; font-weight: 750; background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; padding: 4px 10px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
                           <span>Respuesta Enviada (Activa por ${daysLeft} día${daysLeft === 1 ? '' : 's'} restante${daysLeft === 1 ? '' : 's'})</span>
                         </span>
                       `;
@@ -2903,10 +3039,10 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                   <span style="font-size: 0.74rem; font-weight: 700; color: var(--dorado-oscuro); background: var(--dorado-suave-bg); border: 1px solid var(--dorado-borde); padding: 4px 10px; border-radius: 4px;">
                     Prioridad: ${escapeHtml(peticion.prioridad || 'Media')}
                   </span>
-                  <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.74rem; font-weight: 700; color: #b45309; background: rgba(217, 119, 6, 0.12); border: 1px solid rgba(217, 119, 6, 0.25); padding: 4px 10px; border-radius: 4px;">
+                  <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.74rem; font-weight: 700; color: #786832; background: #F7F5EE; border: 1px solid #DBD2B0; padding: 4px 10px; border-radius: 4px;">
                     <span>PIN Acceso:</span>
-                    <strong style="font-family: monospace; letter-spacing: 0.05em;">${escapeHtml(peticion.pin_acceso || '849201')}</strong>
-                    <button type="button" class="btn-copy-pin" data-pin="${escapeHtml(peticion.pin_acceso || '849201')}" title="Copiar PIN de 6 dígitos" style="border: none; background: transparent; cursor: pointer; color: #b45309; display: inline-flex; align-items: center; padding: 0 2px;">
+                    <strong style="font-family: monospace; letter-spacing: 0.05em; color: #00594E;">${escapeHtml(peticion.pin_acceso || '849201')}</strong>
+                    <button type="button" class="btn-copy-pin" data-pin="${escapeHtml(peticion.pin_acceso || '849201')}" title="Copiar PIN de 6 dígitos" style="border: none; background: transparent; cursor: pointer; color: #786832; display: inline-flex; align-items: center; padding: 0 2px;">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                     </button>
                   </span>
@@ -2939,8 +3075,8 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
               <!-- Semáforo SLA -->
               <div style="background: #FAF9F5; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px 18px; min-width: 250px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.74rem; margin-bottom: 6px;">
-                  <span style="color: var(--text-muted); font-weight: 700;">Plazo General:</span>
-                  <span style="font-weight: 800; color: ${slaColor};">${slaPct}% consumido</span>
+                  <span style="color: var(--text-muted); font-weight: 700;">Fecha de Expiración:</span>
+                  <span style="font-weight: 800; color: ${slaColor};">${isRespondidaFolder ? 'Respondida' : `${slaPct}% consumido`}</span>
                 </div>
                 <div style="width: 100%; height: 7px; background: #E2E8F0; border-radius: 9999px; overflow: hidden; margin-bottom: 8px;">
                   <div style="width: ${slaPct}%; height: 100%; background: ${slaColor}; border-radius: 9999px;"></div>
@@ -2948,7 +3084,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                 <div style="font-size: 0.72rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 3px;">
                   <div>Término Legal: <strong style="color: var(--text-main); font-family: monospace;">${escapeHtml(peticion.fecha_limite_entrega || '--')}</strong></div>
                   <div>Límite Oficinas: <strong style="color: var(--dorado-oscuro); font-family: monospace;">${escapeHtml(peticion.fecha_limite_responsable || '--')}</strong></div>
-                  <div style="color: ${slaColor}; font-weight: 700;">${daysRemaining} días restantes</div>
+                  <div style="color: ${slaColor}; font-weight: 700;">${isRespondidaFolder ? 'Petición Respondida' : (daysRemaining < 0 ? `Vencida hace ${Math.abs(daysRemaining)} día${Math.abs(daysRemaining) === 1 ? '' : 's'}` : `${daysRemaining} día${daysRemaining === 1 ? '' : 's'} restante${daysRemaining === 1 ? '' : 's'}`)}</div>
                 </div>
               </div>
             </div>
@@ -3315,6 +3451,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                                 const isDelivered = ofiAnexos.length > 0 || (subcarpetas.length === 1 && isStateEntregado);
                                 const ofiNombre = Array.isArray(r.oficinas) ? (r.oficinas[0]?.nombre || 'Oficina Responsable') : (r.oficinas?.nombre || 'Oficina Responsable');
                                 const ofiCodigo = Array.isArray(r.oficinas) ? (r.oficinas[0]?.codigo || '') : (r.oficinas?.codigo || '');
+                                const ofiId = Array.isArray(r.oficinas) ? (r.oficinas[0]?.id || '') : (r.oficinas?.id || (r as any).oficina_id || (r as any).dependencia_id || '');
                                 const rawObs = (r as any).observaciones_entrega || '';
                                 const cleanObs = extractSubObs(rawObs, sub.nombre);
                                 const subReqText = (sub.descripcion || '').trim().toLowerCase();
@@ -3376,7 +3513,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                                     ` : `
                                       <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 8px; padding: 10px 12px; background: #ffffff; border: 1px dashed #cbd5e1; border-radius: 6px;">
                                         <span style="font-size: 0.76rem; color: #64748b; font-style: italic;">Pendiente de entrega (Sin archivos cargados aún)</span>
-                                        <button type="button" class="btn btn-secondary btn-sm btn-subir-soporte-manual" onclick="event.stopPropagation()" data-resp-id="${escapeHtml(r.id)}" data-sub-id="${escapeHtml(sub.id)}" data-sub-nombre="${escapeHtml(sub.nombre)}" data-ofi-nombre="${escapeHtml(ofiNombre)}" style="font-size: 0.72rem; padding: 4px 10px; font-weight: 750; border: 1px solid #00594E; color: #00594E; background: #E6EFEF;">
+                                        <button type="button" class="btn btn-secondary btn-sm btn-subir-soporte-manual" onclick="event.stopPropagation()" data-resp-id="${escapeHtml(r.id)}" data-dependencia-id="${escapeHtml(String(ofiId || ''))}" data-codigo-acceso="${escapeHtml(String(r.codigo_acceso || ''))}" data-subfolder-path="${escapeHtml(String(r.storage_subfolder_path || ''))}" data-sub-id="${escapeHtml(sub.id)}" data-sub-nombre="${escapeHtml(sub.nombre)}" data-ofi-nombre="${escapeHtml(ofiNombre)}" style="font-size: 0.72rem; padding: 4px 10px; font-weight: 750; border: 1px solid #00594E; color: #00594E; background: #E6EFEF;">
                                           Subir soporte manualmente
                                         </button>
                                       </div>
@@ -3489,10 +3626,13 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         document.querySelectorAll('.btn-subir-soporte-manual').forEach((btn) => {
           btn.addEventListener('click', (e) => {
             const b = e.currentTarget as HTMLButtonElement;
-            const respId = b.getAttribute('data-resp-id');
-            const subId = b.getAttribute('data-sub-id');
-            const subNombre = b.getAttribute('data-sub-nombre');
-            const ofiNombre = b.getAttribute('data-ofi-nombre');
+            const respId = b.getAttribute('data-resp-id') || '';
+            const depId = b.getAttribute('data-dependencia-id') || '';
+            const codigoAcceso = b.getAttribute('data-codigo-acceso') || '';
+            const subfolderAttr = b.getAttribute('data-subfolder-path') || '';
+            const subId = b.getAttribute('data-sub-id') || '';
+            const subNombre = b.getAttribute('data-sub-nombre') || 'general';
+            const ofiNombre = b.getAttribute('data-ofi-nombre') || 'Oficina Responsable';
 
             const fileInput = document.createElement('input');
             fileInput.type = 'file';
@@ -3507,58 +3647,78 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                 return;
               }
 
+              if (file.size > MAX_FILE_SIZE_BYTES) {
+                if (typeof (window as any).showToast === 'function') {
+                  (window as any).showToast(`El archivo excede el límite máximo permitido de ${MAX_FILE_SIZE_MB} MB.`, 'error');
+                }
+                document.body.removeChild(fileInput);
+                return;
+              }
+
               if (typeof (window as any).showToast === 'function') {
                 (window as any).showToast(`Subiendo soporte para ${ofiNombre}...`, 'info');
               }
 
               try {
-                // Generar URL firmada de subida
                 const radicadoClean = (peticion.numero_radicado || 'EXP').replace(/[^a-zA-Z0-9_-]/g, '_');
                 const subSlug = (subNombre || 'general').toLowerCase().replace(/[^a-z0-9_-]/g, '_');
                 const cleanFileName = `[${subNombre}]_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-                const storagePath = `peticiones/${radicadoClean}/${subSlug}/${Date.now()}_${cleanFileName}`;
+                const relStoragePath = `${radicadoClean}/${subSlug}/${Date.now()}_${cleanFileName}`;
 
-                let uploadedPath = storagePath;
-                try {
-                  const signedRes = await fetch('/api/storage/signed-url', {
+                const uploadedPath = await uploadFileToPeticionesStorage(file, relStoragePath);
+                const subcarpetaIdClean = subId && !subId.startsWith('sub-inf-') ? subId : '';
+                const obsText = `Carga manual de soporte para ${ofiNombre} en Subcarpeta ${subNombre}`;
+
+                let res: Response;
+                if (uploadedPath) {
+                  res = await fetch('/api/portal/subir-anexo', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ bucket: 'peticiones', path: storagePath }),
+                    body: JSON.stringify({
+                      peticion_id: peticion.id,
+                      radicado: peticion.numero_radicado,
+                      numero_radicado: peticion.numero_radicado,
+                      responsable_id: respId,
+                      asignacion_id: respId,
+                      dependencia_id: depId || null,
+                      oficina_nombre: ofiNombre,
+                      codigo_acceso: codigoAcceso,
+                      subcarpeta_id: subcarpetaIdClean || null,
+                      subcarpeta_nombre: subNombre,
+                      storage_subfolder_path: subfolderAttr || `${radicadoClean}/${subSlug}`,
+                      carga_manual: true,
+                      storage_path: uploadedPath,
+                      archivo_nombre: cleanFileName,
+                      archivo_mime: file.type || 'application/octet-stream',
+                      archivo_tamano: file.size,
+                      observaciones: obsText,
+                    }),
                   });
-                  const signedData = await signedRes.json().catch(() => ({}));
-                  if (signedData.success && signedData.signedUrl) {
-                    await fetch(signedData.signedUrl, {
-                      method: 'PUT',
-                      headers: { 'Content-Type': file.type || 'application/octet-stream' },
-                      body: file,
-                    });
-                    uploadedPath = signedData.path || storagePath;
+                } else if (file.size <= 4 * 1024 * 1024) {
+                  const fd = new FormData();
+                  fd.append('archivo', file);
+                  fd.append('peticion_id', peticion.id);
+                  fd.append('radicado', peticion.numero_radicado);
+                  fd.append('numero_radicado', peticion.numero_radicado);
+                  if (respId) {
+                    fd.append('responsable_id', respId);
+                    fd.append('asignacion_id', respId);
                   }
-                } catch (signErr) {
-                  console.warn('Fallo URL firmada, probando subida directa:', signErr);
+                  if (depId) fd.append('dependencia_id', depId);
+                  fd.append('oficina_nombre', ofiNombre);
+                  if (codigoAcceso) fd.append('codigo_acceso', codigoAcceso);
+                  if (subcarpetaIdClean) fd.append('subcarpeta_id', subcarpetaIdClean);
+                  fd.append('subcarpeta_nombre', subNombre);
+                  fd.append('storage_subfolder_path', subfolderAttr || `${radicadoClean}/${subSlug}`);
+                  fd.append('carga_manual', 'true');
+                  fd.append('observaciones', obsText);
+                  res = await fetch('/api/portal/subir-anexo', { method: 'POST', body: fd });
+                } else {
+                  throw new Error('No se pudo subir el archivo de gran tamaño al almacenamiento directo. Verifique la conexión e intente de nuevo.');
                 }
-
-                // Registrar en public.peticion_anexos mediante endpoint oficial
-                const res = await fetch('/api/portal/subir-anexo', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    peticion_id: peticion.id,
-                    responsable_id: respId,
-                    subcarpeta_id: subId && !subId.startsWith('sub-inf-') ? subId : null,
-                    subcarpeta_nombre: subNombre,
-                    numero_radicado: peticion.numero_radicado,
-                    storage_path: uploadedPath,
-                    archivo_nombre: cleanFileName,
-                    archivo_mime: file.type || 'application/octet-stream',
-                    archivo_tamano: file.size,
-                    observaciones: `Carga manual de soporte para ${ofiNombre} en Subcarpeta ${subNombre}`,
-                  }),
-                });
 
                 const data = await res.json().catch(() => ({}));
                 if (data.success) {
-                  // Actualizar dinámicamente la píldora de la dependencia y el contador en la cabecera del acordeón
                   const subCard = b.closest('.subfolder-bento-card');
                   if (subCard) {
                     const depPill = subCard.querySelector(`.dep-status-pill[data-resp-id="${respId}"]`);
@@ -3568,7 +3728,6 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                       depPill.setAttribute('title', `${ofiNombre}: Aporte entregado`);
                     }
 
-                    // Actualizar el contador de aportes entregados
                     const allPills = subCard.querySelectorAll('.dep-status-pill');
                     const deliveredPills = subCard.querySelectorAll('.dep-status-pill.is-delivered');
                     const delCount = deliveredPills.length;
@@ -3848,7 +4007,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
           let matchesStatus = true;
           if (filterStatus === 'pending') matchesStatus = status === 'pending';
           else if (filterStatus === 'responded') matchesStatus = status === 'responded';
-          else if (filterStatus === 'safe' || filterStatus === 'warn' || filterStatus === 'critical') matchesStatus = sla === filterStatus;
+          else if (filterStatus === 'safe' || filterStatus === 'warn' || filterStatus === 'critical') matchesStatus = status !== 'responded' && sla === filterStatus;
 
           let matchesSearch = true;
           if (searchText) {
@@ -3871,7 +4030,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
           let matchesStatus = true;
           if (filterStatus === 'pending') matchesStatus = status === 'pending';
           else if (filterStatus === 'responded') matchesStatus = status === 'responded';
-          else if (filterStatus === 'safe' || filterStatus === 'warn' || filterStatus === 'critical') matchesStatus = sla === filterStatus;
+          else if (filterStatus === 'safe' || filterStatus === 'warn' || filterStatus === 'critical') matchesStatus = status !== 'responded' && sla === filterStatus;
 
           let matchesSearch = true;
           if (searchText) {
@@ -4470,19 +4629,49 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       const file = inputSubirRespuestaFinal.files?.[0];
       if (!file || !currentUploadPetId) return;
 
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        if (typeof (window as any).showToast === 'function') {
+          (window as any).showToast(`El archivo excede el límite máximo permitido de ${MAX_FILE_SIZE_MB} MB.`, 'error');
+        }
+        return;
+      }
+
       if (typeof (window as any).showToast === 'function') {
         (window as any).showToast(`Subiendo Respuesta Final Oficial (${file.name})...`, 'info');
       }
 
       try {
-        const formData = new FormData();
-        formData.append('peticion_id', currentUploadPetId);
-        formData.append('archivo', file);
+        const petCurrent = peticionesMap.get(currentUploadPetId) || allPeticiones.find((p) => p.id === currentUploadPetId);
+        const cleanRadicado = String(petCurrent?.numero_radicado || currentUploadPetId).trim().replace(/[^a-zA-Z0-9_-]/g, '_');
+        const cleanFileName = file.name.replace(/[/\\?%*:|"<>]/g, '_').trim();
+        const relStoragePath = `${cleanRadicado}/respuesta_final/${cleanFileName}`;
+        const uploadedPath = await uploadFileToPeticionesStorage(file, relStoragePath);
 
-        const res = await fetch('/api/peticiones/subir-respuesta-final', {
-          method: 'POST',
-          body: formData,
-        });
+        let res: Response;
+        if (uploadedPath) {
+          res = await fetch('/api/peticiones/subir-respuesta-final', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              peticion_id: currentUploadPetId,
+              nombre_archivo: file.name,
+              mime_type: file.type || 'application/octet-stream',
+              tamano_bytes: file.size,
+              storage_path: uploadedPath,
+            }),
+          });
+        } else if (file.size <= 4 * 1024 * 1024) {
+          const formData = new FormData();
+          formData.append('peticion_id', currentUploadPetId);
+          formData.append('archivo', file);
+
+          res = await fetch('/api/peticiones/subir-respuesta-final', {
+            method: 'POST',
+            body: formData,
+          });
+        } else {
+          throw new Error('No se pudo subir el archivo de gran tamaño al almacenamiento directo. Verifique su conexión e intente nuevamente.');
+        }
 
         const data = await res.json().catch(() => ({}));
         if (!res.ok || !data.success) {
@@ -4649,10 +4838,10 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         }
         closeResponder();
 
-        // Actualizar peticion en el array local y recargar vista de la carpeta
+        // Actualizar peticion en el array local, contadores/tarjetas y recargar vista de la carpeta
         const pet = peticionesMap.get(petId) || allPeticiones.find((p) => p.id === petId);
         if (pet) {
-          pet.estado = 'Respondida';
+          pet.estado = 'respondida';
           pet.solicitante_email = email;
           pet.respuesta_mensaje = mensaje;
           pet.respuesta_funcionario = funcionario;
@@ -4663,6 +4852,10 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
           pet.respuesta_archivos_incluidos = anexosOpcionalesIds;
 
           indexPeticion(pet);
+          syncExplorerCountsAndCard(pet);
+          const activeTab = document.querySelector('#archivos-filter-tabs .filter-tab.active');
+          const activeFilter = activeTab ? activeTab.getAttribute('data-filter') || 'all' : 'all';
+          applyFilters(activeFilter, (searchInput ? searchInput.value : '').toLowerCase().trim(), false);
           openFolderDetail(petId);
         } else {
           setTimeout(() => window.location.reload(), 600);

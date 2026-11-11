@@ -5,6 +5,10 @@ export const APP_NAME = 'SGD Unitrópico';
 export const APP_FULL_NAME = 'Sistema de Gestión Documental y Gobierno Institucional';
 export const INSTITUTION_NAME = 'Universidad Internacional del Trópico Americano';
 
+/** Tamaño máximo permitido para archivos (500 MB) */
+export const MAX_FILE_SIZE_MB = 500;
+export const MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024; // 524,288,000 bytes
+
 /** Clave usada para la cookie de sesión del middleware */
 export const SESSION_COOKIE_KEY = 'sgd_session';
 

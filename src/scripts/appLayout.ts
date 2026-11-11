@@ -488,33 +488,85 @@ export function initAppLayout() {
   btnMenuClose?.addEventListener('click', closeSidebar);
   sidebarBackdrop?.addEventListener('click', closeSidebar);
 
-  // 7.1 Barra lateral plegable y desplegable (Collapsible Sidebar)
+  // 7.1 Barra lateral plegable a Mini-Rail con tooltip flotante sin recorte
   const btnCollapseSidebar = document.getElementById('btn-collapse-sidebar');
-  const btnExpandSidebar = document.getElementById('btn-expand-sidebar');
+
+  const miniTooltip = document.createElement('div');
+  miniTooltip.id = 'sidebar-mini-tooltip';
+  miniTooltip.className = 'sidebar-mini-tooltip';
+  miniTooltip.setAttribute('role', 'tooltip');
+  miniTooltip.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(miniTooltip);
+
+  function hideMiniTooltip() {
+    miniTooltip.classList.remove('is-visible');
+    miniTooltip.setAttribute('aria-hidden', 'true');
+  }
+
+  function showMiniTooltipFor(target: HTMLElement) {
+    if (window.innerWidth < 1025 || !document.body.classList.contains('sidebar-collapsed')) return;
+    const text = target.getAttribute('data-tooltip');
+    if (!text) return;
+    const rect = target.getBoundingClientRect();
+    const centerY = Math.max(20, Math.min(window.innerHeight - 20, rect.top + rect.height / 2));
+    miniTooltip.textContent = text;
+    miniTooltip.style.top = `${centerY}px`;
+    miniTooltip.style.left = `${rect.right + 12}px`;
+    miniTooltip.setAttribute('aria-hidden', 'false');
+    miniTooltip.classList.add('is-visible');
+  }
 
   function setSidebarCollapsed(collapsed: boolean) {
+    hideMiniTooltip();
     if (collapsed) {
       document.body.classList.add('sidebar-collapsed');
       localStorage.setItem('sgd_sidebar_collapsed', 'true');
+      btnCollapseSidebar?.setAttribute('aria-expanded', 'false');
     } else {
       document.body.classList.remove('sidebar-collapsed');
       localStorage.setItem('sgd_sidebar_collapsed', 'false');
+      btnCollapseSidebar?.setAttribute('aria-expanded', 'true');
     }
   }
 
-  // Inicializar estado guardado en navegador
-  const isInitiallyCollapsed = localStorage.getItem('sgd_sidebar_collapsed') === 'true';
+  // Inicializar estado guardado en navegador en escritorio
+  const isInitiallyCollapsed = window.innerWidth >= 1025 && localStorage.getItem('sgd_sidebar_collapsed') === 'true';
   if (isInitiallyCollapsed) {
     document.body.classList.add('sidebar-collapsed');
+    btnCollapseSidebar?.setAttribute('aria-expanded', 'false');
+  } else {
+    document.body.classList.remove('sidebar-collapsed');
+    btnCollapseSidebar?.setAttribute('aria-expanded', 'true');
   }
 
-  btnCollapseSidebar?.addEventListener('click', () => setSidebarCollapsed(true));
-  btnExpandSidebar?.addEventListener('click', () => setSidebarCollapsed(false));
+  btnCollapseSidebar?.addEventListener('click', () => {
+    const isCurrentlyCollapsed = document.body.classList.contains('sidebar-collapsed');
+    setSidebarCollapsed(!isCurrentlyCollapsed);
+  });
+
+  document.querySelectorAll('#app-sidebar [data-tooltip]').forEach((el) => {
+    const htmlEl = el as HTMLElement;
+    htmlEl.addEventListener('mouseenter', () => showMiniTooltipFor(htmlEl));
+    htmlEl.addEventListener('focusin', () => showMiniTooltipFor(htmlEl));
+    htmlEl.addEventListener('mouseleave', hideMiniTooltip);
+    htmlEl.addEventListener('focusout', hideMiniTooltip);
+  });
+
+  document.getElementById('sidebar-nav-menu')?.addEventListener('scroll', hideMiniTooltip, { passive: true });
+  window.addEventListener('resize', () => {
+    hideMiniTooltip();
+    if (window.innerWidth < 1025) {
+      document.body.classList.remove('sidebar-collapsed');
+    } else if (localStorage.getItem('sgd_sidebar_collapsed') === 'true') {
+      document.body.classList.add('sidebar-collapsed');
+    }
+  });
 
   // Atajo de teclado (Ctrl + B) para conmutar barra lateral
   window.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && (e.key === 'b' || e.key === 'B')) {
       e.preventDefault();
+      if (window.innerWidth < 1025) return;
       const isNowCollapsed = document.body.classList.contains('sidebar-collapsed');
       setSidebarCollapsed(!isNowCollapsed);
     }

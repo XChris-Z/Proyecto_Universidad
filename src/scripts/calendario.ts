@@ -269,11 +269,11 @@ function updateBentoActiveIndicator() {
   const timelineSubtitle = document.getElementById('timeline-current-filter-desc');
   if (timelineSubtitle) {
     if (activeSlaFilter === 'danger') {
-      timelineSubtitle.textContent = 'Filtrando: Compromisos Críticos (≤ 2 días)';
+      timelineSubtitle.textContent = 'Filtrando: Compromisos Críticos / Vencidos (≤ 0 días)';
     } else if (activeSlaFilter === 'warning') {
-      timelineSubtitle.textContent = 'Filtrando: Compromisos en Alerta (3 a 7 días)';
+      timelineSubtitle.textContent = 'Filtrando: Compromisos Próximos a Vencer (1 a 5 días)';
     } else if (activeSlaFilter === 'safe') {
-      timelineSubtitle.textContent = 'Filtrando: Compromisos en Término SLA (> 7 días)';
+      timelineSubtitle.textContent = 'Filtrando: Compromisos en Término Saludable (> 5 días)';
     } else if (selectedDayStr) {
       timelineSubtitle.textContent = `Compromisos del día ${selectedDayStr}`;
     } else {

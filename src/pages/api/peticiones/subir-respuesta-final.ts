@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { supabase } from '@lib/supabase';
 import { logSystemActivity } from '@lib/audit';
 import { separarRespuestaMeta } from '@lib/subcarpetas';
+import { MAX_FILE_SIZE_BYTES } from '@lib/constants';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -55,6 +56,13 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
+    if (fileSize > MAX_FILE_SIZE_BYTES) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'El archivo excede el límite máximo permitido de 500 MB.' }),
+        { status: 413, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     // 1. Consultar radicado de la petición
     const { data: peticion, error: petErr } = await (supabase
       .from('peticiones' as any)
@@ -76,7 +84,10 @@ export const POST: APIRoute = async ({ request }) => {
       .trim();
 
     const cleanRadicado = String(peticion.numero_radicado || peticion.id).trim().replace(/[^a-zA-Z0-9_-]/g, '_');
-    const finalStoragePath = directStoragePath || `peticiones/${cleanRadicado}/respuesta_final/${cleanOriginalName}`;
+    const normalizedDirectPath = directStoragePath
+      ? (directStoragePath.startsWith('peticiones/') ? directStoragePath : `peticiones/${directStoragePath.replace(/^\/+/, '')}`)
+      : null;
+    const finalStoragePath = normalizedDirectPath || `peticiones/${cleanRadicado}/respuesta_final/${cleanOriginalName}`;
 
     // 2. Subir a Supabase Storage bucket 'peticiones' si se envió buffer
     if (fileBuffer) {

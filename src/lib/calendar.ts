@@ -2,6 +2,7 @@
 // Servicio de integración en tiempo real con Google Calendar API y Supabase
 
 import { supabase } from '@lib/supabase';
+import { isPeticionRespondida, getSlaBucket } from '@lib/subcarpetas';
 import type { CalendarioEvent, CalendarioEventType, EventUrgency } from '@lib/types';
 
 /**
@@ -41,17 +42,41 @@ export async function getGoogleAccessToken(userId?: string): Promise<string | nu
 }
 
 /**
+ * Normaliza una fecha o timestamp a formato YYYY-MM-DD
+ */
+export function normalizeCalendarDate(raw?: string | null): string {
+  if (!raw) return '';
+  const match = String(raw).match(/^(\d{4}-\d{2}-\d{2})/);
+  return match?.[1] ?? '';
+}
+
+function subtractCalendarDays(dateStr: string, days: number): string {
+  const clean = normalizeCalendarDate(dateStr);
+  if (!clean) return '';
+  const parts = clean.split('-');
+  const y = parseInt(parts[0] || '2026', 10);
+  const m = parseInt(parts[1] || '1', 10) - 1;
+  const d = parseInt(parts[2] || '1', 10);
+  const dt = new Date(y, m, d - days);
+  const yy = dt.getFullYear();
+  const mm = String(dt.getMonth() + 1).padStart(2, '0');
+  const dd = String(dt.getDate()).padStart(2, '0');
+  return `${yy}-${mm}-${dd}`;
+}
+
+/**
  * Calcula la urgencia y días restantes según la fecha límite respecto a hoy
  */
 export function calculateEventUrgency(targetDateStr: string): { diasRestantes: number; urgencia: EventUrgency } {
-  if (!targetDateStr) {
+  const cleanDate = normalizeCalendarDate(targetDateStr);
+  if (!cleanDate) {
     return { diasRestantes: 999, urgencia: 'safe' };
   }
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const parts = targetDateStr.split('-');
+  const parts = cleanDate.split('-');
   const y = parseInt(parts[0] || '2026', 10);
   const m = parseInt(parts[1] || '1', 10) - 1;
   const d = parseInt(parts[2] || '1', 10);
@@ -61,14 +86,9 @@ export function calculateEventUrgency(targetDateStr: string): { diasRestantes: n
   const diffTime = target.getTime() - today.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-  let urgencia: EventUrgency = 'safe';
-  if (diffDays <= 5) {
-    urgencia = 'danger';
-  } else if (diffDays <= 15) {
-    urgencia = 'warning';
-  } else {
-    urgencia = 'safe';
-  }
+  const bucket = getSlaBucket(diffDays);
+  const urgencia: EventUrgency =
+    bucket === 'critical' ? 'danger' : bucket === 'warn' ? 'warning' : 'safe';
 
   return { diasRestantes: diffDays, urgencia };
 }
@@ -180,32 +200,59 @@ export async function fetchSupabaseDeadlines(): Promise<CalendarioEvent[]> {
   const events: CalendarioEvent[] = [];
 
   try {
-    // 1. Peticiones pendientes con SLA / fecha límite
-    const { data: peticiones } = await supabase
+    // 1. Peticiones activas con SLA / fecha límite de respuesta y de dependencias
+    const { data: peticiones, error: petError } = await supabase
       .from('peticiones')
-      .select('id, numero_radicado, asunto, fecha_limite_entrega, fecha_limite_responsable, estado, solicitante_nombre')
-      .neq('estado', 'respondida')
-      .neq('estado', 'completada');
+      .select('id, numero_radicado, asunto, fecha_limite_entrega, fecha_limite_responsable, estado, solicitante_nombre, instrucciones_anexos');
 
-    if (peticiones && peticiones.length > 0) {
-      peticiones.forEach((pet: any) => {
-        if (pet.fecha_limite_entrega) {
-          const { diasRestantes, urgencia } = calculateEventUrgency(pet.fecha_limite_entrega);
+    if (petitionsHasActiveRows(peticiones)) {
+      (peticiones || []).forEach((pet: any) => {
+        if (isPeticionRespondida(pet)) return;
+
+        const entregaFecha = normalizeCalendarDate(pet.fecha_limite_entrega);
+        const radicadoUrl = pet.numero_radicado
+          ? `/archivos?radicado=${encodeURIComponent(pet.numero_radicado)}`
+          : '/archivos';
+
+        if (entregaFecha) {
+          const { diasRestantes, urgencia } = calculateEventUrgency(entregaFecha);
           events.push({
             id: `pet-${pet.id}`,
             titulo: `Vence Radicado ${pet.numero_radicado}: ${pet.asunto}`,
             tipo: 'peticion',
-            fecha: pet.fecha_limite_entrega,
+            fecha: entregaFecha,
             destino: 'Oficinas Responsables',
             responsable: pet.solicitante_nombre || 'SGD Unitrópico',
             urgencia,
             diasRestantes,
-            descripcion: `Petición oficial con plazo legal de entrega hasta el ${pet.fecha_limite_entrega}.`,
-            link: '/peticiones',
+            descripcion: `Petición oficial con plazo legal de entrega hasta el ${entregaFecha}.`,
+            link: radicadoUrl,
             hora: '17:00 (Cierre de Despacho)',
           });
         }
+
+        const depFecha = normalizeCalendarDate(pet.fecha_limite_responsable)
+          || (entregaFecha ? subtractCalendarDays(entregaFecha, 5) : '');
+
+        if (depFecha) {
+          const { diasRestantes, urgencia } = calculateEventUrgency(depFecha);
+          events.push({
+            id: `pet-dep-${pet.id}`,
+            titulo: `Cierre Oficinas ${pet.numero_radicado}: ${pet.asunto}`,
+            tipo: 'peticion',
+            fecha: depFecha,
+            destino: 'Dependencias Asignadas',
+            responsable: pet.solicitante_nombre || 'SGD Unitrópico',
+            urgencia,
+            diasRestantes,
+            descripcion: `Fecha límite interna de dependencias (-5 días) para radicado ${pet.numero_radicado}.`,
+            link: radicadoUrl,
+            hora: '17:00 (Cierre Interno)',
+          });
+        }
       });
+    } else if (petError) {
+      console.warn('Aviso consultando peticiones para calendario:', petError.message);
     }
 
     // 2. Convenios interinstitucionales con fecha de finalización
@@ -216,13 +263,14 @@ export async function fetchSupabaseDeadlines(): Promise<CalendarioEvent[]> {
 
     if (convenios && convenios.length > 0) {
       convenios.forEach((conv: any) => {
-        if (conv.fin) {
-          const { diasRestantes, urgencia } = calculateEventUrgency(conv.fin);
+        const finFecha = normalizeCalendarDate(conv.fin);
+        if (finFecha) {
+          const { diasRestantes, urgencia } = calculateEventUrgency(finFecha);
           events.push({
             id: `conv-${conv.id}`,
             titulo: `Vencimiento Convenio ${conv.numero}: ${conv.entidad}`,
             tipo: 'reporte',
-            fecha: conv.fin,
+            fecha: finFecha,
             destino: conv.entidad,
             responsable: conv.supervisor || 'Dirección de Planeación',
             urgencia,
@@ -244,13 +292,14 @@ export async function fetchSupabaseDeadlines(): Promise<CalendarioEvent[]> {
 
     if (colegiados && colegiados.length > 0) {
       colegiados.forEach((col: any) => {
-        if (col.fecha) {
-          const { diasRestantes, urgencia } = calculateEventUrgency(col.fecha);
+        const colFecha = normalizeCalendarDate(col.fecha);
+        if (colFecha) {
+          const { diasRestantes, urgencia } = calculateEventUrgency(colFecha);
           events.push({
             id: `col-${col.id}`,
             titulo: `Sesión / Norma ${col.organo}: ${col.numero} - ${col.titulo}`,
             tipo: 'colegiado',
-            fecha: col.fecha,
+            fecha: colFecha,
             destino: col.organo,
             responsable: 'Secretaría General',
             urgencia,
@@ -266,7 +315,30 @@ export async function fetchSupabaseDeadlines(): Promise<CalendarioEvent[]> {
     console.warn('Error cargando fechas de Supabase:', err);
   }
 
+  // Fallback / mezcla segura con datos SSR incrustados si el navegador tiene restricciones RLS anon
+  if (typeof document !== 'undefined') {
+    const ssrEl = document.getElementById('calendario-ssr-events');
+    if (ssrEl?.textContent) {
+      try {
+        const ssrList = JSON.parse(ssrEl.textContent) as CalendarioEvent[];
+        if (Array.isArray(ssrList) && ssrList.length > 0) {
+          const existingIds = new Set(events.map((e) => e.id));
+          ssrList.forEach((ev) => {
+            if (ev?.id && !existingIds.has(ev.id)) {
+              events.push(ev);
+              existingIds.add(ev.id);
+            }
+          });
+        }
+      } catch {}
+    }
+  }
+
   return events;
+}
+
+function petitionsHasActiveRows(rows: any[] | null | undefined): boolean {
+  return Array.isArray(rows) && rows.length > 0;
 }
 
 /**

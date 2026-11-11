@@ -3,18 +3,25 @@ export const prerender = false;
 
 import type { APIRoute } from 'astro';
 import { supabase } from '@lib/supabase';
+import { MAX_FILE_SIZE_BYTES, SESSION_COOKIE_KEY } from '@lib/constants';
+import { isPeticionRespondida } from '@lib/subcarpetas';
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, cookies }) => {
   try {
+    const isStaffSession = Boolean(cookies.get(SESSION_COOKIE_KEY)?.value);
     const contentType = request.headers.get('content-type') || '';
     let peticionId = '';
     let responsableId = '';
+    let dependenciaId = '';
+    let oficinaNombre = '';
+    let codigoAcceso = '';
     let subcarpetaId = '';
     let subcarpetaNombre = '';
     let numeroRadicado = '';
     let emailInstitucional = '';
     let storageSubfolder = '';
     let observaciones = '';
+    let cargaManual = false;
     let fileBuffer: Buffer | null = null;
     let fileName = '';
     let fileMime = 'application/octet-stream';
@@ -26,15 +33,25 @@ export const POST: APIRoute = async ({ request }) => {
       const formData = await request.formData();
       const file = formData.get('archivo') as File | null;
       peticionId = (formData.get('peticion_id') as string) || '';
-      responsableId = (formData.get('responsable_id') as string) || '';
+      responsableId = (formData.get('responsable_id') as string) || (formData.get('asignacion_id') as string) || '';
+      dependenciaId = (formData.get('dependencia_id') as string) || (formData.get('oficina_id') as string) || '';
+      oficinaNombre = (formData.get('oficina_nombre') as string) || '';
+      codigoAcceso = (formData.get('codigo_acceso') as string) || '';
       subcarpetaId = (formData.get('subcarpeta_id') as string) || '';
       subcarpetaNombre = (formData.get('subcarpeta_nombre') as string) || '';
-      numeroRadicado = (formData.get('numero_radicado') as string) || '';
+      numeroRadicado = (formData.get('numero_radicado') as string) || (formData.get('radicado') as string) || '';
       emailInstitucional = (formData.get('email_institucional') as string) || '';
       storageSubfolder = (formData.get('storage_subfolder_path') as string) || '';
       observaciones = (formData.get('observaciones') as string) || '';
+      cargaManual = String(formData.get('carga_manual') || '') === 'true';
 
       if (file && typeof file.arrayBuffer === 'function') {
+        if (file.size > MAX_FILE_SIZE_BYTES) {
+          return new Response(
+            JSON.stringify({ success: false, error: 'El archivo excede el tamaño máximo permitido de 500 MB.' }),
+            { status: 413, headers: { 'Content-Type': 'application/json' } }
+          );
+        }
         const arrayBuffer = await file.arrayBuffer();
         fileBuffer = Buffer.from(arrayBuffer);
         fileName = file.name;
@@ -44,13 +61,17 @@ export const POST: APIRoute = async ({ request }) => {
     } else {
       const body = await request.json().catch(() => ({}));
       peticionId = body.peticion_id || '';
-      responsableId = body.responsable_id || '';
+      responsableId = body.responsable_id || body.asignacion_id || '';
+      dependenciaId = body.dependencia_id || body.oficina_id || '';
+      oficinaNombre = body.oficina_nombre || '';
+      codigoAcceso = body.codigo_acceso || '';
       subcarpetaId = body.subcarpeta_id || '';
       subcarpetaNombre = body.subcarpeta_nombre || '';
-      numeroRadicado = body.numero_radicado || '';
+      numeroRadicado = body.numero_radicado || body.radicado || '';
       emailInstitucional = body.email_institucional || '';
       storageSubfolder = body.storage_subfolder_path || '';
       observaciones = body.observaciones || '';
+      cargaManual = Boolean(body.carga_manual);
       directStoragePath = body.storage_path || null;
       if (body.archivo_nombre) fileName = body.archivo_nombre;
       if (body.archivo_mime) fileMime = body.archivo_mime;
@@ -64,44 +85,124 @@ export const POST: APIRoute = async ({ request }) => {
       }
     }
 
-    if ((!fileBuffer && !directStoragePath) || !peticionId || !responsableId || !numeroRadicado || !storageSubfolder) {
+    if (fileSize > MAX_FILE_SIZE_BYTES) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Parámetros obligatorios faltantes para la carga.' }),
+        JSON.stringify({ success: false, error: 'El archivo excede el tamaño máximo permitido de 500 MB.' }),
+        { status: 413, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const esCargaInterna = isStaffSession || cargaManual;
+
+    if (!fileBuffer && !directStoragePath) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Debe seleccionar o adjuntar un archivo para completar la carga.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    // 1. Validar que la fecha límite no haya expirado aún
-    const { data: respCheck, error: checkError } = await (supabase
-      .from('peticion_responsables' as any)
-      .select('fecha_expiracion_codigo, estado_entrega')
-      .eq('id', responsableId)
-      .single() as any);
+    // Resolver petición si solo se suministró radicado o completar número radicado
+    let peticionRow: any = null;
+    if (peticionId) {
+      const { data: pById } = await (supabase
+        .from('peticiones' as any)
+        .select('id, numero_radicado, storage_folder_path, estado, instrucciones_anexos, updated_at')
+        .eq('id', peticionId)
+        .maybeSingle() as any);
+      peticionRow = pById;
+    } else if (numeroRadicado) {
+      const { data: pByRad } = await (supabase
+        .from('peticiones' as any)
+        .select('id, numero_radicado, storage_folder_path, estado, instrucciones_anexos, updated_at')
+        .eq('numero_radicado', numeroRadicado)
+        .maybeSingle() as any);
+      peticionRow = pByRad;
+      if (peticionRow?.id) peticionId = peticionRow.id;
+    }
 
-    if (checkError || !respCheck) {
+    if (!peticionId) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Asignación no encontrada.' }),
+        JSON.stringify({ success: false, error: 'Parámetros obligatorios faltantes: no se identificó el radicado ni la petición.' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!numeroRadicado) {
+      numeroRadicado = peticionRow?.numero_radicado || String(peticionId);
+    }
+
+    // Resolver responsableId automáticamente si viene por asignación, subcarpeta, dependencia o código
+    let respCheck: any = null;
+    if (responsableId && !String(responsableId).startsWith('sub-')) {
+      const { data: foundResp } = await (supabase
+        .from('peticion_responsables' as any)
+        .select('id, fecha_expiracion_codigo, estado_entrega, storage_subfolder_path, codigo_acceso, oficina_id')
+        .eq('id', responsableId)
+        .maybeSingle() as any);
+      respCheck = foundResp;
+    }
+
+    if (!respCheck) {
+      const { data: petResps } = await (supabase
+        .from('peticion_responsables' as any)
+        .select('id, fecha_expiracion_codigo, estado_entrega, storage_subfolder_path, codigo_acceso, oficina_id, subcarpeta_id, oficinas(nombre)')
+        .eq('peticion_id', peticionId) as any);
+
+      const listResps: any[] = Array.isArray(petResps) ? petResps : [];
+      if (listResps.length > 0) {
+        respCheck =
+          (codigoAcceso && listResps.find((r) => String(r.codigo_acceso || '').toUpperCase() === codigoAcceso.toUpperCase())) ||
+          (subcarpetaId && listResps.find((r) => String(r.subcarpeta_id || '') === String(subcarpetaId))) ||
+          (dependenciaId && listResps.find((r) => String(r.oficina_id || '') === String(dependenciaId))) ||
+          (oficinaNombre && listResps.find((r) => {
+            const nom = Array.isArray(r.oficinas) ? r.oficinas[0]?.nombre : r.oficinas?.nombre;
+            return nom && String(nom).toLowerCase() === oficinaNombre.toLowerCase();
+          })) ||
+          listResps[0];
+        if (respCheck?.id) responsableId = respCheck.id;
+      }
+    }
+
+    if (!esCargaInterna && !respCheck) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Asignación o dependencia no encontrada para esta petición.' }),
         { status: 404, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    const ahora = new Date();
-    const expiracion = new Date(respCheck.fecha_expiracion_codigo);
-    if (ahora > expiracion) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'El plazo de entrega para su oficina expiró. No se reciben anexos dentro de los últimos 5 días previos al cierre.',
-        }),
-        { status: 403, headers: { 'Content-Type': 'application/json' } }
-      );
+    if (!esCargaInterna && respCheck?.fecha_expiracion_codigo) {
+      const ahora = new Date();
+      const expiracion = new Date(respCheck.fecha_expiracion_codigo);
+      if (!isNaN(expiracion.getTime()) && ahora > expiracion) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'El plazo de entrega para su oficina expiró. No se reciben anexos dentro de los últimos 5 días previos al cierre.',
+          }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    if (!storageSubfolder) {
+      storageSubfolder = respCheck?.storage_subfolder_path || '';
+    }
+    if (!storageSubfolder) {
+      const cleanRad = String(numeroRadicado || peticionId).trim().replace(/[^a-zA-Z0-9_-]/g, '_');
+      const cleanSubSlug = String(subcarpetaNombre || 'general').toLowerCase().replace(/[^a-z0-9_-]/g, '_').replace(/^_+|_+$/g, '') || 'general';
+      storageSubfolder = `${cleanRad}/${cleanSubSlug}/`;
     }
 
     // 2. Subir archivo a Supabase Storage bucket 'peticiones' (si no fue subido directo por el cliente)
     let fullStoragePath = directStoragePath;
+    if (fullStoragePath && !fullStoragePath.startsWith('peticiones/')) {
+      fullStoragePath = `peticiones/${fullStoragePath.replace(/^\/+/, '')}`;
+    }
+
     if (!fullStoragePath && fileBuffer) {
-      const cleanFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const relativeStoragePath = `${storageSubfolder.replace(/^peticiones\//, '')}${Date.now()}_${cleanFileName}`;
+      const cleanFileName = (fileName || 'soporte.pdf').replace(/[^a-zA-Z0-9._-]/g, '_');
+      const baseFolder = storageSubfolder.replace(/^peticiones\//, '').replace(/\/+$/, '');
+      const relativeStoragePath = `${baseFolder}/${Date.now()}_${cleanFileName}`;
       fullStoragePath = `peticiones/${relativeStoragePath}`;
 
       const { error: uploadError } = await supabase.storage
@@ -119,18 +220,21 @@ export const POST: APIRoute = async ({ request }) => {
     // 3. Registrar en public.peticion_anexos con subcarpeta_id si está disponible
     const anexoNombre = subcarpetaNombre && !fileName.includes(`[${subcarpetaNombre}]`)
       ? `[${subcarpetaNombre}] ${fileName}`
-      : fileName;
+      : (fileName || 'Soporte.pdf');
 
     const anexoPayload: any = {
       peticion_id: peticionId,
-      peticion_responsable_id: responsableId,
       nombre_archivo: anexoNombre,
       storage_path: fullStoragePath,
       tamano_bytes: fileSize,
       mime_type: fileMime,
-      subido_por_email: emailInstitucional || 'oficina@unitropico.edu.co',
+      subido_por_email: emailInstitucional || (esCargaInterna ? 'despacho@unitropico.edu.co' : 'oficina@unitropico.edu.co'),
       es_anexo_oficina: true,
     };
+
+    if (responsableId && !String(responsableId).startsWith('sub-')) {
+      anexoPayload.peticion_responsable_id = responsableId;
+    }
 
     if (subcarpetaId && !subcarpetaId.startsWith('sub-')) {
       anexoPayload.subcarpeta_id = subcarpetaId;
@@ -171,67 +275,61 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // 4. Actualizar estado de entrega en peticion_responsables preservando el PIN y observaciones por subcarpeta
-    const { data: currentResp } = await (supabase
-      .from('peticion_responsables' as any)
-      .select('observaciones_entrega')
-      .eq('id', responsableId)
-      .maybeSingle() as any);
-
-    const rawExisting = currentResp?.observaciones_entrega || '';
-    const pinMatch = rawExisting.match(/PIN:\s*([0-9A-Z]{6})/i);
-    const pinHeader = pinMatch ? pinMatch[0] : '';
-    const cleanUserObs = String(observaciones || '').trim();
-
-    // Actualizar o insertar la observación específica para esta subcarpeta
-    let finalObservaciones = '';
-    const cleanSubName = String(subcarpetaNombre || '').replace(/^\[+|\]+$/g, '').trim();
-
-    if (cleanSubName) {
-      let updatedBody = rawExisting.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '').trim();
-      const escapedSub = cleanSubName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const subRegex = new RegExp(`\\[\\s*${escapedSub}\\s*\\][^|]*`, 'i');
-
-      const newSubNote = cleanUserObs ? `[${cleanSubName}]: ${cleanUserObs}` : `[${cleanSubName}]`;
-      if (subRegex.test(updatedBody)) {
-        updatedBody = updatedBody.replace(subRegex, newSubNote);
-      } else {
-        updatedBody = updatedBody ? `${updatedBody} | ${newSubNote}` : newSubNote;
-      }
-      finalObservaciones = pinHeader ? `${pinHeader} | ${updatedBody}` : updatedBody;
-    } else {
-      finalObservaciones = pinHeader ? (cleanUserObs ? `${pinHeader} | ${cleanUserObs}` : pinHeader) : cleanUserObs;
-    }
-
-    // Actualizar de forma segura sin columnas inexistentes
-    const updatePayload: any = {
-      estado_entrega: 'Entregado',
-      fecha_entrega: new Date().toISOString(),
-      observaciones_entrega: finalObservaciones || null,
-    };
-
-    const updResult = await (supabase
-      .from('peticion_responsables' as any)
-      .update(updatePayload)
-      .eq('id', responsableId) as any);
-
-    if (updResult.error) {
-      console.warn('Advertencia actualizando peticion_responsables:', updResult.error.message);
-    }
-
-    // 5. Actualizar estado general en la tabla peticiones a "Revisión" o "Respondida"
-    try {
-      const { data: allResps } = await (supabase
+    if (responsableId && !String(responsableId).startsWith('sub-')) {
+      const { data: currentResp } = await (supabase
         .from('peticion_responsables' as any)
-        .select('estado_entrega')
-        .eq('peticion_id', peticionId) as any);
+        .select('observaciones_entrega')
+        .eq('id', responsableId)
+        .maybeSingle() as any);
 
-      if (allResps && allResps.length > 0) {
-        const allCompleted = allResps.every((r: any) => r.estado_entrega === 'Entregado');
-        const nextState = allCompleted ? 'Respondida' : 'Revisión';
+      const rawExisting = currentResp?.observaciones_entrega || '';
+      const pinMatch = rawExisting.match(/PIN:\s*([0-9A-Z]{6})/i);
+      const pinHeader = pinMatch ? pinMatch[0] : '';
+      const cleanUserObs = String(observaciones || '').trim();
 
+      // Actualizar o insertar la observación específica para esta subcarpeta
+      let finalObservaciones = '';
+      const cleanSubName = String(subcarpetaNombre || '').replace(/^\[+|\]+$/g, '').trim();
+
+      if (cleanSubName) {
+        let updatedBody = rawExisting.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '').trim();
+        const escapedSub = cleanSubName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const subRegex = new RegExp(`\\[\\s*${escapedSub}\\s*\\][^|]*`, 'i');
+
+        const newSubNote = cleanUserObs ? `[${cleanSubName}]: ${cleanUserObs}` : `[${cleanSubName}]`;
+        if (subRegex.test(updatedBody)) {
+          updatedBody = updatedBody.replace(subRegex, newSubNote);
+        } else {
+          updatedBody = updatedBody ? `${updatedBody} | ${newSubNote}` : newSubNote;
+        }
+        finalObservaciones = pinHeader ? `${pinHeader} | ${updatedBody}` : updatedBody;
+      } else {
+        finalObservaciones = pinHeader ? (cleanUserObs ? `${pinHeader} | ${cleanUserObs}` : pinHeader) : cleanUserObs;
+      }
+
+      // Actualizar de forma segura sin columnas inexistentes
+      const updatePayload: any = {
+        estado_entrega: 'Entregado',
+        fecha_entrega: new Date().toISOString(),
+        observaciones_entrega: finalObservaciones || null,
+      };
+
+      const updResult = await (supabase
+        .from('peticion_responsables' as any)
+        .update(updatePayload)
+        .eq('id', responsableId) as any);
+
+      if (updResult.error) {
+        console.warn('Advertencia actualizando peticion_responsables:', updResult.error.message);
+      }
+    }
+
+    // 5. Mantener petición en trámite sin marcar prematuramente como Respondida al solicitante
+    try {
+      if (peticionRow && !isPeticionRespondida(peticionRow)) {
         await (supabase
           .from('peticiones' as any)
-          .update({ estado: nextState } as any)
+          .update({ estado: 'en_tramite', updated_at: new Date().toISOString() } as any)
           .eq('id', peticionId) as any);
       }
     } catch (petUpdErr: any) {

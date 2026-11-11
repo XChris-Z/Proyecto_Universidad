@@ -16,21 +16,21 @@ Astro.response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate
 ---
 
 <Layout title={`${title} | SGD Unitrópico`}>
+  <script is:inline>
+    (function () {
+      try {
+        if (window.innerWidth >= 1025 && localStorage.getItem('sgd_sidebar_collapsed') === 'true') {
+          document.body.classList.add('sidebar-collapsed');
+        }
+      } catch (e) {}
+    })();
+  </script>
   <div class="app-container">
     <!-- Barra lateral -->
     <Sidebar activeNav={activeNav} />
 
     <!-- Telón de fondo para menú lateral en móviles y tablets -->
     <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
-
-    <!-- Pestaña flotante discreta para re-abrir el Sidebar cuando está plegado -->
-    <button type="button" class="btn-sidebar-expand-tab" id="btn-expand-sidebar" aria-label="Desplegar barra lateral" title="Desplegar barra lateral (Ctrl+B)">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-        <path d="M9 3v18"/>
-        <path d="M13 15l3-3-3-3"/>
-      </svg>
-    </button>
 
     <!-- Contenido principal -->
     <main class="main-wrapper">

@@ -342,7 +342,7 @@ import Layout from '@layouts/Layout.astro';
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 </div>
                 <div class="drop-title" style="font-size: 0.90rem;">Arrastre sus archivos aquí o haga clic para examinar</div>
-                <div class="drop-formats" style="font-size: 0.72rem;">Formatos permitidos: PDF, DOCX, XLSX, JPG, PNG, ZIP (hasta 50 MB)</div>
+                <div class="drop-formats" style="font-size: 0.72rem;">Formatos permitidos: PDF, DOCX, XLSX, JPG, PNG, ZIP (hasta 500 MB)</div>
                 <input type="file" id="portal-file-input" multiple style="display: none;" />
               </div>
 
@@ -1876,14 +1876,22 @@ import Layout from '@layouts/Layout.astro';
   }
 
   function handleFilesSelected(files: File[]) {
-    selectedFilesToUpload = files;
+    const MAX_BYTES = 500 * 1024 * 1024;
+    const oversized = files.filter((f) => f.size > MAX_BYTES);
+    if (oversized.length > 0) {
+      showPortalToast(`Uno o más archivos superan el límite máximo de 500 MB (${oversized.map((f) => f.name).join(', ')}).`, 'error');
+    }
+    const validFiles = files.filter((f) => f.size <= MAX_BYTES);
+    if (validFiles.length === 0) return;
+
+    selectedFilesToUpload = validFiles;
     if (dropZone) {
       dropZone.innerHTML = `
         <div style="font-weight: 800; font-size: 0.95rem; color: #00594E;">
-          ${files.length} archivo(s) preparado(s) para entrega:
+          ${validFiles.length} archivo(s) preparado(s) para entrega:
         </div>
         <div style="font-size: 0.78rem; color: #475569; margin-top: 4px; font-weight: 600;">
-          ${files.map(f => f.name).join(', ')}
+          ${validFiles.map(f => f.name).join(', ')}
         </div>
         <div style="font-size: 0.72rem; color: var(--uni-gold-primary); font-weight: 750; margin-top: 8px;">
           Haga clic abajo en 'Confirmar y Subir Archivos a Subcarpeta'.

@@ -119,7 +119,7 @@ export const POST: APIRoute = async ({ request, url }) => {
 
     // 3. Preparar payload de actualización en public.peticiones
     const updatePayload: Record<string, any> = {
-      estado: 'Respondida',
+      estado: 'respondida',
       updated_at: fechaEnvioIso,
       solicitante_email: effectiveEmail,
       instrucciones_anexos: cleanUpdatedInst,
@@ -147,9 +147,9 @@ export const POST: APIRoute = async ({ request, url }) => {
       updateErrorMsg = updateErr.message;
 
       // Fallback seguro: Si las columnas aún no existen físicamente en la BD,
-      // preservamos el estado 'Respondida' y empaquetamos la metadata limpia en instrucciones_anexos
+      // preservamos el estado 'respondida' y empaquetamos la metadata limpia en instrucciones_anexos
       const fallbackPayload: Record<string, any> = {
-        estado: 'Respondida',
+        estado: 'respondida',
         updated_at: fechaEnvioIso,
         solicitante_email: effectiveEmail,
         instrucciones_anexos: cleanUpdatedInst,
@@ -162,7 +162,7 @@ export const POST: APIRoute = async ({ request, url }) => {
 
       if (!fbErr) {
         updateSuccess = true;
-        console.log('[RESPONDER] Fallback aplicado con éxito: metadata guardada en instrucciones_anexos y estado actualizado a Respondida.');
+        console.log('[RESPONDER] Fallback aplicado con éxito: metadata guardada en instrucciones_anexos y estado actualizado a respondida.');
       } else {
         console.error('[RESPONDER] Error en actualización fallback:', fbErr.message);
         updateErrorMsg = fbErr.message || updateErr.message;

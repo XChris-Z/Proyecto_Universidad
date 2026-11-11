@@ -77,7 +77,7 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
             Arrastre el archivo de la petición aquí o haga clic para seleccionar
           </div>
           <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 4px;" id="drop-zone-subtitle">
-            Formatos soportados: PDF, DOCX, JPG, PNG (hasta 50 MB)
+            Formatos soportados: PDF, DOCX, JPG, PNG (hasta 500 MB)
           </div>
           <input type="file" id="input-archivo-peticion" accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png" style="display: none;" />
         </div>
@@ -347,9 +347,19 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
     const asuntoInput = document.getElementById('peticion-asunto') as HTMLInputElement;
 
     function setPrimaryFile(file: File) {
+      const MAX_BYTES = 500 * 1024 * 1024;
+      if (file.size > MAX_BYTES) {
+        if ((window as any).showToast) {
+          (window as any).showToast(`El archivo "${file.name}" supera el límite permitido de 500 MB.`, 'error');
+        }
+        return;
+      }
       primaryFile = file;
       if (selectedFileName) selectedFileName.textContent = file.name;
-      if (selectedFileSize) selectedFileSize.textContent = `${(file.size / 1024).toFixed(1)} KB`;
+      const sizeText = file.size >= 1024 * 1024
+        ? `${(file.size / (1024 * 1024)).toFixed(2)} MB`
+        : `${(file.size / 1024).toFixed(1)} KB`;
+      if (selectedFileSize) selectedFileSize.textContent = sizeText;
       if (fileIndicator) fileIndicator.style.display = 'flex';
       if (dropZone) dropZone.style.display = 'none';
 

@@ -5,6 +5,7 @@
 import AppLayout from "@layouts/AppLayout.astro";
 import { supabase } from "@lib/supabase";
 import { SESSION_COOKIE_KEY } from "@lib/constants";
+import { fetchSupabaseDeadlines } from "@lib/calendar";
 
 // Obtener usuario autenticado desde la cookie de sesión del middleware
 const sessionUserId =
@@ -27,12 +28,17 @@ const calendarEmbedUrl = `https://calendar.google.com/calendar/embed?src=${encod
 // Manejo de parámetros de retorno de la sincronización
 const isJustConnected = Astro.url.searchParams.get("connected") === "true";
 const errorParam = Astro.url.searchParams.get("error");
+
+// Preload SSR de plazos reales de Supabase para garantizar visibilidad inmediata sin depender de RLS anónimo
+const ssrDeadlines = await fetchSupabaseDeadlines();
+const ssrDeadlinesJson = JSON.stringify(ssrDeadlines).replace(/</g, "\\u003c");
 ---
 
 <AppLayout
   title="Calendario Institucional y Semáforo SLA"
   activeNav="calendario"
 >
+  <script id="calendario-ssr-events" type="application/json" is:inline set:html={ssrDeadlinesJson}></script>
   <div class="calendario-promax-workspace">
     <!-- Notificaciones visuales de estado -->
     {
@@ -356,7 +362,7 @@ const errorParam = Astro.url.searchParams.get("error");
             <div class="bento-card-bottom">
               <h4 class="bento-card-title">Críticos / Vencidos</h4>
               <p class="bento-card-desc">
-                Atención inmediata (≤ 2 días restantes)
+                Atención inmediata (≤ 0 días restantes)
               </p>
             </div>
           </article>
@@ -392,7 +398,7 @@ const errorParam = Astro.url.searchParams.get("error");
             <div class="bento-card-bottom">
               <h4 class="bento-card-title">Próximos a Vencer</h4>
               <p class="bento-card-desc">
-                Ventana de alerta (3 a 7 días restantes)
+                Ventana de alerta (1 a 5 días restantes)
               </p>
             </div>
           </article>
@@ -428,7 +434,7 @@ const errorParam = Astro.url.searchParams.get("error");
             <div class="bento-card-bottom">
               <h4 class="bento-card-title">En Término Seguro</h4>
               <p class="bento-card-desc">
-                Dentro del plazo SLA (&gt; 7 días restantes)
+                Dentro del plazo SLA (&gt; 5 días restantes)
               </p>
             </div>
           </article>

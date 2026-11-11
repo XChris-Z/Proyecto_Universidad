@@ -6,6 +6,7 @@ import { supabase } from '@lib/supabase';
 import { sendPeticionAssignmentEmail } from '@lib/email';
 import { logSystemActivity } from '@lib/audit';
 import { generatePin6 } from '@lib/security';
+import { MAX_FILE_SIZE_BYTES } from '@lib/constants';
 
 export interface SubcarpetaInput {
   nombre: string;
@@ -108,6 +109,17 @@ export const POST: APIRoute = async ({ request, url }) => {
           error: 'Campos obligatorios faltantes: asunto, solicitante_nombre o fecha_limite_entrega.',
         }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const declaredSize = primaryFile?.size || rawBase64File?.buffer.length || directFileSize || 0;
+    if (declaredSize > MAX_FILE_SIZE_BYTES) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'El archivo adjunto supera el límite máximo permitido de 500 MB.',
+        }),
+        { status: 413, headers: { 'Content-Type': 'application/json' } }
       );
     }
 

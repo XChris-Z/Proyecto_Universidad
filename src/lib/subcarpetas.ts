@@ -134,3 +134,58 @@ export function filtrarSubcarpetasValidas<T = any>(
   const validas = lista.filter(item => esSubcarpetaValida(item));
   return ordenarCarpetasNaturalmente(validas);
 }
+
+/**
+ * Normaliza si una petición ya cuenta con respuesta oficial despachada al solicitante.
+ */
+export function isPeticionRespondida(p: any): boolean {
+  if (!p) return false;
+  const st = String(p.estado || '').toLowerCase().trim();
+  if (
+    st === 'respondida' ||
+    st === 'respondido' ||
+    st === 'finalizada' ||
+    st === 'finalizado' ||
+    st === 'completada' ||
+    st === 'completado'
+  ) {
+    return true;
+  }
+
+  if (
+    p.fecha_respuesta ||
+    p.respuesta_fecha_envio ||
+    p.respuesta_oficial === true ||
+    p.respuesta_enviada === true ||
+    (typeof p.respuesta_mensaje === 'string' && p.respuesta_mensaje.trim().length > 0) ||
+    p.respuesta_pin_solicitante
+  ) {
+    return true;
+  }
+
+  if (p.instrucciones_anexos) {
+    const { respuestaMeta } = separarRespuestaMeta(p.instrucciones_anexos);
+    if (
+      respuestaMeta &&
+      (respuestaMeta.fecha_envio ||
+        respuestaMeta.pin ||
+        (typeof respuestaMeta.msg === 'string' && respuestaMeta.msg.trim().length > 0))
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Clasifica los días restantes en las bandas SLA oficiales:
+ * > 5 días -> safe (Plazo Saludable)
+ * 1 a 5 días -> warn (Próximo a Vencer)
+ * <= 0 días -> critical (Crítico / Vencido)
+ */
+export function getSlaBucket(daysRemaining: number): 'safe' | 'warn' | 'critical' {
+  if (daysRemaining <= 0) return 'critical';
+  if (daysRemaining <= 5) return 'warn';
+  return 'safe';
+}
