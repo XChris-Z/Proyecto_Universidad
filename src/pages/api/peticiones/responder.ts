@@ -15,9 +15,16 @@ export const POST: APIRoute = async ({ request, url }) => {
       solicitante_email,
       respuesta_mensaje,
       respuesta_funcionario,
-      respuesta_archivos_incluidos = [],
+      respuesta_archivos_incluidos,
+      anexos_opcionales,
       respuesta_drive_url = '',
     } = body;
+
+    const selectedOptionalIds: string[] = Array.isArray(anexos_opcionales)
+      ? anexos_opcionales.map((x: any) => String(x || '').trim()).filter(Boolean)
+      : Array.isArray(respuesta_archivos_incluidos)
+        ? respuesta_archivos_incluidos.map((x: any) => String(x || '').trim()).filter(Boolean)
+        : [];
 
     if (!peticion_id) {
       return new Response(
@@ -67,14 +74,37 @@ export const POST: APIRoute = async ({ request, url }) => {
 
     // Limpiar estrictamente cualquier bloque RESPUESTA_META anterior antes de anexar el nuevo, preservando el archivo de respuesta si existía
     const { textoLimpio, respuestaMeta: prevMeta } = separarRespuestaMeta(peticion.instrucciones_anexos || '');
-    const finalRespArchivo = body.archivo_respuesta || prevMeta?.archivo_respuesta || prevMeta?.respuesta_archivo || null;
+    let finalRespArchivo = body.archivo_respuesta || prevMeta?.archivo_respuesta || prevMeta?.respuesta_archivo || null;
+
+    // Consultar anexos reales en base de datos para validar Respuesta Final y resolver opcionales
+    const { data: allDbAnexos } = await (supabase
+      .from('peticion_anexos' as any)
+      .select('*')
+      .eq('peticion_id', peticion_id) as any);
+    const dbAnexosList: any[] = Array.isArray(allDbAnexos) ? allDbAnexos : [];
+
+    if (!finalRespArchivo || !finalRespArchivo.storage_path) {
+      const respInDb = dbAnexosList.find((a) => a && a.storage_path && String(a.storage_path).includes('/respuesta_final/'));
+      if (respInDb) finalRespArchivo = respInDb;
+    }
+
+    if (!finalRespArchivo || (!finalRespArchivo.storage_path && !finalRespArchivo.nombre_archivo)) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Debe adjuntar el documento obligatorio de Respuesta Final Oficial antes de enviar.',
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
 
     const metaPackage = JSON.stringify({
       pin: pinSolicitante,
       expira: expiraAt,
       msg: cleanMensaje,
       func: funcionarioResp,
-      files: Array.isArray(respuesta_archivos_incluidos) ? respuesta_archivos_incluidos : [],
+      files: selectedOptionalIds,
+      has_explicit_selection: true,
       drive: cleanDrive || null,
       fecha_envio: fechaEnvioIso,
       correo: effectiveEmail,
@@ -98,7 +128,7 @@ export const POST: APIRoute = async ({ request, url }) => {
       respuesta_fecha_envio: fechaEnvioIso,
       respuesta_expira_at: expiraAt,
       respuesta_pin_solicitante: pinSolicitante,
-      respuesta_archivos_incluidos: Array.isArray(respuesta_archivos_incluidos) ? respuesta_archivos_incluidos : [],
+      respuesta_archivos_incluidos: selectedOptionalIds,
       respuesta_drive_url: cleanDrive || null,
     };
 
@@ -167,22 +197,96 @@ export const POST: APIRoute = async ({ request, url }) => {
     const baseUrl = `${proto}://${host}`;
     const consultaUrl = `${baseUrl}/consulta-respuesta?radicado=${encodeURIComponent(peticion.numero_radicado)}&pin=${encodeURIComponent(pinSolicitante)}&correo=${encodeURIComponent(effectiveEmail)}`;
 
-    // 6. Preparar adjunto de Respuesta Final Oficial para el correo (si existe)
+    // 6. Preparar adjunto obligatorio de Respuesta Final Oficial y anexos opcionales seleccionados
     let archivoAdjuntoEmail: { filename: string; content: Buffer; contentType?: string } | null = null;
+    let totalAttachedBytes = 0;
+    const MAX_SMTP_BYTES = 18 * 1024 * 1024; // 18 MB tope seguro para Gmail
+
     if (finalRespArchivo && finalRespArchivo.storage_path) {
       try {
         const cleanPath = finalRespArchivo.storage_path.replace(/^peticiones\//, '').replace(/^\/+/, '');
         const { data: fileBlob, error: dlErr } = await supabase.storage.from('peticiones').download(cleanPath);
         if (!dlErr && fileBlob) {
           const ab = await fileBlob.arrayBuffer();
+          const buf = Buffer.from(ab);
+          totalAttachedBytes += buf.byteLength;
           archivoAdjuntoEmail = {
             filename: (finalRespArchivo.nombre_archivo || 'Respuesta_Oficial.pdf').replace(/^\[[^\]]+\]\s*/, ''),
-            content: Buffer.from(ab),
+            content: buf,
             contentType: finalRespArchivo.mime_type || 'application/pdf',
           };
         }
       } catch (dlException: any) {
-        console.warn('[RESPONDER] Advertencia obteniendo buffer de adjunto para correo:', dlException?.message);
+        console.warn('[RESPONDER] Advertencia obteniendo buffer de respuesta final para correo:', dlException?.message);
+      }
+    }
+
+    const selectedSet = new Set(selectedOptionalIds);
+    const selectedOptionalRecords = selectedOptionalIds.length > 0
+      ? dbAnexosList.filter((a) =>
+        a &&
+        (!a.storage_path || !String(a.storage_path).includes('/respuesta_final/')) &&
+        (selectedSet.has(String(a.id)) || selectedSet.has(String(a.storage_path)))
+      )
+      : [];
+
+    const anexosAdicionalesEmail: Array<{ filename: string; content: Buffer; contentType?: string }> = [];
+    const anexosResumenEmail: Array<{ nombre: string; origen?: string }> = [];
+
+    if (selectedOptionalRecords.length > 0) {
+      // Consultar responsables para mostrar el nombre de origen/dependencia si aplica
+      const { data: dbResps } = await (supabase
+        .from('peticion_responsables' as any)
+        .select('id, oficinas(nombre)')
+        .eq('peticion_id', peticion_id) as any);
+      const respsList: any[] = Array.isArray(dbResps) ? dbResps : [];
+
+      for (const anexo of selectedOptionalRecords) {
+        const rawName = String(anexo.nombre_archivo || 'Anexo.pdf');
+        const cleanFilename = rawName
+          .replace(/^\[[^\]]+\]\s*/g, '')
+          .replace(/^\[[^\]]+\]\s*/g, '')
+          .trim() || rawName;
+
+        let origenDep = '';
+        if (anexo.peticion_responsable_id) {
+          const rMatch = respsList.find((r) => String(r.id) === String(anexo.peticion_responsable_id));
+          if (rMatch?.oficinas) {
+            origenDep = Array.isArray(rMatch.oficinas)
+              ? (rMatch.oficinas[0]?.nombre || '')
+              : (rMatch.oficinas?.nombre || '');
+          }
+        }
+        if (!origenDep) {
+          const depMatch = rawName.match(/\[Aporte de:\s*([^\]]+)\]/i);
+          if (depMatch && depMatch[1]) origenDep = depMatch[1].trim();
+        }
+
+        anexosResumenEmail.push({
+          nombre: cleanFilename,
+          origen: origenDep || undefined,
+        });
+
+        if (anexo.storage_path) {
+          try {
+            const cleanOptPath = String(anexo.storage_path).replace(/^peticiones\//, '').replace(/^\/+/, '');
+            const { data: optBlob, error: optDlErr } = await supabase.storage.from('peticiones').download(cleanOptPath);
+            if (!optDlErr && optBlob) {
+              const optAb = await optBlob.arrayBuffer();
+              const optBuf = Buffer.from(optAb);
+              if (totalAttachedBytes + optBuf.byteLength <= MAX_SMTP_BYTES) {
+                totalAttachedBytes += optBuf.byteLength;
+                anexosAdicionalesEmail.push({
+                  filename: cleanFilename,
+                  content: optBuf,
+                  contentType: anexo.mime_type || 'application/octet-stream',
+                });
+              }
+            }
+          } catch (optEx: any) {
+            console.warn('[RESPONDER] Aviso descargando anexo opcional:', optEx?.message);
+          }
+        }
       }
     }
 
@@ -198,8 +302,10 @@ export const POST: APIRoute = async ({ request, url }) => {
       fechaExpiracion: expiraAt,
       consultaUrl,
       driveUrl: cleanDrive || null,
-      totalArchivos: Array.isArray(respuesta_archivos_incluidos) ? respuesta_archivos_incluidos.length : 0,
+      totalArchivos: 1 + anexosResumenEmail.length,
       archivoAdjunto: archivoAdjuntoEmail,
+      anexosAdicionales: anexosAdicionalesEmail,
+      anexosResumen: anexosResumenEmail,
     });
 
     return new Response(

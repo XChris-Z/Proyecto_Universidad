@@ -220,6 +220,11 @@ import Layout from '@layouts/Layout.astro';
             <span class="badge-total-files" id="disp-total-files">0 archivos disponibles</span>
           </div>
 
+          <!-- RESPUESTA FINAL OFICIAL DESTACADA -->
+          <div id="respuesta-final-doc-container" style="display: none; margin-bottom: 16px;">
+            <!-- Inyectado dinámicamente -->
+          </div>
+
           <!-- CONTENEDOR DINÁMICO DE SUBCARPETAS (1A, 1B, ETC.) -->
           <div id="subcarpetas-container" class="subcarpetas-container">
             <!-- Inyectado dinámicamente -->
@@ -958,6 +963,89 @@ import Layout from '@layouts/Layout.astro';
     box-shadow: 0 2px 6px rgba(0, 89, 78, 0.2);
   }
 
+  /* TARJETA DESTACADA DE RESPUESTA FINAL OFICIAL EN PORTAL */
+  .respuesta-final-portal-card {
+    background: #F2F7F6;
+    border: 1px solid #B2CFCB;
+    border-left: 4px solid #00594E;
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    box-shadow: 0 4px 12px rgba(0, 89, 78, 0.06);
+  }
+  .respuesta-final-portal-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+    flex: 1;
+  }
+  .respuesta-final-portal-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: #FFFFFF;
+    border: 1px solid #B2CFCB;
+    color: #00594E;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .respuesta-final-portal-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #00594E;
+    color: #FFFFFF;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 999px;
+  }
+  .respuesta-final-portal-name {
+    font-size: 0.94rem;
+    font-weight: 800;
+    color: #111827;
+    word-break: break-word;
+    margin-top: 4px;
+  }
+  .respuesta-final-portal-meta {
+    font-size: 0.74rem;
+    color: #475569;
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .respuesta-final-portal-btn {
+    background: #00594E;
+    color: #FFFFFF;
+    border: 1px solid #00594E;
+    text-decoration: none;
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    flex-shrink: 0;
+    transition: background 0.2s ease, transform 0.15s ease;
+  }
+  .respuesta-final-portal-btn:hover {
+    background: #00443B;
+    border-color: #00443B;
+    transform: translateY(-1px);
+  }
+
   /* PIE DE PÁGINA */
   .consulta-footer {
     background: var(--uni-white);
@@ -1160,19 +1248,72 @@ import Layout from '@layouts/Layout.astro';
     const dispCat = document.getElementById('disp-categoria');
     if (dispCat) dispCat.textContent = pet.categoria || 'Petición General';
 
-    // Contador de archivos
-    const dispTotalFiles = document.getElementById('disp-total-files');
-    if (dispTotalFiles) {
-      dispTotalFiles.textContent = `${anexos.length} archivo${anexos.length === 1 ? '' : 's'} disponible${anexos.length === 1 ? '' : 's'}`;
+    // Documento de Respuesta Final Oficial destacada
+    const respFinalContainer = document.getElementById('respuesta-final-doc-container');
+    const respFinalFile = resp.archivo_respuesta || null;
+    const escPortal = (s: any) =>
+      String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] || c));
+    const fmtSizePortal = (bytes?: number) => {
+      if (!bytes || bytes <= 0) return '';
+      if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(2)} MB`;
+      return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+    };
+
+    if (respFinalContainer) {
+      if (respFinalFile && respFinalFile.download_url) {
+        const respName = String(respFinalFile.nombre_archivo || 'Respuesta_Oficial.pdf');
+        const respSize = fmtSizePortal(respFinalFile.tamano_bytes);
+        const respDateRaw = respFinalFile.created_at || resp.fecha_envio;
+        const respDate = respDateRaw
+          ? new Date(respDateRaw).toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric' })
+          : '';
+        respFinalContainer.style.display = 'block';
+        respFinalContainer.innerHTML = `
+          <div class="respuesta-final-portal-card">
+            <div class="respuesta-final-portal-left">
+              <div class="respuesta-final-portal-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>
+              </div>
+              <div style="min-width: 0; flex: 1;">
+                <span class="respuesta-final-portal-badge">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  Respuesta Final Oficial
+                </span>
+                <div class="respuesta-final-portal-name">${escPortal(respName)}</div>
+                <div class="respuesta-final-portal-meta">
+                  ${respSize ? `<span>${escPortal(respSize)}</span>` : ''}
+                  ${respSize && respDate ? `<span>&middot;</span>` : ''}
+                  ${respDate ? `<span>Emitido el ${escPortal(respDate)}</span>` : ''}
+                </div>
+              </div>
+            </div>
+            <a href="${escPortal(respFinalFile.download_url)}" download="${escPortal(respName)}" class="respuesta-final-portal-btn" target="_blank" rel="noopener noreferrer" title="Descargar respuesta final oficial">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>Descargar Respuesta Oficial</span>
+            </a>
+          </div>
+        `;
+      } else {
+        respFinalContainer.style.display = 'none';
+        respFinalContainer.innerHTML = '';
+      }
     }
 
-    // Renderizar subcarpetas y anexos
-    renderSubcarpetas(subcarpetas, anexos);
+    // Contador de archivos (Respuesta Final Oficial + anexos autorizados)
+    const hasRespFinal = Boolean(respFinalFile && respFinalFile.download_url);
+    const totalDocsCount = (hasRespFinal ? 1 : 0) + anexos.length;
+    const dispTotalFiles = document.getElementById('disp-total-files');
+    if (dispTotalFiles) {
+      dispTotalFiles.textContent = `${totalDocsCount} archivo${totalDocsCount === 1 ? '' : 's'} disponible${totalDocsCount === 1 ? '' : 's'}`;
+    }
+
+    // Renderizar subcarpetas y anexos autorizados
+    renderSubcarpetas(subcarpetas, anexos, hasRespFinal);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   // Helper para agrupar y renderizar subcarpetas en el portal del solicitante
-  function renderSubcarpetas(subcarpetas: any[], anexos: any[]) {
+  function renderSubcarpetas(subcarpetas: any[], anexos: any[], hasRespFinal = false) {
     const container = document.getElementById('subcarpetas-container');
     if (!container) return;
 
@@ -1185,15 +1326,19 @@ import Layout from '@layouts/Layout.astro';
     });
 
     if (anexos.length === 0) {
+      if (hasRespFinal) {
+        container.innerHTML = '';
+        return;
+      }
       container.innerHTML = `
-        <div style="background: #ffffff; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 24px; text-align: center; color: #64748b; font-size: 0.84rem;">
+        <div style="background: #ffffff; border: 1px dashed #DCE4E3; border-radius: 10px; padding: 24px; text-align: center; color: #64748b; font-size: 0.84rem;">
           No se registraron documentos anexos descargables para este expediente. El pronunciamiento oficial consta en el texto superior.
         </div>
       `;
       return;
     }
 
-    // 1. Identificar documento original (no anexo de oficina)
+    // 1. Identificar documento original (no anexo de oficina) y anexos autorizados de oficinas
     const docOriginales = anexos.filter((a: any) => !a.es_anexo_oficina);
     const anexosOficinas = anexos.filter((a: any) => a.es_anexo_oficina);
 
@@ -1218,14 +1363,14 @@ import Layout from '@layouts/Layout.astro';
       `;
     }
 
-    // 2. Si no hay subcarpetas estructuradas pero hay archivos de oficinas
+    // 2. Si no hay subcarpetas estructuradas pero hay archivos autorizados de oficinas
     if (validSubcarpetas.length === 0 && anexosOficinas.length > 0) {
       html += `
         <div class="subcarpeta-bento-card open">
           <div class="subcarpeta-header">
             <div class="subcarpeta-title-group">
               <svg class="subcarpeta-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-              <span class="subcarpeta-name">Soportes y Anexos Institucionales</span>
+              <span class="subcarpeta-name">Anexos de Dependencias Incluidos</span>
               <span class="subcarpeta-count-badge">${anexosOficinas.length} doc</span>
             </div>
             <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
@@ -1235,26 +1380,37 @@ import Layout from '@layouts/Layout.astro';
           </div>
         </div>
       `;
-    } else {
-      // 3. Ordenar carpetas de forma natural estricta y renderizar cada una
+    } else if (anexosOficinas.length > 0) {
+      // 3. Ordenar carpetas de forma natural estricta y renderizar solo las que tengan anexos autorizados
       validSubcarpetas.sort((a: any, b: any) => {
         const nombreA = String(a?.nombre ?? '').replace(/^subcarpeta\s+/i, '').trim();
         const nombreB = String(b?.nombre ?? '').replace(/^subcarpeta\s+/i, '').trim();
         return nombreA.localeCompare(nombreB, 'es', { numeric: true, sensitivity: 'base' });
       });
 
+      const renderedOfficeFileIds = new Set<string>();
+
       validSubcarpetas.forEach((sub: any, idx: number) => {
         const rawName = String(sub.nombre || `${idx + 1}`).trim();
         const cleanName = rawName.replace(/^subcarpeta\s+/i, '').trim() || rawName;
         const subId = sub.id;
+        const cleanSub = cleanName.toLowerCase();
+        const subSlug = cleanName.toLowerCase().replace(/[^a-z0-9]/g, '_');
 
-        // Archivos asociados a esta subcarpeta
+        // Archivos autorizados asociados a esta subcarpeta
         const subFiles = anexosOficinas.filter((a: any) => {
           if (a.subcarpeta_id && a.subcarpeta_id === subId) return true;
-          const fileName = (a.nombre_archivo || '').toLowerCase();
-          const cleanSub = cleanName.toLowerCase();
-          return fileName.includes(`[${cleanSub}]`) || fileName.includes(`[subcarpeta ${cleanSub}]`);
+          const fileName = String(a.nombre_raw || a.nombre_archivo || '').toLowerCase();
+          const storagePath = String(a.storage_path || '').toLowerCase();
+          return (
+            fileName.includes(`[${cleanSub}]`) ||
+            fileName.includes(`[subcarpeta ${cleanSub}]`) ||
+            (subSlug && storagePath.includes(`/${subSlug}/`))
+          );
         });
+
+        if (subFiles.length === 0) return;
+        subFiles.forEach((f: any) => { if (f.id) renderedOfficeFileIds.add(String(f.id)); });
 
         html += `
           <div class="subcarpeta-bento-card open">
@@ -1268,14 +1424,30 @@ import Layout from '@layouts/Layout.astro';
             </div>
             <div class="subcarpeta-body">
               ${sub.descripcion ? `<div class="sub-instruction-text"><strong>Finalidad:</strong> ${sub.descripcion}</div>` : ''}
-              ${subFiles.length > 0 
-                ? subFiles.map((doc: any) => renderFileRow(doc)).join('')
-                : `<div style="font-size: 0.78rem; color: #94a3b8; font-style: italic; padding: 6px 0;">No se registraron archivos de soporte adjuntos para esta subcarpeta.</div>`
-              }
+              ${subFiles.map((doc: any) => renderFileRow(doc)).join('')}
             </div>
           </div>
         `;
       });
+
+      const unmatchedOfficeFiles = anexosOficinas.filter((a: any) => !a.id || !renderedOfficeFileIds.has(String(a.id)));
+      if (unmatchedOfficeFiles.length > 0) {
+        html += `
+          <div class="subcarpeta-bento-card open">
+            <div class="subcarpeta-header">
+              <div class="subcarpeta-title-group">
+                <svg class="subcarpeta-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                <span class="subcarpeta-name">Anexos Adicionales Incluidos</span>
+                <span class="subcarpeta-count-badge">${unmatchedOfficeFiles.length} soporte${unmatchedOfficeFiles.length === 1 ? '' : 's'}</span>
+              </div>
+              <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <div class="subcarpeta-body">
+              ${unmatchedOfficeFiles.map((doc: any) => renderFileRow(doc)).join('')}
+            </div>
+          </div>
+        `;
+      }
     }
 
     container.innerHTML = html;
@@ -1290,29 +1462,36 @@ import Layout from '@layouts/Layout.astro';
   }
 
   function renderFileRow(doc: any): string {
+    const esc = (s: any) =>
+      String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] || c));
     const rawName = String(doc?.nombre_archivo || 'Documento_Adjunto.pdf');
-    // Limpiar tags [1.1], [Soportes Técnicos], etc. si existen
-    const cleanDisplayName = rawName.replace(/^\[[^\]]+\]\s*/, '').trim();
+    // Limpiar tags [1.1], [Aporte de: ...], etc. si existen
+    const cleanDisplayName = rawName
+      .replace(/^(?:\[[^\]]+\]\s*[-–—]?\s*)+/i, '')
+      .trim() || rawName;
     const downloadUrl = doc?.download_url || '#';
     const fecha = doc?.created_at ? new Date(doc.created_at).toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric' }) : '';
+    const sizeText = doc?.tamano_bytes > 0
+      ? (doc.tamano_bytes >= 1048576 ? `${(doc.tamano_bytes / 1048576).toFixed(2)} MB` : `${Math.max(1, Math.round(doc.tamano_bytes / 1024))} KB`)
+      : '';
     const oficina = doc?.oficina_nombre ? String(doc.oficina_nombre).trim() : '';
     const observacion = doc?.observacion ? String(doc.observacion).trim() : '';
-    const fileTitle = oficina ? `[Aporte de: ${oficina}] - ${cleanDisplayName}` : cleanDisplayName;
 
     return `
       <div class="file-item-row">
         <div class="file-left">
           <svg class="file-item-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           <div style="flex: 1; min-width: 0;">
-            <div class="file-name" style="word-break: break-all; font-weight: 700;">${fileTitle}</div>
+            <div class="file-name" style="word-break: break-word; font-weight: 700;">${esc(cleanDisplayName)}</div>
             <div class="file-meta" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 3px;">
-              ${oficina ? `<span class="file-office-badge">Aporte de: ${oficina}</span>` : ''}
-              ${fecha ? `<span>Radicado el: ${fecha}</span>` : ''}
+              ${oficina ? `<span class="file-office-badge">${esc(oficina)}</span>` : ''}
+              ${sizeText ? `<span>${esc(sizeText)}</span>` : ''}
+              ${fecha ? `<span>Radicado el: ${esc(fecha)}</span>` : ''}
             </div>
-            ${observacion ? `<div style="font-size: 0.75rem; color: var(--uni-text-muted); font-style: italic; margin-top: 4px; line-height: 1.4;">&ldquo;${observacion}&rdquo;</div>` : ''}
+            ${observacion ? `<div style="font-size: 0.75rem; color: var(--uni-text-muted); font-style: italic; margin-top: 4px; line-height: 1.4;">&ldquo;${esc(observacion)}&rdquo;</div>` : ''}
           </div>
         </div>
-        <a href="${downloadUrl}" download="${cleanDisplayName}" class="btn-download-clean" target="_blank" rel="noopener noreferrer" title="Descargar documento">
+        <a href="${esc(downloadUrl)}" download="${esc(cleanDisplayName)}" class="btn-download-clean" target="_blank" rel="noopener noreferrer" title="Descargar documento">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           <span>Descargar</span>
         </a>

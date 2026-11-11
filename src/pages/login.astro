@@ -7,15 +7,15 @@ import AuthLayout from "@layouts/AuthLayout.astro";
 <AuthLayout title="Acceso al Sistema — SGD Unitrópico">
   <div class="login-promax-wrapper">
     <!-- =====================================================================
-         PANEL IZQUIERDO: IDENTIDAD INSTITUCIONAL INMERSIVA (DESKTOP)
+         PANEL IZQUIERDO: IDENTIDAD INSTITUCIONAL LIMPIA Y CENTRADA
          ===================================================================== -->
     <aside
       class="login-brand-panel"
       aria-label="Identidad Institucional Unitrópico"
     >
       <div class="brand-panel-inner">
-        <!-- Bloque Superior de Identidad (Compacto y Centrado/Alineado) -->
         <div class="brand-header">
+          <!-- 1. Logo Institucional con Presencia Pro Max -->
           <div class="login-brand-logo-wrap">
             <img
               src="/logo.png"
@@ -24,97 +24,25 @@ import AuthLayout from "@layouts/AuthLayout.astro";
               loading="eager"
             />
           </div>
-          
-          <div class="brand-institution-pill">
-            <span class="brand-institution-dot"></span>
-            <span>GESTIÓN DOCUMENTAL &bull; UNITRÓPICO</span>
-          </div>
 
+          <!-- 2. Título Principal -->
           <h1 class="brand-main-title">
             Sistema de Gestión Documental
           </h1>
+
+          <!-- 3. Subtítulo Institucional + Línea de Acento Dorado -->
           <p class="brand-subtitle">
-            Plataforma institucional para la radicación, seguimiento y gestión de expedientes oficiales.
+            PLATAFORMA INSTITUCIONAL PARA LA RADICACIÓN, SEGUIMIENTO Y GESTIÓN DE EXPEDIENTES OFICIALES.
           </p>
+          <div class="brand-gold-accent"></div>
         </div>
+      </div>
 
-        <!-- Micro-Bento Visual: Chart Element Ejecutivo de Flujo Documental -->
-        <div class="brand-chart-bento-card">
-          <div class="bento-chart-header">
-            <div class="bento-chart-titles">
-              <span class="chart-badge-title">Trazabilidad en Tiempo Real</span>
-              <span class="chart-badge-subtitle">Ciclo de vida del expediente documental</span>
-            </div>
-            <span class="bento-status-pill">
-              <span class="live-pulse"></span>
-              <span>Operativo</span>
-            </span>
-          </div>
-
-          <!-- Gráfico y Barras de Flujo Documental -->
-          <div class="flow-chart-stages">
-            <!-- Etapa 1: Radicación Digital -->
-            <div class="flow-stage-row">
-              <div class="stage-label-group">
-                <div class="stage-indicator-icon gold">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-                </div>
-                <span class="stage-name">Radicación Digital</span>
-              </div>
-              <div class="stage-bar-wrap">
-                <div class="stage-bar-track">
-                  <div class="stage-bar-fill gold" style="width: 100%;"></div>
-                </div>
-                <span class="stage-pct gold">100%</span>
-              </div>
-            </div>
-
-            <!-- Etapa 2: Gestión por Dependencias -->
-            <div class="flow-stage-row">
-              <div class="stage-label-group">
-                <div class="stage-indicator-icon emerald">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                </div>
-                <span class="stage-name">Gestión por Dependencias</span>
-              </div>
-              <div class="stage-bar-wrap">
-                <div class="stage-bar-track">
-                  <div class="stage-bar-fill emerald" style="width: 82%;"></div>
-                </div>
-                <span class="stage-pct emerald">En Curso</span>
-              </div>
-            </div>
-
-            <!-- Etapa 3: Despacho Oficial -->
-            <div class="flow-stage-row">
-              <div class="stage-label-group">
-                <div class="stage-indicator-icon verified">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                </div>
-                <span class="stage-name">Despacho Oficial</span>
-              </div>
-              <div class="stage-bar-wrap">
-                <div class="stage-bar-track">
-                  <div class="stage-bar-fill verified" style="width: 100%;"></div>
-                </div>
-                <span class="stage-pct verified">Verificado</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Pie del Micro-Bento -->
-          <div class="bento-chart-footer">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#B5A160" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            <span>Control automatizado de términos y custodia digital</span>
-          </div>
-        </div>
-
-        <!-- Footer del Panel de Marca -->
-        <div class="brand-panel-footer">
-          <p class="brand-copy">
-            &copy; {new Date().getFullYear()} Unitrópico &bull; Yopal, Casanare, Colombia
-          </p>
-        </div>
+      <!-- Pie de Copyright Fijo en la Parte Inferior -->
+      <div class="brand-panel-footer">
+        <p class="brand-copy">
+          &copy; {new Date().getFullYear()} Unitrópico &bull; Yopal, Casanare, Colombia
+        </p>
       </div>
     </aside>
 
@@ -133,7 +61,7 @@ import AuthLayout from "@layouts/AuthLayout.astro";
               loading="eager"
             />
           </div>
-          <div class="brand-gold-line mobile"></div>
+          <div class="brand-gold-accent mobile"></div>
         </div>
 
         <div class="login-card-promax">
@@ -145,7 +73,7 @@ import AuthLayout from "@layouts/AuthLayout.astro";
             </div>
             <h2 class="form-main-title">Iniciar Sesión</h2>
             <p class="form-main-subtitle">
-              Ingrese su correo institucional para acceder al panel de control rectoral y gestión de expedientes.
+              Ingrese su correo institucional para acceder al panel de control y gestión de expedientes.
             </p>
           </div>
 
@@ -353,6 +281,20 @@ import AuthLayout from "@layouts/AuthLayout.astro";
 
 <style>
   /* ==========================================================================
+     ANIMACIÓN GLOBAL PRO MAX CROSSFADE
+     ========================================================================== */
+  @keyframes proMaxCrossfade {
+    from {
+      opacity: 0;
+      transform: translateY(6px) scale(0.992);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  /* ==========================================================================
      CONTENEDOR SPLIT SCREEN PRO MAX
      ========================================================================== */
   .login-promax-wrapper {
@@ -361,7 +303,7 @@ import AuthLayout from "@layouts/AuthLayout.astro";
     min-height: 100dvh;
     display: flex;
     overflow-x: hidden;
-    background: #f8fafc;
+    background: #F8FAFC;
     font-family:
       "Montserrat",
       system-ui,
@@ -370,13 +312,13 @@ import AuthLayout from "@layouts/AuthLayout.astro";
   }
 
   /* ==========================================================================
-     PANEL IZQUIERDO: MARCA E IDENTIDAD INSTITUCIONAL
+     PANEL IZQUIERDO: IDENTIDAD INSTITUCIONAL LIMPIA Y CENTRADA
      ========================================================================== */
   .login-brand-panel {
     width: 50%;
     min-width: 480px;
-    background: radial-gradient(circle at 20% 20%, #00685B 0%, #00594E 60%, #003E36 100%);
-    color: #ffffff;
+    background: radial-gradient(circle at 20% 20%, #006B5E 0%, #00594E 55%, #003E36 100%);
+    color: #FFFFFF;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -385,43 +327,18 @@ import AuthLayout from "@layouts/AuthLayout.astro";
     position: relative;
     box-sizing: border-box;
     border-right: 1px solid rgba(181, 161, 96, 0.25);
+    min-height: 100%;
   }
 
   .brand-panel-inner {
-    max-width: 480px;
+    max-width: 460px;
     width: 100%;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 22px;
-  }
-
-  /* Contenedor Elegante y Proporcionado del Logo Oficial */
-  .login-brand-logo-wrap {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: #FFFFFF;
-    padding: 12px 22px;
-    border-radius: 14px;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(181, 161, 96, 0.35);
-    margin-bottom: 20px;
-    width: fit-content;
-  }
-
-  .login-brand-logo-wrap.mobile {
-    margin-bottom: 12px;
-    padding: 8px 18px;
-  }
-
-  .login-brand-logo-wrap img {
-    max-width: 190px;
-    max-height: 64px;
-    width: auto;
-    height: auto;
-    object-fit: contain;
-    display: block;
+    min-height: 100%;
+    animation: proMaxCrossfade 0.45s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .brand-header {
@@ -430,257 +347,88 @@ import AuthLayout from "@layouts/AuthLayout.astro";
     align-items: flex-start;
   }
 
-  /* Píldora Dorada Superior */
-  .brand-institution-pill {
+  /* 1. Logo Institucional con Presencia Pro Max */
+  .login-brand-logo-wrap {
     display: inline-flex;
     align-items: center;
-    gap: 7px;
-    color: #B5A160;
-    background: rgba(181, 161, 96, 0.14);
-    border: 1px solid rgba(181, 161, 96, 0.35);
-    border-radius: 999px;
-    padding: 4px 12px;
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    margin-bottom: 10px;
+    justify-content: center;
+    background: #FFFFFF;
+    padding: 18px 32px;
+    border-radius: 18px;
+    box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.25), 0 0 0 1.5px rgba(181, 161, 96, 0.45);
+    margin-bottom: 30px;
+    width: fit-content;
+    animation: proMaxCrossfade 0.45s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  .brand-institution-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #B5A160;
+  .login-brand-logo-wrap.mobile {
+    margin-bottom: 14px;
+    padding: 10px 22px;
+    border-radius: 14px;
   }
 
-  .brand-gold-line {
-    width: 56px;
-    height: 3px;
-    background: linear-gradient(90deg, #B5A160, #786832);
-    border-radius: 2px;
-    margin: 12px 0;
+  .login-brand-logo-wrap img {
+    max-width: 260px;
+    max-height: 92px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    display: block;
   }
 
-  .brand-gold-line.mobile {
-    margin: 10px auto;
+  .login-brand-logo-wrap.mobile img {
+    max-width: 180px;
+    max-height: 54px;
   }
 
+  /* 2. Título Principal */
   .brand-main-title {
-    font-size: 2rem;
+    font-size: 2.45rem;
     font-weight: 800;
-    line-height: 1.15;
+    color: #FFFFFF;
+    line-height: 1.12;
     letter-spacing: -0.025em;
-    color: #ffffff;
-    margin: 4px 0 8px 0;
+    margin: 0 0 16px 0;
   }
 
+  /* 3. Subtítulo Institucional y Acento Dorado */
   .brand-subtitle {
-    font-size: 0.92rem;
-    line-height: 1.5;
-    color: rgba(255, 255, 255, 0.82);
+    font-size: 0.86rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.86);
+    line-height: 1.65;
+    max-width: 450px;
     margin: 0;
   }
 
-  /* ==========================================================================
-     MICRO-BENTO VISUAL: CHART ELEMENT EJECUTIVO DE FLUJO DOCUMENTAL
-     ========================================================================== */
-  .brand-chart-bento-card {
-    background: rgba(255, 255, 255, 0.07);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(181, 161, 96, 0.28);
-    border-radius: 16px;
-    padding: 18px 20px;
-    margin-top: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.2);
-    animation: fadeSlideIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  .brand-gold-accent {
+    height: 2px;
+    width: 90px;
+    background: linear-gradient(90deg, #B5A160 0%, rgba(181, 161, 96, 0) 100%);
+    margin-top: 20px;
+    border-radius: 2px;
   }
 
-  @keyframes fadeSlideIn {
-    from {
-      opacity: 0;
-      transform: translateY(12px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+  .brand-gold-accent.mobile {
+    margin: 0 auto 12px auto;
   }
 
-  .bento-chart-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-  }
-
-  .bento-chart-titles {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  .chart-badge-title {
-    font-size: 0.84rem;
-    font-weight: 750;
-    color: #FFFFFF;
-    letter-spacing: -0.01em;
-  }
-
-  .chart-badge-subtitle {
-    font-size: 0.72rem;
-    color: rgba(255, 255, 255, 0.68);
-  }
-
-  .bento-status-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(110, 231, 183, 0.15);
-    border: 1px solid rgba(110, 231, 183, 0.4);
-    color: #6EE7B7;
-    border-radius: 999px;
-    padding: 2px 8px;
-    font-size: 0.68rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .live-pulse {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #6EE7B7;
-    box-shadow: 0 0 8px #6EE7B7;
-    animation: pulseLiveDot 1.8s infinite;
-  }
-
-  @keyframes pulseLiveDot {
-    0%, 100% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.35); opacity: 0.6; }
-  }
-
-  .flow-chart-stages {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .flow-stage-row {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-  }
-
-  .stage-label-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .stage-indicator-icon {
-    width: 22px;
-    height: 22px;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
-  .stage-indicator-icon.gold {
-    background: rgba(181, 161, 96, 0.2);
-    color: #F7F5EE;
-    border: 1px solid rgba(181, 161, 96, 0.4);
-  }
-
-  .stage-indicator-icon.emerald {
-    background: rgba(110, 231, 183, 0.2);
-    color: #6EE7B7;
-    border: 1px solid rgba(110, 231, 183, 0.4);
-  }
-
-  .stage-indicator-icon.verified {
-    background: rgba(255, 255, 255, 0.16);
-    color: #FFFFFF;
-    border: 1px solid rgba(255, 255, 255, 0.35);
-  }
-
-  .stage-name {
-    font-size: 0.78rem;
-    font-weight: 650;
-    color: rgba(255, 255, 255, 0.95);
-    flex: 1;
-  }
-
-  .stage-bar-wrap {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding-left: 30px;
-  }
-
-  .stage-bar-track {
-    flex: 1;
-    height: 6px;
-    background: rgba(255, 255, 255, 0.12);
-    border-radius: 999px;
-    overflow: hidden;
-  }
-
-  .stage-bar-fill {
-    height: 100%;
-    border-radius: 999px;
-    transition: width 0.6s ease;
-  }
-
-  .stage-bar-fill.gold {
-    background: linear-gradient(90deg, #B5A160, #e0d19f);
-  }
-
-  .stage-bar-fill.emerald {
-    background: linear-gradient(90deg, #10B981, #6EE7B7);
-  }
-
-  .stage-bar-fill.verified {
-    background: linear-gradient(90deg, #00594E, #34D399);
-    box-shadow: 0 0 8px rgba(110, 231, 183, 0.4);
-  }
-
-  .stage-pct {
-    font-size: 0.72rem;
-    font-weight: 750;
-    min-width: 58px;
-    text-align: right;
-  }
-
-  .stage-pct.gold { color: #fde68a; }
-  .stage-pct.emerald { color: #6EE7B7; }
-  .stage-pct.verified { color: #FFFFFF; }
-
-  .bento-chart-footer {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.72rem;
-    color: rgba(255, 255, 255, 0.75);
-    padding-top: 10px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  /* Footer del Panel */
+  /* Pie Sutil Fijo en la Parte Inferior */
   .brand-panel-footer {
+    position: absolute;
+    bottom: 24px;
+    left: clamp(2.5rem, 5vw, 4.5rem);
+    right: clamp(2.5rem, 5vw, 4.5rem);
     padding-top: 12px;
-    border-top: 1px solid rgba(255, 255, 255, 0.14);
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    max-width: 460px;
+    margin: 0 auto;
   }
 
   .brand-copy {
-    font-size: 0.76rem;
-    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.74rem;
+    color: rgba(255, 255, 255, 0.62);
     margin: 0;
   }
 
@@ -693,7 +441,7 @@ import AuthLayout from "@layouts/AuthLayout.astro";
     align-items: center;
     justify-content: center;
     padding: clamp(1.5rem, 4vw, 3rem);
-    background: #f8fafc;
+    background: #F8FAFC;
     box-sizing: border-box;
   }
 
@@ -711,35 +459,16 @@ import AuthLayout from "@layouts/AuthLayout.astro";
     margin-bottom: 16px;
   }
 
-  .login-mobile-logo {
-    max-height: 48px;
-    max-width: 170px;
-    width: auto;
-    height: auto;
-    object-fit: contain;
-  }
-
-  /* Tarjeta con animación Crossfade */
+  /* Tarjeta Ejecutiva con Elevación Multicapa y Crossfade */
   .login-card-promax {
     width: 100%;
-    background: #ffffff;
+    background: #FFFFFF;
     border-radius: 20px;
     border: 1px solid #DCE4E3;
-    box-shadow: 0 20px 40px -15px rgba(0, 89, 78, 0.10);
+    box-shadow: 0 10px 30px -10px rgba(0, 89, 78, 0.08), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
     padding: clamp(28px, 4vw, 40px);
     box-sizing: border-box;
-    animation: promaxCardCrossfade 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  }
-
-  @keyframes promaxCardCrossfade {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    animation: proMaxCrossfade 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 
   /* Encabezado */
@@ -769,16 +498,16 @@ import AuthLayout from "@layouts/AuthLayout.astro";
   }
 
   .form-main-title {
-    font-size: 1.6rem;
+    font-size: 1.65rem;
     font-weight: 800;
-    color: #0f172a;
+    color: #111827;
     letter-spacing: -0.02em;
     margin: 0 0 6px 0;
   }
 
   .form-main-subtitle {
     font-size: 0.84rem;
-    color: #64748b;
+    color: #475569;
     line-height: 1.5;
     margin: 0;
   }
@@ -825,7 +554,7 @@ import AuthLayout from "@layouts/AuthLayout.astro";
   .form-label-promax {
     font-size: 0.78rem;
     font-weight: 700;
-    color: #334155;
+    color: #111827;
     letter-spacing: -0.01em;
   }
 
@@ -838,7 +567,7 @@ import AuthLayout from "@layouts/AuthLayout.astro";
   .input-icon-promax {
     position: absolute;
     left: 14px;
-    color: #94a3b8;
+    color: #64748B;
     pointer-events: none;
     transition: color 0.2s ease;
   }
@@ -846,24 +575,24 @@ import AuthLayout from "@layouts/AuthLayout.astro";
   .form-input-promax {
     width: 100%;
     padding: 12px 14px 12px 42px;
-    background: #f8fafc;
-    border: 1.5px solid #e2e8f0;
+    background: #F8FAFC;
+    border: 1.5px solid #DCE4E3;
     border-radius: 10px;
     font-size: 0.88rem;
     font-weight: 550;
-    color: #0f172a;
+    color: #111827;
     font-family: inherit;
     transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     box-sizing: border-box;
   }
 
   .form-input-promax::placeholder {
-    color: #94a3b8;
+    color: #64748B;
     font-weight: 450;
   }
 
   .form-input-promax:focus {
-    background: #ffffff;
+    background: #FFFFFF;
     border-color: #00594E;
     box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.12);
     outline: none;
@@ -882,7 +611,7 @@ import AuthLayout from "@layouts/AuthLayout.astro";
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #94a3b8;
+    color: #64748B;
     cursor: pointer;
     border-radius: 6px;
     transition: all 0.15s ease;
@@ -924,7 +653,7 @@ import AuthLayout from "@layouts/AuthLayout.astro";
     width: 100%;
     padding: 13px 20px;
     background: #00594E;
-    color: #ffffff;
+    color: #FFFFFF;
     border: 1px solid #00443B;
     border-bottom: 3px solid #B5A160;
     border-radius: 10px;
@@ -948,6 +677,7 @@ import AuthLayout from "@layouts/AuthLayout.astro";
   }
 
   .btn-submit-promax:active:not(:disabled) {
+    background: #00332C;
     transform: translateY(0);
   }
 
@@ -960,7 +690,7 @@ import AuthLayout from "@layouts/AuthLayout.astro";
     width: 18px;
     height: 18px;
     border: 2px solid rgba(255, 255, 255, 0.35);
-    border-top-color: #ffffff;
+    border-top-color: #FFFFFF;
     border-radius: 50%;
     animation: promaxSpin 0.75s linear infinite;
   }
@@ -974,7 +704,7 @@ import AuthLayout from "@layouts/AuthLayout.astro";
     display: flex;
     align-items: center;
     margin: 24px 0 16px 0;
-    color: #94a3b8;
+    color: #64748B;
     font-size: 0.7rem;
     font-weight: 750;
     text-transform: uppercase;
@@ -986,7 +716,7 @@ import AuthLayout from "@layouts/AuthLayout.astro";
     content: "";
     flex: 1;
     height: 1px;
-    background: #e2e8f0;
+    background: #DCE4E3;
   }
 
   .login-divider-promax span {
@@ -999,7 +729,7 @@ import AuthLayout from "@layouts/AuthLayout.astro";
   .login-secondary-portals {
     display: flex;
     flex-direction: column;
-    gap: 9px;
+    gap: 10px;
     width: 100%;
   }
 
@@ -1007,30 +737,32 @@ import AuthLayout from "@layouts/AuthLayout.astro";
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 10px 14px;
+    padding: 11px 14px;
     background: #F8FAFC;
-    border: 1px solid #E2E8F0;
+    border: 1px solid #DCE4E3;
     border-radius: 12px;
     text-decoration: none;
     transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    color: #1E293B;
+    color: #111827;
   }
 
   .sec-portal-item:hover {
     background: #F2F7F6;
     border-color: #00594E;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 89, 78, 0.08);
+    box-shadow: 0 6px 16px -4px rgba(0, 89, 78, 0.1);
   }
 
   .sec-portal-item.citizen:hover {
+    background: #F7F5EE;
     border-color: #B5A160;
+    box-shadow: 0 6px 16px -4px rgba(181, 161, 96, 0.15);
   }
 
   .sec-portal-icon {
-    width: 34px;
-    height: 34px;
-    border-radius: 9px;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1063,17 +795,17 @@ import AuthLayout from "@layouts/AuthLayout.astro";
     letter-spacing: 0.04em;
   }
 
-  .sec-portal-badge.citizen { color: #854d0e; }
+  .sec-portal-badge.citizen { color: #786832; }
   .sec-portal-badge.office { color: #00594E; }
 
   .sec-portal-title {
-    font-size: 0.82rem;
+    font-size: 0.84rem;
     font-weight: 700;
-    color: #0F172A;
+    color: #111827;
   }
 
   .sec-arrow {
-    color: #94A3B8;
+    color: #64748B;
     transition: transform 0.2s ease, color 0.2s ease;
     flex-shrink: 0;
   }
@@ -1251,7 +983,7 @@ import AuthLayout from "@layouts/AuthLayout.astro";
             .join("")
             .substring(0, 2)
             .toUpperCase() || "FN",
-        avatarColor: isAdmin ? "#006837" : "#D4AF37",
+        avatarColor: isAdmin ? "#00594E" : "#B5A160",
         avatar_url: profile?.avatar_url || null,
         avatarUrl: profile?.avatar_url || null,
       };

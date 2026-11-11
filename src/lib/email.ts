@@ -293,7 +293,7 @@ export async function sendPeticionAssignmentEmail(
                 ${params.subcarpetas.map(sub => `
                   <div style="background: #ffffff; border: 1px solid #cbd5e1; border-left: 4px solid #00594E; border-radius: 6px; padding: 10px 14px; margin-bottom: 8px;">
                     <div style="font-weight: 800; font-size: 13px; color: #00594E;">
-                      📁 ${sub.nombre}
+                      ${sub.nombre}
                     </div>
                     ${sub.descripcion ? `<div style="font-size: 12px; color: #475569; margin-top: 4px; line-height: 1.4;">${sub.descripcion}</div>` : ''}
                   </div>
@@ -418,6 +418,15 @@ export interface EmailRespuestaSolicitanteParams {
     content: Buffer;
     contentType?: string;
   } | null;
+  anexosAdicionales?: Array<{
+    filename: string;
+    content: Buffer;
+    contentType?: string;
+  }>;
+  anexosResumen?: Array<{
+    nombre: string;
+    origen?: string;
+  }>;
 }
 
 /**
@@ -498,21 +507,34 @@ export async function sendRespuestaSolicitanteEmail(
 
           ${params.archivoAdjunto ? `
             <!-- TARJETA DE ARCHIVO ADJUNTO DE RESPUESTA FINAL -->
-            <div style="background: #f0fdf4; border: 1.5px solid #00594E; border-radius: 8px; padding: 14px 18px; margin: 18px 0; display: flex; align-items: center; justify-content: space-between;">
+            <div style="background: #F2F7F6; border: 1.5px solid #00594E; border-left: 5px solid #00594E; border-radius: 8px; padding: 14px 18px; margin: 18px 0;">
               <div>
-                <span style="font-size: 11px; font-weight: 800; color: #00594E; text-transform: uppercase; letter-spacing: 0.5px;">📎 DOCUMENTO ADJUNTO DE RESPUESTA OFICIAL</span>
+                <span style="font-size: 11px; font-weight: 800; color: #00594E; text-transform: uppercase; letter-spacing: 0.5px;">DOCUMENTO ADJUNTO DE RESPUESTA OFICIAL</span>
                 <div style="font-size: 14px; font-weight: 700; color: #111827; margin-top: 4px;">${params.archivoAdjunto.filename}</div>
-                <div style="font-size: 12px; color: #475569; margin-top: 2px;">El documento oficial se encuentra adjunto directamente a este correo electrónico.</div>
+                <div style="font-size: 12px; color: #475569; margin-top: 2px;">El documento oficial se encuentra adjunto directamente a este correo electrónico y disponible en el portal de consulta.</div>
               </div>
+            </div>
+          ` : ''}
+
+          ${params.anexosResumen && params.anexosResumen.length > 0 ? `
+            <!-- LISTA DE ANEXOS ADICIONALES INCLUIDOS -->
+            <div style="background: #FFFFFF; border: 1px solid #DCE4E3; border-left: 4px solid #B5A160; border-radius: 8px; padding: 14px 18px; margin: 14px 0;">
+              <span style="font-size: 11px; font-weight: 800; color: #786832; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 8px;">ANEXOS ADICIONALES INCLUIDOS (${params.anexosResumen.length})</span>
+              ${params.anexosResumen.map((anexo) => `
+                <div style="padding: 6px 10px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; margin-bottom: 6px; font-size: 12.5px;">
+                  <strong style="color: #111827;">${anexo.nombre}</strong>
+                  ${anexo.origen ? `<span style="color: #00594E; font-size: 11px; font-weight: 700; margin-left: 6px;">[${anexo.origen}]</span>` : ''}
+                </div>
+              `).join('')}
             </div>
           ` : ''}
 
           <!-- AVISO DE CADUCIDAD 10 DÍAS -->
           <div class="expira-card">
-            <strong style="display: block; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; color: #92400e;">
-              ⏱ Acceso Temporal Habilitado (10 Días Calendario)
+            <strong style="display: block; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; color: #786832;">
+              Acceso Temporal Habilitado (10 Días Calendario)
             </strong>
-            Conforme a los protocolos de seguridad documental, el expediente completo con sus anexos y soportes oficiales estará habilitado para consulta y descarga en el portal seguro hasta el <strong>${formattedFechaExpiracion}</strong>.
+            Conforme a los protocolos de seguridad documental, el expediente y los documentos autorizados estarán habilitados para consulta y descarga en el portal seguro hasta el <strong>${formattedFechaExpiracion}</strong>.
           </div>
 
           <!-- CREDENCIALES DE CONSULTA -->
@@ -577,14 +599,27 @@ export async function sendRespuestaSolicitanteEmail(
     html: htmlContent,
   };
 
+  const mailAttachments: any[] = [];
   if (params.archivoAdjunto && params.archivoAdjunto.content) {
-    mailOptions.attachments = [
-      {
-        filename: params.archivoAdjunto.filename,
-        content: params.archivoAdjunto.content,
-        contentType: params.archivoAdjunto.contentType || 'application/pdf',
-      },
-    ];
+    mailAttachments.push({
+      filename: params.archivoAdjunto.filename,
+      content: params.archivoAdjunto.content,
+      contentType: params.archivoAdjunto.contentType || 'application/pdf',
+    });
+  }
+  if (Array.isArray(params.anexosAdicionales) && params.anexosAdicionales.length > 0) {
+    params.anexosAdicionales.forEach((anexo) => {
+      if (anexo && anexo.content) {
+        mailAttachments.push({
+          filename: anexo.filename,
+          content: anexo.content,
+          contentType: anexo.contentType || 'application/octet-stream',
+        });
+      }
+    });
+  }
+  if (mailAttachments.length > 0) {
+    mailOptions.attachments = mailAttachments;
   }
 
   try {

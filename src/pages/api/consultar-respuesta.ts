@@ -192,23 +192,59 @@ export const POST: APIRoute = async ({ request }) => {
       }
     } catch {}
 
-    // Filtrar anexos incluidos por el funcionario si se especificaron
-    const filesAprobados = peticion.respuesta_archivos_incluidos || metaRespuesta.files;
-    let includedFiles = anexos;
-    if (Array.isArray(filesAprobados) && filesAprobados.length > 0) {
-      const allowedIds = new Set(filesAprobados);
-      includedFiles = anexos.filter((a) => allowedIds.has(a.id) || allowedIds.has(a.storage_path) || allowedIds.has(a.nombre_archivo));
-      if (includedFiles.length === 0) {
-        includedFiles = anexos;
-      }
+    // 6b. Identificar documento oficial de Respuesta Final Oficial
+    const respMetaFile = metaRespuesta.archivo_respuesta || metaRespuesta.respuesta_archivo || null;
+    const respInAnexos = anexos.find((a) => a && a.storage_path && String(a.storage_path).includes('/respuesta_final/')) || null;
+    const rawRespFinal = (respMetaFile && (respMetaFile.storage_path || respMetaFile.nombre_archivo)) ? respMetaFile : respInAnexos;
+
+    let respuestaFinalMapped: any = null;
+    if (rawRespFinal && rawRespFinal.storage_path) {
+      const respCleanPath = String(rawRespFinal.storage_path).replace(/^peticiones\//, '').replace(/^\/+/, '');
+      respuestaFinalMapped = {
+        id: rawRespFinal.id || 'resp-final',
+        nombre_archivo: String(rawRespFinal.nombre_archivo || 'Respuesta_Oficial.pdf').replace(/^\[[^\]]+\]\s*/, ''),
+        storage_path: rawRespFinal.storage_path,
+        tamano_bytes: rawRespFinal.tamano_bytes ?? null,
+        mime_type: rawRespFinal.mime_type || 'application/pdf',
+        created_at: rawRespFinal.created_at || peticion.respuesta_fecha_envio || metaRespuesta.fecha_envio || peticion.updated_at,
+        download_url: `https://irjjpjtvhxoakiazfswn.supabase.co/storage/v1/object/public/peticiones/${respCleanPath}`,
+        es_respuesta_final: true,
+      };
     }
+
+    // 6c. Filtrar estrictamente anexos de dependencias según lo marcado con checkbox por el funcionario
+    const anexosSinResp = anexos.filter((a) =>
+      !(a && a.storage_path && String(a.storage_path).includes('/respuesta_final/')) &&
+      !(rawRespFinal && rawRespFinal.id && a.id === rawRespFinal.id)
+    );
+
+    const hasExplicitSelection =
+      metaRespuesta.has_explicit_selection === true ||
+      Array.isArray(peticion.respuesta_archivos_incluidos) ||
+      Array.isArray(metaRespuesta.files);
+
+    const filesAprobados: string[] = Array.isArray(peticion.respuesta_archivos_incluidos)
+      ? peticion.respuesta_archivos_incluidos.map(String)
+      : Array.isArray(metaRespuesta.files)
+        ? metaRespuesta.files.map(String)
+        : [];
+
+    const allowedIds = new Set(filesAprobados);
+
+    const includedFiles = anexosSinResp.filter((a) => {
+      const isOficinaAnexo = Boolean(a.es_anexo_oficina || a.peticion_responsable_id || a.subcarpeta_id);
+      if (!isOficinaAnexo) return true; // Documento radicado original del solicitante
+      if (!hasExplicitSelection) return true; // Retrocompatibilidad para registros antiguos sin selector
+      return allowedIds.has(String(a.id)) || allowedIds.has(String(a.storage_path)) || allowedIds.has(String(a.nombre_archivo));
+    });
 
     subcarpetas = filtrarSubcarpetasValidas(subcarpetas);
 
-    // Inferir subcarpetas virtuales a partir de los nombres de los anexos [Subcarpeta] si la tabla física no tiene registros
+    // Inferir subcarpetas virtuales a partir de los nombres de los anexos seleccionados si no hay tabla física
     if (subcarpetas.length === 0) {
       const subsMap: Record<string, any> = {};
       includedFiles.forEach((a) => {
+        if (!a.es_anexo_oficina) return;
         const rawName = String(a.nombre_archivo || '');
         const match = rawName.match(/^\[([^\]]+)\]/);
         if (match && match[1]) {
@@ -225,20 +261,30 @@ export const POST: APIRoute = async ({ request }) => {
       subcarpetas = filtrarSubcarpetasValidas(Object.values(subsMap));
     }
 
-    // Asociar cada archivo con su URL pública
+    // Asociar cada archivo seleccionado con su URL pública y su dependencia
     const mappedFiles = includedFiles.map((a) => {
       const storagePath = a.storage_path || '';
-      const cleanPath = storagePath.replace(/^peticiones\//, '');
+      const cleanPath = storagePath.replace(/^peticiones\//, '').replace(/^\/+/, '');
       const downloadUrl = `https://irjjpjtvhxoakiazfswn.supabase.co/storage/v1/object/public/peticiones/${cleanPath}`;
-      
-      // Asociar información del responsable / dependencia si existe
-      const respMatch = responsables.find((r) => r.id === a.peticion_responsable_id || r.subcarpeta_id === a.subcarpeta_id);
-      const oficinaNombre = respMatch?.oficinas?.nombre || null;
+
+      const respMatch = responsables.find((r) =>
+        (a.peticion_responsable_id && r.id === a.peticion_responsable_id) ||
+        (a.subcarpeta_id && r.subcarpeta_id === a.subcarpeta_id)
+      );
+      let oficinaNombre = respMatch?.oficinas?.nombre || null;
+      if (!oficinaNombre) {
+        const depMatch = String(a.nombre_archivo || '').match(/\[Aporte de:\s*([^\]]+)\]/i);
+        if (depMatch && depMatch[1]) oficinaNombre = depMatch[1].trim();
+      }
       const observacion = respMatch?.observaciones_entrega || respMatch?.observaciones || null;
 
       return {
         id: a.id,
-        nombre_archivo: a.nombre_archivo,
+        nombre_archivo: String(a.nombre_archivo || 'Documento_Anexo.pdf')
+          .replace(/^\[[^\]]+\]\s*/g, '')
+          .replace(/^\[[^\]]+\]\s*/g, '')
+          .trim() || a.nombre_archivo,
+        nombre_raw: a.nombre_archivo,
         storage_path: a.storage_path,
         subcarpeta_id: a.subcarpeta_id || null,
         tamano_bytes: a.tamano_bytes ?? null,
@@ -249,6 +295,17 @@ export const POST: APIRoute = async ({ request }) => {
         oficina_nombre: oficinaNombre,
         observacion: observacion,
       };
+    });
+
+    // Filtrar subcarpetas para mostrar únicamente aquellas que contienen al menos un archivo autorizado
+    const officeMappedFiles = mappedFiles.filter((f) => f.es_anexo_oficina);
+    const activeSubcarpetas = subcarpetas.filter((sub) => {
+      const cleanSubName = String(sub.nombre || '').replace(/^subcarpeta\s+/i, '').trim().toLowerCase();
+      return officeMappedFiles.some((f) => {
+        if (f.subcarpeta_id && String(f.subcarpeta_id) === String(sub.id)) return true;
+        const raw = String(f.nombre_raw || '').toLowerCase();
+        return cleanSubName && (raw.includes(`[${cleanSubName}]`) || raw.includes(`[subcarpeta ${cleanSubName}]`));
+      });
     });
 
     return new Response(
@@ -275,8 +332,9 @@ export const POST: APIRoute = async ({ request }) => {
           formatted_expira: formattedExpira,
           dias_restantes: diasRestantes,
           drive_url: peticion.respuesta_drive_url || metaRespuesta.drive || null,
+          archivo_respuesta: respuestaFinalMapped,
         },
-        subcarpetas,
+        subcarpetas: activeSubcarpetas,
         anexos: mappedFiles,
         responsables,
       }),
