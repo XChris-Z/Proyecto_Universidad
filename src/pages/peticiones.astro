@@ -8,69 +8,81 @@ import { calculateDeadlineProgress } from '@lib/utils';
 import { getDeterministicPin } from '@lib/security';
 import { separarRespuestaMeta, esSubcarpetaValida, filtrarSubcarpetasValidas, isPeticionRespondida, isAuditLogOfficialResponse, getSlaBucket } from '@lib/subcarpetas';
 
-// Consultar peticiones reales en base de datos PostgreSQL
-const { data: dbPeticiones } = await (supabase
+// 1. Obtener todas las peticiones con select('*') de forma tolerante al esquema (idéntico enfoque seguro a archivos.astro)
+const { data: peticionesRaw, error: errPeticiones } = await (supabase
   .from('peticiones' as any)
-  .select(`
-    id,
-    numero_radicado,
-    asunto,
-    descripcion,
-    instrucciones_anexos,
-    solicitante_nombre,
-    solicitante_tipo,
-    solicitante_email,
-    fecha_radicacion,
-    fecha_limite_entrega,
-    fecha_limite_responsable,
-    storage_folder_path,
-    estado,
-    prioridad,
-    respuesta_mensaje,
-    respuesta_fecha_envio,
-    respuesta_pin_solicitante,
-    created_at,
-    peticion_responsables (
-      id,
-      codigo_acceso,
-      estado_entrega,
-      fecha_entrega,
-      observaciones_entrega,
-      storage_subfolder_path,
-      oficinas (
-        id,
-        nombre,
-        email_institucional
-      )
-    )
-  `)
+  .select('*')
   .order('created_at', { ascending: false }) as any);
 
-// Consultar subcarpetas y anexos para cálculo consolidado de entregas por subcarpeta
+let dbPeticionesList: any[] = Array.isArray(peticionesRaw) ? peticionesRaw : [];
+if (errPeticiones || !peticionesRaw) {
+  const { data: fallbackData } = await (supabase
+    .from('peticiones' as any)
+    .select('*') as any);
+  dbPeticionesList = Array.isArray(fallbackData) ? fallbackData : [];
+}
+
+// 2. Consultar oficinas/dependencias, asignaciones, subcarpetas, anexos y logs por separado (cero riesgo de romper el select principal)
+const oficinasById: Record<string, any> = {};
+try {
+  const { data: ofisData } = await (supabase
+    .from('oficinas' as any)
+    .select('id, codigo, nombre, email_institucional') as any);
+  if (Array.isArray(ofisData)) {
+    ofisData.forEach((o: any) => {
+      if (o?.id) oficinasById[String(o.id)] = o;
+    });
+  }
+} catch {}
+
+const responsablesPorPeticion: Record<string, any[]> = {};
+try {
+  const { data: respData } = await (supabase
+    .from('peticion_responsables' as any)
+    .select('*') as any);
+  if (Array.isArray(respData)) {
+    respData.forEach((r: any) => {
+      const petId = String(r?.peticion_id || '').trim();
+      if (!petId) return;
+      if (!responsablesPorPeticion[petId]) responsablesPorPeticion[petId] = [];
+      const ofiResolved = r?.oficinas || (r?.oficina_id ? oficinasById[String(r.oficina_id)] : null) || null;
+      responsablesPorPeticion[petId]!.push({
+        ...r,
+        oficinas: ofiResolved,
+      });
+    });
+  }
+} catch {}
+
 let dbSubcarpetas: any[] = [];
 try {
-  const { data: subsData } = await (supabase
+  const { data: subsData, error: subsErr } = await (supabase
     .from('peticion_subcarpetas' as any)
-    .select('id, peticion_id, nombre, descripcion') as any);
-  if (subsData) dbSubcarpetas = subsData;
-} catch (e) {}
+    .select('id, peticion_id, nombre, descripcion, created_at')
+    .order('created_at', { ascending: true }) as any);
+  if (!subsErr && Array.isArray(subsData)) {
+    dbSubcarpetas = subsData;
+  } else {
+    const { data: subsFallback } = await (supabase
+      .from('peticion_subcarpetas' as any)
+      .select('*') as any);
+    if (Array.isArray(subsFallback)) dbSubcarpetas = subsFallback;
+  }
+} catch {}
 
 let dbAnexos: any[] = [];
+const anexosPorPeticion: Record<string, any[]> = {};
 try {
   const { data: anexosData } = await (supabase
     .from('peticion_anexos' as any)
-    .select('id, peticion_id, peticion_responsable_id, subcarpeta_id, nombre_archivo, storage_path') as any);
-  if (anexosData) dbAnexos = anexosData;
-} catch (e) {}
-
-const respSubcarpetasMap: Record<string, string> = {};
-try {
-  const { data: respSubs } = await (supabase
-    .from('peticion_responsables' as any)
-    .select('id, subcarpeta_id') as any);
-  if (respSubs && respSubs.length > 0) {
-    respSubs.forEach((r: any) => {
-      if (r.id && r.subcarpeta_id) respSubcarpetasMap[r.id] = r.subcarpeta_id;
+    .select('*') as any);
+  if (Array.isArray(anexosData)) {
+    dbAnexos = anexosData;
+    anexosData.forEach((a: any) => {
+      const petId = String(a?.peticion_id || '').trim();
+      if (!petId) return;
+      if (!anexosPorPeticion[petId]) anexosPorPeticion[petId] = [];
+      anexosPorPeticion[petId]!.push(a);
     });
   }
 } catch {}
@@ -82,26 +94,43 @@ try {
     .select('action, entity_id, details')
     .eq('action_type', 'RESPUESTA')
     .limit(400) as any);
-  if (auditData) auditRespLogs = auditData;
+  if (Array.isArray(auditData)) auditRespLogs = auditData;
 } catch {}
 
-const peticionesList = ((dbPeticiones as any[]) || []).map((p: any) => {
-  const respObs = p.peticion_responsables?.find((r: any) => r?.observaciones_entrega?.includes('PIN:'))?.observaciones_entrega;
+function computeFallbackOfficeDeadline(fechaEntrega: string | null | undefined): string | null {
+  if (!fechaEntrega) return null;
+  const parsed = new Date(`${String(fechaEntrega).slice(0, 10)}T12:00:00Z`);
+  if (isNaN(parsed.getTime())) return null;
+  parsed.setUTCDate(parsed.getUTCDate() - 5);
+  return parsed.toISOString().slice(0, 10);
+}
+
+const peticionesList = dbPeticionesList.map((p: any) => {
+  const petResponsables = responsablesPorPeticion[String(p.id)] || (Array.isArray(p.peticion_responsables) ? p.peticion_responsables : []);
+  const petAnexos = anexosPorPeticion[String(p.id)] || (Array.isArray(p.peticion_anexos) ? p.peticion_anexos : []);
+
+  const respObs = petResponsables.find((r: any) => r?.observaciones_entrega?.includes('PIN:'))?.observaciones_entrega;
   const pinMatch = respObs?.match(/PIN:\s*([0-9A-Z]{6})/i);
   const storedPin = pinMatch ? pinMatch[1] : null;
 
-  const auditMatch = auditRespLogs.some((log: any) => isAuditLogOfficialResponse(log, p));
+  const { respuestaMeta: metaInstr } = separarRespuestaMeta(p.instrucciones_anexos || '');
+  const { respuestaMeta: metaDesc } = separarRespuestaMeta(p.descripcion || '');
+  const respuestaMeta = metaInstr || metaDesc || null;
+  const cleanAsunto = separarRespuestaMeta(p.asunto || '').textoLimpio || p.asunto || 'Sin asunto';
 
-  const enrichedResponsables = (p.peticion_responsables || []).map((r: any) => ({
-    ...r,
-    subcarpeta_id: r.subcarpeta_id || respSubcarpetasMap[r.id] || null,
-  }));
+  const auditMatch = auditRespLogs.some((log: any) => isAuditLogOfficialResponse(log, p));
 
   const enriched: any = {
     ...p,
+    asunto: cleanAsunto,
+    fecha_limite_responsable: p.fecha_limite_responsable || computeFallbackOfficeDeadline(p.fecha_limite_entrega),
+    respuesta_mensaje: p.respuesta_mensaje ?? respuestaMeta?.msg ?? null,
+    respuesta_fecha_envio: p.respuesta_fecha_envio ?? respuestaMeta?.fecha_envio ?? null,
+    respuesta_pin_solicitante: p.respuesta_pin_solicitante ?? respuestaMeta?.pin ?? null,
     tiene_respuesta_audit: auditMatch,
-    peticion_responsables: enrichedResponsables,
-    pin_acceso: storedPin || p.pin_acceso || getDeterministicPin(p.numero_radicado || p.id),
+    peticion_responsables: petResponsables,
+    peticion_anexos: petAnexos,
+    pin_acceso: storedPin || p.pin_acceso || respuestaMeta?.pin || getDeterministicPin(p.numero_radicado || p.id),
   };
 
   return {
@@ -326,7 +355,7 @@ function getPetSlaTone(bucket: string, responded: boolean) {
                   <!-- Columna Chart Element: Fecha de Expiración -->
                   <td style="padding: 12px 8px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-size: 0.76rem; gap: 6px;">
-                      <span style="font-weight: 700; color: #111827;">{pet.fecha_limite_entrega}</span>
+                      <span style="font-weight: 700; color: #111827;">{pet.fecha_limite_entrega || 'Por definir'}</span>
                       <span style={`font-weight: 800; font-size: 0.68rem; padding: 2px 7px; border-radius: 5px; border: 1px solid ${slaTone.badgeBorder}; background: ${slaTone.badgeBg}; color: ${slaTone.text}; white-space: nowrap;`}>
                         {slaTone.label}
                       </span>
@@ -342,13 +371,13 @@ function getPetSlaTone(bucket: string, responded: boolean) {
 
                   <td style="padding: 12px 8px;">
                     <span style="color: #786832; font-weight: 800; background: #F7F5EE; padding: 3px 8px; border-radius: 5px; border: 1px solid #DBD2B0; font-family: monospace; font-size: 0.8rem;">
-                      {pet.fecha_limite_responsable}
+                      {pet.fecha_limite_responsable || 'Por definir'}
                     </span>
                   </td>
 
                   <td style="padding: 12px 8px;">
                     <div style="display: flex; flex-direction: column; gap: 5px;">
-                      {responsables.map((r: any) => {
+                      {responsables.length > 0 ? responsables.map((r: any) => {
                         const ofiNombre = r.oficinas?.nombre || 'Oficina';
                         let petSubs = filtrarSubcarpetasValidas(dbSubcarpetas.filter((s: any) => s.peticion_id === pet.id));
                         const rawObs = r.observaciones_entrega || '';
@@ -441,7 +470,9 @@ function getPetSlaTone(bucket: string, responded: boolean) {
                             <span style="font-size: 0.67rem; font-weight: 800; white-space: nowrap; opacity: 0.92;">· {statusText}</span>
                           </div>
                         );
-                      })}
+                      }) : (
+                        <span style="font-size: 0.74rem; color: #64748B; font-style: italic;">Sin dependencias asignadas</span>
+                      )}
                     </div>
                   </td>
 
