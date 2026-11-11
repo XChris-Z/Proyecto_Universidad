@@ -1959,4 +1959,20 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
       }
     });
   });
+
+  // 4. Disparo automático silencioso de recordatorios preventivos a dependencias (<= 3 días)
+  setTimeout(() => {
+    fetch('/api/peticiones/recordatorio-dependencias', { method: 'POST' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.remindersSent > 0 && typeof (window as any).showToast === 'function') {
+          (window as any).showToast(
+            `Se enviaron ${data.remindersSent} recordatorio(s) preventivo(s) por vencimiento próximo a dependencias pendientes.`,
+            'info',
+            'Recordatorios Automáticos'
+          );
+        }
+      })
+      .catch(() => {});
+  }, 600);
 </script>

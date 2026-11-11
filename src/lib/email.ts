@@ -639,3 +639,210 @@ export async function sendRespuestaSolicitanteEmail(
     return { success: false, error: error.message || 'Error al despachar correo al solicitante' };
   }
 }
+
+export interface EmailRecordatorioDependenciaParams {
+  toEmail: string;
+  oficinaNombre: string;
+  numeroRadicado: string;
+  tituloPeticion: string;
+  nombreSubcarpeta: string;
+  instruccionSubcarpeta?: string | null;
+  fechaLimiteDependencia: string;
+  diasRestantes: number;
+  codigoAccesoDependencia: string;
+  pinAcceso?: string | null;
+  portalUrl: string;
+}
+
+function escapeEmailHtml(value: string | null | undefined): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
+ * Envía recordatorio preventivo automático cuando faltan 3 días o menos para el plazo de entrega
+ * de una dependencia sin soporte cargado. Diseño institucional Unitrópico (#00594E y #B5A160), sin emojis.
+ */
+export async function enviarCorreoRecordatorioDependencia(
+  params: EmailRecordatorioDependenciaParams
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const smtpInfo = await getSmtpTransporter();
+
+  const dias = Math.max(0, Math.round(params.diasRestantes));
+  const diasLabel = dias === 0 ? 'Vence Hoy' : dias === 1 ? 'Queda 1 día' : `Quedan ${dias} días`;
+  const subject = `Recordatorio de Vencimiento Próximo (${diasLabel}) - Radicado ${params.numeroRadicado}`;
+
+  const parsedLimite = new Date(
+    params.fechaLimiteDependencia.includes('T')
+      ? params.fechaLimiteDependencia
+      : `${params.fechaLimiteDependencia}T12:00:00`
+  );
+  const formattedLimite = !isNaN(parsedLimite.getTime())
+    ? parsedLimite.toLocaleDateString('es-CO', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+    : params.fechaLimiteDependencia;
+
+  const instruccionTexto =
+    params.instruccionSubcarpeta && params.instruccionSubcarpeta.trim().length > 0
+      ? params.instruccionSubcarpeta.trim()
+      : 'Remitir los documentos, conceptos técnicos o soportes institucionales requeridos para consolidar la respuesta del radicado.';
+
+  const mensajeUrgencia =
+    dias === 0
+      ? `Le informamos que <strong>hoy vence el plazo interno</strong> asignado a su dependencia para cargar el soporte pendiente del radicado <strong>${escapeEmailHtml(params.numeroRadicado)} - ${escapeEmailHtml(params.tituloPeticion)}</strong>.`
+      : `Le recordamos que faltan <strong>${dias} día${dias === 1 ? '' : 's'} calendario</strong> para que venza el plazo interno asignado a su dependencia para cargar el soporte pendiente del radicado <strong>${escapeEmailHtml(params.numeroRadicado)} - ${escapeEmailHtml(params.tituloPeticion)}</strong>.`;
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${escapeEmailHtml(subject)}</title>
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #F2F7F6; margin: 0; padding: 24px 12px; color: #111827; }
+        .email-container { max-width: 640px; margin: 0 auto; background: #FFFFFF; border-radius: 14px; border: 1px solid #DCE4E3; overflow: hidden; box-shadow: 0 8px 24px rgba(0, 89, 78, 0.08); }
+        .email-header { background: #00594E; padding: 26px 24px; text-align: center; color: #FFFFFF; border-bottom: 4px solid #B5A160; }
+        .email-header h1 { font-size: 20px; font-weight: 800; letter-spacing: 1px; margin: 0; text-transform: uppercase; }
+        .email-header p { font-size: 11.5px; color: #B5A160; text-transform: uppercase; font-weight: 700; margin: 6px 0 0 0; letter-spacing: 1.4px; }
+        .email-body { padding: 28px 26px; }
+        .alert-pill { display: inline-block; background: #F7F5EE; color: #786832; border: 1px solid #DBD2B0; padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 14px; }
+        .greeting { font-size: 16px; font-weight: 800; color: #00594E; margin: 0 0 10px 0; }
+        .lead-text { font-size: 14px; line-height: 1.65; color: #334155; margin: 0 0 18px 0; }
+        .summary-card { background: #F8FAFC; border: 1px solid #DCE4E3; border-radius: 10px; padding: 14px 16px; margin: 16px 0; }
+        .summary-row { padding: 6px 0; border-bottom: 1px solid #E2E8F0; font-size: 13px; }
+        .summary-row:last-child { border-bottom: none; padding-bottom: 0; }
+        .summary-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748B; display: block; margin-bottom: 2px; }
+        .summary-val { font-weight: 700; color: #111827; }
+        .subfolder-box { background: #F7F5EE; border: 1px solid #DBD2B0; border-left: 4px solid #B5A160; border-radius: 8px; padding: 14px 16px; margin: 18px 0; }
+        .subfolder-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: #786832; margin-bottom: 6px; }
+        .subfolder-name { font-size: 14.5px; font-weight: 800; color: #00594E; margin-bottom: 6px; }
+        .subfolder-desc { font-size: 13px; color: #475569; line-height: 1.55; white-space: pre-wrap; }
+        .credentials-card { background: #F2F7F6; border: 1px solid #B2CFCB; border-left: 4px solid #00594E; border-radius: 10px; padding: 18px; margin: 20px 0; }
+        .cred-heading { font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: #00594E; margin: 0 0 12px 0; }
+        .cred-grid-table { width: 100%; border-collapse: separate; border-spacing: 8px 0; margin: 0 -8px; }
+        .cred-cell { background: #FFFFFF; border: 1px solid #DCE4E3; border-radius: 8px; padding: 12px; text-align: center; vertical-align: middle; }
+        .cred-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: #64748B; margin-bottom: 4px; }
+        .cred-value { font-family: monospace; font-size: 17px; font-weight: 900; color: #00594E; letter-spacing: 1px; }
+        .cred-pin-cell { background: #F7F5EE; border: 1px solid #DBD2B0; border-radius: 8px; padding: 10px 12px; text-align: center; margin-top: 10px; }
+        .btn-portal-cta { display: inline-block; background: #00594E; color: #FFFFFF !important; text-decoration: none; padding: 14px 28px; border-radius: 9px; font-weight: 800; font-size: 14px; letter-spacing: 0.2px; box-shadow: 0 4px 12px rgba(0, 89, 78, 0.24); }
+        .email-footer { background: #F8FAFC; border-top: 1px solid #DCE4E3; padding: 20px 24px; font-size: 11px; color: #64748B; text-align: center; line-height: 1.6; }
+        .footer-brand { font-weight: 800; color: #00594E; text-transform: uppercase; }
+      </style>
+    </head>
+    <body>
+      <div class="email-container">
+        <div class="email-header">
+          <h1>UNITRÓPICO</h1>
+          <p>Recordatorio Preventivo de Entrega Documental</p>
+        </div>
+
+        <div class="email-body">
+          <span class="alert-pill">Aviso de Vencimiento Próximo &middot; ${escapeEmailHtml(diasLabel)}</span>
+          <p class="greeting">Estimado(a) responsable de ${escapeEmailHtml(params.oficinaNombre)},</p>
+          <p class="lead-text">
+            ${mensajeUrgencia} Hasta el momento el sistema no registra archivos cargados por su dependencia en esta asignación.
+          </p>
+
+          <div class="summary-card">
+            <div class="summary-row">
+              <span class="summary-label">Expediente / Radicado</span>
+              <span class="summary-val" style="color: #00594E; font-family: monospace;">${escapeEmailHtml(params.numeroRadicado)} &mdash; ${escapeEmailHtml(params.tituloPeticion)}</span>
+            </div>
+            <div class="summary-row">
+              <span class="summary-label">Fecha Límite para Dependencia</span>
+              <span class="summary-val" style="color: #786832;">${escapeEmailHtml(formattedLimite)} (23:59:59)</span>
+            </div>
+          </div>
+
+          <div class="subfolder-box">
+            <div class="subfolder-title">Subcarpeta Asignada y Requerimiento Específico</div>
+            <div class="subfolder-name">${escapeEmailHtml(params.nombreSubcarpeta)}</div>
+            <div class="subfolder-desc">${escapeEmailHtml(instruccionTexto)}</div>
+          </div>
+
+          <div class="credentials-card">
+            <div class="cred-heading">Credenciales Originales de Acceso al Portal</div>
+            <div style="font-size: 12.5px; color: #475569; margin-bottom: 10px;">
+              Correo autorizado: <strong style="color: #111827;">${escapeEmailHtml(params.toEmail)}</strong>
+            </div>
+            <table class="cred-grid-table">
+              <tr>
+                <td class="cred-cell" width="50%">
+                  <div class="cred-label">Número de Radicado</div>
+                  <div class="cred-value">${escapeEmailHtml(params.numeroRadicado)}</div>
+                </td>
+                <td class="cred-cell" width="50%">
+                  <div class="cred-label">Código Único de Dependencia</div>
+                  <div class="cred-value">${escapeEmailHtml(params.codigoAccesoDependencia)}</div>
+                </td>
+              </tr>
+            </table>
+            ${params.pinAcceso ? `
+              <div class="cred-pin-cell">
+                <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #786832; letter-spacing: 0.6px;">PIN de Seguridad (6 Dígitos): </span>
+                <strong style="font-family: monospace; font-size: 16px; color: #786832; letter-spacing: 3px;">${escapeEmailHtml(params.pinAcceso)}</strong>
+              </div>
+            ` : ''}
+          </div>
+
+          <div style="text-align: center; margin: 26px 0 18px 0;">
+            <a href="${escapeEmailHtml(params.portalUrl)}" class="btn-portal-cta" target="_blank" rel="noopener noreferrer">
+              Subir Soporte Ahora en el Portal &rarr;
+            </a>
+          </div>
+
+          <p style="font-size: 11.5px; color: #64748B; text-align: center; margin: 0;">
+            Acceso directo al portal de entregas:<br>
+            <a href="${escapeEmailHtml(params.portalUrl)}" style="color: #00594E; word-break: break-all;">${escapeEmailHtml(params.portalUrl)}</a>
+          </p>
+        </div>
+
+        <div class="email-footer">
+          <span class="footer-brand">Universidad Internacional del Trópico Americano &mdash; Unitrópico</span><br>
+          Sistema de Gestión Documental y Correspondencia Oficial<br>
+          Yopal, Casanare, Colombia &bull; Este mensaje se genera automáticamente al detectar plazos próximos a vencer.
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  if (!smtpInfo) {
+    console.error('[SMTP RECORDATORIO] Configuración SMTP no disponible en el servidor.');
+    return { success: false, error: 'Configuración SMTP no disponible en el servidor' };
+  }
+
+  const { transporter, sender, creds } = smtpInfo;
+  const mailOptions = {
+    from: `"Sistema de Alertas SGD Unitrópico" <${sender}>`,
+    to: params.toEmail,
+    subject,
+    html: htmlContent,
+  };
+
+  try {
+    let info;
+    try {
+      info = await transporter.sendMail(mailOptions);
+    } catch (primaryErr: any) {
+      console.warn(`[SMTP RECORDATORIO] Reintentando por puerto 587 STARTTLS (${primaryErr.message})...`);
+      const fallbackTransporter = createTransporter(creds, true);
+      info = await fallbackTransporter.sendMail(mailOptions);
+    }
+
+    console.log(`[RECORDATORIO 3D ENVIADO] A ${params.toEmail} | Radicado ${params.numeroRadicado} (MessageId: ${info.messageId})`);
+    return { success: true, messageId: info.messageId };
+  } catch (error: any) {
+    console.error(`[SMTP RECORDATORIO ERROR] ${params.toEmail}:`, error.message);
+    return { success: false, error: error.message || 'Error enviando recordatorio SMTP' };
+  }
+}
