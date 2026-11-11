@@ -9,131 +9,375 @@ const { data: dbNormas } = await (supabase
   .select('*')
   .order('created_at', { ascending: false }) as any);
 
-const normasList = dbNormas || [];
-const total = normasList.length;
-const csuCount = normasList.filter((n: any) => n.organo_code === 'csu').length;
-const caCount = normasList.filter((n: any) => n.organo_code === 'ca').length;
-const recCount = normasList.filter((n: any) => n.organo_code === 'rectoria').length;
-const eleCount = normasList.filter((n: any) => n.organo_code === 'electoral').length;
+const rawNormas = Array.isArray(dbNormas) ? dbNormas : [];
+const total = rawNormas.length;
+const csuCount = rawNormas.filter((n: any) => n.organo_code === 'csu').length;
+const caCount = rawNormas.filter((n: any) => n.organo_code === 'ca').length;
+const recCount = rawNormas.filter((n: any) => n.organo_code === 'rectoria').length;
+const eleCount = rawNormas.filter((n: any) => n.organo_code === 'electoral').length;
+
+const vigentesCount = rawNormas.filter((n: any) => String(n.vigencia || '').toLowerCase() === 'vigente').length;
+const vigentesPct = total > 0 ? Math.round((vigentesCount / total) * 100) : 0;
+const csuPct = total > 0 ? Math.round((csuCount / total) * 100) : 0;
+const caPct = total > 0 ? Math.round((caCount / total) * 100) : 0;
+const otrosCount = recCount + eleCount;
+const recPct = total > 0 ? Math.round((recCount / total) * 100) : 0;
+const elePct = total > 0 ? Math.round((eleCount / total) * 100) : 0;
+
+function getOrganStyle(code: string) {
+  switch (code) {
+    case 'csu':
+      return {
+        label: 'CSU',
+        bg: '#F2F7F6',
+        text: '#00594E',
+        border: '#B2CFCB',
+      };
+    case 'ca':
+      return {
+        label: 'Consejo Académico',
+        bg: '#F7F5EE',
+        text: '#786832',
+        border: '#DBD2B0',
+      };
+    case 'rectoria':
+      return {
+        label: 'Rectoría',
+        bg: '#E8F2F0',
+        text: '#00443B',
+        border: '#9DC4BE',
+      };
+    case 'electoral':
+      return {
+        label: 'Consejo Electoral',
+        bg: '#FAF7ED',
+        text: '#786832',
+        border: '#D5C694',
+      };
+    default:
+      return {
+        label: 'Colegiado',
+        bg: '#F8FAFC',
+        text: '#475569',
+        border: '#DCE4E3',
+      };
+  }
+}
+
+function getVigenciaStyle(vig: string) {
+  const lower = String(vig || 'vigente').toLowerCase().trim();
+  if (lower === 'derogado') {
+    return {
+      key: 'derogado',
+      label: 'Derogado',
+      bg: '#F1F5F9',
+      text: '#475569',
+      border: '#CBD5E1',
+      dot: '#64748B',
+    };
+  }
+  if (lower === 'modificado') {
+    return {
+      key: 'modificado',
+      label: 'Modificado',
+      bg: '#F7F5EE',
+      text: '#786832',
+      border: '#DBD2B0',
+      dot: '#B5A160',
+    };
+  }
+  return {
+    key: 'vigente',
+    label: 'Vigente',
+    bg: '#F2F7F6',
+    text: '#00594E',
+    border: '#B2CFCB',
+    dot: '#00594E',
+  };
+}
+
+const normasView = rawNormas.map((norma: any) => ({
+  ...norma,
+  organStyle: getOrganStyle(norma.organo_code),
+  vigStyle: getVigenciaStyle(norma.vigencia),
+}));
 ---
 
 <AppLayout title="Cuerpos Colegiados y Normativa" activeNav="normas">
-  <div class="panel-box">
-    <div class="panel-header" style="flex-wrap: wrap; gap: 14px;">
-      <div>
-        <div class="panel-title">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-          <span>Sistematización de Normas y Actos de Cuerpos Colegiados</span>
+  <div class="normas-bento-shell">
+    <!-- Cabecera Ejecutiva Bento -->
+    <section class="normas-hero-bento">
+      <div class="normas-hero-info">
+        <div class="normas-eyebrow-pill">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span>COMPENDIO NORMATIVO INSTITUCIONAL</span>
         </div>
-        <div style="font-size: 0.8rem; color: var(--secondary-light); font-weight: 600; margin-top: 4px;">
-          Compendio oficial y clasificado: Consejo Superior, Consejo Académico, Resoluciones Rectorales y Consejo Electoral
-        </div>
+        <h2 class="normas-hero-title">Sistematización de Actos y Cuerpos Colegiados</h2>
+        <p class="normas-hero-subtitle">
+          Repositorio oficial de acuerdos y resoluciones expedidos por el Consejo Superior Universitario, Consejo Académico, Rectoría y Consejo Electoral.
+        </p>
       </div>
 
-      <div style="display: flex; gap: 10px; align-items: center;">
-        <button class="btn btn-primary" id="btn-open-new-norma-modal">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      <div class="normas-hero-actions">
+        <button class="btn-normas-primary" id="btn-open-new-norma-modal" type="button">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M12 5v14M5 12h14"/></svg>
           <span>Radicar Nuevo Acto / Norma</span>
         </button>
       </div>
-    </div>
+    </section>
 
-    <!-- Submódulos por Cuerpo Colegiado con Contadores Reales -->
-    <div class="module-tabs" id="normas-module-tabs">
-      <button class="module-tab-btn active" data-org="all">
-        <span>Todos los Cuerpos Colegiados</span>
-        <span class="tab-count" id="normas-count-all">{total}</span>
-      </button>
-      <button class="module-tab-btn" data-org="csu">
-        <span>Consejo Superior (CSU)</span>
-        <span class="tab-count" id="normas-count-csu">{csuCount}</span>
-      </button>
-      <button class="module-tab-btn" data-org="ca">
-        <span>Consejo Académico (CA)</span>
-        <span class="tab-count" id="normas-count-ca">{caCount}</span>
-      </button>
-      <button class="module-tab-btn" data-org="rectoria">
-        <span>Resoluciones Rectorales</span>
-        <span class="tab-count" id="normas-count-rectoria">{recCount}</span>
-      </button>
-      <button class="module-tab-btn" data-org="electoral">
-        <span>Consejo Electoral</span>
-        <span class="tab-count" id="normas-count-electoral">{eleCount}</span>
-      </button>
-    </div>
-
-    <!-- Filtros de búsqueda para normas -->
-    <div style="display: flex; gap: 12px; margin-bottom: 18px; flex-wrap: wrap;">
-      <div class="search-box" style="flex: 1; min-width: 260px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-        <input type="text" id="normas-search-input" placeholder="Buscar por número (Ej: Acuerdo 014), palabra clave o tema...">
-      </div>
-      <select class="form-select" id="normas-filter-vigencia" style="width: 180px;">
-        <option value="all">Todas las Vigencias</option>
-        <option value="vigente" selected>Vigente</option>
-        <option value="modificado">Modificado</option>
-        <option value="derogado">Derogado</option>
-      </select>
-    </div>
-
-    <div class="colegiados-grid" id="colegiados-cards-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 16px;">
-      {normasList.length > 0 ? (
-        normasList.map((norma: any) => (
-          <div class="colegiado-card" data-org={norma.organo_code} data-vigencia={norma.vigencia} style="border: 1px solid var(--border-color); border-radius: 10px; padding: 18px; background: var(--bg-surface); display: flex; flex-direction: column; justify-content: space-between;">
-            <div>
-              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                <span class="badge" style="background: var(--verde-suave-bg); color: var(--verde-principal); border: 1px solid var(--verde-borde); font-size: 0.72rem;">
-                  {norma.organo}
-                </span>
-                <span class="vigencia-pill vigente" style="font-size: 0.68rem; text-transform: uppercase;">
-                  {norma.vigencia}
-                </span>
-              </div>
-              <h4 style="font-size: 0.98rem; font-weight: 700; color: var(--text-main); margin-bottom: 4px;">
-                {norma.tipo} {norma.numero}
-              </h4>
-              <div style="font-size: 0.76rem; color: var(--text-muted); margin-bottom: 8px;">
-                Fecha: {norma.fecha} &bull; Descriptor: <strong>{norma.descriptor}</strong>
-              </div>
-              <p style="font-size: 0.82rem; color: var(--text-main); line-height: 1.4; margin-bottom: 12px;">
-                {norma.titulo}
-              </p>
-              {norma.resumen && (
-                <p style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.35; margin-bottom: 12px; font-style: italic;">
-                  {norma.resumen}
-                </p>
-              )}
-            </div>
-            <div style="border-top: 1px solid var(--border-subtle); padding-top: 10px; display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-size: 0.72rem; color: var(--text-muted);">{norma.signatarios}</span>
-              <button class="btn btn-secondary btn-sm" onclick={`window.showToast('Descargando ${norma.numero}...')`} style="font-size: 0.74rem;">
-                Descargar PDF
-              </button>
-            </div>
-          </div>
-        ))
-      ) : (
-        <div style="grid-column: 1 / -1; text-align: center; padding: 48px 16px; color: var(--text-muted); background: var(--bg-surface-elevated); border-radius: var(--radius-md); border: 1px dashed var(--border-color);">
-          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--verde-principal); margin-bottom: 8px;"><path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-          <div style="font-weight: 700; color: var(--text-main); font-size: 1rem;">No hay actos ni normas sistematizadas actualmente</div>
-          <p style="font-size: 0.85rem; margin-top: 4px;">Utilice el botón superior para radicar el primer acto administrativo oficial.</p>
+    <!-- Bento KPI Strip con Chart Elements -->
+    <section class="normas-kpi-grid" aria-label="Resumen por cuerpo colegiado">
+      <article class="normas-kpi-card accent-verde">
+        <div class="normas-kpi-top">
+          <span class="normas-kpi-label">Total Actos Sistematizados</span>
+          <span class="normas-kpi-icon verde">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          </span>
         </div>
-      )}
-    </div>
+        <div class="normas-kpi-value">{total}</div>
+        <div class="normas-chart-block">
+          <div class="normas-chart-meta">
+            <span>Estado vigente</span>
+            <strong style="color: #00594E;">{vigentesCount} ({vigentesPct}%)</strong>
+          </div>
+          <div class="normas-chart-track">
+            <div class="normas-chart-fill" style={`width: ${vigentesPct}%; background: #00594E;`}></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="normas-kpi-card accent-verde">
+        <div class="normas-kpi-top">
+          <span class="normas-kpi-label">Consejo Superior (CSU)</span>
+          <span class="normas-kpi-icon verde">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg>
+          </span>
+        </div>
+        <div class="normas-kpi-value">{csuCount}</div>
+        <div class="normas-chart-block">
+          <div class="normas-chart-meta">
+            <span>Participación CSU</span>
+            <strong style="color: #00594E;">{csuPct}% del compendio</strong>
+          </div>
+          <div class="normas-chart-track">
+            <div class="normas-chart-fill" style={`width: ${csuPct}%; background: #00594E;`}></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="normas-kpi-card accent-dorado">
+        <div class="normas-kpi-top">
+          <span class="normas-kpi-label">Consejo Académico (CA)</span>
+          <span class="normas-kpi-icon dorado">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+          </span>
+        </div>
+        <div class="normas-kpi-value">{caCount}</div>
+        <div class="normas-chart-block">
+          <div class="normas-chart-meta">
+            <span>Participación CA</span>
+            <strong style="color: #786832;">{caPct}% del compendio</strong>
+          </div>
+          <div class="normas-chart-track">
+            <div class="normas-chart-fill" style={`width: ${caPct}%; background: #B5A160;`}></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="normas-kpi-card accent-dorado">
+        <div class="normas-kpi-top">
+          <span class="normas-kpi-label">Rectoría y Electoral</span>
+          <span class="normas-kpi-icon dorado">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          </span>
+        </div>
+        <div class="normas-kpi-value">{otrosCount}</div>
+        <div class="normas-chart-block">
+          <div class="normas-chart-meta">
+            <span>Rectoría {recCount} &middot; Electoral {eleCount}</span>
+            <strong style="color: #786832;">{recPct + elePct}%</strong>
+          </div>
+          <div class="normas-chart-track" style="display: flex;">
+            <div class="normas-chart-fill" style={`width: ${recPct}%; background: #00594E; border-radius: 999px 0 0 999px;`}></div>
+            <div class="normas-chart-fill" style={`width: ${elePct}%; background: #B5A160; border-radius: 0 999px 999px 0;`}></div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- Panel Principal Bento: Filtros + Tabla Scrollable Pro Max -->
+    <section class="normas-main-panel">
+      <!-- Píldoras Interactivas por Órgano Colegiado -->
+      <div class="normas-tabs-bar" id="normas-module-tabs" role="tablist" aria-label="Filtrar por cuerpo colegiado">
+        <button type="button" class="module-tab-btn active" data-org="all">
+          <span>Todos los Órganos</span>
+          <span class="tab-count" id="normas-count-all">{total}</span>
+        </button>
+        <button type="button" class="module-tab-btn" data-org="csu">
+          <span>Consejo Superior (CSU)</span>
+          <span class="tab-count" id="normas-count-csu">{csuCount}</span>
+        </button>
+        <button type="button" class="module-tab-btn" data-org="ca">
+          <span>Consejo Académico (CA)</span>
+          <span class="tab-count" id="normas-count-ca">{caCount}</span>
+        </button>
+        <button type="button" class="module-tab-btn" data-org="rectoria">
+          <span>Rectoría</span>
+          <span class="tab-count" id="normas-count-rectoria">{recCount}</span>
+        </button>
+        <button type="button" class="module-tab-btn" data-org="electoral">
+          <span>Consejo Electoral</span>
+          <span class="tab-count" id="normas-count-electoral">{eleCount}</span>
+        </button>
+      </div>
+
+      <!-- Barra de Búsqueda y Vigencia -->
+      <div class="normas-toolbar">
+        <div class="normas-search-wrap">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          <input
+            type="text"
+            id="normas-search-input"
+            placeholder="Buscar por número (Ej: Acuerdo 014), descriptor temático o palabra clave..."
+          />
+        </div>
+
+        <div class="normas-toolbar-right">
+          <select class="normas-select-vigencia" id="normas-filter-vigencia" aria-label="Filtrar por vigencia">
+            <option value="all" selected>Todas las Vigencias</option>
+            <option value="vigente">Solo Vigentes</option>
+            <option value="modificado">Modificados</option>
+            <option value="derogado">Derogados</option>
+          </select>
+
+          <div class="normas-visible-badge">
+            <span>Mostrando</span>
+            <strong id="normas-visible-count">{total}</strong>
+            <span>de {total}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contenedor con Scrollbar Propia (.pro-scroll-container) y Cabecera Sticky -->
+      <div class="normas-scroll-box pro-scroll-container" id="normas-scroll-container">
+        {normasView.length > 0 ? (
+          <table class="normas-pro-table">
+            <thead>
+              <tr>
+                <th style="width: 175px;">Órgano Colegiado</th>
+                <th style="width: 165px;">Acto / Consecutivo</th>
+                <th>Título Oficial y Descriptor Temático</th>
+                <th style="width: 195px;">Expedición y Signatarios</th>
+                <th style="width: 120px;">Vigencia</th>
+                <th style="width: 130px; text-align: right;">Documento</th>
+              </tr>
+            </thead>
+            <tbody id="normas-table-body">
+              {normasView.map((norma: any) => (
+                <tr
+                  class="norma-row colegiado-card"
+                  data-org={norma.organo_code}
+                  data-vigencia={norma.vigStyle.key}
+                >
+                  <td>
+                    <span
+                      class="norma-organ-pill"
+                      style={`background: ${norma.organStyle.bg}; color: ${norma.organStyle.text}; border: 1px solid ${norma.organStyle.border};`}
+                    >
+                      {norma.organo || norma.organStyle.label}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="norma-consecutivo-wrap">
+                      <span class="norma-numero-chip">{norma.numero}</span>
+                      <span class="norma-tipo-label">{norma.tipo}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="norma-titulo-main">{norma.titulo}</div>
+                    <div class="norma-meta-sub">
+                      {norma.descriptor && (
+                        <span class="norma-descriptor-tag">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                          <span>{norma.descriptor}</span>
+                        </span>
+                      )}
+                      {norma.resumen && norma.resumen !== norma.titulo && (
+                        <span class="norma-resumen-text">{norma.resumen}</span>
+                      )}
+                    </div>
+                  </td>
+                  <td>
+                    <div class="norma-fecha-line">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                      <span>{norma.fecha || 'Sin fecha'}</span>
+                    </div>
+                    <div class="norma-signatario-line">{norma.signatarios || 'Secretaría General'}</div>
+                  </td>
+                  <td>
+                    <span
+                      class="norma-vigencia-badge"
+                      style={`background: ${norma.vigStyle.bg}; color: ${norma.vigStyle.text}; border: 1px solid ${norma.vigStyle.border};`}
+                    >
+                      <span class="norma-vig-dot" style={`background: ${norma.vigStyle.dot};`}></span>
+                      <span>{norma.vigStyle.label}</span>
+                    </span>
+                  </td>
+                  <td style="text-align: right;">
+                    <button
+                      type="button"
+                      class="btn-norma-download"
+                      data-norma-label={`${norma.tipo} ${norma.numero}`}
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                      <span>PDF</span>
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <div class="normas-empty-state">
+            <div class="normas-empty-icon">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+            </div>
+            <div class="normas-empty-title">No hay actos ni normas sistematizadas actualmente</div>
+            <p class="normas-empty-desc">Utilice el botón superior para radicar el primer acto administrativo oficial.</p>
+          </div>
+        )}
+
+        <div id="normas-filter-empty" class="normas-empty-state" style="display: none;">
+          <div class="normas-empty-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          </div>
+          <div class="normas-empty-title">Sin coincidencias para este filtro</div>
+          <p class="normas-empty-desc">Ajuste el órgano colegiado, la vigencia o las palabras clave de búsqueda.</p>
+        </div>
+      </div>
+    </section>
   </div>
 
-  <!-- Modal para nueva norma (preparado para Fase 3) -->
+  <!-- Modal para radicar nuevo acto administrativo -->
   <div class="modal-backdrop" id="new-norma-modal" style="display: none;">
-    <div class="modal-card" style="max-width: 600px;">
-      <div class="modal-header">
-        <h3>Radicar Nuevo Acto / Norma</h3>
-        <button class="btn-close-modal" id="btn-close-new-norma-modal">&times;</button>
+    <div class="modal-card normas-modal-card" style="max-width: 600px;">
+      <div class="modal-header" style="border-bottom: 1px solid #DCE4E3; background: #F2F7F6;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 34px; height: 34px; border-radius: 9px; background: #00594E; color: #FFFFFF; display: flex; align-items: center; justify-content: center;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+          </div>
+          <h3 style="margin: 0; font-size: 1.02rem; font-weight: 800; color: #111827;">Radicar Nuevo Acto / Norma</h3>
+        </div>
+        <button type="button" class="btn-close-modal" id="btn-close-new-norma-modal" aria-label="Cerrar modal">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
       </div>
       <div class="modal-body">
         <form id="form-new-norma">
           <div class="form-group">
             <label class="form-label">Cuerpo Colegiado *</label>
-            <select class="form-select" id="new-norma-organo" required>
+            <select class="form-select normas-input" id="new-norma-organo" required>
               <option value="csu">Consejo Superior Universitario (CSU)</option>
               <option value="ca">Consejo Académico (CA)</option>
               <option value="rectoria">Rectoría (Resolución Rectoral)</option>
@@ -143,35 +387,600 @@ const eleCount = normasList.filter((n: any) => n.organo_code === 'electoral').le
           <div class="form-row-2">
             <div class="form-group">
               <label class="form-label">Tipo de Acto *</label>
-              <input type="text" class="form-input" id="new-norma-tipo" placeholder="Ej: Acuerdo o Resolución" required />
+              <input type="text" class="form-input normas-input" id="new-norma-tipo" placeholder="Ej: Acuerdo o Resolución" required />
             </div>
             <div class="form-group">
               <label class="form-label">Número / Consecutivo *</label>
-              <input type="text" class="form-input" id="new-norma-numero" placeholder="Ej: Acuerdo 015" required />
+              <input type="text" class="form-input normas-input" id="new-norma-numero" placeholder="Ej: Acuerdo 015" required />
             </div>
           </div>
           <div class="form-group">
             <label class="form-label">Título Oficial *</label>
-            <textarea class="form-textarea" id="new-norma-titulo" rows="2" placeholder="Por el cual se adopta..." required></textarea>
+            <textarea class="form-textarea normas-input" id="new-norma-titulo" rows="2" placeholder="Por el cual se adopta..." required></textarea>
           </div>
           <div class="form-row-2">
             <div class="form-group">
               <label class="form-label">Fecha de Expedición *</label>
-              <input type="date" class="form-input" id="new-norma-fecha" required />
+              <input type="date" class="form-input normas-input" id="new-norma-fecha" required />
             </div>
             <div class="form-group">
               <label class="form-label">Descriptor Temático</label>
-              <input type="text" class="form-input" id="new-norma-descriptor" placeholder="Ej: Régimen Profesoral" />
+              <input type="text" class="form-input normas-input" id="new-norma-descriptor" placeholder="Ej: Régimen Profesoral" />
             </div>
           </div>
-          <div class="modal-footer" style="padding: 12px 0 0 0;">
+          <div class="modal-footer" style="padding: 14px 0 0 0; border-top: 1px solid #DCE4E3; margin-top: 6px;">
             <button type="button" class="btn btn-ghost" id="btn-cancel-norma">Cancelar</button>
-            <button type="submit" class="btn btn-primary" id="btn-submit-norma">Guardar Acto</button>
+            <button type="submit" class="btn-normas-primary" id="btn-submit-norma">Guardar Acto</button>
           </div>
         </form>
       </div>
     </div>
   </div>
+
+  <style>
+    .normas-bento-shell {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .normas-hero-bento {
+      background: #FFFFFF;
+      border: 1px solid #DCE4E3;
+      border-left: 4px solid #00594E;
+      border-radius: 16px;
+      padding: 20px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      box-shadow: 0 2px 10px rgba(17, 24, 39, 0.03);
+    }
+
+    .normas-eyebrow-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      color: #786832;
+      background: #F7F5EE;
+      border: 1px solid #DBD2B0;
+      padding: 4px 10px;
+      border-radius: 999px;
+      margin-bottom: 8px;
+    }
+
+    .normas-hero-title {
+      margin: 0;
+      font-size: 1.28rem;
+      font-weight: 800;
+      color: #111827;
+      letter-spacing: -0.02em;
+    }
+
+    .normas-hero-subtitle {
+      margin: 4px 0 0 0;
+      font-size: 0.85rem;
+      color: #475569;
+      max-width: 680px;
+      line-height: 1.45;
+    }
+
+    .btn-normas-primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: 10px;
+      border: none;
+      background: #00594E;
+      color: #FFFFFF;
+      font-size: 0.84rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+      box-shadow: 0 4px 12px rgba(0, 89, 78, 0.2);
+      white-space: nowrap;
+    }
+
+    .btn-normas-primary:hover {
+      background: #00443B;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(0, 89, 78, 0.25);
+    }
+
+    /* Bento KPI Strip */
+    .normas-kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .normas-kpi-card {
+      background: #FFFFFF;
+      border: 1px solid #DCE4E3;
+      border-radius: 14px;
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 2px 8px rgba(17, 24, 39, 0.025);
+      transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .normas-kpi-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0, 89, 78, 0.08);
+    }
+
+    .normas-kpi-card.accent-verde {
+      border-top: 3px solid #00594E;
+    }
+
+    .normas-kpi-card.accent-dorado {
+      border-top: 3px solid #B5A160;
+    }
+
+    .normas-kpi-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .normas-kpi-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #475569;
+    }
+
+    .normas-kpi-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 9px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .normas-kpi-icon.verde {
+      background: #F2F7F6;
+      color: #00594E;
+      border: 1px solid #B2CFCB;
+    }
+
+    .normas-kpi-icon.dorado {
+      background: #F7F5EE;
+      color: #786832;
+      border: 1px solid #DBD2B0;
+    }
+
+    .normas-kpi-value {
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: #111827;
+      letter-spacing: -0.025em;
+      line-height: 1.1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .normas-chart-block {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      padding-top: 8px;
+      border-top: 1px solid #F1F5F9;
+    }
+
+    .normas-chart-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.72rem;
+      color: #64748B;
+      gap: 8px;
+    }
+
+    .normas-chart-track {
+      width: 100%;
+      height: 6px;
+      background: #E2E8F0;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .normas-chart-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Panel Principal */
+    .normas-main-panel {
+      background: #FFFFFF;
+      border: 1px solid #DCE4E3;
+      border-radius: 16px;
+      padding: 18px 20px;
+      box-shadow: 0 2px 10px rgba(17, 24, 39, 0.03);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .normas-tabs-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #DCE4E3;
+    }
+
+    .normas-tabs-bar .module-tab-btn {
+      border: 1px solid #DCE4E3;
+      border-bottom: 1px solid #DCE4E3;
+      background: #F8FAFC;
+      color: #475569;
+      padding: 7px 13px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      gap: 7px;
+      transition: all 0.18s ease;
+    }
+
+    .normas-tabs-bar .module-tab-btn:hover {
+      background: #F2F7F6;
+      color: #00594E;
+      border-color: #B2CFCB;
+    }
+
+    .normas-tabs-bar .module-tab-btn.active {
+      background: #00594E;
+      color: #FFFFFF;
+      border-color: #00594E;
+      box-shadow: 0 3px 10px rgba(0, 89, 78, 0.2);
+    }
+
+    .normas-tabs-bar .module-tab-btn .tab-count {
+      background: #FFFFFF;
+      color: #00594E;
+      border: 1px solid #DCE4E3;
+      font-size: 0.7rem;
+      padding: 1px 7px;
+    }
+
+    .normas-tabs-bar .module-tab-btn.active .tab-count {
+      background: rgba(255, 255, 255, 0.2);
+      color: #FFFFFF;
+      border-color: transparent;
+    }
+
+    .normas-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .normas-search-wrap {
+      flex: 1;
+      min-width: 260px;
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .normas-search-wrap svg {
+      position: absolute;
+      left: 12px;
+      color: #64748B;
+      pointer-events: none;
+    }
+
+    .normas-search-wrap input {
+      width: 100%;
+      height: 38px;
+      padding: 0 12px 0 36px;
+      border-radius: 10px;
+      border: 1px solid #DCE4E3;
+      background: #F8FAFC;
+      font-size: 0.84rem;
+      color: #111827;
+      transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+    }
+
+    .normas-search-wrap input:focus {
+      outline: none;
+      background: #FFFFFF;
+      border-color: #00594E;
+      box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.12);
+    }
+
+    .normas-toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .normas-select-vigencia {
+      height: 38px;
+      padding: 0 12px;
+      border-radius: 10px;
+      border: 1px solid #DCE4E3;
+      background: #FFFFFF;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #111827;
+      cursor: pointer;
+    }
+
+    .normas-select-vigencia:focus {
+      outline: none;
+      border-color: #00594E;
+      box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.12);
+    }
+
+    .normas-visible-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      height: 38px;
+      padding: 0 12px;
+      border-radius: 10px;
+      background: #F7F5EE;
+      border: 1px solid #DBD2B0;
+      color: #786832;
+      font-size: 0.78rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    /* Scrollbar propia .pro-scroll-container + Sticky Header */
+    .normas-scroll-box {
+      max-height: 540px;
+      overflow-y: auto;
+      overflow-x: auto;
+      border: 1px solid #DCE4E3;
+      border-radius: 12px;
+      background: #FFFFFF;
+    }
+
+    .normas-scroll-box.normas-crossfade-in {
+      animation: normasCrossfade 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes normasCrossfade {
+      from {
+        opacity: 0.4;
+        transform: translateY(4px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .normas-pro-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 820px;
+    }
+
+    .normas-pro-table thead th {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: #F2F7F6;
+      color: #00594E;
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 11px 14px;
+      text-align: left;
+      border-bottom: 1px solid #B2CFCB;
+      white-space: nowrap;
+    }
+
+    .normas-pro-table tbody td {
+      padding: 13px 14px;
+      border-bottom: 1px solid #EEF2F2;
+      vertical-align: top;
+      font-size: 0.83rem;
+      color: #111827;
+    }
+
+    .normas-pro-table tbody tr:hover {
+      background: #F8FAFC;
+    }
+
+    .normas-pro-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .norma-organ-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      line-height: 1.25;
+      white-space: nowrap;
+    }
+
+    .norma-consecutivo-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .norma-numero-chip {
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+      font-size: 0.79rem;
+      font-weight: 800;
+      color: #00594E;
+      background: #F2F7F6;
+      border: 1px solid #B2CFCB;
+      padding: 3px 8px;
+      border-radius: 6px;
+      width: fit-content;
+      white-space: nowrap;
+    }
+
+    .norma-tipo-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #64748B;
+    }
+
+    .norma-titulo-main {
+      font-size: 0.87rem;
+      font-weight: 700;
+      color: #111827;
+      line-height: 1.4;
+      margin-bottom: 6px;
+    }
+
+    .norma-meta-sub {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .norma-descriptor-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      width: fit-content;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: #F7F5EE;
+      border: 1px solid #DBD2B0;
+      color: #786832;
+      font-size: 0.71rem;
+      font-weight: 700;
+    }
+
+    .norma-resumen-text {
+      font-size: 0.76rem;
+      color: #475569;
+      line-height: 1.35;
+    }
+
+    .norma-fecha-line {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #111827;
+      white-space: nowrap;
+    }
+
+    .norma-signatario-line {
+      margin-top: 4px;
+      font-size: 0.73rem;
+      color: #64748B;
+      line-height: 1.35;
+    }
+
+    .norma-vigencia-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .norma-vig-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      flex-shrink: 0;
+    }
+
+    .btn-norma-download {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 11px;
+      border-radius: 8px;
+      border: 1px solid #DCE4E3;
+      background: #FFFFFF;
+      color: #00594E;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.18s ease;
+    }
+
+    .btn-norma-download:hover {
+      background: #00594E;
+      color: #FFFFFF;
+      border-color: #00594E;
+    }
+
+    .normas-empty-state {
+      text-align: center;
+      padding: 46px 18px;
+      color: #64748B;
+    }
+
+    .normas-empty-icon {
+      width: 52px;
+      height: 52px;
+      margin: 0 auto 12px auto;
+      border-radius: 14px;
+      background: #F2F7F6;
+      border: 1px solid #B2CFCB;
+      color: #00594E;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .normas-empty-title {
+      font-size: 0.96rem;
+      font-weight: 800;
+      color: #111827;
+    }
+
+    .normas-empty-desc {
+      margin: 4px 0 0 0;
+      font-size: 0.82rem;
+      color: #64748B;
+    }
+
+    .normas-input:focus {
+      outline: none;
+      border-color: #00594E;
+      box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.12);
+    }
+
+    @media (max-width: 1120px) {
+      .normas-kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      .normas-kpi-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </AppLayout>
 
 <script>

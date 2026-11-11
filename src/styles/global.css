@@ -180,9 +180,13 @@ h1, h2, h3, h4, .brand-font {
   border-right: 1px solid #DCE4E3;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   position: sticky;
   top: 0;
   height: 100vh;
+  height: 100dvh;
+  padding-bottom: 0;
+  box-sizing: border-box;
   z-index: 50;
   transition: width 0.28s cubic-bezier(0.16, 1, 0.3, 1), transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
   flex-shrink: 0;
@@ -190,8 +194,8 @@ h1, h2, h3, h4, .brand-font {
 }
 
 .brand-section {
-  padding: 14px 16px;
-  min-height: 76px;
+  padding: 10px 14px;
+  min-height: 60px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -213,8 +217,8 @@ h1, h2, h3, h4, .brand-font {
 }
 
 .sidebar-brand-full {
-  max-height: 50px;
-  max-width: 172px;
+  max-height: 40px;
+  max-width: 170px;
   width: auto;
   height: auto;
   object-fit: contain;
@@ -282,11 +286,11 @@ h1, h2, h3, h4, .brand-font {
 }
 
 .nav-menu {
-  padding: 14px 12px;
+  padding: 8px 12px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  flex: 1;
+  gap: 2px;
+  flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
@@ -308,27 +312,34 @@ h1, h2, h3, h4, .brand-font {
 }
 
 .nav-label {
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: #786832;
-  padding: 12px 12px 4px 12px;
+  margin: 10px 0 4px 0;
+  padding: 0 10px;
   font-weight: 800;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+.nav-label:first-child {
+  margin-top: 2px;
+}
+
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 10px 13px;
-  border-radius: 10px;
+  gap: 10px;
+  padding: 7px 12px;
+  margin-bottom: 1px;
+  border-radius: 9px;
   color: #334155;
   text-decoration: none;
-  font-size: 0.87rem;
+  font-size: 0.84rem;
   font-weight: 600;
+  line-height: 1.25;
   cursor: pointer;
   transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
   border: 1px solid transparent;
@@ -387,18 +398,22 @@ h1, h2, h3, h4, .brand-font {
   animation: pulseAlert 2s infinite;
 }
 
-/* Perfil y cierre de sesión fijados al pie del Sidebar */
-.user-profile-section {
-  padding: 12px 14px;
-  margin: 10px 12px 14px 12px;
-  background: #ffffff;
-  border: 1px solid rgba(0, 89, 78, 0.15);
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+/* Perfil y cierre de sesión anclados al ras inferior del Sidebar */
+.user-profile-section,
+.sidebar-footer {
+  margin-top: auto;
+  margin-bottom: 0;
+  padding: 10px 12px 10px 12px;
+  background: #FFFFFF;
+  border: none;
+  border-top: 1px solid #E2E8F0;
+  border-radius: 0;
+  box-shadow: none;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .user-profile-header {
@@ -419,17 +434,17 @@ h1, h2, h3, h4, .brand-font {
 
 .sidebar .btn-logout {
   width: 100%;
-  padding: 8px 12px;
-  font-size: 0.8rem;
+  padding: 7px 10px;
+  font-size: 0.78rem;
   border-radius: 8px;
-  background: #fff5f5;
-  border: 1px solid #fecaca;
-  color: #dc2626;
+  background: #FFF5F5;
+  border: 1px solid #FECACA;
+  color: #B91C1C;
 }
 
 .user-avatar {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: var(--radius-full);
   background: var(--verde-suave-bg);
   border: 2px solid var(--verde-borde);
@@ -6520,7 +6535,11 @@ p, h1, h2, h3, h4, h5, h6, span, label, td, th {
 
 /* Gestor de Archivos (Modo Carpetas y Modo Lista) fluido automático */
 #drive-grid-container,
-.drive-grid-container,
+.drive-grid-container {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)) !important;
+  gap: 18px !important;
+}
+
 .colegiados-grid,
 .convenios-grid,
 #colegiados-cards-grid,
@@ -6584,7 +6603,9 @@ p, h1, h2, h3, h4, h5, h6, span, label, td, th {
     top: 0 !important;
     left: auto !important;
     height: 100vh !important;
+    height: 100dvh !important;
     width: 264px;
+    padding-bottom: 0 !important;
     transform: none !important;
     box-shadow: none !important;
     z-index: 50 !important;
@@ -6679,11 +6700,14 @@ p, h1, h2, h3, h4, h5, h6, span, label, td, th {
     display: none;
   }
 
-  body.sidebar-collapsed .user-profile-section {
+  body.sidebar-collapsed .user-profile-section,
+  body.sidebar-collapsed .sidebar-footer {
     padding: 10px 8px;
-    margin: 10px 10px 14px 10px;
+    margin: auto 0 0 0;
+    border-radius: 0;
+    border-top: 1px solid #E2E8F0;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
   }
 
   body.sidebar-collapsed .user-profile-header {

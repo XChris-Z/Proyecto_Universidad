@@ -500,14 +500,14 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                 data-sla={filterSla}
               >
                 <!-- Cabecera de Carpeta -->
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; gap: 8px;">
-                  <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; gap: 10px;">
+                  <div style="display: flex; align-items: flex-start; gap: 10px; min-width: 0;">
                     <div class="folder-svg-icon">
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg>
                     </div>
-                    <div style="min-width: 0;">
+                    <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
                       <span class="radicado-chip">{doc.numero_radicado}</span>
-                      <div style="font-size: 0.72rem; color: #64748B; margin-top: 3px; font-weight: 500;">
+                      <div style="font-size: 0.73rem; color: #64748B; white-space: nowrap; font-weight: 500;">
                         Radicado: {doc.fecha_radicacion || 'Reciente'}
                       </div>
                     </div>
@@ -541,7 +541,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                 <div class="pin-acceso-row">
                   <span class="pin-acceso-label">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#786832" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                    <span>PIN de Acceso:</span>
+                    <span>PIN Acceso:</span>
                   </span>
                   <span class="pin-acceso-code">{doc.pin_acceso || '849201'}</span>
                   <button
@@ -1673,8 +1673,8 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
 
     .archivos-bento-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(min(100%, 295px), 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+      gap: 18px;
       transition: opacity 0.18s ease, transform 0.22s ease;
     }
 
@@ -1697,6 +1697,8 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       flex-direction: column;
       box-shadow: 0 2px 8px rgba(17, 24, 39, 0.03);
       cursor: pointer;
+      box-sizing: border-box;
+      min-width: 0;
     }
     .drive-folder-card:hover {
       border-color: #00594E;
@@ -1705,9 +1707,9 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
     }
 
     .folder-svg-icon {
-      width: 42px;
-      height: 42px;
-      border-radius: 11px;
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
       background: #F2F7F6;
       color: #00594E;
       border: 1px solid #B2CFCB;
@@ -1715,6 +1717,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
+      margin-top: 0;
     }
 
     .folder-title {
@@ -1730,15 +1733,18 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       overflow: hidden;
     }
     .radicado-chip {
-      font-family: monospace;
-      font-size: 0.80rem;
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+      font-size: 0.78rem;
       font-weight: 800;
       color: #00594E;
       background: #F2F7F6;
-      padding: 2px 8px;
+      padding: 3px 9px;
       border-radius: 6px;
       border: 1px solid #B2CFCB;
       display: inline-block;
+      width: fit-content;
+      white-space: nowrap;
+      line-height: 1.25;
     }
 
     /* Bloque Chart Element: Fecha de Expiración */
@@ -1784,18 +1790,21 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    /* Fila de PIN de Acceso en una sola línea (nunca hace wrap) */
+    /* Fila de PIN de Acceso en una sola línea (nunca desborda) */
     .pin-acceso-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 8px;
+      gap: 6px;
       flex-wrap: nowrap;
+      width: 100%;
+      box-sizing: border-box;
       padding: 7px 10px;
       margin: 10px 0 14px 0;
-      background: #F7F5EE;
-      border: 1px solid #DBD2B0;
-      border-radius: 8px;
+      background: #FBF9F5;
+      border: 1px solid #E6DEC3;
+      border-radius: 10px;
+      overflow: hidden;
       min-width: 0;
     }
 
@@ -1803,7 +1812,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       display: inline-flex;
       align-items: center;
       gap: 5px;
-      font-size: 0.72rem;
+      font-size: 0.74rem;
       font-weight: 700;
       color: #786832;
       white-space: nowrap;
@@ -1811,15 +1820,15 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
     }
 
     .pin-acceso-code {
-      font-family: ui-monospace, SFMono-Regular, monospace;
-      font-size: 0.78rem;
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+      font-size: 0.8rem;
       font-weight: 800;
       color: #00594E;
       background: #FFFFFF;
       border: 1px solid #B2CFCB;
       padding: 2px 8px;
       border-radius: 6px;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.4px;
       white-space: nowrap;
       flex-shrink: 0;
     }
@@ -1827,24 +1836,26 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
     .pin-copy-btn {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 4px;
-      padding: 3px 8px;
-      font-size: 0.72rem;
-      font-weight: 600;
+      padding: 4px 9px;
+      height: 26px;
       background: #FFFFFF;
-      color: #475569;
-      border: 1px solid #DCE4E3;
+      color: #111827;
+      border: 1px solid #CBD5E1;
       border-radius: 6px;
-      cursor: pointer;
+      font-size: 0.72rem;
+      font-weight: 700;
       white-space: nowrap;
       flex-shrink: 0;
-      transition: all 0.15s ease;
+      cursor: pointer;
+      transition: all 0.18s ease;
     }
 
     .pin-copy-btn:hover {
-      background: #F2F7F6;
-      color: #00594E;
-      border-color: #B2CFCB;
+      background: #00594E;
+      color: #FFFFFF;
+      border-color: #00594E;
     }
 
     .view-toggle-btn {

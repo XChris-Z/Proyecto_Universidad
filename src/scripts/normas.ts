@@ -5,41 +5,75 @@ import { supabase } from '@lib/supabase';
 import { logSystemActivity } from '@lib/audit';
 
 export function initNormas() {
-  const cards = document.querySelectorAll('.colegiado-card') as NodeListOf<HTMLElement>;
+  const rows = document.querySelectorAll('.norma-row, .colegiado-card') as NodeListOf<HTMLElement>;
   const orgTabs = document.querySelectorAll('#normas-module-tabs .module-tab-btn');
   const searchInput = document.getElementById('normas-search-input') as HTMLInputElement | null;
   const vigenciaSelect = document.getElementById('normas-filter-vigencia') as HTMLSelectElement | null;
+  const scrollContainer = document.getElementById('normas-scroll-container');
+  const visibleCountEl = document.getElementById('normas-visible-count');
+  const filterEmptyEl = document.getElementById('normas-filter-empty');
 
   let currentOrg = 'all';
 
-  function filterCards() {
-    const q = (searchInput?.value || '').toLowerCase().trim();
-    const vig = vigenciaSelect?.value || 'all';
-
-    cards.forEach(card => {
-      const org = card.getAttribute('data-org');
-      const cardVig = card.getAttribute('data-vigencia');
-      const text = card.textContent?.toLowerCase() || '';
-
-      const matchesOrg = currentOrg === 'all' || org === currentOrg;
-      const matchesVig = vig === 'all' || cardVig === vig;
-      const matchesQ = !q || text.includes(q);
-
-      card.style.display = (matchesOrg && matchesVig && matchesQ) ? '' : 'none';
-    });
+  function triggerCrossfade() {
+    if (!scrollContainer) return;
+    scrollContainer.classList.remove('normas-crossfade-in');
+    void scrollContainer.offsetWidth;
+    scrollContainer.classList.add('normas-crossfade-in');
   }
 
-  orgTabs.forEach(tab => {
+  function filterNormas(animate = false) {
+    const q = (searchInput?.value || '').toLowerCase().trim();
+    const vig = (vigenciaSelect?.value || 'all').toLowerCase();
+
+    let visibleCount = 0;
+
+    rows.forEach((row) => {
+      const org = (row.getAttribute('data-org') || '').toLowerCase();
+      const rowVig = (row.getAttribute('data-vigencia') || '').toLowerCase();
+      const text = (row.textContent || '').toLowerCase();
+
+      const matchesOrg = currentOrg === 'all' || org === currentOrg;
+      const matchesVig = vig === 'all' || rowVig === vig;
+      const matchesQ = !q || text.includes(q);
+      const show = matchesOrg && matchesVig && matchesQ;
+
+      row.style.display = show ? '' : 'none';
+      if (show) visibleCount += 1;
+    });
+
+    if (visibleCountEl) {
+      visibleCountEl.textContent = String(visibleCount);
+    }
+
+    if (filterEmptyEl && rows.length > 0) {
+      filterEmptyEl.style.display = visibleCount === 0 ? 'block' : 'none';
+    }
+
+    if (animate) {
+      triggerCrossfade();
+    }
+  }
+
+  orgTabs.forEach((tab) => {
     tab.addEventListener('click', () => {
-      orgTabs.forEach(t => t.classList.remove('active'));
+      orgTabs.forEach((t) => t.classList.remove('active'));
       tab.classList.add('active');
-      currentOrg = tab.getAttribute('data-org') || 'all';
-      filterCards();
+      currentOrg = (tab.getAttribute('data-org') || 'all').toLowerCase();
+      filterNormas(true);
     });
   });
 
-  searchInput?.addEventListener('input', filterCards);
-  vigenciaSelect?.addEventListener('change', filterCards);
+  searchInput?.addEventListener('input', () => filterNormas(false));
+  vigenciaSelect?.addEventListener('change', () => filterNormas(true));
+
+  // Botones de descarga PDF por delegación limpia
+  document.querySelectorAll('.btn-norma-download').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const label = btn.getAttribute('data-norma-label') || 'acto administrativo';
+      (window as any).showToast?.(`Descargando ${label}...`);
+    });
+  });
 
   // Modal para nueva norma
   const modal = document.getElementById('new-norma-modal');
@@ -65,6 +99,9 @@ export function initNormas() {
 
   closeBtn?.addEventListener('click', closeModal);
   cancelBtn?.addEventListener('click', closeModal);
+  modal?.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
 
   // Conectar envío del formulario a Supabase
   form?.addEventListener('submit', async (e) => {
@@ -74,7 +111,7 @@ export function initNormas() {
       csu: 'Consejo Superior Universitario',
       ca: 'Consejo Académico',
       rectoria: 'Rectoría',
-      electoral: 'Consejo Electoral'
+      electoral: 'Consejo Electoral',
     };
     const organo = organoNameMap[organoCode] || 'Consejo Superior Universitario';
     const tipo = (document.getElementById('new-norma-tipo') as HTMLInputElement).value.trim();
@@ -104,7 +141,7 @@ export function initNormas() {
         vigencia: 'Vigente',
         resumen: titulo,
         signatarios: 'Secretaría General / Rectoría',
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
       }] as any);
 
       if (error) throw error;
@@ -116,14 +153,14 @@ export function initNormas() {
         entity: 'Cuerpos Colegiados',
         entityId: `${tipo} ${numero}`,
         details: `Se radicó el acto administrativo "${tipo} ${numero}" para ${organo}.`,
-        severity: 'INFO'
+        severity: 'INFO',
       });
 
-      (window as any).showToast(`Acto "${tipo} ${numero}" radicado exitosamente.`);
+      (window as any).showToast?.(`Acto "${tipo} ${numero}" radicado exitosamente.`);
       window.location.reload();
     } catch (err: any) {
       console.error('Error guardando norma:', err);
-      (window as any).showToast('Error al guardar acto: ' + (err.message || 'Error en el servidor'));
+      (window as any).showToast?.('Error al guardar acto: ' + (err.message || 'Error en el servidor'));
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;
@@ -131,4 +168,6 @@ export function initNormas() {
       }
     }
   });
+
+  filterNormas(false);
 }
