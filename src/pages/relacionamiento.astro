@@ -18,7 +18,7 @@ const nalCount = conveniosList.filter((c: any) => c.tipo === 'nacional').length;
 ---
 
 <AppLayout title="Relacionamiento Institucional y Convenios" activeNav="relacionamiento">
-  <div style="display: flex; flex-direction: column; gap: 22px; max-width: 1280px; margin: 0 auto; width: 100%;">
+  <div class="relacionamiento-container" style="display: flex; flex-direction: column; gap: 22px; width: 100%; max-width: 100%; margin: 0; box-sizing: border-box; overflow-x: hidden; transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);">
     
     <!-- Cabecera Sobria y Ejecutiva (Bento Pro Max) -->
     <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-top: 4px solid #00594E; border-radius: 16px; padding: 24px 28px; box-shadow: 0 2px 10px rgba(0, 89, 78, 0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 18px;">
@@ -94,17 +94,17 @@ const nalCount = conveniosList.filter((c: any) => c.tipo === 'nacional').length;
                   </p>
                   
                   <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; font-size: 0.78rem; margin-bottom: 12px;">
-                    <div style="display: flex; justify-content: space-between;">
+                    <div style="display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
                       <span style="color: #64748B;">Vigencia:</span>
-                      <strong style="color: #111827;">{formatNiceDate(c.inicio)} &rarr; {formatNiceDate(c.fin)}</strong>
+                      <strong style="color: #111827; text-align: right;">{formatNiceDate(c.inicio)} &rarr; {formatNiceDate(c.fin)}</strong>
                     </div>
-                    <div style="display: flex; justify-content: space-between;">
+                    <div style="display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
                       <span style="color: #64748B;">Cuantía / Aporte:</span>
-                      <strong style="color: #00594E;">{c.cuantia}</strong>
+                      <strong style="color: #00594E; text-align: right;">{c.cuantia}</strong>
                     </div>
-                    <div style="display: flex; justify-content: space-between;">
+                    <div style="display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
                       <span style="color: #64748B;">Supervisor:</span>
-                      <span style="color: #111827; font-weight: 600;">{c.supervisor}</span>
+                      <span style="color: #111827; font-weight: 600; text-align: right;">{c.supervisor}</span>
                     </div>
                   </div>
                 </div>

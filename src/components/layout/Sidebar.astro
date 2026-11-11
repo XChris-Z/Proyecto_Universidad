@@ -159,5 +159,61 @@ const navItems = [
     :global(body.sidebar-collapsed .sidebar) {
       --sidebar-width: 76px;
     }
+
+    /* Estado inactivo base (desplegado y plegado) */
+    :global(#app-sidebar .sidebar-link:not(.active)) {
+      color: #334155 !important;
+      background-color: transparent !important;
+    }
+
+    :global(#app-sidebar .sidebar-link:not(.active) svg),
+    :global(#app-sidebar .sidebar-link:not(.active) svg *) {
+      color: #475569 !important;
+      stroke: #475569 !important;
+      fill: none !important;
+      transition: color 0.18s ease, stroke 0.18s ease, transform 0.18s ease;
+    }
+
+    /* Hover en ítems inactivos (desplegado y plegado): nunca se vuelve blanco sobre fondo claro */
+    :global(#app-sidebar .sidebar-link:not(.active):hover),
+    :global(body.sidebar-collapsed #app-sidebar .sidebar-link:not(.active):hover) {
+      background-color: #E6F0EE !important;
+      color: #00594E !important;
+      box-shadow: inset 0 0 0 1px #B2CFCB;
+    }
+
+    :global(#app-sidebar .sidebar-link:not(.active):hover svg),
+    :global(#app-sidebar .sidebar-link:not(.active):hover svg *),
+    :global(body.sidebar-collapsed #app-sidebar .sidebar-link:not(.active):hover svg),
+    :global(body.sidebar-collapsed #app-sidebar .sidebar-link:not(.active):hover svg *) {
+      color: #00594E !important;
+      stroke: #00594E !important;
+      fill: none !important;
+      transform: scale(1.06);
+    }
+
+    /* Ítem activo (y su hover en desplegado o plegado): mantiene fondo verde institucional e icono blanco */
+    :global(#app-sidebar .sidebar-link.active),
+    :global(#app-sidebar .sidebar-link.active:hover),
+    :global(body.sidebar-collapsed #app-sidebar .sidebar-link.active),
+    :global(body.sidebar-collapsed #app-sidebar .sidebar-link.active:hover) {
+      background-color: #00594E !important;
+      color: #FFFFFF !important;
+      box-shadow: 0 4px 12px rgba(0, 89, 78, 0.24) !important;
+      font-weight: 700;
+    }
+
+    :global(#app-sidebar .sidebar-link.active svg),
+    :global(#app-sidebar .sidebar-link.active svg *),
+    :global(#app-sidebar .sidebar-link.active:hover svg),
+    :global(#app-sidebar .sidebar-link.active:hover svg *),
+    :global(body.sidebar-collapsed #app-sidebar .sidebar-link.active svg),
+    :global(body.sidebar-collapsed #app-sidebar .sidebar-link.active svg *),
+    :global(body.sidebar-collapsed #app-sidebar .sidebar-link.active:hover svg),
+    :global(body.sidebar-collapsed #app-sidebar .sidebar-link.active:hover svg *) {
+      color: #FFFFFF !important;
+      stroke: #FFFFFF !important;
+      fill: none !important;
+    }
   </style>
 </aside>

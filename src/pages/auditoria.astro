@@ -15,10 +15,10 @@ const totalRespuestas = dbLogs?.filter(l => l.action_type === 'RESPUESTA' || (l.
 ---
 
 <AppLayout title="Registro de Auditoría y Trazabilidad" activeNav="auditoria">
-  <div style="display: flex; flex-direction: column; gap: 24px; max-width: 1280px; margin: 0 auto; width: 100%;">
+  <div class="auditoria-container">
     
     <!-- Cabecera Sobria y Ejecutiva (Bento Pro Max) -->
-    <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-top: 4px solid #00594E; border-radius: 16px; padding: 24px 28px; box-shadow: 0 2px 10px rgba(0, 89, 78, 0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 18px;">
+    <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-top: 4px solid #00594E; border-radius: 16px; padding: 22px 26px; box-shadow: 0 2px 10px rgba(0, 89, 78, 0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 18px; width: 100%; box-sizing: border-box;">
       <div style="min-width: 0; flex: 1;">
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
           <h1 style="font-size: 1.55rem; font-weight: 800; color: #111827; margin: 0; letter-spacing: -0.01em;">Registro de Auditoría y Trazabilidad</h1>
@@ -42,7 +42,7 @@ const totalRespuestas = dbLogs?.filter(l => l.action_type === 'RESPUESTA' || (l.
     </div>
 
     <!-- Resumen Operativo Real (3 KPIs Bento Pro Max en #00594E y #B5A160) -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+    <div class="auditoria-kpi-row">
       
       <!-- KPI 1: Total de Eventos Registrados -->
       <div style="background: #F2F7F6; border: 1.5px solid #B2CFCB; border-radius: 14px; padding: 20px 22px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0, 89, 78, 0.04);">
@@ -121,17 +121,17 @@ const totalRespuestas = dbLogs?.filter(l => l.action_type === 'RESPUESTA' || (l.
     </div>
 
     <!-- Tabla Ejecutiva de Trazabilidad y Logs (Con scrollbar interna propia y Sticky Header) -->
-    <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
-      <div class="pro-scroll-container audit-log-container audit-table-wrapper" style="max-height: 540px; overflow-y: auto; overflow-x: auto; width: 100%; position: relative;">
-        <table class="doc-table audit-table" style="width: 100%; border-collapse: collapse; font-size: 0.86rem;">
-          <thead style="position: sticky; top: 0; z-index: 10;">
-            <tr style="background: #F2F7F6; border-bottom: 2px solid #DCE4E3; text-align: left; color: #52606D; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.5px;">
-              <th style="padding: 14px 18px; white-space: nowrap; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Fecha y Hora</th>
-              <th style="padding: 14px 16px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Funcionario / Despacho</th>
-              <th style="padding: 14px 16px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Acción Realizada</th>
-              <th style="padding: 14px 16px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Módulo o Radicado</th>
-              <th style="padding: 14px 16px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Detalle de la Operación</th>
-              <th style="padding: 14px 18px; white-space: nowrap; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Sello de Seguridad</th>
+    <div class="auditoria-table-card">
+      <div class="pro-scroll-container audit-log-container audit-table-wrapper">
+        <table class="doc-table audit-table">
+          <thead>
+            <tr>
+              <th>Fecha y Hora</th>
+              <th>Funcionario / Despacho</th>
+              <th>Acción Realizada</th>
+              <th>Módulo o Radicado</th>
+              <th>Detalle de la Operación</th>
+              <th>Sello de Seguridad</th>
             </tr>
           </thead>
           <tbody id="audit-logs-tbody">
@@ -169,6 +169,107 @@ const totalRespuestas = dbLogs?.filter(l => l.action_type === 'RESPUESTA' || (l.
     </div>
   </div>
 </AppLayout>
+
+<style>
+  .auditoria-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    min-width: 0;
+    transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .auditoria-kpi-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .auditoria-table-card {
+    background: #ffffff;
+    border: 1.5px solid #DCE4E3;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .auditoria-table-card .audit-table-wrapper {
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100vh - 330px);
+    min-height: 360px;
+    overflow-y: auto;
+    overflow-x: auto;
+    position: relative;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .auditoria-table-card .audit-table {
+    width: 100%;
+    table-layout: auto;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+
+  .auditoria-table-card .audit-table thead th {
+    padding: 13px 16px;
+    background: #F2F7F6;
+    border-bottom: 2px solid #DCE4E3;
+    text-align: left;
+    color: #52606D;
+    font-size: 0.74rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 1px 0 #DCE4E3;
+    white-space: nowrap;
+  }
+
+  .auditoria-table-card .audit-table tbody td {
+    padding: 14px 16px;
+    vertical-align: middle;
+    border-bottom: 1px solid #E2E8F0;
+  }
+
+  .auditoria-table-card .audit-table th:nth-child(4),
+  .auditoria-table-card .audit-table td:nth-child(4) {
+    min-width: 170px;
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  .auditoria-table-card .audit-table th:nth-child(5),
+  .auditoria-table-card .audit-table td:nth-child(5) {
+    min-width: 240px;
+    white-space: normal;
+  }
+
+  .auditoria-table-card .audit-table th:last-child,
+  .auditoria-table-card .audit-table td:last-child {
+    padding-right: 22px;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 960px) {
+    .auditoria-kpi-row {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
 
 <script>
   import { initAuditoria } from '@scripts/auditoria';
