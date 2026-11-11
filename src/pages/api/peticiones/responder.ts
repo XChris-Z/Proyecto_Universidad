@@ -238,105 +238,13 @@ export const POST: APIRoute = async ({ request, url }) => {
       console.warn('[RESPONDER] Aviso de auditoría:', auditErr.message);
     }
 
-    // 5. Determinar URL pública de consulta (apunta exactamente a ?radicado=...&pin=...&correo=...)
+    // 5. Determinar URL pública de consulta directa (apunta exactamente a ?radicado=...&pin=...)
     const proto = request.headers.get('x-forwarded-proto') || url.protocol.replace(':', '') || 'https';
     const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || url.host;
     const baseUrl = `${proto}://${host}`;
-    const consultaUrl = `${baseUrl}/consulta-respuesta?radicado=${encodeURIComponent(peticion.numero_radicado)}&pin=${encodeURIComponent(pinSolicitante)}&correo=${encodeURIComponent(effectiveEmail)}`;
+    const consultaUrl = `${baseUrl}/consulta-respuesta?radicado=${encodeURIComponent(peticion.numero_radicado)}&pin=${encodeURIComponent(pinSolicitante)}`;
 
-    // 6. Preparar adjunto obligatorio de Respuesta Final Oficial y anexos opcionales seleccionados
-    let archivoAdjuntoEmail: { filename: string; content: Buffer; contentType?: string } | null = null;
-    let totalAttachedBytes = 0;
-    const MAX_SMTP_BYTES = 18 * 1024 * 1024; // 18 MB tope seguro para Gmail
-
-    if (finalRespArchivo && finalRespArchivo.storage_path) {
-      try {
-        const cleanPath = finalRespArchivo.storage_path.replace(/^peticiones\//, '').replace(/^\/+/, '');
-        const { data: fileBlob, error: dlErr } = await supabase.storage.from('peticiones').download(cleanPath);
-        if (!dlErr && fileBlob) {
-          const ab = await fileBlob.arrayBuffer();
-          const buf = Buffer.from(ab);
-          totalAttachedBytes += buf.byteLength;
-          archivoAdjuntoEmail = {
-            filename: (finalRespArchivo.nombre_archivo || 'Respuesta_Oficial.pdf').replace(/^\[[^\]]+\]\s*/, ''),
-            content: buf,
-            contentType: finalRespArchivo.mime_type || 'application/pdf',
-          };
-        }
-      } catch (dlException: any) {
-        console.warn('[RESPONDER] Advertencia obteniendo buffer de respuesta final para correo:', dlException?.message);
-      }
-    }
-
-    const selectedSet = new Set(selectedOptionalIds);
-    const selectedOptionalRecords = selectedOptionalIds.length > 0
-      ? dbAnexosList.filter((a) =>
-        a &&
-        (!a.storage_path || !String(a.storage_path).includes('/respuesta_final/')) &&
-        (selectedSet.has(String(a.id)) || selectedSet.has(String(a.storage_path)))
-      )
-      : [];
-
-    const anexosAdicionalesEmail: Array<{ filename: string; content: Buffer; contentType?: string }> = [];
-    const anexosResumenEmail: Array<{ nombre: string; origen?: string }> = [];
-
-    if (selectedOptionalRecords.length > 0) {
-      // Consultar responsables para mostrar el nombre de origen/dependencia si aplica
-      const { data: dbResps } = await (supabase
-        .from('peticion_responsables' as any)
-        .select('id, oficinas(nombre)')
-        .eq('peticion_id', peticion_id) as any);
-      const respsList: any[] = Array.isArray(dbResps) ? dbResps : [];
-
-      for (const anexo of selectedOptionalRecords) {
-        const rawName = String(anexo.nombre_archivo || 'Anexo.pdf');
-        const cleanFilename = rawName
-          .replace(/^\[[^\]]+\]\s*/g, '')
-          .replace(/^\[[^\]]+\]\s*/g, '')
-          .trim() || rawName;
-
-        let origenDep = '';
-        if (anexo.peticion_responsable_id) {
-          const rMatch = respsList.find((r) => String(r.id) === String(anexo.peticion_responsable_id));
-          if (rMatch?.oficinas) {
-            origenDep = Array.isArray(rMatch.oficinas)
-              ? (rMatch.oficinas[0]?.nombre || '')
-              : (rMatch.oficinas?.nombre || '');
-          }
-        }
-        if (!origenDep) {
-          const depMatch = rawName.match(/\[Aporte de:\s*([^\]]+)\]/i);
-          if (depMatch && depMatch[1]) origenDep = depMatch[1].trim();
-        }
-
-        anexosResumenEmail.push({
-          nombre: cleanFilename,
-          origen: origenDep || undefined,
-        });
-
-        if (anexo.storage_path) {
-          try {
-            const cleanOptPath = String(anexo.storage_path).replace(/^peticiones\//, '').replace(/^\/+/, '');
-            const { data: optBlob, error: optDlErr } = await supabase.storage.from('peticiones').download(cleanOptPath);
-            if (!optDlErr && optBlob) {
-              const optAb = await optBlob.arrayBuffer();
-              const optBuf = Buffer.from(optAb);
-              if (totalAttachedBytes + optBuf.byteLength <= MAX_SMTP_BYTES) {
-                totalAttachedBytes += optBuf.byteLength;
-                anexosAdicionalesEmail.push({
-                  filename: cleanFilename,
-                  content: optBuf,
-                  contentType: anexo.mime_type || 'application/octet-stream',
-                });
-              }
-            }
-          } catch (optEx: any) {
-            console.warn('[RESPONDER] Aviso descargando anexo opcional:', optEx?.message);
-          }
-        }
-      }
-    }
-
+    // 6. Sin adjuntos físicos en el correo: todos los soportes seleccionados se consultan y descargan exclusivamente en el Portal
     // 7. Enviar Correo Institucional al Solicitante
     const emailResult = await sendRespuestaSolicitanteEmail({
       toEmail: effectiveEmail,
@@ -350,10 +258,7 @@ export const POST: APIRoute = async ({ request, url }) => {
       fechaExpiracion: expiraAt,
       consultaUrl,
       driveUrl: cleanDrive || null,
-      totalArchivos: 1 + anexosResumenEmail.length,
-      archivoAdjunto: archivoAdjuntoEmail,
-      anexosAdicionales: anexosAdicionalesEmail,
-      anexosResumen: anexosResumenEmail,
+      totalArchivos: 1 + selectedOptionalIds.length,
     });
 
     return new Response(

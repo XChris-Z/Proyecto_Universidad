@@ -84,9 +84,9 @@ const navItems = [
   </div>
 
   <nav class="nav-menu sidebar-nav" id="sidebar-nav-menu">
-    {navItems.map((item) => {
+    {navItems.map((item, idx) => {
       if (item.group) {
-        return <div class="nav-label">{item.group}</div>;
+        return idx > 0 ? <div class="nav-divider sidebar-divider" aria-hidden="true"></div> : null;
       }
       const isActive = activeNav === item.id;
       return (
@@ -150,4 +150,14 @@ const navItems = [
       } catch (e) {}
     })();
   </script>
+
+  <style>
+    :global(.sidebar) {
+      --sidebar-width: 272px;
+    }
+
+    :global(body.sidebar-collapsed .sidebar) {
+      --sidebar-width: 76px;
+    }
+  </style>
 </aside>

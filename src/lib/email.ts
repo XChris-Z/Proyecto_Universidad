@@ -238,9 +238,7 @@ async function dispatchSmtpMail(options: {
     html: options.html,
   };
 
-  if (options.attachments && options.attachments.length > 0) {
-    mailOptions.attachments = options.attachments;
-  }
+  // Política de cero adjuntos físicos por correo: los soportes se descargan únicamente en la plataforma.
 
   try {
     let info;
@@ -426,6 +424,44 @@ function buildCtaButton(href: string, label: string): string {
   `;
 }
 
+function parseEmailDateSafe(dateInput?: string | Date | null): Date | null {
+  if (!dateInput) return null;
+  if (dateInput instanceof Date) {
+    return Number.isNaN(dateInput.getTime()) ? null : dateInput;
+  }
+  const raw = String(dateInput).trim();
+  if (!raw) return null;
+  const normalized = /^\d{4}-\d{2}-\d{2}$/.test(raw) ? `${raw}T12:00:00-05:00` : raw;
+  const parsed = new Date(normalized);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function formatDateCompactEs(dateInput?: string | Date | null): string {
+  const parsed = parseEmailDateSafe(dateInput);
+  if (!parsed) return 'No especificada';
+  return new Intl.DateTimeFormat('es-CO', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'America/Bogota',
+  }).format(parsed);
+}
+
+function formatDateShortSlashEs(dateInput?: string | Date | null): string {
+  const parsed = parseEmailDateSafe(dateInput);
+  if (!parsed) return 'No especificada';
+  const parts = new Intl.DateTimeFormat('es-CO', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: 'America/Bogota',
+  }).formatToParts(parsed);
+  const day = parts.find((p) => p.type === 'day')?.value || '01';
+  const month = parts.find((p) => p.type === 'month')?.value || '01';
+  const year = parts.find((p) => p.type === 'year')?.value || '2026';
+  return `${day}/${month}/${year}`;
+}
+
 function buildEmailLayout(options: {
   title: string;
   headerTitle: string;
@@ -446,29 +482,37 @@ function buildEmailLayout(options: {
   <title>${safeTitle}</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #F2F7F6; font-family: 'Plus Jakarta Sans', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #111827;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#F2F7F6" style="background-color: #F2F7F6; padding: 28px 12px;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#F2F7F6" style="background-color: #F2F7F6; padding: 24px 12px;">
     <tr>
       <td align="center">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 620px; width: 100%; background-color: #FFFFFF; border-radius: 18px; overflow: hidden; border: 1px solid #DCE4E3; box-shadow: 0 12px 32px rgba(0, 89, 78, 0.08);">
-          <!-- CABECERA INSTITUCIONAL UNITRÓPICO -->
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 720px; width: 100%; background-color: #FFFFFF; border-radius: 18px; overflow: hidden; border: 1px solid #DCE4E3; box-shadow: 0 12px 32px rgba(0, 89, 78, 0.08);">
+          <!-- CABECERA INSTITUCIONAL UNITRÓPICO COMPACTA -->
           <tr>
-            <td style="background-color: #00594E; border-bottom: 4px solid #B5A160; padding: 28px 28px 24px 28px; text-align: center;">
-              <p style="margin: 0 0 8px 0; font-size: 11px; letter-spacing: 1.5px; font-weight: 700; color: #B5A160; text-transform: uppercase;">
-                UNITRÓPICO &middot; UNIVERSIDAD INTERNACIONAL DEL TRÓPICO AMERICANO
-              </p>
-              <h1 style="margin: 0 0 14px 0; font-size: 22px; font-weight: 800; color: #FFFFFF; line-height: 1.25;">
-                ${safeHeaderTitle}
-              </h1>
-              <div style="display: inline-block; background-color: #00443B; color: #FFFFFF; border: 1px solid #B5A160; border-radius: 999px; padding: 6px 16px; font-family: 'JetBrains Mono', Consolas, ui-monospace, monospace; font-size: 13px; font-weight: 800; letter-spacing: 0.7px;">
-                ${safeRadicado}
-              </div>
-              ${safeTag ? `<div style="margin-top: 8px; font-size: 11px; font-weight: 700; color: #F7F5EE; letter-spacing: 0.4px;">${safeTag}</div>` : ''}
+            <td style="background-color: #00594E; border-bottom: 4px solid #B5A160; padding: 22px 32px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td align="left" valign="middle" style="padding-right: 16px;">
+                    <p style="margin: 0 0 5px 0; font-size: 10.5px; letter-spacing: 1.4px; font-weight: 700; color: #B5A160; text-transform: uppercase;">
+                      UNITRÓPICO &middot; UNIVERSIDAD INTERNACIONAL DEL TRÓPICO AMERICANO
+                    </p>
+                    <h1 style="margin: 0; font-size: 20px; font-weight: 800; color: #FFFFFF; line-height: 1.25;">
+                      ${safeHeaderTitle}
+                    </h1>
+                    ${safeTag ? `<div style="margin-top: 6px; font-size: 11px; font-weight: 700; color: #F7F5EE; letter-spacing: 0.3px;">${safeTag}</div>` : ''}
+                  </td>
+                  <td align="right" valign="middle" style="white-space: nowrap;">
+                    <div style="display: inline-block; background-color: #00443B; color: #FFFFFF; border: 1px solid #B5A160; border-radius: 999px; padding: 7px 15px; font-family: 'JetBrains Mono', Consolas, ui-monospace, monospace; font-size: 13px; font-weight: 800; letter-spacing: 0.7px; white-space: nowrap;">
+                      ${safeRadicado}
+                    </div>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
           <!-- CUERPO DEL MENSAJE -->
           <tr>
-            <td style="padding: 28px 28px 24px 28px; background-color: #FFFFFF;">
+            <td style="padding: 24px 32px 22px 32px; background-color: #FFFFFF;">
               ${options.bodyHtml}
             </td>
           </tr>
@@ -606,18 +650,7 @@ export async function sendPeticionAssignmentEmail(
     }
   );
 
-  const attachmentBanner =
-    params.attachments && params.attachments.length > 0
-      ? `
-        <div style="background-color: #F2F7F6; border: 1px solid #B2CFCB; border-left: 4px solid #00594E; border-radius: 10px; padding: 13px 16px; margin: 16px 0;">
-          <div style="font-size: 11px; font-weight: 800; color: #00594E; text-transform: uppercase; letter-spacing: 0.6px;">
-            Memorial Original Adjunto
-          </div>
-          <div style="font-size: 13.5px; font-weight: 700; color: #111827; margin-top: 3px;">
-            ${escapeEmailHtml(params.attachments.map((a) => a.filename).join(', '))}
-          </div>
-        </div>`
-      : '';
+  const attachmentBanner = ''; // Los soportes documentales se consultan exclusivamente en la plataforma.
 
   const subcarpetasHtml =
     params.subcarpetas && params.subcarpetas.length > 0
@@ -687,7 +720,6 @@ export async function sendPeticionAssignmentEmail(
     toEmail: params.toEmail,
     subject,
     html,
-    attachments: params.attachments,
     logTag: 'SMTP ASIGNACION',
   });
 }
@@ -799,101 +831,125 @@ export async function enviarCorreoRecordatorioDependencia(
 export async function sendRespuestaSolicitanteEmail(
   params: EmailRespuestaSolicitanteParams
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const formattedExpiracion = formatDateLongEs(params.fechaExpiracion);
-  const formattedRadicacion = formatDateLongEs(params.fechaRadicacion);
+  const formattedExpiracionSlash = formatDateShortSlashEs(params.fechaExpiracion);
+  const formattedRadicacion = formatDateCompactEs(params.fechaRadicacion);
   const subject = `[Radicado N° ${params.numeroRadicado}] Notificación oficial de respuesta a su petición - Unitrópico`;
 
-  const bentoCard = buildBentoDataCard(
-    [
-      { label: 'Asunto', valueHtml: escapeEmailHtml(params.asunto) },
-      { label: 'Solicitante', valueHtml: escapeEmailHtml(params.solicitanteNombre) },
-      { label: 'Emitido Por', valueHtml: `<strong style="color:#00594E;">${escapeEmailHtml(params.funcionarioNombre)}</strong>` },
-      { label: 'Fecha de Radicación', valueHtml: escapeEmailHtml(formattedRadicacion) },
-      { label: 'Expiración del Enlace (10 Días)', valueHtml: `<strong style="color:#786832;">${escapeEmailHtml(formattedExpiracion)}</strong>` },
-    ],
-    {
-      label: 'Ciclo Documental del Expediente',
-      statusRight: 'Respuesta Oficial Emitida (100%)',
-      greenPct: 80,
-      goldPct: 20,
-      legendLeft: 'Trámite institucional completado',
-      legendRight: 'Descarga habilitada por 10 días calendario',
-    }
-  );
-
-  const respuestaMessageBox = `
-    <div style="background-color: #FFFFFF; border: 1px solid #DCE4E3; border-left: 4px solid #00594E; border-radius: 12px; padding: 18px 20px; margin: 18px 0;">
-      <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: #00594E; margin-bottom: 10px;">
-        Pronunciamiento Oficial de la Institución
-      </div>
-      <div style="font-size: 14px; color: #111827; line-height: 1.7; white-space: pre-wrap;">${escapeEmailHtml(params.mensajeRespuesta)}</div>
+  const bentoCard = `
+    <div style="background-color: #F8FAFC; border: 1px solid #DCE4E3; border-radius: 12px; overflow: hidden; margin: 14px 0;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td width="60%" valign="top" style="width: 60%; padding: 12px 16px; border-bottom: 1px solid #E2E8F0; border-right: 1px solid #E2E8F0;">
+            <div style="font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: #64748B; margin-bottom: 4px;">
+              Asunto
+            </div>
+            <div style="font-size: 13.5px; font-weight: 700; color: #111827; line-height: 1.4;">
+              ${escapeEmailHtml(params.asunto)}
+            </div>
+          </td>
+          <td width="40%" valign="top" style="width: 40%; padding: 12px 16px; border-bottom: 1px solid #E2E8F0;">
+            <div style="font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: #64748B; margin-bottom: 4px;">
+              Fecha de Radicación
+            </div>
+            <div style="font-size: 13.5px; font-weight: 700; color: #111827; line-height: 1.4;">
+              ${escapeEmailHtml(formattedRadicacion)}
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td width="60%" valign="top" style="width: 60%; padding: 12px 16px; border-right: 1px solid #E2E8F0;">
+            <div style="font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: #64748B; margin-bottom: 4px;">
+              Emitido Por
+            </div>
+            <div style="font-size: 13.5px; font-weight: 800; color: #00594E; line-height: 1.4;">
+              ${escapeEmailHtml(params.funcionarioNombre)}
+            </div>
+          </td>
+          <td width="40%" valign="top" style="width: 40%; padding: 12px 16px;">
+            <div style="font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: #64748B; margin-bottom: 4px;">
+              Solicitante
+            </div>
+            <div style="font-size: 13.5px; font-weight: 700; color: #111827; line-height: 1.4;">
+              ${escapeEmailHtml(params.solicitanteNombre)}
+            </div>
+          </td>
+        </tr>
+      </table>
     </div>
   `;
 
-  const hasFinalFile = Boolean(params.archivoAdjunto?.filename);
-  const hasOptionalFiles = Array.isArray(params.anexosResumen) && params.anexosResumen.length > 0;
+  const respuestaMessageBox = `
+    <div style="background-color: #FFFFFF; border: 1px solid #DCE4E3; border-left: 4px solid #00594E; border-radius: 12px; padding: 16px 20px; margin: 14px 0;">
+      <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: #00594E; margin-bottom: 8px;">
+        Pronunciamiento Oficial de la Institución
+      </div>
+      <div style="font-size: 14px; color: #111827; line-height: 1.65; white-space: pre-wrap;">${escapeEmailHtml(params.mensajeRespuesta)}</div>
+    </div>
+  `;
 
-  const attachmentsListHtml =
-    hasFinalFile || hasOptionalFiles
-      ? `
-        <div style="background-color: #F8FAFC; border: 1px solid #DCE4E3; border-radius: 12px; padding: 16px 18px; margin: 18px 0;">
-          <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: #00594E; margin-bottom: 10px;">
-            Documentos Adjuntos y Soportes Oficiales
-          </div>
-          ${
-            hasFinalFile
-              ? `
-                <div style="background-color: #FFFFFF; border: 1px solid #B2CFCB; border-left: 4px solid #00594E; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px;">
-                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-                    <tr>
-                      <td style="vertical-align: middle;">
-                        <span style="display: inline-block; background-color: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; border-radius: 999px; padding: 2px 9px; font-size: 10.5px; font-weight: 800; text-transform: uppercase; margin-bottom: 4px;">
-                          &#10003; Respuesta Final Oficial
-                        </span>
-                        <div style="font-size: 13.5px; font-weight: 800; color: #111827;">
-                          ${escapeEmailHtml(params.archivoAdjunto!.filename)}
-                        </div>
-                      </td>
-                    </tr>
-                  </table>
-                </div>`
-              : ''
-          }
-          ${
-            hasOptionalFiles
-              ? params.anexosResumen!
-                  .map(
-                    (anexo) => `
-                    <div style="background-color: #FFFFFF; border: 1px solid #DCE4E3; border-left: 4px solid #B5A160; border-radius: 10px; padding: 10px 14px; margin-bottom: 7px;">
-                      <span style="color: #00594E; font-weight: 800; font-size: 13px; margin-right: 6px;">&#10003;</span>
-                      <strong style="font-size: 13px; color: #111827;">${escapeEmailHtml(anexo.nombre)}</strong>
-                      ${
-                        anexo.origen
-                          ? `<span style="display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; background-color: #F7F5EE; border: 1px solid #DBD2B0; color: #786832; font-size: 10.5px; font-weight: 700;">${escapeEmailHtml(anexo.origen)}</span>`
-                          : ''
-                      }
-                    </div>`
-                  )
-                  .join('')
-              : ''
-          }
-        </div>`
-      : '';
+  const credentialsAndCtaCard = `
+    <div style="background-color: #FBF9F4; border: 1px solid #DBD2B0; border-radius: 14px; padding: 20px 24px; margin: 16px 0 8px 0;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width: 100%; margin-bottom: 14px;">
+        <tr>
+          <td align="left" valign="middle" style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: #786832; padding-right: 12px;">
+            Credenciales y Enlace de Consulta del Expediente
+          </td>
+          <td align="right" valign="middle" style="font-size: 12px; color: #475569; white-space: nowrap;">
+            Correo autorizado: <strong style="color: #111827;">${escapeEmailHtml(params.toEmail)}</strong>
+          </td>
+        </tr>
+      </table>
 
-  const credsBox = buildCredentialsBox({
-    heading: 'Credenciales de Consulta del Expediente',
-    email: params.toEmail,
-    items: [
-      { label: 'Número de Radicado', value: params.numeroRadicado },
-      { label: 'PIN de Consulta', value: params.pinSolicitante },
-    ],
-    footnote: `Portal seguro disponible para descarga y verificación de anexos hasta el ${formattedExpiracion}.`,
-  });
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width: 100%;">
+        <tr>
+          <td width="34%" valign="top" style="background-color: #FFFFFF; border: 1px solid #E7DFC4; border-radius: 10px; padding: 12px 10px; text-align: center;">
+            <div style="font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: #64748B; margin-bottom: 5px;">
+              Número de Radicado
+            </div>
+            <div style="font-family: 'JetBrains Mono', Consolas, ui-monospace, monospace; font-size: 14.5px; font-weight: 800; color: #00594E; letter-spacing: 0.4px; white-space: nowrap;">
+              ${escapeEmailHtml(params.numeroRadicado)}
+            </div>
+          </td>
+          <td width="2%" style="font-size: 0; line-height: 0;">&nbsp;</td>
+          <td width="30%" valign="top" style="background-color: #FFFFFF; border: 1px solid #E7DFC4; border-radius: 10px; padding: 12px 10px; text-align: center;">
+            <div style="font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: #64748B; margin-bottom: 5px;">
+              PIN de Consulta
+            </div>
+            <div style="font-family: 'JetBrains Mono', Consolas, ui-monospace, monospace; font-size: 17px; font-weight: 800; color: #00594E; letter-spacing: 2.5px; white-space: nowrap;">
+              ${escapeEmailHtml(params.pinSolicitante)}
+            </div>
+          </td>
+          <td width="2%" style="font-size: 0; line-height: 0;">&nbsp;</td>
+          <td width="32%" valign="top" style="background-color: #FFFFFF; border: 1px solid #E7DFC4; border-radius: 10px; padding: 12px 10px; text-align: center;">
+            <div style="font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: #64748B; margin-bottom: 3px;">
+              Expiración del Enlace
+            </div>
+            <div style="font-size: 11px; font-weight: 600; color: #64748B; line-height: 1.25;">
+              Vigencia: 10 días
+            </div>
+            <div style="font-size: 13px; font-weight: 800; color: #786832; margin-top: 2px; white-space: nowrap;">
+              Hasta el ${escapeEmailHtml(formattedExpiracionSlash)}
+            </div>
+          </td>
+        </tr>
+      </table>
+
+      <div style="text-align: center; margin-top: 18px;">
+        <a href="${escapeEmailHtml(params.consultaUrl)}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: #00594E; color: #FFFFFF !important; border: 1px solid #B5A160; border-radius: 10px; padding: 13px 28px; font-size: 14px; font-weight: 700; text-decoration: none; letter-spacing: 0.2px;">
+          Abrir Portal de Respuestas y Descargar Documentos &rarr;
+        </a>
+      </div>
+
+      <p style="margin: 12px 0 0 0; text-align: center; font-size: 11.5px; line-height: 1.45; color: #64748B;">
+        Ingrese desde el botón superior o digite su Número de Radicado y PIN antes de la fecha de expiración indicada.
+      </p>
+    </div>
+  `;
 
   const driveHtml = params.driveUrl
     ? `
-      <div style="background-color: #F2F7F6; border: 1px solid #B2CFCB; border-radius: 10px; padding: 12px 16px; margin: 16px 0; text-align: center;">
-        <div style="font-size: 11.5px; font-weight: 800; color: #00594E; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">
+      <div style="background-color: #F2F7F6; border: 1px solid #B2CFCB; border-radius: 10px; padding: 12px 16px; margin: 14px 0 6px 0; text-align: center;">
+        <div style="font-size: 11px; font-weight: 800; color: #00594E; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">
           Repositorio Documental Complementario
         </div>
         <a href="${escapeEmailHtml(params.driveUrl)}" target="_blank" rel="noopener noreferrer" style="color: #00594E; font-size: 13px; font-weight: 700; text-decoration: underline;">
@@ -903,17 +959,15 @@ export async function sendRespuestaSolicitanteEmail(
     : '';
 
   const bodyHtml = `
-    <p style="margin: 0 0 10px 0; font-size: 16px; font-weight: 800; color: #00594E;">
+    <p style="margin: 0 0 6px 0; font-size: 16px; font-weight: 800; color: #00594E;">
       Estimado(a) ${escapeEmailHtml(params.solicitanteNombre)},
     </p>
-    <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.65; color: #475569;">
+    <p style="margin: 0 0 14px 0; font-size: 14px; line-height: 1.6; color: #475569;">
       La Universidad Internacional del Trópico Americano — Unitrópico le notifica formalmente la respuesta oficial emitida frente a su solicitud radicada en nuestro sistema documental.
     </p>
     ${bentoCard}
     ${respuestaMessageBox}
-    ${attachmentsListHtml}
-    ${credsBox}
-    ${buildCtaButton(params.consultaUrl, 'Consultar Expediente y Descargar Anexos')}
+    ${credentialsAndCtaCard}
     ${driveHtml}
   `;
 
@@ -921,36 +975,15 @@ export async function sendRespuestaSolicitanteEmail(
     title: subject,
     headerTitle: 'Respuesta Oficial a su Solicitud',
     numeroRadicado: params.numeroRadicado,
-    badgeTag: 'Pronunciamiento Definitivo · Vigencia 10 Días',
     bodyHtml,
   });
 
-  const mailAttachments: any[] = [];
-  if (params.archivoAdjunto && params.archivoAdjunto.content) {
-    mailAttachments.push({
-      filename: params.archivoAdjunto.filename,
-      content: params.archivoAdjunto.content,
-      contentType: params.archivoAdjunto.contentType || 'application/pdf',
-    });
-  }
-  if (Array.isArray(params.anexosAdicionales) && params.anexosAdicionales.length > 0) {
-    params.anexosAdicionales.forEach((anexo) => {
-      if (anexo && anexo.content) {
-        mailAttachments.push({
-          filename: anexo.filename,
-          content: anexo.content,
-          contentType: anexo.contentType || 'application/octet-stream',
-        });
-      }
-    });
-  }
-
+  // Política de cero adjuntos físicos por correo: los documentos oficiales se descargan únicamente desde el Portal Institucional.
   return dispatchSmtpMail({
     fromLabel: 'Correspondencia Oficial Unitrópico',
     toEmail: params.toEmail,
     subject,
     html,
-    attachments: mailAttachments,
     logTag: 'RESPUESTA SOLICITANTE',
   });
 }

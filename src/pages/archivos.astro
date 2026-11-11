@@ -4365,7 +4365,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       const radNum = pet?.numero_radicado || 'RAD-2026';
       const funcName = responderFuncionarioInput?.value.trim() || 'Oficina de Correspondencia y Gestión Documental';
 
-      const template = `Estimado(a) ${solName},\n\nEn atención a su solicitud oficial radicada bajo el N° ${radNum}, nos permitimos emitir formal pronunciamiento institucional y dar respuesta integral y de fondo a los puntos expuestos en su petición.\n\nSe anexa a la presente comunicación oficial el documento de respuesta suscrito por la dependencia competente para su conocimiento y fines pertinentes.\n\nAtentamente,\n${funcName}\nUniversidad Internacional del Trópico Americano — Unitrópico`;
+      const template = `Estimado(a) ${solName},\n\nEn atención a su solicitud oficial radicada bajo el N° ${radNum}, nos permitimos emitir formal pronunciamiento institucional y dar respuesta integral y de fondo a los puntos expuestos en su petición.\n\nEl documento oficial de respuesta y sus soportes asociados se encuentran disponibles para su consulta y descarga segura en nuestro Portal Institucional de Respuestas utilizando las credenciales indicadas a continuación.\n\nAtentamente,\n${funcName}\nUniversidad Internacional del Trópico Americano — Unitrópico`;
 
       if (responderMensajeInput) {
         responderMensajeInput.value = template;
@@ -4783,7 +4783,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         responderFuncionarioInput.value = pet.respuesta_funcionario || 'Oficina de Correspondencia y Gestión Documental';
       }
 
-      const defaultMensaje = pet.respuesta_mensaje || `Estimado(a) ${pet.solicitante_nombre || 'solicitante'}, en atención a su comunicación oficial radicada bajo el N° ${pet.numero_radicado}, nos permitimos informarle formalmente que la Universidad Internacional del Trópico Americano ha emitido pronunciamiento de fondo.\n\nSe adjunta a la presente notificación el documento oficial de respuesta debidamente suscrito para los fines pertinentes.`;
+      const defaultMensaje = pet.respuesta_mensaje || `Estimado(a) ${pet.solicitante_nombre || 'solicitante'}, en atención a su comunicación oficial radicada bajo el N° ${pet.numero_radicado}, nos permitimos informarle formalmente que la Universidad Internacional del Trópico Americano ha emitido pronunciamiento de fondo.\n\nEl documento oficial de respuesta y sus soportes asociados se encuentran disponibles para su consulta y descarga segura en nuestro Portal Institucional de Respuestas utilizando las credenciales indicadas a continuación.`;
       if (responderMensajeInput) {
         responderMensajeInput.value = defaultMensaje;
         updateComposerCharCount();

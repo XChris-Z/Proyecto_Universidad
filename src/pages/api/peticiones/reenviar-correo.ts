@@ -72,32 +72,8 @@ export const POST: APIRoute = async ({ request, url }) => {
       );
     }
 
-    // 2. Descargar el archivo original del Storage para adjuntarlo si existe
-    let emailAttachments: EmailAttachment[] | undefined = undefined;
-    const anexos = peticion.peticion_anexos || [];
-    const rootDoc = anexos.find((a: any) => !a.es_anexo_oficina) || anexos[0];
-
-    if (rootDoc && rootDoc.storage_path) {
-      try {
-        const cleanPath = rootDoc.storage_path.replace(/^peticiones\//, '');
-        const { data: fileBlob, error: downloadErr } = await supabase.storage
-          .from('peticiones')
-          .download(cleanPath);
-
-        if (!downloadErr && fileBlob) {
-          const buffer = Buffer.from(await fileBlob.arrayBuffer());
-          emailAttachments = [
-            {
-              filename: rootDoc.nombre_archivo,
-              content: buffer,
-              contentType: rootDoc.mime_type || 'application/pdf',
-            },
-          ];
-        }
-      } catch (err: any) {
-        console.warn('[REENVIO CORREO] No se pudo obtener el adjunto para reenviar:', err.message);
-      }
-    }
+    // 2. Política de cero adjuntos físicos por correo: los soportes documentales se consultan en la plataforma
+    const emailAttachments: EmailAttachment[] | undefined = undefined;
 
     // 3. Consultar subcarpetas asociadas si existen
     let subcarpetasData: any[] = [];

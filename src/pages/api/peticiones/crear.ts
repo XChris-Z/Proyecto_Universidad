@@ -507,14 +507,8 @@ export const POST: APIRoute = async ({ request, url }) => {
       );
     }
 
-    // 6. Preparar adjunto físico de Nodemailer con el archivo original subido
-    const emailAttachments = (fileBuffer && fileName) ? [
-      {
-        filename: fileName,
-        content: fileBuffer,
-        contentType: fileMime,
-      }
-    ] : undefined;
+    // 6. Política de cero adjuntos físicos por correo: el memorial original se consulta y descarga en el portal
+    const emailAttachments = undefined;
 
     // 7. Enviar Notificación SMTP Inteligente y Consolidada por Dependencia
     // Si una oficina está asignada a 2 o más subcarpetas, recibe UN SOLO CORREO con el desglose de todas sus subcarpetas
