@@ -910,6 +910,30 @@ export async function sendRespuestaSolicitanteEmail(
     </div>
   `;
 
+  const buildSafeConsultaUrl = () => {
+    const rawUrl = String(params.consultaUrl || '').trim();
+    if (!rawUrl) return rawUrl;
+    try {
+      const parsed = new URL(rawUrl);
+      if (!parsed.searchParams.get('radicado') && params.numeroRadicado) {
+        parsed.searchParams.set('radicado', params.numeroRadicado);
+      }
+      if (!parsed.searchParams.get('email') && !parsed.searchParams.get('correo') && params.toEmail) {
+        parsed.searchParams.set('email', String(params.toEmail).trim().toLowerCase());
+      }
+      if (!parsed.searchParams.get('pin') && params.pinSolicitante) {
+        parsed.searchParams.set('pin', params.pinSolicitante);
+      }
+      return parsed.toString();
+    } catch {
+      const hasEmail = /[?&](email|correo)=/i.test(rawUrl);
+      if (hasEmail || !params.toEmail) return rawUrl;
+      const sep = rawUrl.includes('?') ? '&' : '?';
+      return `${rawUrl}${sep}email=${encodeURIComponent(String(params.toEmail).trim().toLowerCase())}`;
+    }
+  };
+  const safeConsultaUrl = buildSafeConsultaUrl();
+
   const credentialsAndCtaCard = buildGoldCredentialsAndCtaCard({
     heading: 'Credenciales y Enlace de Consulta del Expediente',
     email: params.toEmail,
@@ -930,7 +954,7 @@ export async function sendRespuestaSolicitanteEmail(
         valueHtml: `<div style="font-size: 11px; font-weight: 600; color: #64748B; line-height: 1.25;">Vigencia: 10 días</div><div style="font-size: 13px; font-weight: 800; color: #786832; margin-top: 2px; white-space: nowrap;">Hasta el ${escapeEmailHtml(formattedExpiracionSlash)}</div>`,
       },
     ],
-    ctaUrl: params.consultaUrl,
+    ctaUrl: safeConsultaUrl,
     ctaLabel: 'Abrir Portal de Respuestas y Descargar Documentos',
     helperText: 'Ingrese desde el botón superior o digite su Número de Radicado y PIN antes de la fecha de expiración indicada.',
   });

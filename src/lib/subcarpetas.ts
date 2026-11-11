@@ -11,64 +11,142 @@ export interface SubcarpetaMetaParsed {
     drive?: string | null;
     fecha_envio?: string;
     correo?: string | null;
+    email_destino?: string | null;
+    original_email?: string | null;
+    emails_autorizados?: string[];
+    pins_historicos?: string[];
     archivo_respuesta?: any;
     respuesta_archivo?: any;
     [key: string]: any;
   } | null;
   allPins: string[];
+  allEmails: string[];
   allMetas: any[];
 }
 
 /**
+ * Extrae todos los objetos JSON válidos asociados a `[RESPUESTA_META]: {...}` mediante conteo balanceado
+ * de llaves (tolerante a objetos anidados como `archivo_respuesta` y bloques múltiples heredados).
+ */
+function extractJsonObjectAt(text: string, startIndex: number): { jsonStr: string; endIndex: number } | null {
+  const openIdx = text.indexOf('{', startIndex);
+  if (openIdx === -1) return null;
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let i = openIdx; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (ch === '\\') {
+        escaped = true;
+      } else if (ch === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = true;
+    } else if (ch === '{') {
+      depth++;
+    } else if (ch === '}') {
+      depth--;
+      if (depth === 0) {
+        return { jsonStr: text.slice(openIdx, i + 1), endIndex: i + 1 };
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Elimina cualquier bloque `[RESPUESTA_META]: ...` del texto dejando solo el contenido descriptivo limpio.
+ */
+export function limpiarBloquesRespuestaMeta(textoCrudo: string | null | undefined): string {
+  const texto = String(textoCrudo ?? '');
+  if (!texto) return '';
+  return separarRespuestaMeta(texto).textoLimpio
+    .replace(/\[?RESPUESTA_META\]?\s*:[\s\S]*$/gi, '')
+    .trim();
+}
+
+/**
  * Separa y extrae el bloque [RESPUESTA_META] del texto crudo (instrucciones_anexos o descripcion).
- * Soporta múltiples bloques heredados, retornando siempre el más reciente como `respuestaMeta`
- * y acumulando todos los PINs históricos emitidos en `allPins`.
+ * Soporta múltiples bloques heredados y JSONs con objetos anidados, retornando siempre el más
+ * reciente como `respuestaMeta` y acumulando todos los PINs y correos históricos en `allPins`/`allEmails`.
  * Garantiza que `textoLimpio` JAMÁS contenga el JSON de metadatos de respuesta.
  */
 export function separarRespuestaMeta(textoCrudo: string | null | undefined): SubcarpetaMetaParsed {
   const texto = String(textoCrudo ?? '');
   const allMetas: any[] = [];
-  const allPins: string[] = [];
+  const pinsSet = new Set<string>();
+  const emailsSet = new Set<string>();
 
-  // Buscar todas las ocurrencias de [RESPUESTA_META]: {...}
-  const metaRegex = /\[?RESPUESTA_META\]?\s*:\s*(\{.*?\})(?=\s*(\[?RESPUESTA_META\]?|$))/gs;
-  for (const m of texto.matchAll(metaRegex)) {
-    try {
-      const jsonStr = m[1];
-      if (jsonStr) {
-        const obj = JSON.parse(jsonStr);
-        if (obj && typeof obj === 'object') {
-          allMetas.push(obj);
-          if (obj.pin) {
-            allPins.push(String(obj.pin).trim());
-          }
-        }
-      }
-    } catch {}
-  }
+  const tagRegex = /\[?RESPUESTA_META\]?\s*:/gi;
+  const tagMatches = Array.from(texto.matchAll(tagRegex));
 
-  const idx = texto.search(/\[?RESPUESTA_META\]?\s*:/i);
-  let textoLimpio = texto;
-  if (idx !== -1) {
-    textoLimpio = texto.slice(0, idx).trim();
-    if (allMetas.length === 0) {
-      const bloque = texto.slice(idx).replace(/^\[?RESPUESTA_META\]?\s*:\s*/i, '').trim();
-      const firstBrace = bloque.indexOf('{');
-      const lastBrace = bloque.lastIndexOf('}');
-      if (firstBrace !== -1 && lastBrace !== -1) {
-        try {
-          const parsed = JSON.parse(bloque.slice(firstBrace, lastBrace + 1));
-          if (parsed && typeof parsed === 'object') {
-            allMetas.push(parsed);
-            if (parsed.pin) allPins.push(String(parsed.pin).trim());
-          }
-        } catch {}
-      }
+  const collectFromObj = (obj: any) => {
+    if (!obj || typeof obj !== 'object') return;
+    allMetas.push(obj);
+    if (obj.pin) pinsSet.add(String(obj.pin).replace(/\s+/g, '').trim());
+    if (Array.isArray(obj.pins_historicos)) {
+      obj.pins_historicos.forEach((p: any) => {
+        const cleanP = String(p || '').replace(/\s+/g, '').trim();
+        if (cleanP) pinsSet.add(cleanP);
+      });
+    }
+    const candidates = [
+      obj.email_destino,
+      obj.correo,
+      obj.to,
+      obj.original_email,
+      ...(Array.isArray(obj.emails_autorizados) ? obj.emails_autorizados : []),
+    ];
+    candidates.forEach((c: any) => {
+      const cleanE = String(c || '').trim().toLowerCase();
+      if (cleanE && cleanE.includes('@')) emailsSet.add(cleanE);
+    });
+  };
+
+  for (let idx = 0; idx < tagMatches.length; idx++) {
+    const match = tagMatches[idx]!;
+    const afterTag = (match.index ?? 0) + match[0].length;
+    const extracted = extractJsonObjectAt(texto, afterTag);
+    if (extracted) {
+      try {
+        const parsed = JSON.parse(extracted.jsonStr);
+        collectFromObj(parsed);
+        continue;
+      } catch {}
+    }
+
+    // Respaldo tolerante ante bloques JSON heredados truncados o dañados
+    const nextTagStart = tagMatches[idx + 1]?.index ?? texto.length;
+    const rawSegment = texto.slice(afterTag, nextTagStart);
+    const pinFallback = rawSegment.match(/"pin"\s*:\s*"([^"]+)"/i);
+    if (pinFallback?.[1]) pinsSet.add(pinFallback[1].replace(/\s+/g, '').trim());
+    for (const emailFallback of rawSegment.matchAll(/"(?:email_destino|correo|to|original_email)"\s*:\s*"([^"]+@[^"]+)"/gi)) {
+      if (emailFallback[1]) emailsSet.add(emailFallback[1].trim().toLowerCase());
     }
   }
 
+  const firstIdx = texto.search(/\[?RESPUESTA_META\]?\s*:/i);
+  const textoLimpio = (firstIdx !== -1 ? texto.slice(0, firstIdx) : texto)
+    .replace(/\[?RESPUESTA_META\]?\s*:[\s\S]*$/gi, '')
+    .trim();
+
   const respuestaMeta = allMetas.length > 0 ? allMetas[allMetas.length - 1] : null;
-  return { textoLimpio: textoLimpio.trim(), respuestaMeta, allPins, allMetas };
+  return {
+    textoLimpio,
+    respuestaMeta,
+    allPins: Array.from(pinsSet),
+    allEmails: Array.from(emailsSet),
+    allMetas,
+  };
 }
 
 /**

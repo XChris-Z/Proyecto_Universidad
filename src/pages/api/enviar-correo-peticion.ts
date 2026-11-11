@@ -9,6 +9,7 @@ import {
   limpiarTextoRequerimiento,
 } from '@lib/email';
 import { separarRespuestaMeta, filtrarSubcarpetasValidas } from '@lib/subcarpetas';
+import { getDeterministicPin } from '@lib/security';
 
 export const POST: APIRoute = async ({ request, url }) => {
   try {
@@ -77,7 +78,19 @@ export const POST: APIRoute = async ({ request, url }) => {
       if (!ofi || !ofi.email_institucional) continue;
 
       const pinMatch = String(item.observaciones_entrega || '').match(/PIN:\s*([0-9A-Z]{6})/i);
-      const effectivePin = (pinMatch && pinMatch[1] ? pinMatch[1].trim() : null) || pet.pin_acceso || '';
+      const effectivePin =
+        (pinMatch && pinMatch[1] ? pinMatch[1].trim() : null) ||
+        pet.pin_acceso ||
+        getDeterministicPin(pet.numero_radicado || pet.id);
+      if (!pet.pin_acceso && effectivePin) {
+        try {
+          await (supabase
+            .from('peticiones' as any)
+            .update({ pin_acceso: effectivePin } as any)
+            .eq('id', pet.id) as any);
+          pet.pin_acceso = effectivePin;
+        } catch {}
+      }
       const portalUrl =
         `${baseUrl}/portal-responsable?radicado=${encodeURIComponent(pet.numero_radicado)}` +
         `&codigo=${encodeURIComponent(item.codigo_acceso)}` +

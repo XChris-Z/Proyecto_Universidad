@@ -5,7 +5,8 @@ import type { APIRoute } from 'astro';
 import { supabase } from '@lib/supabase';
 import { sendRespuestaSolicitanteEmail, resolvePublicBaseUrl } from '@lib/email';
 import { logSystemActivity } from '@lib/audit';
-import { separarRespuestaMeta } from '@lib/subcarpetas';
+import { separarRespuestaMeta, limpiarBloquesRespuestaMeta } from '@lib/subcarpetas';
+import { getDeterministicPin } from '@lib/security';
 
 export const POST: APIRoute = async ({ request, url }) => {
   try {
@@ -62,8 +63,45 @@ export const POST: APIRoute = async ({ request, url }) => {
       );
     }
 
-    // 2. Generar PIN de 6 dígitos y plazo de 10 días calendario (exactamente 864,000,000 ms)
-    const pinSolicitante = String(Math.floor(100000 + Math.random() * 900000));
+    // 2. Mantener un único PIN consistente del expediente (nunca regenerar aleatorio si ya existe uno)
+    const parsedInst = separarRespuestaMeta(peticion.instrucciones_anexos || '');
+    const parsedDesc = separarRespuestaMeta(peticion.descripcion || '');
+    const prevMeta = parsedInst.respuestaMeta || parsedDesc.respuestaMeta || null;
+
+    let respObsPin: string | null = null;
+    try {
+      const { data: respRows } = await (supabase
+        .from('peticion_responsables' as any)
+        .select('observaciones_entrega')
+        .eq('peticion_id', peticion_id) as any);
+      if (Array.isArray(respRows)) {
+        for (const r of respRows) {
+          const m = String(r?.observaciones_entrega || '').match(/PIN:\s*([0-9A-Z]{4,8})/i);
+          if (m?.[1]) {
+            respObsPin = m[1].trim();
+            break;
+          }
+        }
+      }
+    } catch {}
+
+    const pinSolicitante = String(
+      peticion.pin_acceso ||
+        peticion.pin ||
+        body.pin_solicitante ||
+        body.pin_acceso ||
+        body.pin ||
+        peticion.respuesta_pin_solicitante ||
+        prevMeta?.pin ||
+        parsedInst.allPins[parsedInst.allPins.length - 1] ||
+        parsedDesc.allPins[parsedDesc.allPins.length - 1] ||
+        respObsPin ||
+        getDeterministicPin(peticion.numero_radicado || peticion.id) ||
+        Math.floor(100000 + Math.random() * 900000)
+    )
+      .replace(/\s+/g, '')
+      .trim();
+
     const fechaEnvio = new Date();
     const fechaEnvioIso = fechaEnvio.toISOString();
     const fechaExpiracion = new Date(fechaEnvio.getTime() + 10 * 24 * 60 * 60 * 1000);
@@ -72,8 +110,10 @@ export const POST: APIRoute = async ({ request, url }) => {
     const cleanMensaje = String(respuesta_mensaje).trim();
     const cleanDrive = String(respuesta_drive_url || '').trim();
 
-    // Limpiar estrictamente cualquier bloque RESPUESTA_META anterior antes de anexar el nuevo, preservando el archivo de respuesta si existía
-    const { textoLimpio, respuestaMeta: prevMeta } = separarRespuestaMeta(peticion.instrucciones_anexos || '');
+    // Limpiar estrictamente cualquier bloque [RESPUESTA_META] anterior antes de construir el único bloque vigente
+    const textoLimpio = limpiarBloquesRespuestaMeta(peticion.instrucciones_anexos || '');
+    const cleanDescText = limpiarBloquesRespuestaMeta(peticion.descripcion || '');
+    const descHadMeta = /\[?RESPUESTA_META\]?\s*:/i.test(String(peticion.descripcion || ''));
     let finalRespArchivo = body.archivo_respuesta || prevMeta?.archivo_respuesta || prevMeta?.respuesta_archivo || null;
 
     // Consultar anexos reales en base de datos para validar Respuesta Final y resolver opcionales
@@ -98,8 +138,52 @@ export const POST: APIRoute = async ({ request, url }) => {
       );
     }
 
+    const originalEmail = String(
+      prevMeta?.original_email ||
+        peticion.solicitante_email ||
+        peticion.correo_solicitante ||
+        peticion.solicitante_correo ||
+        effectiveEmail
+    )
+      .trim()
+      .toLowerCase();
+
+    const emailsAutorizados = Array.from(
+      new Set(
+        [
+          originalEmail,
+          peticion.solicitante_email,
+          peticion.correo_solicitante,
+          peticion.solicitante_correo,
+          peticion.correo,
+          peticion.email,
+          effectiveEmail,
+          ...parsedInst.allEmails,
+          ...parsedDesc.allEmails,
+        ]
+          .map((e: any) => String(e || '').trim().toLowerCase())
+          .filter((e) => e && e.includes('@'))
+      )
+    );
+
+    const pinsHistoricos = Array.from(
+      new Set(
+        [
+          pinSolicitante,
+          peticion.pin_acceso,
+          peticion.respuesta_pin_solicitante,
+          respObsPin,
+          ...parsedInst.allPins,
+          ...parsedDesc.allPins,
+        ]
+          .map((p: any) => String(p || '').replace(/\s+/g, '').trim())
+          .filter((p) => p && p.length >= 4)
+      )
+    );
+
     const metaPackage = JSON.stringify({
       pin: pinSolicitante,
+      pins_historicos: pinsHistoricos,
       expira: expiraAt,
       msg: cleanMensaje,
       func: funcionarioResp,
@@ -107,7 +191,10 @@ export const POST: APIRoute = async ({ request, url }) => {
       has_explicit_selection: true,
       drive: cleanDrive || null,
       fecha_envio: fechaEnvioIso,
+      email_destino: effectiveEmail,
       correo: effectiveEmail,
+      original_email: originalEmail || null,
+      emails_autorizados: emailsAutorizados,
       archivo_respuesta: finalRespArchivo,
       respuesta_archivo: finalRespArchivo,
     });
@@ -120,11 +207,13 @@ export const POST: APIRoute = async ({ request, url }) => {
     // 3. Preparar actualización en public.peticiones respetando el constraint CHECK de estado
     const coreTemplate: Record<string, any> = {
       updated_at: fechaEnvioIso,
-      solicitante_email: effectiveEmail,
+      solicitante_email: peticion.solicitante_email || effectiveEmail,
       instrucciones_anexos: cleanUpdatedInst,
+      ...(descHadMeta ? { descripcion: cleanDescText } : {}),
     };
     let payloadTemplate: Record<string, any> = {
       ...coreTemplate,
+      ...(peticion.pin_acceso ? {} : { pin_acceso: pinSolicitante }),
       respuesta_mensaje: cleanMensaje,
       respuesta_funcionario: funcionarioResp,
       respuesta_fecha_envio: fechaEnvioIso,
@@ -223,6 +312,16 @@ export const POST: APIRoute = async ({ request, url }) => {
       );
     }
 
+    // Asegurar guardado de pin_acceso en caso de que la petición previa no lo tuviera persistido
+    if (!peticion.pin_acceso && pinSolicitante) {
+      try {
+        await (supabase
+          .from('peticiones' as any)
+          .update({ pin_acceso: pinSolicitante } as any)
+          .eq('id', peticion_id) as any);
+      } catch {}
+    }
+
     // 4. Registrar en Auditoría y Trazabilidad
     try {
       await logSystemActivity({
@@ -231,16 +330,16 @@ export const POST: APIRoute = async ({ request, url }) => {
         actionType: 'RESPUESTA',
         entity: 'Expediente Documental',
         entityId: peticion.numero_radicado || peticion_id,
-        details: `Se emitió y despachó la respuesta oficial del radicado ${peticion.numero_radicado} para ${peticion.solicitante_nombre} (${effectiveEmail}). Acceso habilitado por 10 días calendario (Vence: ${expiraAt.split('T')[0]}).`,
+        details: `Se emitió y despachó la respuesta oficial del radicado ${peticion.numero_radicado} para ${peticion.solicitante_nombre} (${effectiveEmail}). PIN: ${pinSolicitante}. Acceso habilitado por 10 días calendario (Vence: ${expiraAt.split('T')[0]}).`,
         severity: 'INFO',
       });
     } catch (auditErr: any) {
       console.warn('[RESPONDER] Aviso de auditoría:', auditErr.message);
     }
 
-    // 5. Determinar URL pública de consulta directa (apunta exactamente a ?radicado=...&pin=...)
+    // 5. Determinar URL pública de consulta directa con radicado, email y pin completos
     const baseUrl = resolvePublicBaseUrl(request, url);
-    const consultaUrl = `${baseUrl}/consulta-respuesta?radicado=${encodeURIComponent(peticion.numero_radicado)}&pin=${encodeURIComponent(pinSolicitante)}`;
+    const consultaUrl = `${baseUrl}/consulta-respuesta?radicado=${encodeURIComponent(peticion.numero_radicado)}&email=${encodeURIComponent(effectiveEmail)}&pin=${encodeURIComponent(pinSolicitante)}`;
 
     // 6. Sin adjuntos físicos en el correo: todos los soportes seleccionados se consultan y descargan exclusivamente en el Portal
     // 7. Enviar Correo Institucional al Solicitante

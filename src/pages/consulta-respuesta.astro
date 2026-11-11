@@ -3,6 +3,38 @@
 export const prerender = false;
 
 import Layout from '@layouts/Layout.astro';
+import { validarYConsultarRespuesta } from '@lib/consulta-respuesta';
+
+const sp = Astro.url.searchParams;
+const urlRadicado = (sp.get('radicado') || sp.get('rad') || '').trim().toUpperCase();
+const urlEmail = (sp.get('email') || sp.get('correo') || '').trim().toLowerCase();
+const urlPin = (sp.get('pin') || sp.get('codigo') || '').replace(/\s+/g, '').trim();
+
+let autoUnlockedData: any = null;
+let autoAuthError = '';
+let autoExpiredError = '';
+let resolvedEmailValue = urlEmail;
+
+if (urlRadicado && urlPin) {
+  const ssrResult = await validarYConsultarRespuesta({
+    radicado: urlRadicado,
+    email: urlEmail,
+    pin: urlPin,
+  });
+  if (ssrResult.ok) {
+    autoUnlockedData = ssrResult.data;
+    resolvedEmailValue = urlEmail || ssrResult.data.resolved_email || ssrResult.data.peticion?.solicitante_email || '';
+  } else if (ssrResult.code === 'EXPIRED') {
+    autoExpiredError = ssrResult.error;
+  } else {
+    autoAuthError = ssrResult.error;
+  }
+}
+
+const showAuthInitially = !autoUnlockedData && !autoExpiredError;
+const showExpedienteInitially = Boolean(autoUnlockedData);
+const showExpiredInitially = Boolean(autoExpiredError);
+const serializedSsrData = JSON.stringify(autoUnlockedData || null).replace(/</g, '\\u003c');
 ---
 
 <Layout title="Consulta de Respuesta Oficial — SGD Unitrópico">
@@ -34,7 +66,7 @@ import Layout from '@layouts/Layout.astro';
       <!-- ===================================================================
            PANTALLA 1: FORMULARIO DE ACCESO Y VALIDACIÓN (CANDADO 10 DÍAS)
            =================================================================== -->
-      <section id="auth-section" class="auth-container">
+      <section id="auth-section" class="auth-container" style={`display: ${showAuthInitially ? 'flex' : 'none'};`}>
         
         <div class="auth-bento-card">
           <div class="auth-icon-circle">
@@ -68,6 +100,7 @@ import Layout from '@layouts/Layout.astro';
                   name="radicado" 
                   class="form-input" 
                   placeholder="Ej: RAD-2026-00019" 
+                  value={urlRadicado}
                   required 
                   style="text-transform: uppercase; font-family: monospace; font-weight: 700; letter-spacing: 0.5px;"
                 />
@@ -86,6 +119,7 @@ import Layout from '@layouts/Layout.astro';
                   name="email" 
                   class="form-input" 
                   placeholder="ejemplo@correo.com" 
+                  value={resolvedEmailValue}
                   required 
                 />
               </div>
@@ -106,6 +140,7 @@ import Layout from '@layouts/Layout.astro';
                   name="pin" 
                   class="form-input" 
                   placeholder="6 dígitos (ej: 492810)" 
+                  value={urlPin}
                   maxlength="8" 
                   required 
                   style="font-family: monospace; font-weight: 800; font-size: 1.1rem; letter-spacing: 3px;"
@@ -113,9 +148,9 @@ import Layout from '@layouts/Layout.astro';
               </div>
             </div>
 
-            <div id="auth-error-box" class="auth-alert-box error" style="display: none;">
+            <div id="auth-error-box" class="auth-alert-box error" style={`display: ${autoAuthError ? 'flex' : 'none'};`}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              <span id="auth-error-msg">Error de autenticación</span>
+              <span id="auth-error-msg">{autoAuthError || 'Error de autenticación'}</span>
             </div>
 
             <button type="submit" id="btn-submit-auth" class="btn-primary-consulta">
@@ -135,7 +170,7 @@ import Layout from '@layouts/Layout.astro';
       <!-- ===================================================================
            PANTALLA 2: VISTA DEL PRONUNCIAMIENTO Y EXPEDIENTE (CROSSFADE)
            =================================================================== -->
-      <section id="expediente-section" class="expediente-container" style="display: none;">
+      <section id="expediente-section" class="expediente-container" style={`display: ${showExpedienteInitially ? 'flex' : 'none'};`}>
         
         <!-- BARRA SUPERIOR DE VIGENCIA Y SALIDA -->
         <div class="vigencia-banner">
@@ -236,14 +271,14 @@ import Layout from '@layouts/Layout.astro';
       <!-- ===================================================================
            PANTALLA 3: ENLACE CADUCADO / ACCESO EXPIRADO
            =================================================================== -->
-      <section id="expired-section" class="auth-container" style="display: none;">
+      <section id="expired-section" class="auth-container" style={`display: ${showExpiredInitially ? 'flex' : 'none'};`}>
         <div class="auth-bento-card expired">
           <div class="expired-icon-circle">
             <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#991b1b" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           </div>
           <h2 style="font-size: 1.25rem; font-weight: 800; color: #991b1b; margin: 12px 0 6px 0;">Enlace Temporal Vencido (Plazo de 10 días finalizado)</h2>
           <p id="expired-detail-text" style="font-size: 0.88rem; color: #475569; line-height: 1.6; margin: 0 0 20px 0;">
-            El periodo habilitado de 10 días calendario para consultar y descargar los documentos de este radicado ha vencido. Por políticas de seguridad documental, el acceso público ha sido cerrado.
+            {autoExpiredError || 'El periodo habilitado de 10 días calendario para consultar y descargar los documentos de este radicado ha vencido. Por políticas de seguridad documental, el acceso público ha sido cerrado.'}
           </p>
           <div class="expired-instruction-box">
             <strong>¿Necesita una copia de su respuesta o anexos?</strong>
@@ -273,6 +308,9 @@ import Layout from '@layouts/Layout.astro';
         </div>
       </div>
     </footer>
+
+    <!-- Datos iniciales pre-validados en servidor para auto-desbloqueo instantáneo sin parpadeo -->
+    <script id="ssr-consulta-data" type="application/json" set:html={serializedSsrData}></script>
 
   </div>
 </Layout>
@@ -326,12 +364,13 @@ import Layout from '@layouts/Layout.astro';
     font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
   }
 
-  /* BARRA DE NAVEGACIÓN INSTITUCIONAL (UI/UX PRO MAX BLANCA SOBRIA) */
+  /* BARRA DE NAVEGACIÓN INSTITUCIONAL (EN FLUJO NORMAL SIN SUPERPOSICIÓN) */
   .consulta-navbar {
     background: var(--uni-white);
-    position: sticky;
-    top: 0;
-    z-index: 50;
+    position: relative !important;
+    top: auto !important;
+    z-index: 20;
+    flex-shrink: 0;
     border-top: 4px solid var(--uni-green-primary);
     border-bottom: 1px solid var(--uni-border);
     box-shadow: 0 2px 10px rgba(0, 89, 78, 0.05);
@@ -390,11 +429,11 @@ import Layout from '@layouts/Layout.astro';
   }
 
   .consulta-main-content {
-    flex: 1;
+    flex: 1 0 auto;
     max-width: 1100px;
     width: 100%;
-    margin: 32px auto;
-    padding: 0 20px;
+    margin: 36px auto 32px auto !important;
+    padding: 4px 20px 24px 20px;
     box-sizing: border-box;
   }
 
@@ -402,8 +441,9 @@ import Layout from '@layouts/Layout.astro';
   .auth-container {
     display: flex;
     justify-content: center;
-    align-items: center;
-    padding: 20px 0;
+    align-items: flex-start;
+    padding: 0 0 24px 0;
+    margin-top: 0;
   }
   .auth-bento-card {
     background: var(--uni-white);
@@ -1109,11 +1149,25 @@ import Layout from '@layouts/Layout.astro';
   const errorMsg = document.getElementById('auth-error-msg');
   const btnLogout = document.getElementById('btn-logout');
 
-  // 1. Prellenado automático desde URL (?radicado=...&correo=...&pin=...)
+  // 1. Prellenado automático desde URL (?radicado=...&email=...&pin=...) y auto-desbloqueo SSR/cliente
   function checkUrlParams() {
+    const ssrDataScript = document.getElementById('ssr-consulta-data');
+    if (ssrDataScript && ssrDataScript.textContent) {
+      try {
+        const ssrData = JSON.parse(ssrDataScript.textContent);
+        if (ssrData && ssrData.success) {
+          if (ssrData.resolved_email && inputEmail && !inputEmail.value) {
+            inputEmail.value = ssrData.resolved_email;
+          }
+          renderExpediente(ssrData);
+          return;
+        }
+      } catch {}
+    }
+
     const urlParams = new URLSearchParams(window.location.search);
     const rad = (urlParams.get('radicado') || urlParams.get('rad') || '').trim().toUpperCase();
-    const email = (urlParams.get('correo') || urlParams.get('email') || '').trim().toLowerCase();
+    const email = (urlParams.get('email') || urlParams.get('correo') || '').trim().toLowerCase();
     const pin = (urlParams.get('pin') || urlParams.get('codigo') || '').replace(/\s+/g, '').trim();
 
     if (rad && inputRadicado) inputRadicado.value = rad;
@@ -1121,7 +1175,11 @@ import Layout from '@layouts/Layout.astro';
     if (pin && inputPin) inputPin.value = pin;
 
     if (rad && pin) {
-      submitValidation(rad, email, pin);
+      const hasSsrError = errorBox && errorBox.style.display === 'flex';
+      const hasSsrExpired = expiredSection && expiredSection.style.display === 'flex';
+      if (!hasSsrError && !hasSsrExpired) {
+        submitValidation(rad, email, pin);
+      }
     } else if (rad && email && inputPin) {
       inputPin.focus();
     }
@@ -1513,6 +1571,9 @@ import Layout from '@layouts/Layout.astro';
     if (expedienteSection) expedienteSection.style.display = 'none';
     if (authSection) authSection.style.display = 'flex';
     if (inputPin) inputPin.value = '';
+    if (window.location.search && typeof window.history?.replaceState === 'function') {
+      window.history.replaceState({}, '', '/consulta-respuesta');
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 

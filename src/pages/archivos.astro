@@ -2457,6 +2457,8 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       respuesta_archivos_incluidos?: string[] | null;
       respuesta_drive_url?: string | null;
       respuesta_archivo?: any;
+      tiene_respuesta_audit?: boolean;
+      respondida?: boolean;
       subcarpetas?: any[];
       peticion_anexos?: PeticionAnexo[];
       peticion_responsables?: PeticionResponsable[];
@@ -3128,10 +3130,11 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
               const funcEmite = peticion.respuesta_funcionario || respuestaMeta?.func || 'Oficina de Correspondencia y Gestión Documental';
               const fEnvio = peticion.respuesta_fecha_envio || respuestaMeta?.fecha_envio;
               const fEnvioFormatted = fEnvio ? safeFormatDate(fEnvio) : 'Reciente';
+              const portalTargetEmail = respuestaMeta?.email_destino || respuestaMeta?.correo || peticion.solicitante_email || '';
               const queryParams = new URLSearchParams({
                 radicado: peticion.numero_radicado || '',
+                email: portalTargetEmail,
                 pin: pinSol || '',
-                correo: peticion.solicitante_email || ''
               }).toString();
               return `
                 <div style="background: #ffffff; border: 1px solid #b2cfcb; border-left: 4px solid #00594E; border-radius: 8px; padding: 14px 18px; margin-top: 4px; box-shadow: 0 1px 3px rgba(0, 89, 78, 0.05);">
@@ -4755,7 +4758,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         responderEmailInput.value = pet.solicitante_email || '';
         updateRecipientAvatar(pet.solicitante_email || '');
       }
-      if (composerDispPinBadge) composerDispPinBadge.textContent = `PIN: ${pet.pin_acceso || '849201'}`;
+      if (composerDispPinBadge) composerDispPinBadge.textContent = `PIN: ${pet.pin_acceso || pet.respuesta_pin_solicitante || '849201'}`;
 
       // Configurar remitente dinámico según usuario en sesión o cuenta institucional
       const currentUser = (window as any).currentLoggedUser;
@@ -4847,6 +4850,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
           body: JSON.stringify({
             peticion_id: petId,
             solicitante_email: email,
+            pin_solicitante: currentPet?.pin_acceso || currentPet?.respuesta_pin_solicitante || null,
             asunto,
             respuesta_mensaje: mensaje,
             respuesta_funcionario: funcionario,
@@ -4874,13 +4878,16 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         const pet = peticionesMap.get(petId) || allPeticiones.find((p) => p.id === petId);
         if (pet) {
           pet.estado = data.estado_actual || 'Respondida';
-      pet.respondida = true;
-          pet.solicitante_email = email;
+          pet.respondida = true;
+          pet.solicitante_email = pet.solicitante_email || email;
           pet.respuesta_mensaje = mensaje;
           pet.respuesta_funcionario = funcionario;
           pet.respuesta_fecha_envio = new Date().toISOString();
           pet.respuesta_expira_at = data.expira_at;
           pet.respuesta_pin_solicitante = data.pin_solicitante;
+          if (data.pin_solicitante && !pet.pin_acceso) {
+            pet.pin_acceso = data.pin_solicitante;
+          }
           pet.respuesta_drive_url = driveUrl || null;
           pet.respuesta_archivos_incluidos = anexosOpcionalesIds;
 
