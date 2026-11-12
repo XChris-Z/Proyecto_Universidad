@@ -1109,12 +1109,17 @@ function getPetSlaTone(bucket: string, responded: boolean) {
           return;
         }
         closeProrroga();
+        const prorrogaId = inputProrrogaId.value;
+        const row = document.querySelector(`tr[data-id="${prorrogaId}"]`);
+        if (row && data.nueva_fecha_entrega) {
+          const dateCell = row.querySelector('.pet-delivery-deadline');
+          if (dateCell) dateCell.textContent = data.nueva_fecha_entrega;
+        }
         (window as any).showToast(
           data.message || 'Prórroga registrada con trazabilidad en Auditoría.',
           'success',
           'Plazo Ampliado'
         );
-        setTimeout(() => window.location.reload(), 650);
       } catch {
         (window as any).showToast('Error de red registrando prórroga.', 'error');
       } finally {
@@ -1157,8 +1162,19 @@ function getPetSlaTone(bucket: string, responded: boolean) {
           return;
         }
 
+        const editModal = document.getElementById('modal-edit-peticion');
+        if (editModal) editModal.style.display = 'none';
+
+        const row = document.querySelector(`tr[data-id="${payload.id}"]`);
+        if (row) {
+          const asuntoEl = row.querySelector('.pet-asunto-link, .pet-asunto-text');
+          if (asuntoEl) asuntoEl.textContent = payload.asunto;
+          const solEl = row.querySelector('.pet-solicitante-text');
+          if (solEl) solEl.textContent = payload.solicitante_nombre;
+          row.setAttribute('data-search', `${payload.asunto} ${payload.solicitante_nombre}`.toLowerCase());
+        }
+
         (window as any).showToast('Petición actualizada con éxito.', 'success');
-        setTimeout(() => window.location.reload(), 600);
       } catch (err: any) {
         (window as any).showToast('Error de conexión al actualizar la petición.', 'error');
       } finally {

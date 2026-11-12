@@ -11,12 +11,15 @@ import { fetchSupabaseDeadlines, computeActivePeticionSlaCounts } from "@lib/cal
 const sessionUserId =
   Astro.cookies.get(SESSION_COOKIE_KEY)?.value || "usr-root";
 
-// Consultar perfil del usuario en Supabase PostgreSQL
-const { data: userProfile } = await supabase
-  .from("profiles")
-  .select("id, email, full_name, google_calendar_connected, google_calendar_id")
-  .or(`id.eq.${sessionUserId},email.eq.${sessionUserId}`)
-  .maybeSingle();
+// Consultar perfil y plazos en paralelo para carga instantánea
+const [{ data: userProfile }, ssrDeadlines] = await Promise.all([
+  supabase
+    .from("profiles")
+    .select("id, email, full_name, google_calendar_connected, google_calendar_id")
+    .or(`id.eq.${sessionUserId},email.eq.${sessionUserId}`)
+    .maybeSingle(),
+  fetchSupabaseDeadlines(),
+]);
 
 const isConnected = !!userProfile?.google_calendar_connected;
 const userEmail = userProfile?.email || "christianlemus.es@unitropico.edu.co";
@@ -29,8 +32,6 @@ const calendarEmbedUrl = `https://calendar.google.com/calendar/embed?src=${encod
 const isJustConnected = Astro.url.searchParams.get("connected") === "true";
 const errorParam = Astro.url.searchParams.get("error");
 
-// Preload SSR de plazos reales de Supabase para garantizar visibilidad inmediata sin depender de RLS anónimo
-const ssrDeadlines = await fetchSupabaseDeadlines();
 const ssrDeadlinesJson = JSON.stringify(ssrDeadlines).replace(/</g, "\\u003c");
 const {
   critCount: ssrCritCount,

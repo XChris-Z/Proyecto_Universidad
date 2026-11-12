@@ -38,7 +38,7 @@ interface SidebarNavEntry {
 const navGroupsRaw: SidebarNavEntry[][] = [
   [
     { id: 'dashboard', moduleId: 'dashboard', href: '/dashboard', label: 'Dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
-    { id: 'archivos', moduleId: 'archivos', href: '/archivos', label: 'Carpetas de Expedientes', icon: 'M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4' },
+    { id: 'archivos', moduleId: 'archivos', href: '/archivos', label: 'Carpetas de Radicados', icon: 'M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4' },
     { id: 'peticiones', moduleId: 'peticiones', href: '/peticiones', label: 'Peticiones Radicadas', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
     { id: 'subir-peticion', moduleId: 'subir', href: '/peticiones/subir', label: 'Subir Petición', icon: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12' },
   ],
@@ -117,6 +117,7 @@ const visibleGroups = navGroupsRaw
               id={`nav-${item.id}`}
               data-module-id={item.moduleId || ''}
               data-tooltip={item.label}
+              data-astro-prefetch="hover"
               aria-label={item.label}
             >
               <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d={item.icon}/></svg>
@@ -133,10 +134,17 @@ const visibleGroups = navGroupsRaw
     <a href="/perfil" class="user-profile-header" data-tooltip="Mi Perfil Institucional" aria-label="Ver Mi Perfil institucional">
       <div class="user-avatar" id="avatar-initials">
         <span id="sidebar-avatar-text" style={ssrAvatarUrl ? 'display: none;' : ''}>{ssrInitials}</span>
-        <img id="sidebar-avatar-img" src={ssrAvatarUrl} alt="Avatar" style={`width: 100%; height: 100%; object-fit: cover; ${ssrAvatarUrl ? 'display: block;' : 'display: none;'}`} />
+        <img 
+          id="sidebar-avatar-img" 
+          class="global-user-avatar-img"
+          data-user-avatar
+          src={ssrAvatarUrl} 
+          alt="Avatar" 
+          style={`width: 100%; height: 100%; object-fit: cover; ${ssrAvatarUrl ? 'display: block;' : 'display: none;'}`} 
+        />
       </div>
       <div class="user-info">
-        <div class="user-name" id="user-display-name">
+        <div class="user-name" id="user-display-name" data-user-display-name>
           {ssrDisplayName}
         </div>
         <div class={`role-badge ${isAdmin ? 'admin' : 'funcionario'}`} id="user-role-badge">
@@ -172,6 +180,68 @@ const visibleGroups = navGroupsRaw
           }
         }
       } catch (e) {}
+
+      // Hidratar avatar y nombre al instante desde localStorage para cero parpadeo
+      try {
+        var cachedAvatar = localStorage.getItem('unitropico_user_avatar') || localStorage.getItem('sgd_user_avatar');
+        var sidebarImg = document.getElementById('sidebar-avatar-img');
+        var sidebarTxt = document.getElementById('sidebar-avatar-text');
+        if (cachedAvatar && sidebarImg) {
+          sidebarImg.src = cachedAvatar;
+          sidebarImg.style.display = 'block';
+          if (sidebarTxt) sidebarTxt.style.display = 'none';
+        }
+        var cachedName = localStorage.getItem('unitropico_user_name');
+        var nameEl = document.getElementById('user-display-name');
+        if (cachedName && nameEl) {
+          nameEl.textContent = cachedName;
+        }
+      } catch (e) {}
+
+      // Precarga hover ultrarrápida e indicador de navegación superior
+      document.querySelectorAll('.sidebar-link').forEach(function(link) {
+        link.addEventListener('mouseenter', function() {
+          var href = link.getAttribute('href');
+          if (href && !document.querySelector('link[rel="prefetch"][href="' + href + '"]')) {
+            var pre = document.createElement('link');
+            pre.rel = 'prefetch';
+            pre.href = href;
+            document.head.appendChild(pre);
+          }
+        });
+        link.addEventListener('click', function(e) {
+          if (link.getAttribute('target') === '_blank' || e.metaKey || e.ctrlKey) return;
+          var bar = document.getElementById('page-navigation-progress-bar');
+          if (bar) {
+            bar.style.opacity = '1';
+            bar.style.width = '35%';
+            setTimeout(function() { bar.style.width = '75%'; }, 100);
+          }
+        });
+      });
+
+      // Escuchar eventos globales de actualización de perfil en vivo
+      function handleProfileUpdate(e) {
+        var detail = (e && e.detail) || {};
+        var newUrl = detail.avatarUrl || detail.avatar_url;
+        if (newUrl) {
+          document.querySelectorAll('img[data-user-avatar], .global-user-avatar-img, #sidebar-avatar-img').forEach(function(img) {
+            img.src = newUrl;
+            img.style.display = 'block';
+          });
+          document.querySelectorAll('#sidebar-avatar-text').forEach(function(txt) {
+            txt.style.display = 'none';
+          });
+        }
+        if (detail.nombre) {
+          document.querySelectorAll('[data-user-display-name], #user-display-name').forEach(function(el) {
+            el.textContent = detail.nombre;
+          });
+        }
+      }
+
+      window.addEventListener('unitropico:profile-updated', handleProfileUpdate);
+      window.addEventListener('sgd-user-updated', handleProfileUpdate);
     })();
   </script>
 
@@ -180,8 +250,26 @@ const visibleGroups = navGroupsRaw
       --sidebar-width: 286px;
     }
 
+    :global(html.sidebar-is-collapsed .sidebar),
     :global(body.sidebar-collapsed .sidebar) {
-      --sidebar-width: 76px;
+      --sidebar-width: 76px !important;
+      width: 76px !important;
+      min-width: 76px !important;
+      max-width: 76px !important;
+      flex: 0 0 76px !important;
+    }
+
+    /* Cero Layout Shift: Desactivar transiciones durante la carga inicial o navegación entre módulos */
+    :global(html:not(.sidebar-user-toggled) .sidebar),
+    :global(html:not(.sidebar-user-toggled) .main-wrapper),
+    :global(html:not(.sidebar-user-toggled) #app-sidebar),
+    :global(html:not(.sidebar-user-toggled) #app-sidebar *) {
+      transition: none !important;
+    }
+
+    /* Transición suave exclusivamente cuando el usuario hace clic en el botón de colapsar */
+    :global(html.sidebar-user-toggled .sidebar) {
+      transition: width 0.24s cubic-bezier(0.16, 1, 0.3, 1), flex-basis 0.24s cubic-bezier(0.16, 1, 0.3, 1) !important;
     }
 
     /* Estado inactivo base (desplegado y plegado) */

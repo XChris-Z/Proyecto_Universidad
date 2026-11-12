@@ -7,29 +7,28 @@ import { calculateDeadlineProgress } from "@lib/utils";
 import { isPeticionRespondida, isAuditLogOfficialResponse } from "@lib/subcarpetas";
 import { getDashboardSnapshotData } from "@lib/dashboard-data";
 
-// 1. Consultar métricas unificadas en tiempo real (sin columnas inexistentes)
-const dashSnap = await getDashboardSnapshotData();
-const dbPeticiones = dashSnap.peticiones;
+// 1. Consultar métricas, auditoría, normas y convenios en paralelo (Promise.all)
+const [dashSnap, auditRespRes, normasRes, conveniosRes] = await Promise.all([
+  getDashboardSnapshotData(),
+  supabase
+    .from("audit_logs" as any)
+    .select("action, entity_id, details")
+    .eq("action_type", "RESPUESTA")
+    .limit(400) as any,
+  supabase
+    .from("colegiados_normas" as any)
+    .select("id, organo, tipo, numero, year, fecha, titulo, descriptor, vigencia")
+    .order("created_at", { ascending: false }) as any,
+  supabase
+    .from("convenios" as any)
+    .select("id, tipo, numero, entidad, estado")
+    .order("created_at", { ascending: false }) as any,
+]);
 
-const { data: dbAuditRespuestas } = await (supabase
-  .from("audit_logs" as any)
-  .select("action, entity_id, details")
-  .eq("action_type", "RESPUESTA")
-  .limit(400) as any);
-
-const auditRespuestas = dbAuditRespuestas || [];
-
-// 2. Consultar normas de cuerpos colegiados reales
-const { data: dbNormas } = await (supabase
-  .from("colegiados_normas" as any)
-  .select("id, organo, tipo, numero, year, fecha, titulo, descriptor, vigencia")
-  .order("created_at", { ascending: false }) as any);
-
-// 3. Consultar convenios institucionales reales
-const { data: dbConvenios } = await (supabase
-  .from("convenios" as any)
-  .select("id, tipo, numero, entidad, estado")
-  .order("created_at", { ascending: false }) as any);
+const dbPeticiones = dashSnap?.peticiones || [];
+const auditRespuestas = auditRespRes?.data || [];
+const normas = normasRes?.data || [];
+const convenios = conveniosRes?.data || [];
 
 const peticiones = (dbPeticiones || []).map((p: any) => {
   const auditMatch = auditRespuestas.some((log: any) => isAuditLogOfficialResponse(log, p));
@@ -42,8 +41,6 @@ const peticiones = (dbPeticiones || []).map((p: any) => {
     respondida: isPeticionRespondida(enriched),
   };
 });
-const normas = dbNormas || [];
-const convenios = dbConvenios || [];
 
 const totalPeticiones = peticiones.length;
 const totalNormas = normas.length;

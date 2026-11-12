@@ -14,11 +14,11 @@ export const RBAC_MODULES: RbacModuleDef[] = [
   },
   {
     id: 'archivos',
-    label: 'Carpetas de Expedientes',
+    label: 'Carpetas de Radicados',
     href: '/archivos',
     sidebarId: 'nav-archivos',
     group: 'Navegación Principal',
-    description: 'Carpetas de expedientes, revisión de aportes, cierre interno, prórrogas y respaldo en Drive.',
+    description: 'Carpetas de radicados, revisión de aportes, cierre interno, prórrogas y respaldo en Drive.',
   },
   {
     id: 'peticiones',

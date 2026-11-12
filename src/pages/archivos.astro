@@ -79,114 +79,106 @@ export interface PeticionExpediente {
   peticion_anexos?: PeticionAnexo[];
   peticion_responsables?: PeticionResponsable[];
   subcarpetas?: PeticionSubcarpeta[];
+  [key: string]: any;
 }
 
-// Consultar peticiones, archivo principal y anexos reales en PostgreSQL
-const { data: dbPeticiones } = await (supabase
-  .from('peticiones' as any)
-  .select(`
-    id,
-    numero_radicado,
-    asunto,
-    descripcion,
-    categoria,
-    instrucciones_anexos,
-    solicitante_nombre,
-    solicitante_tipo,
-    solicitante_email,
-    fecha_radicacion,
-    fecha_limite_entrega,
-    fecha_limite_responsable,
-    storage_folder_path,
-    respuesta_drive_url,
-    estado,
-    prioridad,
-    created_at,
-    peticion_anexos (
-      id,
-      nombre_archivo,
-      storage_path,
-      tamano_bytes,
-      mime_type,
-      es_anexo_oficina,
-      peticion_responsable_id,
-      created_at
-    ),
-    peticion_responsables (
-      id,
-      codigo_acceso,
-      estado_entrega,
-      fecha_entrega,
-      observaciones_entrega,
-      storage_subfolder_path,
-      oficinas (
-        id,
-        codigo,
-        nombre,
-        email_institucional
-      )
-    )
-  `)
-  .order('created_at', { ascending: false }) as any);
+// Consultar todas las tablas en paralelo con select('*') de forma resiliente al esquema (sin joins fragiles)
+const [
+  peticionesRes,
+  responsablesRes,
+  anexosRes,
+  subcarpetasRes,
+  oficinasRes,
+  auditLogsRes,
+] = await Promise.all([
+  supabase.from('peticiones' as any).select('*').order('created_at', { ascending: false }) as any,
+  supabase.from('peticion_responsables' as any).select('*').order('created_at', { ascending: true }) as any,
+  supabase.from('peticion_anexos' as any).select('*').order('created_at', { ascending: true }) as any,
+  supabase.from('peticion_subcarpetas' as any).select('*').order('created_at', { ascending: true }) as any,
+  supabase.from('oficinas' as any).select('*').order('nombre', { ascending: true }) as any,
+  supabase
+    .from('audit_logs' as any)
+    .select('action, entity_id, details')
+    .or('action_type.eq.RESPUESTA,action.ilike.%Expediente Marcado como Completo%')
+    .limit(500) as any,
+]);
 
-// Consultar catálogo de oficinas para modal de asignación de subcarpetas
-const { data: oficinasCatalogoDb } = await (supabase
-  .from('oficinas' as any)
-  .select('id, codigo, nombre, email_institucional')
-  .eq('activo', true)
-  .order('nombre') as any);
+let basePeticiones: any[] = Array.isArray(peticionesRes?.data) ? peticionesRes.data : [];
+if (peticionesRes?.error || !peticionesRes?.data) {
+  const fallbackPets = await (supabase.from('peticiones' as any).select('*') as any);
+  basePeticiones = Array.isArray(fallbackPets?.data) ? fallbackPets.data : [];
+}
 
-const oficinasCatalogo = (oficinasCatalogoDb as any[]) || [];
+let allRespRows: any[] = Array.isArray(responsablesRes?.data) ? responsablesRes.data : [];
+if (responsablesRes?.error || !responsablesRes?.data) {
+  const fallbackResp = await (supabase.from('peticion_responsables' as any).select('*') as any);
+  allRespRows = Array.isArray(fallbackResp?.data) ? fallbackResp.data : [];
+}
 
-// Consultar subcarpetas asociadas de forma segura y defensiva
+let allAnexoRows: any[] = Array.isArray(anexosRes?.data) ? anexosRes.data : [];
+if (anexosRes?.error || !anexosRes?.data) {
+  const fallbackAnexos = await (supabase.from('peticion_anexos' as any).select('*') as any);
+  allAnexoRows = Array.isArray(fallbackAnexos?.data) ? fallbackAnexos.data : [];
+}
+
+let allSubcarpetaRows: any[] = Array.isArray(subcarpetasRes?.data) ? subcarpetasRes.data : [];
+if (subcarpetasRes?.error || !subcarpetasRes?.data) {
+  const fallbackSubs = await (supabase.from('peticion_subcarpetas' as any).select('*') as any);
+  allSubcarpetaRows = Array.isArray(fallbackSubs?.data) ? fallbackSubs.data : [];
+}
+
+const allOficinasRows: any[] = Array.isArray(oficinasRes?.data) ? oficinasRes.data : [];
+const oficinasById: Record<string, any> = {};
+allOficinasRows.forEach((o: any) => {
+  if (o?.id) oficinasById[String(o.id)] = o;
+});
+
+const oficinasCatalogo = allOficinasRows.filter((o: any) => o?.activo !== false);
+
 const subcarpetasPorPeticion: Record<string, any[]> = {};
-try {
-  const { data: allSubcarpetas } = await (supabase
-    .from('peticion_subcarpetas' as any)
-    .select('id, peticion_id, nombre, descripcion, created_at')
-    .order('created_at', { ascending: true }) as any);
+allSubcarpetaRows.forEach((sub: any) => {
+  const petId = String(sub?.peticion_id || '').trim();
+  if (!petId) return;
+  if (!subcarpetasPorPeticion[petId]) subcarpetasPorPeticion[petId] = [];
+  subcarpetasPorPeticion[petId]!.push(sub);
+});
 
-  if (allSubcarpetas && allSubcarpetas.length > 0) {
-    allSubcarpetas.forEach((sub: any) => {
-      const petId = String(sub?.peticion_id || '');
-      if (petId) {
-        if (!subcarpetasPorPeticion[petId]) {
-          subcarpetasPorPeticion[petId] = [];
-        }
-        subcarpetasPorPeticion[petId]!.push(sub);
-      }
-    });
-  }
-} catch {
-  // Ignorar si la tabla física aún no existe
-}
-
-// Consultar mapeos de subcarpeta_id en peticion_responsables y peticion_anexos de forma segura
 const respSubcarpetasMap: Record<string, string> = {};
-try {
-  const { data: respSubs } = await (supabase
-    .from('peticion_responsables' as any)
-    .select('id, subcarpeta_id') as any);
-  if (respSubs && respSubs.length > 0) {
-    respSubs.forEach((r: any) => {
-      if (r && r.id && r.subcarpeta_id) respSubcarpetasMap[r.id] = r.subcarpeta_id;
-    });
+const responsablesPorPeticion: Record<string, any[]> = {};
+allRespRows.forEach((r: any) => {
+  const petId = String(r?.peticion_id || '').trim();
+  if (r?.id && r?.subcarpeta_id) {
+    respSubcarpetasMap[String(r.id)] = String(r.subcarpeta_id);
   }
-} catch {}
+  if (!petId) return;
+  if (!responsablesPorPeticion[petId]) responsablesPorPeticion[petId] = [];
+  const ofiResolved = r?.oficinas || (r?.oficina_id ? oficinasById[String(r.oficina_id)] : null) || null;
+  responsablesPorPeticion[petId]!.push({
+    ...r,
+    oficinas: ofiResolved,
+  });
+});
 
 const anexoSubcarpetasMap: Record<string, string> = {};
-try {
-  const { data: anexoSubs } = await (supabase
-    .from('peticion_anexos' as any)
-    .select('id, subcarpeta_id') as any);
-  if (anexoSubs && anexoSubs.length > 0) {
-    anexoSubs.forEach((a: any) => {
-      if (a && a.id && a.subcarpeta_id) anexoSubcarpetasMap[a.id] = a.subcarpeta_id;
-    });
+const anexosPorPeticion: Record<string, any[]> = {};
+allAnexoRows.forEach((a: any) => {
+  const petId = String(a?.peticion_id || '').trim();
+  if (a?.id && a?.subcarpeta_id) {
+    anexoSubcarpetasMap[String(a.id)] = String(a.subcarpeta_id);
   }
-} catch {}
+  if (!petId) return;
+  if (!anexosPorPeticion[petId]) anexosPorPeticion[petId] = [];
+  anexosPorPeticion[petId]!.push(a);
+});
 
-const rawPeticiones = (dbPeticiones as any[]) || [];
+const rawPeticiones = basePeticiones.map((p: any) => {
+  const petId = String(p?.id || '');
+  return {
+    ...p,
+    peticion_responsables: responsablesPorPeticion[petId] || (Array.isArray(p.peticion_responsables) ? p.peticion_responsables : []),
+    peticion_anexos: anexosPorPeticion[petId] || (Array.isArray(p.peticion_anexos) ? p.peticion_anexos : []),
+  };
+});
 
 // Helper robusto para inferir subcarpetas virtuales si la tabla física aún no tiene registros (retrocompatibilidad)
 function combineSubcarpetas(p: any, dbSubs: any[] = []): any[] {
@@ -386,7 +378,7 @@ const peticionesJson = JSON.stringify(peticiones);
 const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64');
 ---
 
-<AppLayout title="Carpetas y Expedientes" activeNav="archivos">
+<AppLayout title="Carpetas de Radicados" activeNav="archivos">
   <div class="archivos-wrapper" style="display: flex; flex-direction: column; gap: 20px;">
 
     <!-- =========================================================================
@@ -404,10 +396,10 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
           </div>
           <div>
             <div class="archivos-header-title-row">
-              <span class="archivos-header-title">Carpetas y Expedientes</span>
-              <span class="archivos-total-pill">{totalCount} expediente{totalCount === 1 ? '' : 's'}</span>
+              <span class="archivos-header-title">Carpetas de Radicados</span>
+              <span class="archivos-total-pill">{totalCount} radicado{totalCount === 1 ? '' : 's'}</span>
             </div>
-            <div class="archivos-header-subtitle">Repositorio central de expedientes, trazabilidad de aportes por dependencia y cierre de peticiones</div>
+            <div class="archivos-header-subtitle">Repositorio digital de carpetas por radicado, control de soportes por dependencia y cierre de trámites.</div>
             {totalCount > 0 && (
               <div class="archivos-sla-chart-strip" title={`Distribución SLA: ${respondedCount} Respondida, ${safeCount} Saludable, ${warnCount} Próximo a Vencer, ${criticalCount} Crítico`}>
                 <div class="archivos-chart-bar" role="img" aria-label="Distribución de plazos de expedientes">
@@ -639,7 +631,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
             <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--verde-suave-bg); color: var(--verde-principal); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px auto;">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
             </div>
-            <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--text-main); margin: 0 0 6px 0;">No hay carpetas de expedientes creadas</h3>
+            <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--text-main); margin: 0 0 6px 0;">No hay carpetas de radicados creadas</h3>
             <p style="font-size: 0.85rem; color: var(--text-muted); max-width: 480px; margin: 0 auto 16px auto;">
               Al radicar una nueva petición se creará automáticamente su carpeta virtual con su documento inicial y las subcarpetas de las dependencias asignadas.
             </p>
@@ -2367,6 +2359,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       subcarpetas?: any[];
       peticion_anexos?: PeticionAnexo[];
       peticion_responsables?: PeticionResponsable[];
+      [key: string]: any;
     }
 
     let allPeticiones: PeticionExpediente[] = [];
@@ -3821,7 +3814,9 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                   if (typeof (window as any).showToast === 'function') {
                     (window as any).showToast('Soporte cargado exitosamente.', 'success');
                   }
-                  setTimeout(() => window.location.reload(), 800);
+                  if (currentActiveFolderId === peticion.id) {
+                    openFolderDetail(peticion.id);
+                  }
                 } else {
                   throw new Error(data.error || 'No se pudo registrar el soporte.');
                 }
@@ -4210,8 +4205,24 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
           return;
         }
 
-        (window as any).showToast('Expediente actualizado con éxito.', 'success');
-        setTimeout(() => window.location.reload(), 600);
+        const editModal = document.getElementById('modal-edit-peticion');
+        if (editModal) editModal.style.display = 'none';
+
+        const editId = payload.id;
+        const pet = peticionesMap.get(editId) || allPeticiones.find((p) => p.id === editId);
+        if (pet) {
+          pet.asunto = payload.asunto;
+          pet.solicitante_nombre = payload.solicitante_nombre;
+          pet.solicitante_tipo = payload.solicitante_tipo;
+          pet.prioridad = payload.prioridad;
+          pet.estado = payload.estado;
+          pet.fecha_limite_entrega = payload.fecha_limite_entrega;
+          indexPeticion(pet);
+          syncExplorerCountsAndCard(pet);
+          if (currentActiveFolderId === editId) openFolderDetail(editId);
+        }
+
+        (window as any).showToast('Radicado actualizado con éxito.', 'success');
       } catch (err) {
         (window as any).showToast('Error de conexión al actualizar.', 'error');
       } finally {
@@ -4379,9 +4390,9 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
             });
           }
           indexPeticion(pet);
-          openFolderDetail(petId);
+          if (currentActiveFolderId === petId) openFolderDetail(petId);
         } else {
-          setTimeout(() => window.location.reload(), 600);
+          closeSubModal();
         }
       } catch (err: any) {
         console.error('Error al crear subcarpeta:', err);

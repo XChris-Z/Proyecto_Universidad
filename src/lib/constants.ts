@@ -34,7 +34,7 @@ export const ADMIN_ROUTES = ['/admin/usuarios', '/admin/roles'];
 /** Mapa de rutas a etiquetas de navegación */
 export const NAV_LABELS: Record<string, string> = {
   '/dashboard':      'Dashboard — Panel de Control',
-  '/archivos':       'Carpetas de Expedientes',
+  '/archivos':       'Carpetas de Radicados',
   '/peticiones':     'Derechos de Petición y PQRS',
   '/normas':         'Cuerpos Colegiados y Normatividad',
   '/juridicos':      'Asuntos Jurídicos y Tutelas',

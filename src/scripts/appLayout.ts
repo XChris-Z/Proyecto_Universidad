@@ -376,6 +376,7 @@ export function initAppLayout() {
 
     const avatarUrl = u.avatar_url ||
       (u as any).avatarUrl ||
+      localStorage.getItem('unitropico_user_avatar') ||
       localStorage.getItem('sgd_user_avatar') ||
       localStorage.getItem(`sgd_avatar_${u.id}`) ||
       (u.email ? localStorage.getItem(`sgd_avatar_${u.email}`) : null);
@@ -387,8 +388,14 @@ export function initAppLayout() {
         sidebarAvatarImg.style.display = 'block';
         sidebarAvatarText.style.display = 'none';
       } else if (avatarEl) {
-        avatarEl.innerHTML = `<img src="${avatarUrl}" alt="Avatar" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" />`;
+        avatarEl.innerHTML = `<img src="${avatarUrl}" alt="Avatar" class="global-user-avatar-img" data-user-avatar style="width:100%; height:100%; border-radius:50%; object-fit:cover;" />`;
       }
+      document.querySelectorAll<HTMLImageElement>('img[data-user-avatar], .global-user-avatar-img').forEach((img) => {
+        if (img !== sidebarAvatarImg) {
+          img.src = avatarUrl;
+          img.style.display = 'block';
+        }
+      });
     } else {
       if (sidebarAvatarText) {
         sidebarAvatarText.textContent = u.initials;
@@ -730,14 +737,34 @@ export function initAppLayout() {
   })();
 
   // 5. Escuchar evento de actualización de usuario en tiempo real
-  window.addEventListener('sgd-user-updated', (e: any) => {
-    const detail = e.detail;
-    if (detail?.avatar_url) {
-      window.currentLoggedUser.avatar_url = detail.avatar_url;
-      (window.currentLoggedUser as any).avatarUrl = detail.avatar_url;
-      window.updateUserProfileUI();
+  function handleProfileUpdatedGlobal(e: any) {
+    const detail = e.detail || {};
+    const newAvatar = detail.avatarUrl || detail.avatar_url;
+    if (newAvatar) {
+      window.currentLoggedUser.avatar_url = newAvatar;
+      (window.currentLoggedUser as any).avatarUrl = newAvatar;
+      localStorage.setItem('unitropico_user_avatar', newAvatar);
+      localStorage.setItem('sgd_user_avatar', newAvatar);
+      document.querySelectorAll<HTMLImageElement>('img[data-user-avatar], .global-user-avatar-img, #sidebar-avatar-img').forEach((img) => {
+        img.src = newAvatar;
+        img.style.display = 'block';
+      });
+      document.querySelectorAll<HTMLElement>('#sidebar-avatar-text').forEach((txt) => {
+        txt.style.display = 'none';
+      });
     }
-  });
+    if (detail.nombre) {
+      window.currentLoggedUser.name = detail.nombre;
+      localStorage.setItem('unitropico_user_name', detail.nombre);
+      document.querySelectorAll<HTMLElement>('[data-user-display-name], #user-display-name').forEach((el) => {
+        el.textContent = detail.nombre;
+      });
+    }
+    window.updateUserProfileUI();
+  }
+
+  window.addEventListener('sgd-user-updated', handleProfileUpdatedGlobal);
+  window.addEventListener('unitropico:profile-updated', handleProfileUpdatedGlobal);
 
   // 6. Fecha del Topbar
   const dateText = document.getElementById('current-date-text');
@@ -796,28 +823,45 @@ export function initAppLayout() {
 
   function setSidebarCollapsed(collapsed: boolean) {
     hideMiniTooltip();
+    document.documentElement.classList.add('sidebar-user-toggled');
     if (collapsed) {
       document.body.classList.add('sidebar-collapsed');
+      document.documentElement.classList.add('sidebar-is-collapsed');
+      document.documentElement.setAttribute('data-sidebar-collapsed', 'true');
       localStorage.setItem('sgd_sidebar_collapsed', 'true');
+      localStorage.setItem('unitropico_sidebar_collapsed', 'true');
       btnCollapseSidebar?.setAttribute('aria-expanded', 'false');
     } else {
       document.body.classList.remove('sidebar-collapsed');
+      document.documentElement.classList.remove('sidebar-is-collapsed');
+      document.documentElement.removeAttribute('data-sidebar-collapsed');
       localStorage.setItem('sgd_sidebar_collapsed', 'false');
+      localStorage.setItem('unitropico_sidebar_collapsed', 'false');
       btnCollapseSidebar?.setAttribute('aria-expanded', 'true');
     }
   }
 
   // Inicializar estado guardado en navegador en escritorio
-  const isInitiallyCollapsed = window.innerWidth >= 1025 && localStorage.getItem('sgd_sidebar_collapsed') === 'true';
+  const isInitiallyCollapsed = window.innerWidth >= 1025 && (
+    localStorage.getItem('sgd_sidebar_collapsed') === 'true' ||
+    localStorage.getItem('unitropico_sidebar_collapsed') === 'true' ||
+    localStorage.getItem('sidebar_collapsed') === 'true' ||
+    localStorage.getItem('sidebarCollapsed') === 'true'
+  );
   if (isInitiallyCollapsed) {
     document.body.classList.add('sidebar-collapsed');
+    document.documentElement.classList.add('sidebar-is-collapsed');
+    document.documentElement.setAttribute('data-sidebar-collapsed', 'true');
     btnCollapseSidebar?.setAttribute('aria-expanded', 'false');
   } else {
     document.body.classList.remove('sidebar-collapsed');
+    document.documentElement.classList.remove('sidebar-is-collapsed');
+    document.documentElement.removeAttribute('data-sidebar-collapsed');
     btnCollapseSidebar?.setAttribute('aria-expanded', 'true');
   }
 
   btnCollapseSidebar?.addEventListener('click', () => {
+    document.documentElement.classList.add('sidebar-user-toggled');
     const isCurrentlyCollapsed = document.body.classList.contains('sidebar-collapsed');
     setSidebarCollapsed(!isCurrentlyCollapsed);
   });

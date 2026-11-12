@@ -333,11 +333,15 @@ import { supabase } from '@lib/supabase';
             .update({ name: newName, updated_at: nowIso })
             .eq('id', targetId);
 
-          // Actualizar vista local
+          // Actualizar vista local y global en vivo
           const nameEl = document.getElementById('profile-name-display');
           if (nameEl) nameEl.textContent = newName;
+          document.querySelectorAll<HTMLElement>('[data-user-display-name], #user-display-name').forEach((el) => {
+            el.textContent = newName;
+          });
 
-          // Actualizar localStorage
+          // Actualizar localStorage y despachar evento en vivo
+          localStorage.setItem('unitropico_user_name', newName);
           const storedUser = localStorage.getItem('sgd_current_user');
           if (storedUser) {
             try {
@@ -346,6 +350,9 @@ import { supabase } from '@lib/supabase';
               localStorage.setItem('sgd_current_user', JSON.stringify(u));
             } catch(e) {}
           }
+          window.dispatchEvent(new CustomEvent('unitropico:profile-updated', {
+            detail: { nombre: newName }
+          }));
 
           // Registrar en bitácora de auditoría de Supabase
           await logSystemActivity({
@@ -412,6 +419,8 @@ import { supabase } from '@lib/supabase';
             });
           }
 
+          const cacheBustedUrl = `${publicUrl}${publicUrl.includes('?') ? '&' : '?'}v=${Date.now()}`;
+
           // Actualizar avatar_url en tabla profiles de Supabase
           const targetId = currentUserId || 'usr-root';
           const updateFilter = currentUserEmail 
@@ -420,40 +429,49 @@ import { supabase } from '@lib/supabase';
 
           await supabase
             .from('profiles')
-            .update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
+            .update({ avatar_url: cacheBustedUrl, updated_at: new Date().toISOString() })
             .or(updateFilter);
 
-          // Guardar y actualizar vista globalmente
-          localStorage.setItem('sgd_user_avatar', publicUrl);
-          localStorage.setItem(`sgd_avatar_${currentUserId}`, publicUrl);
+          // Guardar y actualizar vista globalmente al instante sin recarga
+          localStorage.setItem('unitropico_user_avatar', cacheBustedUrl);
+          localStorage.setItem('sgd_user_avatar', cacheBustedUrl);
+          localStorage.setItem(`sgd_avatar_${targetId}`, cacheBustedUrl);
           if (currentUserEmail) {
-            localStorage.setItem(`sgd_avatar_${currentUserEmail}`, publicUrl);
+            localStorage.setItem(`sgd_avatar_${currentUserEmail}`, cacheBustedUrl);
           }
           const rawUser = localStorage.getItem("sgd_current_user");
           let uObj: any = {};
           if (rawUser) {
             try { uObj = JSON.parse(rawUser); } catch(e) {}
           }
-          uObj.avatar_url = publicUrl;
-          uObj.avatarUrl = publicUrl;
+          uObj.avatar_url = cacheBustedUrl;
+          uObj.avatarUrl = cacheBustedUrl;
           localStorage.setItem("sgd_current_user", JSON.stringify(uObj));
 
-          const img = document.getElementById("profile-avatar-img") as HTMLImageElement;
-          const initials = document.getElementById("profile-avatar-initials");
-          if (img && initials) {
-            img.src = publicUrl;
+          // Actualizar todas las instancias de avatar en el DOM al instante
+          document.querySelectorAll<HTMLImageElement>('img[data-user-avatar], .global-user-avatar-img, .sidebar-user-card img, #profile-avatar-img, #sidebar-avatar-img').forEach((img) => {
+            img.src = cacheBustedUrl;
             img.style.display = "block";
-            initials.style.display = "none";
-          }
+          });
+          document.querySelectorAll<HTMLElement>('#sidebar-avatar-text, #profile-avatar-initials').forEach((init) => {
+            init.style.display = "none";
+          });
 
           if (window.currentLoggedUser) {
-            window.currentLoggedUser.avatar_url = publicUrl;
-            (window.currentLoggedUser as any).avatarUrl = publicUrl;
+            window.currentLoggedUser.avatar_url = cacheBustedUrl;
+            (window.currentLoggedUser as any).avatarUrl = cacheBustedUrl;
           }
           if (window.updateUserProfileUI) {
             window.updateUserProfileUI();
           }
-          window.dispatchEvent(new CustomEvent("sgd-user-updated", { detail: { avatar_url: publicUrl } }));
+
+          window.dispatchEvent(new CustomEvent("unitropico:profile-updated", {
+            detail: {
+              avatarUrl: cacheBustedUrl,
+              nombre: document.getElementById('profile-name-display')?.textContent || ''
+            }
+          }));
+          window.dispatchEvent(new CustomEvent("sgd-user-updated", { detail: { avatar_url: cacheBustedUrl } }));
 
           // Registrar en auditoría
           await logSystemActivity({

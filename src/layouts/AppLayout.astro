@@ -19,12 +19,24 @@ Astro.response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate
   <script is:inline>
     (function () {
       try {
-        if (window.innerWidth >= 1025 && localStorage.getItem('sgd_sidebar_collapsed') === 'true') {
-          document.body.classList.add('sidebar-collapsed');
+        var isCollapsed = window.innerWidth >= 1025 && (
+          localStorage.getItem('sgd_sidebar_collapsed') === 'true' ||
+          localStorage.getItem('unitropico_sidebar_collapsed') === 'true' ||
+          localStorage.getItem('sidebar_collapsed') === 'true' ||
+          localStorage.getItem('sidebarCollapsed') === 'true'
+        );
+        if (isCollapsed) {
+          document.documentElement.classList.add('sidebar-is-collapsed');
+          document.documentElement.setAttribute('data-sidebar-collapsed', 'true');
+          if (document.body) document.body.classList.add('sidebar-collapsed');
         }
       } catch (e) {}
     })();
   </script>
+
+  <!-- Barra de progreso de navegación ultra-delgada entre módulos -->
+  <div id="page-navigation-progress-bar" style="position: fixed; top: 0; left: 0; height: 2.5px; width: 0%; background: linear-gradient(90deg, #00594E 0%, #B5A160 100%); z-index: 999999; pointer-events: none; opacity: 0; transition: width 0.3s ease, opacity 0.2s ease;"></div>
+
   <div class="app-container" style="--sidebar-width: 286px; display: flex; width: 100%; min-height: 100vh;">
     <!-- Barra lateral -->
     <Sidebar activeNav={activeNav} />
