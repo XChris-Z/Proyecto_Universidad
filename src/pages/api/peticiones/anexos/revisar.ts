@@ -16,6 +16,7 @@ import {
   isGoogleDriveConfigured,
   sincronizarAporteAprobadoEnDrive,
   eliminarAporteRechazadoDeDrive,
+  eliminarArchivoIndividualDeDrive,
 } from '@lib/google-drive';
 
 function extractPinFromObs(obs?: string | null): string | null {
@@ -195,6 +196,10 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
 
     if (!delErr) {
       removedOrMarked = true;
+      if (anexo.storage_path) {
+        const cleanPath = anexo.storage_path.replace(/^peticiones\//, '').replace(/^\/+/, '');
+        await supabase.storage.from('peticiones').remove([cleanPath]).catch(() => {});
+      }
     } else {
       const markedName = String(anexo.nombre_archivo || '').toUpperCase().includes('[RECHAZADO]')
         ? anexo.nombre_archivo
@@ -329,7 +334,12 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
           recipientOffice,
           effectiveSubName
         );
-        driveRemoved = Boolean(remRes.removed);
+        const indRes = await eliminarArchivoIndividualDeDrive(
+          pet.numero_radicado || pet.id,
+          cleanFileName,
+          effectiveSubName
+        );
+        driveRemoved = Boolean(remRes.removed || indRes.success);
       } catch (driveErr: any) {
         console.warn('[REVISAR ANEXO] Aviso eliminando aporte rechazado de Drive (no fatal):', driveErr?.message);
       }

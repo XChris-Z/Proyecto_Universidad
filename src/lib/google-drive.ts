@@ -996,6 +996,257 @@ export async function eliminarAporteRechazadoDeDrive(
 }
 
 /**
+ * Extrae el ID de una carpeta de Google Drive a partir de una URL o cadena de ID.
+ */
+export function extractDriveFolderId(input?: string | null): string | null {
+  if (!input) return null;
+  const str = String(input).trim();
+  const urlMatch = str.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+  if (urlMatch?.[1]) return urlMatch[1];
+  const idMatch = str.match(/^([a-zA-Z0-9_-]{20,})$/);
+  if (idMatch?.[1]) return idMatch[1];
+  return null;
+}
+
+/**
+ * 1. Elimina la carpeta de un radicado en Google Drive usando su ID o buscando por prefijo de radicado.
+ * Nunca bloquea la operación si no está configurado o si no existe en Drive.
+ */
+export async function eliminarCarpetaRadicadoDeDrive(
+  radicado: string,
+  driveFolderIdOrUrl?: string | null
+): Promise<{ success: boolean; deletedCount: number }> {
+  if (!isGoogleDriveConfigured()) return { success: false, deletedCount: 0 };
+  const cleanRad = sanitizeDriveName(radicado, '').trim();
+  if (!cleanRad) return { success: false, deletedCount: 0 };
+
+  let deletedCount = 0;
+  try {
+    const { drive, parentFolderId } = await getGoogleDriveClient();
+
+    // 1. Si viene un ID directo o URL, intentar eliminar directamente esa carpeta
+    const directId = extractDriveFolderId(driveFolderIdOrUrl);
+    if (directId) {
+      try {
+        await drive.files.delete({ fileId: directId, supportsAllDrives: true });
+        deletedCount++;
+      } catch (err: any) {
+        try {
+          await drive.files.update({ fileId: directId, requestBody: { trashed: true }, supportsAllDrives: true });
+          deletedCount++;
+        } catch {}
+      }
+    }
+
+    // 2. Buscar en la raíz de Drive todas las carpetas que coincidan con el radicado para no dejar huérfanas
+    const parentClause =
+      parentFolderId && parentFolderId !== 'root'
+        ? `'${escapeDriveQueryValue(parentFolderId)}' in parents and `
+        : '';
+    const q = `${parentClause}mimeType = 'application/vnd.google-apps.folder' and trashed = false and name contains '${escapeDriveQueryValue(cleanRad)}'`;
+    const listRes = await drive.files.list({
+      q,
+      fields: 'files(id, name)',
+      spaces: 'drive',
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+      pageSize: 30,
+    });
+
+    const cleanUpper = cleanRad.toUpperCase();
+    const matchingFolders = (listRes.data.files || []).filter((f) => {
+      const n = String(f.name || '').toUpperCase();
+      return n.includes(cleanUpper);
+    });
+
+    for (const f of matchingFolders) {
+      if (!f.id || f.id === directId) continue;
+      try {
+        await drive.files.delete({ fileId: f.id, supportsAllDrives: true });
+        deletedCount++;
+      } catch (err: any) {
+        try {
+          await drive.files.update({ fileId: f.id, requestBody: { trashed: true }, supportsAllDrives: true });
+          deletedCount++;
+        } catch {}
+      }
+    }
+
+    return { success: true, deletedCount };
+  } catch (err: any) {
+    console.warn(`[Google Drive] Error al eliminar carpeta de radicado ${radicado}:`, err?.message);
+    return { success: false, deletedCount };
+  }
+}
+
+/**
+ * 2. Elimina una subcarpeta de dependencia específica dentro de la carpeta del radicado en Google Drive.
+ */
+export async function eliminarSubcarpetaDependenciaDeDrive(
+  radicado: string,
+  nombreSubcarpetaODependencia: string
+): Promise<{ success: boolean; deletedCount: number }> {
+  if (!isGoogleDriveConfigured()) return { success: false, deletedCount: 0 };
+  const cleanRad = sanitizeDriveName(radicado, '').trim();
+  const cleanSub = sanitizeDriveName(nombreSubcarpetaODependencia, '').trim();
+  if (!cleanRad || !cleanSub) return { success: false, deletedCount: 0 };
+
+  let deletedCount = 0;
+  try {
+    const { drive, parentFolderId } = await getGoogleDriveClient();
+
+    // Ubicar la carpeta principal del radicado
+    const parentClause =
+      parentFolderId && parentFolderId !== 'root'
+        ? `'${escapeDriveQueryValue(parentFolderId)}' in parents and `
+        : '';
+    const rootSearch = await drive.files.list({
+      q: `${parentClause}mimeType = 'application/vnd.google-apps.folder' and trashed = false and name contains '${escapeDriveQueryValue(cleanRad)}'`,
+      fields: 'files(id, name)',
+      spaces: 'drive',
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+      pageSize: 10,
+    });
+
+    const mainFolder = (rootSearch.data.files || []).find((f) =>
+      String(f.name || '').toUpperCase().includes(cleanRad.toUpperCase())
+    ) || (rootSearch.data.files || [])[0];
+
+    if (!mainFolder?.id) return { success: false, deletedCount: 0 };
+
+    // Buscar la subcarpeta interna
+    const subQ = `'${escapeDriveQueryValue(mainFolder.id)}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false and name contains '${escapeDriveQueryValue(cleanSub)}'`;
+    const subRes = await drive.files.list({
+      q: subQ,
+      fields: 'files(id, name)',
+      spaces: 'drive',
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+      pageSize: 20,
+    });
+
+    const targetSubs = subRes.data.files || [];
+    for (const sf of targetSubs) {
+      if (!sf.id) continue;
+      try {
+        await drive.files.delete({ fileId: sf.id, supportsAllDrives: true });
+        deletedCount++;
+      } catch {
+        try {
+          await drive.files.update({ fileId: sf.id, requestBody: { trashed: true }, supportsAllDrives: true });
+          deletedCount++;
+        } catch {}
+      }
+    }
+
+    return { success: true, deletedCount };
+  } catch (err: any) {
+    console.warn(`[Google Drive] Error al eliminar subcarpeta ${nombreSubcarpetaODependencia} de ${radicado}:`, err?.message);
+    return { success: false, deletedCount };
+  }
+}
+
+/**
+ * 3. Elimina un archivo individual dentro de la carpeta del radicado (y su subcarpeta opcional) en Google Drive.
+ */
+export async function eliminarArchivoIndividualDeDrive(
+  radicado: string,
+  nombreArchivo: string,
+  nombreSubcarpeta?: string
+): Promise<{ success: boolean; deletedCount: number }> {
+  if (!isGoogleDriveConfigured()) return { success: false, deletedCount: 0 };
+  const cleanRad = sanitizeDriveName(radicado, '').trim();
+  const cleanFileName = sanitizeDriveName(nombreArchivo, '').trim();
+  if (!cleanRad || !cleanFileName) return { success: false, deletedCount: 0 };
+
+  let deletedCount = 0;
+  try {
+    const { drive, parentFolderId } = await getGoogleDriveClient();
+
+    // Ubicar la carpeta del radicado
+    const parentClause =
+      parentFolderId && parentFolderId !== 'root'
+        ? `'${escapeDriveQueryValue(parentFolderId)}' in parents and `
+        : '';
+    const rootSearch = await drive.files.list({
+      q: `${parentClause}mimeType = 'application/vnd.google-apps.folder' and trashed = false and name contains '${escapeDriveQueryValue(cleanRad)}'`,
+      fields: 'files(id, name)',
+      spaces: 'drive',
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+      pageSize: 10,
+    });
+
+    const mainFolder = (rootSearch.data.files || []).find((f) =>
+      String(f.name || '').toUpperCase().includes(cleanRad.toUpperCase())
+    ) || (rootSearch.data.files || [])[0];
+
+    if (!mainFolder?.id) return { success: false, deletedCount: 0 };
+
+    // Subcarpetas para búsqueda exhaustiva
+    const subRes = await drive.files.list({
+      q: `'${escapeDriveQueryValue(mainFolder.id)}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+      fields: 'files(id, name)',
+      spaces: 'drive',
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+      pageSize: 50,
+    });
+
+    const subfolders = subRes.data.files || [];
+    let foldersToCheck: { id?: string | null; name?: string | null }[] = [mainFolder, ...subfolders];
+
+    if (nombreSubcarpeta && nombreSubcarpeta.trim()) {
+      const cleanTargetSub = sanitizeDriveName(nombreSubcarpeta, '').toLowerCase();
+      const matchedSubs = subfolders.filter((sf) =>
+        String(sf.name || '').toLowerCase().includes(cleanTargetSub)
+      );
+      if (matchedSubs.length > 0) {
+        foldersToCheck = matchedSubs;
+      }
+    }
+
+    const targetLower = cleanFileName.toLowerCase();
+    for (const folder of foldersToCheck) {
+      if (!folder.id) continue;
+      const fileQ = `'${escapeDriveQueryValue(folder.id)}' in parents and trashed = false and mimeType != 'application/vnd.google-apps.folder'`;
+      const fileList = await drive.files.list({
+        q: fileQ,
+        fields: 'files(id, name)',
+        spaces: 'drive',
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true,
+        pageSize: 100,
+      });
+
+      const matchedFiles = (fileList.data.files || []).filter((f) => {
+        const fn = String(f.name || '').trim().toLowerCase();
+        return fn === targetLower || fn.endsWith(` - ${targetLower}`) || fn.includes(targetLower);
+      });
+
+      for (const mf of matchedFiles) {
+        if (!mf.id) continue;
+        try {
+          await drive.files.delete({ fileId: mf.id, supportsAllDrives: true });
+          deletedCount++;
+        } catch {
+          try {
+            await drive.files.update({ fileId: mf.id, requestBody: { trashed: true }, supportsAllDrives: true });
+            deletedCount++;
+          } catch {}
+        }
+      }
+    }
+
+    return { success: true, deletedCount };
+  } catch (err: any) {
+    console.warn(`[Google Drive] Error al eliminar archivo ${nombreArchivo} de ${radicado}:`, err?.message);
+    return { success: false, deletedCount };
+  }
+}
+
+/**
  * Sube/actualiza la Respuesta Final Oficial en la subcarpeta dedicada dentro de Google Drive.
  */
 export async function sincronizarRespuestaFinalEnDrive(

@@ -2,6 +2,9 @@
 // src/pages/peticiones.astro
 export const prerender = false;
 
+// No almacenar en caché para reflejar eliminaciones y cambios al instante
+Astro.response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+
 import AppLayout from '@layouts/AppLayout.astro';
 import { supabase } from '@lib/supabase';
 import { calculateDeadlineProgress } from '@lib/utils';

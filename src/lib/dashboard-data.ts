@@ -51,6 +51,8 @@ export interface DashboardSnapshot {
   totalRespondidas: number;
   totalPendientes: number;
   responseRate: number;
+  aportesAprobadosCount: number;
+  dependenciasPendientesCount: number;
   oficiosEmitidos: number;
   oficiosEntregados: number;
   oficiosPendientes: number;
@@ -234,15 +236,41 @@ export async function getDashboardSnapshotData(): Promise<DashboardSnapshot> {
     safeSelectAll('audit_logs', 'raw_timestamp', false),
   ]);
 
+  const peticionesActivas = (rawPeticiones || []).filter((p: any) => p && p.id);
+  const idsPeticionesActivas = new Set(peticionesActivas.map((p: any) => String(p.id)));
+  const radicadosActivos = new Set(
+    peticionesActivas
+      .map((p: any) => String(p.numero_radicado || p.radicado || '').trim().toUpperCase())
+      .filter(Boolean)
+  );
+
+  // Filtrar estrictamente contra peticiones activas (descartar huérfanos de radicados eliminados)
+  const responsablesActivos = (rawResponsables || []).filter((r: any) => {
+    const pid = String(r?.peticion_id || '');
+    const rad = String(r?.radicado || r?.numero_radicado || '').trim().toUpperCase();
+    return (pid && idsPeticionesActivas.has(pid)) || (rad && radicadosActivos.has(rad));
+  });
+
+  const anexosActivos = (rawAnexos || []).filter((a: any) => {
+    const pid = String(a?.peticion_id || '');
+    const rad = String(a?.radicado || a?.numero_radicado || '').trim().toUpperCase();
+    return (pid && idsPeticionesActivas.has(pid)) || (rad && radicadosActivos.has(rad));
+  });
+
+  const subcarpetasActivas = (rawSubcarpetas || []).filter((s: any) => {
+    const pid = String(s?.peticion_id || '');
+    return pid && idsPeticionesActivas.has(pid);
+  });
+
   const oficinaMap = new Map<string, any>();
   for (const ofi of rawOficinas) {
     if (ofi?.id) oficinaMap.set(String(ofi.id), ofi);
   }
 
   const respsByPet = new Map<string, any[]>();
-  for (const r of rawResponsables) {
+  for (const r of responsablesActivos) {
     const pid = String(r?.peticion_id || '');
-    if (!pid) continue;
+    if (!pid || !idsPeticionesActivas.has(pid)) continue;
     const enrichedResp = {
       ...r,
       oficinas: r.oficinas || oficinaMap.get(String(r.oficina_id || '')) || null,
@@ -253,18 +281,18 @@ export async function getDashboardSnapshotData(): Promise<DashboardSnapshot> {
   }
 
   const anexosByPet = new Map<string, any[]>();
-  for (const a of rawAnexos) {
+  for (const a of anexosActivos) {
     const pid = String(a?.peticion_id || '');
-    if (!pid) continue;
+    if (!pid || !idsPeticionesActivas.has(pid)) continue;
     const arr = anexosByPet.get(pid) || [];
     arr.push(a);
     anexosByPet.set(pid, arr);
   }
 
   const subsByPet = new Map<string, any[]>();
-  for (const s of rawSubcarpetas) {
+  for (const s of subcarpetasActivas) {
     const pid = String(s?.peticion_id || '');
-    if (!pid) continue;
+    if (!pid || !idsPeticionesActivas.has(pid)) continue;
     const arr = subsByPet.get(pid) || [];
     arr.push(s);
     subsByPet.set(pid, arr);
@@ -272,7 +300,7 @@ export async function getDashboardSnapshotData(): Promise<DashboardSnapshot> {
 
   const todayYmd = getTodayBogotaYmd();
 
-  const peticiones = rawPeticiones.map((p: any) => {
+  const peticiones = peticionesActivas.map((p: any) => {
     const pid = String(p.id || '');
     const parsedMeta = separarRespuestaMeta(p.instrucciones_anexos || p.descripcion || '');
     const auditMatch = rawAuditLogs.some((log: any) => isAuditLogOfficialResponse(log, p));
@@ -339,11 +367,12 @@ export async function getDashboardSnapshotData(): Promise<DashboardSnapshot> {
   const slaDangerPct = activeTotal > 0 ? Math.max(0, 100 - slaSafePct - slaWarnPct) : 0;
 
   // Oficios emitidos vs entregados/pendientes (asignaciones a dependencias)
-  const oficiosEmitidos = rawResponsables.length;
+  // Oficios emitidos vs entregados/pendientes (asignaciones a dependencias de radicados activos exclusivamente)
+  const oficiosEmitidos = responsablesActivos.length;
   let oficiosEntregados = 0;
   let oficiosPendientes = 0;
 
-  // Mapa de rendimiento por dependencia
+  // Mapa de rendimiento por dependencia (únicamente radicados activos)
   const depPerfMap = new Map<string, DependencyPerformanceRow>();
   for (const ofi of rawOficinas) {
     depPerfMap.set(String(ofi.id), {
@@ -360,7 +389,7 @@ export async function getDashboardSnapshotData(): Promise<DashboardSnapshot> {
     });
   }
 
-  for (const r of rawResponsables) {
+  for (const r of responsablesActivos) {
     const st = String(r?.estado_entrega || '').toLowerCase();
     const obs = String(r?.observaciones_entrega || '').toUpperCase();
     const isApproved = obs.includes('[APROBADO]') || obs.includes('ESTADO:APROBADO');
@@ -379,6 +408,46 @@ export async function getDashboardSnapshotData(): Promise<DashboardSnapshot> {
       if (isApproved) existing.aprobadas++;
       if (isRejected) existing.rechazadas++;
     }
+  }
+
+  // Contadores específicos y coherentes para la tarjeta "Eficacia en Peticiones"
+  let aportesAprobadosCount = 0;
+  let dependenciasPendientesCount = 0;
+
+  for (const pet of peticiones) {
+    const petResps = pet.peticion_responsables || [];
+    const petAnexos = pet.peticion_anexos || [];
+
+    for (const a of petAnexos) {
+      const aName = String(a.nombre_archivo || '').toUpperCase();
+      if (aName.includes('[APROBADO]') || a.aprobado === true) {
+        aportesAprobadosCount++;
+      }
+    }
+
+    for (const r of petResps) {
+      const st = String(r?.estado_entrega || '').toLowerCase();
+      const obs = String(r?.observaciones_entrega || '').toUpperCase();
+      const isApproved = obs.includes('[APROBADO]') || obs.includes('ESTADO:APROBADO') || st === 'aprobado';
+      const isRejected = obs.includes('[RECHAZADO]') || obs.includes('DEVUELTO');
+      const isDelivered = !isRejected && (st === 'entregado' || isApproved);
+
+      if (isApproved && petAnexos.length === 0) {
+        aportesAprobadosCount++;
+      }
+
+      if (!pet.respondida && !isDelivered) {
+        dependenciasPendientesCount++;
+      }
+    }
+  }
+
+  if (aportesAprobadosCount === 0 && totalRespondidas > 0) {
+    aportesAprobadosCount = responsablesActivos.filter((r) => {
+      const st = String(r?.estado_entrega || '').toLowerCase();
+      const obs = String(r?.observaciones_entrega || '').toUpperCase();
+      return st === 'entregado' || st === 'aprobado' || obs.includes('[APROBADO]');
+    }).length || totalRespondidas;
   }
 
   const rendimientoDependencias: DependencyPerformanceRow[] = [];
@@ -413,6 +482,8 @@ export async function getDashboardSnapshotData(): Promise<DashboardSnapshot> {
     totalRespondidas,
     totalPendientes,
     responseRate,
+    aportesAprobadosCount,
+    dependenciasPendientesCount,
     oficiosEmitidos,
     oficiosEntregados,
     oficiosPendientes,
