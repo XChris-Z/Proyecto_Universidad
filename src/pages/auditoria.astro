@@ -2,17 +2,20 @@
 // src/pages/auditoria.astro
 import AppLayout from '@layouts/AppLayout.astro';
 import { supabase } from '@lib/supabase';
+import { isRelevantAuditLog } from '@lib/audit';
 
-// Consultar bitácora oficial en tiempo real desde Supabase
-const { data: dbLogs } = await supabase
+// Consultar bitácora oficial en tiempo real desde Supabase (excluyendo snapshots técnicos y eventos no esenciales como perfil)
+const { data: rawDbLogs } = await supabase
   .from('audit_logs')
   .select('*')
   .or('entity.is.null,entity.neq.rbac_state_snapshot')
   .order('raw_timestamp', { ascending: false });
 
-const totalLogs = dbLogs?.length ?? 0;
-const totalRadicaciones = dbLogs?.filter(l => l.action_type === 'SUBIDA_ARCHIVO' || l.action_type === 'RADICACION').length ?? 0;
-const totalRespuestas = dbLogs?.filter(l => l.action_type === 'RESPUESTA' || (l.action && l.action.toLowerCase().includes('respuesta'))).length ?? 0;
+const dbLogs = (rawDbLogs || []).filter(isRelevantAuditLog);
+
+const totalLogs = dbLogs.length;
+const totalRadicaciones = dbLogs.filter(l => l.action_type === 'SUBIDA_ARCHIVO' || l.action_type === 'RADICACION').length;
+const totalRespuestas = dbLogs.filter(l => l.action_type === 'RESPUESTA' || (l.action && l.action.toLowerCase().includes('respuesta'))).length;
 ---
 
 <AppLayout title="Registro de Auditoría y Trazabilidad" activeNav="auditoria">

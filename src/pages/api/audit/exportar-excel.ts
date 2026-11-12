@@ -7,6 +7,7 @@ import { buildXlsxWorkbookBuffer, type XlsxCell } from '@lib/xlsx-builder';
 import {
   cleanAuditActionTitle,
   formatBogotaTimestamp,
+  isRelevantAuditLog,
   normalizeAuditActor,
   sanitizeAuditDisplayIp,
 } from '@lib/audit';
@@ -45,9 +46,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
       );
     }
 
-    const visibleRows = ((data as any[]) || []).filter(
-      (d) => d && d.entity !== 'rbac_state_snapshot'
-    );
+    const visibleRows = ((data as any[]) || []).filter(isRelevantAuditLog);
 
     const mapped = visibleRows.map((d: any) => {
       const normalizedActor = normalizeAuditActor({

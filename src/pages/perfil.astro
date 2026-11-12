@@ -231,7 +231,6 @@ import { supabase } from '@lib/supabase';
 
   <script>
     import { supabase } from '@lib/supabase';
-    import { logSystemActivity } from '@lib/audit';
 
     let currentUserId = 'usr-root';
     let currentUserEmail = 'christianlemus.es@unitropico.edu.co';
@@ -354,17 +353,6 @@ import { supabase } from '@lib/supabase';
             detail: { nombre: newName }
           }));
 
-          // Registrar en bitácora de auditoría de Supabase
-          await logSystemActivity({
-            actor: { id: targetId, name: newName, role: 'admin' },
-            action: 'Actualización de Nombre de Funcionario',
-            actionType: 'MODIFICACION',
-            entity: 'Perfil Institucional',
-            entityId: targetId,
-            details: `El usuario actualizó su nombre oficial a "${newName}".`,
-            severity: 'INFO'
-          });
-
           if (nameStatus) {
             nameStatus.style.display = 'block';
             nameStatus.style.color = '#059669';
@@ -472,17 +460,6 @@ import { supabase } from '@lib/supabase';
             }
           }));
           window.dispatchEvent(new CustomEvent("sgd-user-updated", { detail: { avatar_url: cacheBustedUrl } }));
-
-          // Registrar en auditoría
-          await logSystemActivity({
-            actor: { id: currentUserId, name: inputName?.value || 'Usuario', role: 'funcionario' },
-            action: 'Actualización de Foto de Perfil (Avatar)',
-            actionType: 'MODIFICACION',
-            entity: 'Perfil Institucional',
-            entityId: currentUserId,
-            details: 'El usuario actualizó su fotografía institucional en Supabase Storage (bucket avatars).',
-            severity: 'INFO'
-          });
 
           window.showToast('Foto de perfil actualizada correctamente.');
         } catch (err) {
@@ -602,17 +579,6 @@ import { supabase } from '@lib/supabase';
             .from('profiles')
             .update({ is_provisional_password: false, updated_at: new Date().toISOString() })
             .eq('id', targetId);
-
-          // Registrar en auditoría oficial de Supabase
-          await logSystemActivity({
-            actor: { id: currentUserId, name: inputName?.value || 'Usuario', role: 'funcionario' },
-            action: 'Cambio de Contraseña Institucional',
-            actionType: 'SEGURIDAD',
-            entity: 'Credenciales de Acceso',
-            entityId: currentUserId,
-            details: 'Actualización segura de contraseña institucional cumpliendo la política estricta de seguridad.',
-            severity: 'WARN'
-          });
 
           if (statusFeedback) {
             statusFeedback.style.display = 'block';

@@ -12,11 +12,39 @@ import {
 const AUDIT_STORAGE_KEY = 'sgd_audit_logs';
 const BOGOTA_TZ = 'America/Bogota';
 
+/** Filtra eventos que no corresponden a la pista de auditoría oficial de la plataforma (p. ej. cambios de foto/perfil o snapshots internos) */
+export function isRelevantAuditLog(log: { entity?: string | null; action?: string | null; details?: string | null }): boolean {
+  if (!log) return false;
+  const entity = (log.entity || '').toLowerCase().trim();
+  const action = (log.action || '').toLowerCase().trim();
+
+  // Excluir snapshots técnicos internos
+  if (entity === 'rbac_state_snapshot') return false;
+
+  // Excluir cambios de perfil personal y credenciales de usuario
+  if (
+    entity === 'perfil institucional' ||
+    entity === 'perfil' ||
+    entity === 'credenciales de acceso' ||
+    action.includes('foto de perfil') ||
+    action.includes('avatar') ||
+    action.includes('nombre de funcionario') ||
+    action.includes('actualización de perfil') ||
+    action.includes('actualizacion de perfil') ||
+    action.includes('cambio de contraseña') ||
+    action.includes('cambio de contrasena')
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
 function loadLogs(): AuditLog[] {
   if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(AUDIT_STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as AuditLog[]) : [];
+    return raw ? (JSON.parse(raw) as AuditLog[]).filter(isRelevantAuditLog) : [];
   } catch {
     return [];
   }
@@ -346,7 +374,7 @@ export async function fetchAuditLogsFromSupabase(): Promise<AuditLog[]> {
       .limit(250);
 
     if (!error && data) {
-      const visibleRows = (data as any[]).filter((d) => d.entity !== 'rbac_state_snapshot');
+      const visibleRows = (data as any[]).filter(isRelevantAuditLog);
       const mapped: AuditLog[] = visibleRows.map((d: any) => {
         const normalizedActor = normalizeAuditActor({
           id: d.actor_id || 'usr-root',

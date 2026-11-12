@@ -7,6 +7,7 @@ import {
   cleanAuditActionTitle,
   normalizeAuditActor,
   formatBogotaTimestamp,
+  isRelevantAuditLog,
 } from '@lib/audit';
 import type { AuditLog } from '@lib/types';
 
@@ -15,8 +16,9 @@ export async function initAuditoria() {
   const emptyState = document.getElementById('audit-empty-state');
   if (!tbody) return;
 
-  // Cargar bitácora real de Supabase
-  let logs: AuditLog[] = await fetchAuditLogsFromSupabase();
+  // Cargar bitácora real de Supabase (excluyendo snapshots y eventos de perfil)
+  let rawLogs: AuditLog[] = await fetchAuditLogsFromSupabase();
+  let logs: AuditLog[] = (rawLogs || []).filter(isRelevantAuditLog);
 
   function updateCounters(filteredList: AuditLog[]) {
     const kpiTotal = document.getElementById('audit-kpi-total');
