@@ -66,6 +66,31 @@ const totalFuncionarios = enrichedUsers.filter((u: any) => !u.isUserAdmin).lengt
 const customRolesCount = rolesCatalog.filter((r) => !r.isProtected).length;
 const totalRoles = rolesCatalog.length;
 
+const SIDEBAR_MODULE_ICONS: Record<string, string> = {
+  dashboard: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6',
+  archivos: 'M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4',
+  peticiones: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+  subir: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12',
+  normas: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
+  juridicos: 'M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3',
+  juzgamiento: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',
+  calendario: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
+  programas: 'M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222',
+  planeacion: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
+  relacionamiento: 'M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9',
+  auditoria: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z',
+};
+
+const ROLE_PALETTE_OPTIONS = [
+  { hex: '#00594E', name: 'Verde Unitrópico' },
+  { hex: '#B5A160', name: 'Dorado Institucional' },
+  { hex: '#003830', name: 'Verde Bosque' },
+  { hex: '#786832', name: 'Bronce Oscuro' },
+  { hex: '#1E293B', name: 'Pizarra Ejecutivo' },
+  { hex: '#334155', name: 'Carbón Institucional' },
+  { hex: '#7F1D1D', name: 'Vinotinto Sobrio' },
+];
+
 const initialRbacBootstrap = JSON.stringify({
   roles: rolesCatalog,
   userCustomRoles: rbacState.userCustomRoles,
@@ -553,11 +578,12 @@ const initialRbacBootstrap = JSON.stringify({
 
     <!-- MODAL 5: GESTIÓN Y CREACIÓN DE ROLES PERSONALIZADOS RBAC -->
     <div class="modal-backdrop" id="modal-roles" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1050; align-items: center; justify-content: center; padding: 20px;">
-      <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 1060px; border-radius: var(--radius-md); box-shadow: 0 24px 55px rgba(0,0,0,0.25); overflow: hidden; display: flex; flex-direction: column; height: min(90vh, 780px);">
-        
-        <div style="background: #ffffff; border-top: 4px solid #B5A160; border-bottom: 1px solid #DCE4E3; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+      <div class="roles-modal-card">
+
+        <!-- ZONA 1: HEADER FIJO -->
+        <div style="background: #ffffff; border-bottom: 1px solid #E2E8F0; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
           <div style="display: flex; align-items: center; gap: 12px;">
-            <div style="width: 40px; height: 40px; border-radius: 10px; background: #F7F5EE; border: 1.5px solid #DBD2B0; display: flex; align-items: center; justify-content: center; color: #786832;">
+            <div style="width: 40px; height: 40px; border-radius: 10px; background: #F7F5EE; border: 1.5px solid #DBD2B0; display: flex; align-items: center; justify-content: center; color: #786832; flex-shrink: 0;">
               <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
             </div>
             <div>
@@ -566,122 +592,170 @@ const initialRbacBootstrap = JSON.stringify({
               <div style="font-size: 0.76rem; color: #52606D; margin-top: 2px;">Cree perfiles personalizados y defina sus permisos de consulta y gestión por módulo</div>
             </div>
           </div>
-          <button type="button" class="btn-close-modal" id="btn-close-roles-modal" style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid #DCE4E3; background: #F8FAFC; color: #52606D; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; line-height: 1;">&times;</button>
+          <button type="button" class="btn-close-modal" id="btn-close-roles-modal" style="width: 34px; height: 34px; border-radius: 9px; border: 1px solid #DCE4E3; background: #F8FAFC; color: #52606D; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; line-height: 1; flex-shrink: 0;">&times;</button>
         </div>
 
+        <!-- ZONA 2: CUERPO 2 COLUMNAS CON SCROLL PROPIO -->
         <div class="roles-modal-body">
-          <!-- Columna Izquierda: Lista de Roles Interactivos -->
-          <div class="roles-list-pane pro-scroll-container">
-            <button type="button" id="btn-new-custom-role" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 14px; background: #00594E; color: #FFFFFF; border: none; border-radius: 10px; font-weight: 800; font-size: 0.82rem; cursor: pointer; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0, 89, 78, 0.2);">
+          <!-- Columna Izquierda: Sidebar de Roles Interactivos -->
+          <div class="roles-sidebar-col pro-scroll-container">
+            <button type="button" id="btn-new-custom-role" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 14px; background: #00594E; color: #FFFFFF; border: none; border-radius: 10px; font-weight: 800; font-size: 0.82rem; cursor: pointer; box-shadow: 0 2px 6px rgba(0, 89, 78, 0.2); flex-shrink: 0;">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               <span>Crear Rol Personalizado</span>
             </button>
 
             <div id="roles-catalog-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+
+            <div style="margin-top: auto; background: #F7F5EE; border: 1px solid #DBD2B0; border-radius: 10px; padding: 11px 12px; font-size: 0.72rem; line-height: 1.45; color: #786832; font-weight: 600;">
+              Seleccione un rol para editar sus accesos o cree un perfil personalizado para asignarlo en el directorio.
+            </div>
           </div>
 
-          <!-- Columna Derecha: Editor del Rol (Scrollable sin recortes) -->
-          <form id="form-role-editor" class="roles-editor-pane">
-            <div class="roles-editor-scroll pro-scroll-container">
-              <input type="hidden" id="role-edit-id" />
-              <input type="hidden" id="role-edit-color" value="#00594E" />
+          <!-- Columna Derecha: Formulario + Tabla 12 Módulos -->
+          <form id="form-role-editor" class="roles-editor-col">
+            <input type="hidden" id="role-edit-id" />
+            <input type="hidden" id="role-edit-color" value="#00594E" />
 
-              <div id="role-admin-lock-banner" style="display: none; background: #F2F7F6; border: 1px solid #B2CFCB; color: #00594E; padding: 12px 14px; border-radius: 10px; font-size: 0.80rem; margin-bottom: 14px;">
-                <strong>Rol Protegido del Sistema:</strong> El rol <strong>Administrador</strong> posee control irrestricto permanente sobre los 12 módulos y la seguridad del sistema.
+            <div id="role-admin-lock-banner" style="display: none; background: #F2F7F6; border: 1px solid #B2CFCB; color: #00594E; padding: 10px 14px; border-radius: 10px; font-size: 0.78rem; flex-shrink: 0;">
+              <strong>Rol Protegido del Sistema:</strong> El rol <strong>Administrador</strong> posee control irrestricto permanente sobre los 12 módulos y la seguridad del sistema.
+            </div>
+
+            <!-- Nombre + Selector de Color Pro Max -->
+            <div style="display: grid; grid-template-columns: 1fr 255px; gap: 14px; align-items: start; flex-shrink: 0;">
+              <div>
+                <label style="font-size: 0.72rem; font-weight: 800; color: #52606D; text-transform: uppercase; letter-spacing: 0.03em; display: block; margin-bottom: 5px;">Nombre del Rol *</label>
+                <input type="text" id="role-edit-name" required placeholder="Ej. Coordinador Jurídico" class="role-desc-input" />
               </div>
-
-              <div style="display: grid; grid-template-columns: 1fr 240px; gap: 14px; margin-bottom: 12px; align-items: start;">
-                <div>
-                  <label style="font-size: 0.74rem; font-weight: 800; color: #52606D; text-transform: uppercase; display: block; margin-bottom: 5px;">Nombre del Rol *</label>
-                  <input type="text" id="role-edit-name" required placeholder="Ej. Coordinador Jurídico" class="form-input" />
-                </div>
-                <div>
-                  <label style="font-size: 0.74rem; font-weight: 800; color: #52606D; text-transform: uppercase; display: block; margin-bottom: 5px;">Color Identificador</label>
-                  <div class="role-color-custom-select" id="role-color-picker">
-                    <button type="button" id="role-color-trigger" class="role-color-trigger">
-                      <span style="display: inline-flex; align-items: center; gap: 8px; min-width: 0;">
-                        <span id="role-color-dot" style="width: 14px; height: 14px; border-radius: 50%; background: #00594E; border: 1px solid rgba(0,0,0,0.15); flex-shrink: 0;"></span>
-                        <span id="role-color-label" style="font-size: 0.82rem; font-weight: 700; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Verde Principal</span>
-                      </span>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00594E" stroke-width="2.4" style="flex-shrink: 0;"><polyline points="6 9 12 15 18 9"/></svg>
-                    </button>
-                    <div class="role-color-dropdown" id="role-color-dropdown" style="display: none;">
-                      {[
-                        { hex: '#00594E', name: 'Verde Principal' },
-                        { hex: '#B5A160', name: 'Dorado Institucional' },
-                        { hex: '#003830', name: 'Verde Profundo' },
-                        { hex: '#786832', name: 'Bronce Oscuro' },
-                        { hex: '#1E293B', name: 'Pizarra Ejecutivo' },
-                        { hex: '#334155', name: 'Carbón Institucional' },
-                        { hex: '#7F1D1D', name: 'Vinotinto Sobrio' },
-                      ].map((c) => (
-                        <button type="button" class="role-color-option" data-color={c.hex} data-label={c.name}>
-                          <span style={`width: 14px; height: 14px; border-radius: 50%; background: ${c.hex}; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.15);`}></span>
-                          <span style="font-size: 0.80rem; font-weight: 700; color: #111827;">{c.name}</span>
-                          <span style="margin-left: auto; font-family: monospace; font-size: 0.70rem; color: #64748B;">{c.hex}</span>
-                        </button>
-                      ))}
-                    </div>
+              <div>
+                <label style="font-size: 0.72rem; font-weight: 800; color: #52606D; text-transform: uppercase; letter-spacing: 0.03em; display: block; margin-bottom: 5px;">Color Identificador</label>
+                <div class="role-color-custom-select" id="role-color-picker">
+                  <button type="button" id="role-color-trigger" class="role-color-trigger">
+                    <span style="display: inline-flex; align-items: center; gap: 8px; min-width: 0;">
+                      <span id="role-color-dot" style="width: 14px; height: 14px; border-radius: 50%; background: #00594E; border: 1px solid rgba(0,0,0,0.15); flex-shrink: 0;"></span>
+                      <span id="role-color-label" style="font-size: 0.82rem; font-weight: 700; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Verde Unitrópico</span>
+                    </span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00594E" stroke-width="2.4" style="flex-shrink: 0;"><polyline points="6 9 12 15 18 9"/></svg>
+                  </button>
+                  <div class="role-color-dropdown" id="role-color-dropdown" style="display: none;">
+                    {ROLE_PALETTE_OPTIONS.map((c) => (
+                      <button type="button" class="role-color-option" data-color={c.hex} data-label={c.name}>
+                        <span style={`width: 14px; height: 14px; border-radius: 50%; background: ${c.hex}; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.15);`}></span>
+                        <span style="font-size: 0.80rem; font-weight: 700; color: #111827;">{c.name}</span>
+                        <span style="margin-left: auto; font-family: monospace; font-size: 0.70rem; color: #64748B;">{c.hex}</span>
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
-
-            <div style="margin-bottom: 12px;">
-              <label style="font-size: 0.74rem; font-weight: 800; color: #52606D; text-transform: uppercase; display: block; margin-bottom: 5px;">Descripción / Alcance</label>
-              <input type="text" id="role-edit-desc" placeholder="Describe las responsabilidades y alcance operativo del rol..." class="form-input" />
             </div>
 
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 9px; padding: 9px 12px;">
+            <!-- Swatches clicables + Vista previa en vivo del Badge del Rol -->
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding: 8px 12px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; flex-shrink: 0;">
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span style="font-size: 0.70rem; font-weight: 800; color: #64748B; text-transform: uppercase;">Muestras:</span>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  {ROLE_PALETTE_OPTIONS.map((c) => (
+                    <button
+                      type="button"
+                      class="role-color-swatch"
+                      data-color={c.hex}
+                      data-label={c.name}
+                      title={`${c.name} (${c.hex})`}
+                      style={`background: ${c.hex};`}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 0.70rem; font-weight: 800; color: #64748B; text-transform: uppercase;">Vista Previa:</span>
+                <span id="role-live-preview-badge" class="role-live-preview-pill" style="background: #F2F7F6; border: 1px solid #00594E; color: #00594E;">
+                  <span id="role-live-preview-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #00594E; flex-shrink: 0;"></span>
+                  <span id="role-live-preview-text">FUNCIONARIO</span>
+                </span>
+              </div>
+            </div>
+
+            <!-- Descripción / Alcance sin recortes -->
+            <div style="flex-shrink: 0;">
+              <label style="font-size: 0.72rem; font-weight: 800; color: #52606D; text-transform: uppercase; letter-spacing: 0.03em; display: block; margin-bottom: 5px;">Descripción / Alcance</label>
+              <textarea id="role-edit-desc" rows="2" placeholder="Describe las responsabilidades y alcance operativo del rol..." class="role-desc-input role-desc-textarea"></textarea>
+            </div>
+
+            <!-- Barra de Sincronización + Presets -->
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 9px; padding: 8px 12px; flex-shrink: 0;">
               <label style="display: flex; align-items: center; gap: 8px; font-size: 0.76rem; font-weight: 700; color: #334155; cursor: pointer;">
                 <input type="checkbox" id="role-edit-propagate" checked style="accent-color: #00594E;" />
                 <span>Sincronizar permisos en usuarios asignados a este rol</span>
               </label>
 
               <div style="display: flex; gap: 6px;">
-                <button type="button" class="btn-role-preset" data-preset="view_all" style="font-size: 0.70rem; font-weight: 750; padding: 4px 8px; border-radius: 6px; border: 1px solid #DBD2B0; background: #F7F5EE; color: #786832; cursor: pointer;">Solo Ver</button>
-                <button type="button" class="btn-role-preset" data-preset="full_modules" style="font-size: 0.70rem; font-weight: 750; padding: 4px 8px; border-radius: 6px; border: 1px solid #B2CFCB; background: #F2F7F6; color: #00594E; cursor: pointer;">Todos</button>
-                <button type="button" class="btn-role-preset" data-preset="clear_all" style="font-size: 0.70rem; font-weight: 750; padding: 4px 8px; border-radius: 6px; border: 1px solid #FECACA; background: #FEF2F2; color: #DC2626; cursor: pointer;">Limpiar</button>
+                <button type="button" class="btn-role-preset" data-preset="view_all" style="font-size: 0.70rem; font-weight: 750; padding: 4px 9px; border-radius: 6px; border: 1px solid #DBD2B0; background: #F7F5EE; color: #786832; cursor: pointer;">Solo Ver</button>
+                <button type="button" class="btn-role-preset" data-preset="full_modules" style="font-size: 0.70rem; font-weight: 750; padding: 4px 9px; border-radius: 6px; border: 1px solid #B2CFCB; background: #F2F7F6; color: #00594E; cursor: pointer;">Todos</button>
+                <button type="button" class="btn-role-preset" data-preset="clear_all" style="font-size: 0.70rem; font-weight: 750; padding: 4px 9px; border-radius: 6px; border: 1px solid #FECACA; background: #FEF2F2; color: #DC2626; cursor: pointer;">Limpiar</button>
               </div>
             </div>
 
-            <!-- Matriz 12 Módulos del Rol -->
-            <div style="border: 1.5px solid #DCE4E3; border-radius: 10px; overflow: hidden;">
-              <div style="display: grid; grid-template-columns: 1fr 95px 125px; align-items: center; background: #F8FAFC; border-bottom: 1px solid #DCE4E3; padding: 9px 14px; font-size: 0.70rem; font-weight: 800; color: #52606D; text-transform: uppercase;">
-                <span>Módulo (12)</span>
-                <span style="text-align: center;">Ver</span>
-                <span style="text-align: center;">Gestionar</span>
-              </div>
-
-              <div>
-                {RBAC_MODULES.map((mod, idx) => (
-                  <div style={`display: grid; grid-template-columns: 1fr 95px 125px; align-items: center; padding: 8px 14px; ${idx < RBAC_MODULES.length - 1 ? 'border-bottom: 1px solid #E2E8F0;' : ''} background: #FFFFFF;`}>
-                    <div style="min-width: 0;">
-                      <div style="font-weight: 750; font-size: 0.80rem; color: #111827;">{mod.label}</div>
-                      <div style="font-size: 0.69rem; color: #64748B;">{mod.group}</div>
-                    </div>
-                    <div style="display: flex; justify-content: center;">
-                      <label class="switch switch-sm">
-                        <input type="checkbox" class="role-perm-checkbox role-ver-cb" data-matrix="role" data-module-id={mod.id} data-perm-id={`${mod.id}.ver`} />
-                        <span class="slider"></span>
-                      </label>
-                    </div>
-                    <div style="display: flex; justify-content: center;">
-                      <label class="switch switch-sm">
-                        <input type="checkbox" class="role-perm-checkbox role-manage-cb" data-matrix="role" data-module-id={mod.id} data-perm-id={`${mod.id}.gestionar`} />
-                        <span class="slider slider-gold"></span>
-                      </label>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            </div>
-
-            <div class="roles-editor-footer">
-              <button type="button" class="btn btn-secondary" id="btn-cancel-roles-modal">Cerrar</button>
-              <button type="submit" id="btn-save-role" class="btn btn-primary" style="font-weight: 800; padding: 9px 20px;">Guardar Rol</button>
+            <!-- Tabla Scrollable con Cabecera Sticky (12 Módulos Completos) -->
+            <div class="roles-modules-table-wrap pro-scroll-container">
+              <table class="roles-modules-table">
+                <thead>
+                  <tr>
+                    <th style="text-align: left;">Módulo ({RBAC_MODULES.length})</th>
+                    <th style="text-align: center; width: 92px;">Ver</th>
+                    <th style="text-align: center; width: 112px;">Gestionar</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {RBAC_MODULES.map((mod) => (
+                    <tr class="role-module-row">
+                      <td>
+                        <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+                          <div class="role-module-icon-box">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <path d={SIDEBAR_MODULE_ICONS[mod.id] || SIDEBAR_MODULE_ICONS.dashboard} />
+                            </svg>
+                          </div>
+                          <div style="min-width: 0;">
+                            <div style="font-weight: 750; font-size: 0.81rem; color: #111827; line-height: 1.25;">{mod.label}</div>
+                            <div style="font-size: 0.69rem; color: #64748B;">{mod.group}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td style="text-align: center;">
+                        <div style="display: inline-flex; justify-content: center;">
+                          <label class="switch switch-sm">
+                            <input type="checkbox" class="role-perm-checkbox role-ver-cb" data-matrix="role" data-module-id={mod.id} data-perm-id={`${mod.id}.ver`} />
+                            <span class="slider"></span>
+                          </label>
+                        </div>
+                      </td>
+                      <td style="text-align: center;">
+                        <div style="display: inline-flex; justify-content: center;">
+                          <label class="switch switch-sm">
+                            <input type="checkbox" class="role-perm-checkbox role-manage-cb" data-matrix="role" data-module-id={mod.id} data-perm-id={`${mod.id}.gestionar`} />
+                            <span class="slider slider-gold"></span>
+                          </label>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </form>
+        </div>
+
+        <!-- ZONA 3: FOOTER DE ANCHO COMPLETO FIJO AL PIE DEL MODAL -->
+        <div class="roles-modal-footer">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span id="role-footer-perm-summary" style="font-size: 0.76rem; font-weight: 800; color: #00594E; background: #F2F7F6; border: 1px solid #B2CFCB; padding: 5px 11px; border-radius: 999px;">
+              0 Ver &middot; 0 Gestionar (0/24 activos)
+            </span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <button type="button" class="btn btn-secondary" id="btn-cancel-roles-modal">Cerrar</button>
+            <button type="submit" form="form-role-editor" id="btn-save-role" class="btn btn-primary" style="font-weight: 800; padding: 9px 20px;">Guardar Cambios del Rol</button>
+          </div>
         </div>
 
       </div>
@@ -691,7 +765,7 @@ const initialRbacBootstrap = JSON.stringify({
 
   <script id="rbac-bootstrap-json" type="application/json" set:html={initialRbacBootstrap}></script>
 
-  <style>
+  <style is:global>
     .form-input {
       width: 100%;
       padding: 10px 14px;
@@ -783,41 +857,227 @@ const initialRbacBootstrap = JSON.stringify({
       cursor: not-allowed;
     }
 
+    /* MODAL ROLES PRO MAX (3 ZONAS FIJAS + ESTILOS GLOBALES PARA ELEMENTOS DINÁMICOS) */
+    .roles-modal-card {
+      width: 100%;
+      max-width: 940px !important;
+      max-height: 88vh !important;
+      display: flex !important;
+      flex-direction: column !important;
+      background: #FFFFFF !important;
+      border-radius: 18px !important;
+      border: 1px solid #DCE4E3 !important;
+      border-top: 4px solid #00594E !important;
+      box-shadow: 0 24px 48px -12px rgba(0, 89, 78, 0.18), 0 8px 20px -6px rgba(15, 23, 42, 0.08) !important;
+      overflow: hidden !important;
+    }
     .roles-modal-body {
-      display: grid;
-      grid-template-columns: 280px 1fr;
-      flex: 1;
-      min-height: 0;
-      overflow: hidden;
+      display: grid !important;
+      grid-template-columns: 270px 1fr !important;
+      flex: 1 1 auto !important;
+      min-height: 0 !important;
+      overflow: hidden !important;
+      background: #FFFFFF !important;
     }
-    .roles-list-pane {
-      padding: 18px;
-      background: #F8FAFC;
-      border-right: 1px solid #DCE4E3;
-      overflow-y: auto;
+    .roles-sidebar-col {
+      background: #F8FAFC !important;
+      border-right: 1px solid #E2E8F0 !important;
+      padding: 16px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 12px !important;
+      min-height: 0 !important;
+      overflow-y: auto !important;
     }
-    .roles-editor-pane {
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-      overflow: hidden;
-      padding: 0;
-      background: #FFFFFF;
+    .roles-editor-col {
+      padding: 18px 22px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 12px !important;
+      min-height: 0 !important;
+      overflow: hidden !important;
+      background: #FFFFFF !important;
     }
-    .roles-editor-scroll {
-      flex: 1;
-      min-height: 0;
-      overflow-y: auto;
-      padding: 18px 22px 24px 22px;
+    .role-desc-input {
+      width: 100% !important;
+      padding: 9px 12px !important;
+      font-size: 0.83rem !important;
+      color: #1E293B !important;
+      background: #FFFFFF !important;
+      border: 1px solid #CBD5E1 !important;
+      border-radius: 10px !important;
+      font-family: inherit !important;
+      box-sizing: border-box !important;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
     }
-    .roles-editor-footer {
-      flex-shrink: 0;
-      padding: 14px 22px;
-      background: #F8FAFC;
-      border-top: 1px solid #DCE4E3;
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
+    .role-desc-input:focus {
+      outline: none !important;
+      border-color: #00594E !important;
+      box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.1) !important;
+    }
+    .role-desc-textarea {
+      resize: none !important;
+      line-height: 1.4 !important;
+      min-height: 54px !important;
+    }
+    .roles-modules-table-wrap {
+      flex: 1 1 auto !important;
+      min-height: 220px !important;
+      max-height: 310px !important;
+      overflow-y: auto !important;
+      border: 1px solid #DCE4E3 !important;
+      border-radius: 12px !important;
+      background: #FFFFFF !important;
+    }
+    .roles-modules-table {
+      width: 100% !important;
+      border-collapse: collapse !important;
+    }
+    .roles-modules-table thead th {
+      position: sticky !important;
+      top: 0 !important;
+      z-index: 5 !important;
+      background: #F2F7F6 !important;
+      color: #00594E !important;
+      border-bottom: 1px solid #B2CFCB !important;
+      padding: 10px 14px !important;
+      font-size: 0.70rem !important;
+      font-weight: 800 !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.04em !important;
+    }
+    .roles-modules-table tbody tr.role-module-row {
+      border-bottom: 1px solid #E2E8F0 !important;
+      background: #FFFFFF !important;
+      transition: background 0.14s ease !important;
+    }
+    .roles-modules-table tbody tr.role-module-row:last-child {
+      border-bottom: none !important;
+    }
+    .roles-modules-table tbody tr.role-module-row:hover {
+      background: #F8FAFC !important;
+    }
+    .roles-modules-table tbody td {
+      padding: 9px 14px !important;
+      vertical-align: middle !important;
+    }
+    .role-module-icon-box {
+      width: 30px !important;
+      height: 30px !important;
+      border-radius: 8px !important;
+      background: #F2F7F6 !important;
+      border: 1px solid #DCE4E3 !important;
+      color: #00594E !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      flex-shrink: 0 !important;
+    }
+    .roles-modal-footer {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 12px !important;
+      padding: 14px 22px !important;
+      background: #F8FAFC !important;
+      border-top: 1px solid #E2E8F0 !important;
+      flex-shrink: 0 !important;
+    }
+    .role-selector-row {
+      position: relative !important;
+      width: 100% !important;
+    }
+    .role-selector-btn {
+      width: 100% !important;
+      text-align: left !important;
+      padding: 12px 14px !important;
+      border-radius: 12px !important;
+      border: 1.5px solid #E2E8F0 !important;
+      background: #FFFFFF !important;
+      cursor: pointer !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 6px !important;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+      position: relative !important;
+      box-shadow: 0 2px 5px rgba(15, 23, 42, 0.02) !important;
+      font-family: inherit !important;
+    }
+    .role-selector-btn:hover {
+      border-color: #94B8B3 !important;
+      background: #F2F7F6 !important;
+      transform: translateY(-1px) !important;
+      box-shadow: 0 6px 14px rgba(0, 89, 78, 0.07) !important;
+    }
+    .role-selector-btn.active,
+    .role-selector-btn[aria-selected="true"] {
+      background: #F2F7F6 !important;
+      border-color: #00594E !important;
+      box-shadow: inset 4px 0 0 #00594E, 0 6px 16px -4px rgba(0, 89, 78, 0.12) !important;
+    }
+    .role-selector-top {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      width: 100% !important;
+      gap: 8px !important;
+    }
+    .role-selector-name {
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 8px !important;
+      font-size: 0.88rem !important;
+      font-weight: 800 !important;
+      color: #111827 !important;
+      min-width: 0 !important;
+    }
+    .role-selector-btn.active .role-selector-name {
+      color: #00594E !important;
+    }
+    .role-selector-chevron {
+      color: #94A3B8 !important;
+      transition: color 0.16s ease, transform 0.16s ease !important;
+      flex-shrink: 0 !important;
+    }
+    .role-selector-btn.active .role-selector-chevron {
+      color: #00594E !important;
+      transform: translateX(2px) !important;
+    }
+    .role-selector-meta {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      width: 100% !important;
+      font-size: 0.73rem !important;
+      color: #64748B !important;
+      font-weight: 600 !important;
+      gap: 8px !important;
+    }
+    .role-selector-badge {
+      background: #FFFFFF !important;
+      color: #00594E !important;
+      border: 1px solid #B2CFCB !important;
+      padding: 2px 8px !important;
+      border-radius: 999px !important;
+      font-size: 0.7rem !important;
+      font-weight: 700 !important;
+      white-space: nowrap !important;
+    }
+    .btn-delete-custom-role {
+      position: absolute !important;
+      top: 9px !important;
+      right: 32px !important;
+      z-index: 3 !important;
+      width: 24px !important;
+      height: 24px !important;
+      border-radius: 6px !important;
+      border: 1px solid #FECACA !important;
+      background: #FEF2F2 !important;
+      color: #DC2626 !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      cursor: pointer !important;
     }
     .role-color-custom-select {
       position: relative;
@@ -825,9 +1085,9 @@ const initialRbacBootstrap = JSON.stringify({
     }
     .role-color-trigger {
       width: 100%;
-      height: 41px;
+      height: 39px;
       padding: 8px 12px;
-      border: 1.5px solid #DCE4E3;
+      border: 1px solid #CBD5E1;
       border-radius: 10px;
       background: #FFFFFF;
       display: flex;
@@ -880,35 +1140,46 @@ const initialRbacBootstrap = JSON.stringify({
       background: #F2F7F6;
       border-color: #B2CFCB;
     }
-    .role-item-card {
-      padding: 12px 13px;
-      border-radius: 12px;
-      border: 1.5px solid #DCE4E3;
-      border-left: 4px solid #DCE4E3;
-      background: #FFFFFF;
-      cursor: pointer;
-      transition: all 0.16s ease;
+    .role-color-swatch {
+      width: 22px !important;
+      height: 22px !important;
+      border-radius: 50% !important;
+      border: 2px solid #FFFFFF !important;
+      box-shadow: 0 0 0 1.5px rgba(15, 23, 42, 0.18) !important;
+      cursor: pointer !important;
+      padding: 0 !important;
+      transition: transform 0.15s ease, box-shadow 0.15s ease !important;
     }
-    .role-item-card:hover {
-      border-color: #B2CFCB;
-      border-left-color: #00594E;
-      background: #F2F7F6;
-      transform: translateY(-1px);
+    .role-color-swatch:hover:not(:disabled) {
+      transform: scale(1.12) !important;
     }
-    .role-item-card.active {
-      border-color: #00594E;
-      border-left-color: #00594E;
-      background: #F2F7F6;
-      box-shadow: 0 4px 12px rgba(0, 89, 78, 0.1);
+    .role-color-swatch.selected {
+      transform: scale(1.12) !important;
+      box-shadow: 0 0 0 2px #00594E, 0 0 0 4px rgba(0, 89, 78, 0.18) !important;
+    }
+    .role-color-swatch:disabled {
+      opacity: 0.5 !important;
+      cursor: not-allowed !important;
+    }
+    .role-live-preview-pill {
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 7px !important;
+      padding: 4px 12px !important;
+      border-radius: 999px !important;
+      font-size: 0.72rem !important;
+      font-weight: 800 !important;
+      letter-spacing: 0.03em !important;
+      text-transform: uppercase !important;
     }
     @media (max-width: 820px) {
       .roles-modal-body {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr !important;
       }
-      .roles-list-pane {
-        border-right: none;
-        border-bottom: 1px solid #DCE4E3;
-        max-height: 210px;
+      .roles-sidebar-col {
+        border-right: none !important;
+        border-bottom: 1px solid #E2E8F0 !important;
+        max-height: 210px !important;
       }
     }
   </style>
@@ -1396,33 +1667,102 @@ const initialRbacBootstrap = JSON.stringify({
     const roleColorDropdown = document.getElementById('role-color-dropdown');
     const roleColorDot = document.getElementById('role-color-dot');
     const roleColorLabel = document.getElementById('role-color-label');
-    const roleEditDesc = document.getElementById('role-edit-desc') as HTMLInputElement | null;
+    const roleEditDesc = document.getElementById('role-edit-desc') as HTMLTextAreaElement | null;
     const roleEditPropagate = document.getElementById('role-edit-propagate') as HTMLInputElement | null;
     const roleAdminLockBanner = document.getElementById('role-admin-lock-banner');
     const btnSaveRole = document.getElementById('btn-save-role') as HTMLButtonElement | null;
+    const roleLivePreviewBadge = document.getElementById('role-live-preview-badge') as HTMLElement | null;
+    const roleLivePreviewDot = document.getElementById('role-live-preview-dot') as HTMLElement | null;
+    const roleLivePreviewText = document.getElementById('role-live-preview-text') as HTMLElement | null;
+    const roleFooterPermSummary = document.getElementById('role-footer-perm-summary') as HTMLElement | null;
 
     const ROLE_COLOR_NAMES: Record<string, string> = {
-      '#00594E': 'Verde Principal',
+      '#00594E': 'Verde Unitrópico',
       '#B5A160': 'Dorado Institucional',
-      '#003830': 'Verde Profundo',
+      '#003830': 'Verde Bosque',
       '#786832': 'Bronce Oscuro',
       '#1E293B': 'Pizarra Ejecutivo',
       '#334155': 'Carbón Institucional',
       '#7F1D1D': 'Vinotinto Sobrio',
     };
 
+    const MAX_MODULE_PERMS = RBAC_MODULES.length * 2;
+    const MODULE_ID_SET = new Set(RBAC_MODULES.map((m) => m.id));
+
+    function computeModulePermStats(rawPerms: string[], isAdmin = false) {
+      if (isAdmin) {
+        return { verCount: RBAC_MODULES.length, manageCount: RBAC_MODULES.length, totalActive: MAX_MODULE_PERMS };
+      }
+      const norm = normalizePermissionsList(rawPerms);
+      let verCount = 0;
+      let manageCount = 0;
+      norm.forEach((pid) => {
+        const [modId, action] = pid.split('.');
+        if (!modId || !MODULE_ID_SET.has(modId)) return;
+        if (action === 'ver') verCount += 1;
+        else if (action === 'gestionar') manageCount += 1;
+      });
+      return { verCount, manageCount, totalActive: verCount + manageCount };
+    }
+
+    function hexToSoftRgba(hex: string, alpha: number): string {
+      const clean = hex.replace('#', '');
+      if (clean.length !== 6) return `rgba(0, 89, 78, ${alpha})`;
+      const r = parseInt(clean.slice(0, 2), 16);
+      const g = parseInt(clean.slice(2, 4), 16);
+      const b = parseInt(clean.slice(4, 6), 16);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function updateRoleBadgePreview() {
+      const hex = roleEditColor?.value || '#00594E';
+      const labelTxt = (roleEditName?.value || '').trim() || 'Nuevo Rol';
+      if (roleLivePreviewText) roleLivePreviewText.textContent = labelTxt.toUpperCase();
+      if (roleLivePreviewDot) roleLivePreviewDot.style.background = hex;
+      if (roleLivePreviewBadge) {
+        roleLivePreviewBadge.style.color = hex;
+        roleLivePreviewBadge.style.borderColor = hexToSoftRgba(hex, 0.42);
+        roleLivePreviewBadge.style.background = hexToSoftRgba(hex, 0.08);
+      }
+    }
+
+    function refreshLiveEditorRoleCount() {
+      const checkedPerms: string[] = [];
+      document.querySelectorAll<HTMLInputElement>('.role-perm-checkbox:checked').forEach((cb) => {
+        if (cb.dataset.permId) checkedPerms.push(cb.dataset.permId);
+      });
+      const stats = computeModulePermStats(checkedPerms, activeRoleEditorId === 'admin');
+      if (roleFooterPermSummary) {
+        roleFooterPermSummary.innerHTML = `${stats.verCount} Ver &middot; ${stats.manageCount} Gestionar (${stats.totalActive}/${MAX_MODULE_PERMS} activos)`;
+      }
+      if (activeRoleEditorId) {
+        const activeBadge = rolesListContainer?.querySelector<HTMLElement>(
+          `[data-role-badge-id="${activeRoleEditorId}"]`
+        );
+        if (activeBadge) {
+          activeBadge.textContent = `${stats.totalActive}/${MAX_MODULE_PERMS} activos`;
+        }
+      }
+    }
+
     function setSelectedRoleColor(rawHex: string, disabled = false) {
       const normalized = (rawHex && rawHex !== '#2563EB' ? rawHex : '#00594E').toUpperCase();
       const matchingKey = Object.keys(ROLE_COLOR_NAMES).find((k) => k.toUpperCase() === normalized) || '#00594E';
       if (roleEditColor) roleEditColor.value = matchingKey;
       if (roleColorDot) (roleColorDot as HTMLElement).style.background = matchingKey;
-      if (roleColorLabel) roleColorLabel.textContent = ROLE_COLOR_NAMES[matchingKey] || 'Verde Principal';
+      if (roleColorLabel) roleColorLabel.textContent = ROLE_COLOR_NAMES[matchingKey] || 'Verde Unitrópico';
       if (roleColorTrigger) roleColorTrigger.disabled = disabled;
       if (roleColorDropdown) (roleColorDropdown as HTMLElement).style.display = 'none';
       document.querySelectorAll<HTMLButtonElement>('.role-color-option').forEach((opt) => {
         const optHex = (opt.dataset.color || '').toUpperCase();
         opt.classList.toggle('selected', optHex === matchingKey.toUpperCase());
       });
+      document.querySelectorAll<HTMLButtonElement>('.role-color-swatch').forEach((sw) => {
+        const swHex = (sw.dataset.color || '').toUpperCase();
+        sw.classList.toggle('selected', swHex === matchingKey.toUpperCase());
+        sw.disabled = disabled;
+      });
+      updateRoleBadgePreview();
     }
 
     roleColorTrigger?.addEventListener('click', (e) => {
@@ -1440,17 +1780,28 @@ const initialRbacBootstrap = JSON.stringify({
       });
     });
 
+    document.querySelectorAll<HTMLButtonElement>('.role-color-swatch').forEach((sw) => {
+      sw.addEventListener('click', () => {
+        if (sw.disabled) return;
+        const chosen = sw.dataset.color || '#00594E';
+        setSelectedRoleColor(chosen, roleColorTrigger?.disabled || false);
+      });
+    });
+
+    roleEditName?.addEventListener('input', updateRoleBadgePreview);
+
     document.addEventListener('click', (e) => {
       if (roleColorDropdown && roleColorPicker && !roleColorPicker.contains(e.target as Node)) {
         (roleColorDropdown as HTMLElement).style.display = 'none';
       }
     });
 
-    setupMatrixCoupling(rolesModal, 'role-ver-cb', 'role-manage-cb');
+    setupMatrixCoupling(rolesModal, 'role-ver-cb', 'role-manage-cb', refreshLiveEditorRoleCount);
 
     document.querySelectorAll<HTMLButtonElement>('.btn-role-preset').forEach((btn) => {
       btn.addEventListener('click', () => {
         applyPresetToCheckboxes('role-perm', btn.dataset.preset || '');
+        refreshLiveEditorRoleCount();
       });
     });
 
@@ -1470,6 +1821,7 @@ const initialRbacBootstrap = JSON.stringify({
       if (roleEditDesc) {
         roleEditDesc.value = role?.desc || '';
         roleEditDesc.readOnly = isAdminRole;
+        roleEditDesc.style.background = isAdminRole ? '#F8FAFC' : '#FFFFFF';
       }
       if (roleAdminLockBanner) {
         roleAdminLockBanner.style.display = isAdminRole ? 'block' : 'none';
@@ -1489,7 +1841,9 @@ const initialRbacBootstrap = JSON.stringify({
         cb.disabled = isAdminRole;
       });
 
+      updateRoleBadgePreview();
       renderRolesCatalogList();
+      refreshLiveEditorRoleCount();
     }
 
     function renderRolesCatalogList() {
@@ -1499,42 +1853,43 @@ const initialRbacBootstrap = JSON.stringify({
       rolesCatalog.forEach((r) => {
         const isSelected = activeRoleEditorId === r.id;
         const safeColor = r.color && r.color !== '#2563EB' ? r.color : (r.id === 'admin' ? '#00594E' : '#786832');
-        const permCount = r.id === 'admin' ? ALL_PERMISSION_IDS.length - 1 : normalizePermissionsList(r.permissions).length;
-        const card = document.createElement('div');
-        card.className = `role-item-card ${isSelected ? 'active' : ''}`;
-        card.setAttribute('role', 'button');
-        card.setAttribute('tabindex', '0');
-        card.innerHTML = `
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
-            <div style="min-width: 0;">
-              <div style="display: flex; align-items: center; gap: 7px;">
-                <span style="width: 10px; height: 10px; border-radius: 50%; background: ${safeColor}; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.12);"></span>
-                <span style="font-weight: 800; font-size: 0.84rem; color: #111827;">${r.name}</span>
-              </div>
-              <div style="font-size: 0.70rem; color: #64748B; margin-top: 4px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                <span>${r.isProtected ? 'Rol institucional' : 'Rol personalizado'}</span>
-                <span style="background: ${isSelected ? '#FFFFFF' : '#F1F5F9'}; border: 1px solid ${isSelected ? '#B2CFCB' : '#E2E8F0'}; color: ${isSelected ? '#00594E' : '#475569'}; padding: 1px 6px; border-radius: 999px; font-weight: 750;">${permCount} permiso(s)</span>
-              </div>
-            </div>
-            ${!r.isProtected ? `
-              <button type="button" class="btn-delete-custom-role" data-role-id="${r.id}" data-role-name="${r.name}" title="Eliminar rol personalizado" style="width: 26px; height: 26px; border-radius: 6px; border: 1px solid #FECACA; background: #FEF2F2; color: #DC2626; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-              </button>
-            ` : ''}
+        const stats = computeModulePermStats(r.permissions || [], r.id === 'admin');
+
+        const row = document.createElement('div');
+        row.className = 'role-selector-row';
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `role-selector-btn ${isSelected ? 'active' : ''}`;
+        btn.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+        btn.innerHTML = `
+          <div class="role-selector-top" style="${!r.isProtected ? 'padding-right: 26px;' : ''}">
+            <span class="role-selector-name">
+              <span style="width: 10px; height: 10px; border-radius: 50%; background: ${safeColor}; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.14);"></span>
+              <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${r.name}</span>
+            </span>
+            <svg class="role-selector-chevron" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="role-selector-meta">
+            <span>${r.isProtected ? 'Rol base' : 'Personalizado'}</span>
+            <span class="role-selector-badge" data-role-badge-id="${r.id}">${stats.totalActive}/${MAX_MODULE_PERMS} activos</span>
           </div>
         `;
-        card.addEventListener('click', (ev) => {
-          const targetEl = ev.target as HTMLElement | null;
-          if (targetEl?.closest('.btn-delete-custom-role')) return;
-          loadRoleIntoEditor(r);
-        });
-        card.addEventListener('keydown', (ev) => {
-          if (ev.key === 'Enter' || ev.key === ' ') {
-            ev.preventDefault();
-            loadRoleIntoEditor(r);
-          }
-        });
-        rolesListContainer.appendChild(card);
+        btn.addEventListener('click', () => loadRoleIntoEditor(r));
+        row.appendChild(btn);
+
+        if (!r.isProtected) {
+          const delBtn = document.createElement('button');
+          delBtn.type = 'button';
+          delBtn.className = 'btn-delete-custom-role';
+          delBtn.dataset.roleId = r.id;
+          delBtn.dataset.roleName = r.name;
+          delBtn.title = 'Eliminar rol personalizado';
+          delBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
+          row.appendChild(delBtn);
+        }
+
+        rolesListContainer.appendChild(row);
       });
     }
 
