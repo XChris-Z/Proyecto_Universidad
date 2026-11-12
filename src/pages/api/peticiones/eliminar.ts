@@ -4,8 +4,9 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { supabase } from '@lib/supabase';
 import { logSystemActivity } from '@lib/audit';
+import { resolveSessionActor } from '@lib/request-actor';
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
   try {
     const body = await request.json();
     const { id } = body;
@@ -67,8 +68,9 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // 5. Registrar en la bitácora inmutable de auditoría
+    const actor = await resolveSessionActor(cookies);
     await logSystemActivity({
-      actor: { id: 'usr-root', name: 'Administrador General', role: 'Superadministrador' },
+      actor,
       action: `Eliminación de radicado ${peticion.numero_radicado}`,
       actionType: 'ELIMINACION',
       entity: 'Peticiones Radicadas',
@@ -76,6 +78,9 @@ export const POST: APIRoute = async ({ request }) => {
       details: `Se eliminó definitivamente el radicado ${peticion.numero_radicado} (${peticion.asunto}) y sus archivos asociados`,
       before: peticion,
       severity: 'CRITICAL',
+      request,
+      clientAddress,
+      cookies,
     }).catch((err) => console.warn('Error registrando auditoría de eliminación:', err));
 
     return new Response(

@@ -11,8 +11,10 @@ import {
 import { separarRespuestaMeta, filtrarSubcarpetasValidas } from '@lib/subcarpetas';
 import { logSystemActivity } from '@lib/audit';
 import { getDeterministicPin } from '@lib/security';
+import { resolveSessionActor } from '@lib/request-actor';
+import { sanitizeRevisionTokens } from '@lib/revision-meta';
 
-export const POST: APIRoute = async ({ request, url }) => {
+export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) => {
   try {
     const body = await request.json().catch(() => ({}));
     const id = body.id || body.peticion_id;
@@ -27,8 +29,8 @@ export const POST: APIRoute = async ({ request, url }) => {
     // 1. Consultar la petición y sus asignaciones
     const buildPeticionQuery = (withSubcarpetaCol: boolean) => {
       const respFields = withSubcarpetaCol
-        ? `id, subcarpeta_id, codigo_acceso, oficina_id, observaciones_entrega, oficinas ( id, nombre, codigo, email_institucional )`
-        : `id, codigo_acceso, oficina_id, observaciones_entrega, oficinas ( id, nombre, codigo, email_institucional )`;
+        ? `id, subcarpeta_id, codigo_acceso, estado_entrega, fecha_expiracion_codigo, oficina_id, observaciones_entrega, oficinas ( id, nombre, codigo, email_institucional )`
+        : `id, codigo_acceso, estado_entrega, fecha_expiracion_codigo, oficina_id, observaciones_entrega, oficinas ( id, nombre, codigo, email_institucional )`;
       return supabase
         .from('peticiones' as any)
         .select(`
@@ -71,7 +73,7 @@ export const POST: APIRoute = async ({ request, url }) => {
       );
     }
 
-    // 2. Consultar subcarpetas asociadas si existen
+    // 2. Consultar subcarpetas asociadas y anexos existentes para omitir oficinas que ya entregaron
     let subcarpetasData: any[] = [];
     try {
       const { data: subs } = await (supabase
@@ -81,14 +83,31 @@ export const POST: APIRoute = async ({ request, url }) => {
       if (subs) subcarpetasData = filtrarSubcarpetasValidas(subs);
     } catch {}
 
+    let validAnexos: any[] = [];
+    try {
+      const { data: dbAnexos } = await (supabase
+        .from('peticion_anexos' as any)
+        .select('*')
+        .eq('peticion_id', peticion.id) as any);
+      if (Array.isArray(dbAnexos)) {
+        validAnexos = dbAnexos.filter((a: any) => {
+          const n = String(a?.nombre_archivo || '');
+          if (!n || n.toUpperCase().includes('[RECHAZADO]')) return false;
+          if (n.toLowerCase().startsWith('respuesta oficial')) return false;
+          return true;
+        });
+      }
+    } catch {}
+
     const baseUrl = resolvePublicBaseUrl(request, url);
     const { textoLimpio: rawInstLimpia } = separarRespuestaMeta(peticion.instrucciones_anexos || peticion.descripcion || '');
     const cleanFallbackInst = limpiarTextoRequerimiento(rawInstLimpia);
     const resultados: any[] = [];
     let exitosos = 0;
     let fallidos = 0;
+    let omitidosEntregados = 0;
 
-    // 3. Reenviar correo a cada oficina asignada que tenga correo institucional configurado
+    // 3. Reenviar correo ÚNICAMENTE a oficinas asignadas con entrega pendiente (nunca a las ya entregadas)
     for (const resp of responsables) {
       const ofi = resp.oficinas;
       const email = ofi?.email_institucional?.trim();
@@ -103,19 +122,23 @@ export const POST: APIRoute = async ({ request, url }) => {
         continue;
       }
 
+      const rawObs = String(resp.observaciones_entrega || '');
+      const cleanObsTags = sanitizeRevisionTokens(rawObs).replace(/\[RECHAZADO[^\]]*\]:?[^|]*/gi, '').trim();
+      const { textoLimpio: cleanObs } = separarRespuestaMeta(cleanObsTags);
+      const obsWithoutPin = cleanObs.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '').trim();
+
       let assignedSubs: any[] = [];
       if (resp.subcarpeta_id) {
         const matched = subcarpetasData.find((s: any) => s.id === resp.subcarpeta_id);
         if (matched) {
           assignedSubs = [{
+            id: matched.id,
             nombre: matched.nombre,
             descripcion: matched.descripcion ? limpiarTextoRequerimiento(matched.descripcion) : undefined,
           }];
         }
       }
       if (assignedSubs.length === 0) {
-        const { textoLimpio: cleanObs } = separarRespuestaMeta(resp.observaciones_entrega || '');
-        const obsWithoutPin = cleanObs.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '').trim();
         const tagNames = Array.from(obsWithoutPin.matchAll(/\[([^\]\r\n]+)\]/g))
           .map((m) => String(m?.[1] || '').trim())
           .filter((name) => name && !name.toUpperCase().includes('RESPUESTA_META'));
@@ -123,6 +146,7 @@ export const POST: APIRoute = async ({ request, url }) => {
           assignedSubs = subcarpetasData
             .filter((s: any) => tagNames.some((t) => t.toLowerCase() === String(s.nombre || '').trim().toLowerCase()))
             .map((s: any) => ({
+              id: s.id,
               nombre: s.nombre,
               descripcion: s.descripcion ? limpiarTextoRequerimiento(s.descripcion) : undefined,
             }));
@@ -130,9 +154,37 @@ export const POST: APIRoute = async ({ request, url }) => {
       }
       if (assignedSubs.length === 0 && subcarpetasData.length > 0) {
         assignedSubs = subcarpetasData.map((s: any) => ({
+          id: s.id,
           nombre: s.nombre,
           descripcion: s.descripcion ? limpiarTextoRequerimiento(s.descripcion) : undefined,
         }));
+      }
+
+      const isRejected = rawObs.toUpperCase().includes('[RECHAZADO');
+      const targetSubNames = assignedSubs.map((s: any) => String(s.nombre || '').trim().toLowerCase()).filter(Boolean);
+      const targetSubIds = new Set(assignedSubs.map((s: any) => String(s.id || '')).filter(Boolean));
+      const hasValidAnnex = validAnexos.some((a: any) => {
+        if (a?.peticion_responsable_id && String(a.peticion_responsable_id) === String(resp.id)) return true;
+        if (a?.subcarpeta_id && targetSubIds.has(String(a.subcarpeta_id))) return true;
+        const nLower = String(a?.nombre_archivo || '').toLowerCase();
+        if (targetSubNames.some((sn) => nLower.includes(`[${sn}]`))) return true;
+        return false;
+      });
+      const estadoLower = String(resp.estado_entrega || '').trim().toLowerCase();
+      const yaEntregado =
+        !isRejected &&
+        (['entregado', 'entregada', 'completado', 'completada', 'aprobado', 'respondido', 'respondida'].includes(estadoLower) ||
+          hasValidAnnex);
+
+      if (yaEntregado) {
+        omitidosEntregados++;
+        resultados.push({
+          oficina: ofi?.nombre || 'Oficina',
+          email,
+          status: 'skipped_delivered',
+          motivo: 'La dependencia ya realizó la entrega de su soporte.',
+        });
+        continue;
       }
 
       const pinMatch = resp.observaciones_entrega?.match(/PIN:\s*([0-9A-Z]{6})/i);
@@ -148,10 +200,10 @@ export const POST: APIRoute = async ({ request, url }) => {
         categoria: peticion.categoria,
         prioridad: peticion.prioridad,
         fechaRadicacion: peticion.fecha_radicacion || peticion.created_at || null,
-        subcarpetas: assignedSubs.length > 0 ? assignedSubs : undefined,
+        subcarpetas: assignedSubs.length > 0 ? assignedSubs.map(({ nombre, descripcion }) => ({ nombre, descripcion })) : undefined,
         instruccionesAnexos: cleanFallbackInst,
         fechaLimiteEntrega: peticion.fecha_limite_entrega,
-        fechaLimiteResponsable: peticion.fecha_limite_responsable,
+        fechaLimiteResponsable: resp.fecha_expiracion_codigo || peticion.fecha_limite_responsable,
         codigoAcceso: resp.codigo_acceso,
         pinAcceso: effectivePin,
         portalUrl,
@@ -176,15 +228,20 @@ export const POST: APIRoute = async ({ request, url }) => {
       }
     }
 
+    const actor = await resolveSessionActor(cookies);
+
     // 4. Registrar en auditoría
     await logSystemActivity({
-      actor: { id: 'usr-root', name: 'Administrador General', role: 'Superadministrador' },
-      action: `Reenvío de notificación por correo para radicado ${peticion.numero_radicado}`,
+      actor,
+      action: `Reenvío a dependencias pendientes (${peticion.numero_radicado})`,
       actionType: 'GESTION',
       entity: 'Peticiones Radicadas',
       entityId: peticion.numero_radicado,
-      details: `Reenvío manual de correo para ${peticion.numero_radicado}. Exitosos: ${exitosos}, Fallidos: ${fallidos}`,
+      details: `Reenvío selectivo a pendientes para ${peticion.numero_radicado}. Enviados: ${exitosos}, Omitidos (ya entregados): ${omitidosEntregados}, Fallidos: ${fallidos}`,
       severity: fallidos > 0 ? 'WARN' : 'INFO',
+      request,
+      clientAddress,
+      cookies,
     }).catch(() => {});
 
     if (exitosos === 0 && fallidos > 0) {
@@ -199,12 +256,17 @@ export const POST: APIRoute = async ({ request, url }) => {
       );
     }
 
+    const summaryMsg = exitosos === 0 && omitidosEntregados > 0
+      ? `Todas las dependencias de ${peticion.numero_radicado} ya entregaron sus soportes (${omitidosEntregados} omitida(s)).`
+      : `Notificación enviada a ${exitosos} dependencia(s) pendiente(s)${omitidosEntregados > 0 ? ` (${omitidosEntregados} ya entregada(s) omitida(s))` : ''}.`;
+
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Notificación procesada para ${peticion.numero_radicado}. ${exitosos} correo(s) enviado(s) exitosamente.`,
+        message: summaryMsg,
         exitosos,
         fallidos,
+        omitidosEntregados,
         resultados,
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }

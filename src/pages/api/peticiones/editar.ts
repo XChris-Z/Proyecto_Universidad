@@ -4,11 +4,12 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { supabase } from '@lib/supabase';
 import { logSystemActivity } from '@lib/audit';
+import { resolveSessionActor } from '@lib/request-actor';
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
   try {
     const body = await request.json();
-    const { id, asunto, solicitante_nombre, solicitante_tipo, solicitante_email, prioridad, fecha_limite_entrega, estado, descripcion } = body;
+    const { id, asunto, solicitante_nombre, solicitante_tipo, solicitante_email, prioridad, fecha_limite_entrega, fecha_limite_responsable, estado, descripcion } = body;
 
     if (!id) {
       return new Response(
@@ -17,16 +18,11 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // Calcular fecha límite del responsable (-5 días calendario)
-    let fechaLimiteResponsable: string | undefined = undefined;
-    if (fecha_limite_entrega) {
-      const entregaDate = new Date(fecha_limite_entrega + 'T12:00:00');
-      if (!isNaN(entregaDate.getTime())) {
-        const respDate = new Date(entregaDate);
-        respDate.setDate(respDate.getDate() - 5);
-        fechaLimiteResponsable = respDate.toISOString().split('T')[0];
-      }
-    }
+    // Respetar fecha_limite_responsable explícita si fue enviada
+    const fechaLimiteResponsable: string | undefined =
+      typeof fecha_limite_responsable === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(fecha_limite_responsable.trim())
+        ? fecha_limite_responsable.trim()
+        : undefined;
 
     const updatePayload: Record<string, any> = {
       updated_at: new Date().toISOString(),
@@ -117,8 +113,9 @@ export const POST: APIRoute = async ({ request }) => {
     const radicadoNum = updated?.numero_radicado || previousData?.numero_radicado || id;
 
     // Registrar en auditoría institucional
+    const actor = await resolveSessionActor(cookies);
     await logSystemActivity({
-      actor: { id: 'usr-root', name: 'Administrador General', role: 'Superadministrador' },
+      actor,
       action: `Edición de radicado ${radicadoNum}`,
       actionType: 'MODIFICACION',
       entity: 'Peticiones Radicadas',
@@ -127,6 +124,9 @@ export const POST: APIRoute = async ({ request }) => {
       before: previousData,
       after: updatePayload,
       severity: 'INFO',
+      request,
+      clientAddress,
+      cookies,
     }).catch((err) => console.warn('Error registrando auditoría:', err));
 
     return new Response(

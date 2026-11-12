@@ -342,7 +342,7 @@ import Layout from '@layouts/Layout.astro';
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 </div>
                 <div class="drop-title" style="font-size: 0.90rem;">Arrastre sus archivos aquí o haga clic para examinar</div>
-                <div class="drop-formats" style="font-size: 0.72rem;">Formatos permitidos: PDF, DOCX, XLSX, JPG, PNG, ZIP (hasta 500 MB)</div>
+                <div class="drop-formats" style="font-size: 0.72rem;">Formatos permitidos: PDF, DOCX, XLSX, JPG, PNG, ZIP &middot; Capacidad Ilimitada · Soporte de Archivos Pesados</div>
                 <input type="file" id="portal-file-input" multiple style="display: none;" />
               </div>
 
@@ -1876,12 +1876,7 @@ import Layout from '@layouts/Layout.astro';
   }
 
   function handleFilesSelected(files: File[]) {
-    const MAX_BYTES = 500 * 1024 * 1024;
-    const oversized = files.filter((f) => f.size > MAX_BYTES);
-    if (oversized.length > 0) {
-      showPortalToast(`Uno o más archivos superan el límite máximo de 500 MB (${oversized.map((f) => f.name).join(', ')}).`, 'error');
-    }
-    const validFiles = files.filter((f) => f.size <= MAX_BYTES);
+    const validFiles = files.filter((f) => f && f.size >= 0);
     if (validFiles.length === 0) return;
 
     selectedFilesToUpload = validFiles;
@@ -1912,15 +1907,28 @@ import Layout from '@layouts/Layout.astro';
 
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
-    const color = type === 'success' ? '#00594E' : type === 'error' ? '#dc2626' : '#B5A160';
+    const titles: Record<string, string> = {
+      success: 'Operación Exitosa',
+      error: 'Atención Requerida',
+      warning: 'Aviso del Sistema',
+    };
+    const icons: Record<string, string> = {
+      success: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
+      error: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`,
+      warning: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+    };
     toast.innerHTML = `
-      <div class="toast-content-col" style="padding: 10px 14px; background: #ffffff; border: 1px solid #cbd5e1; border-left: 4px solid ${color}; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
-        <div style="font-weight: 800; font-size: 0.82rem; color: ${color}; margin-bottom: 2px;">
-          ${type === 'success' ? 'Operación Exitosa' : type === 'error' ? 'Atención Requerida' : 'Aviso'}
+      <div class="toast-icon-wrap">${icons[type] || icons.success}</div>
+      <div class="toast-content-col">
+        <div class="toast-header-row">
+          <span class="toast-category">${titles[type] || 'Notificación'}</span>
+          <button type="button" class="toast-close-btn" aria-label="Cerrar">&times;</button>
         </div>
-        <div class="toast-message" style="font-size: 0.80rem; color: #0f172a;">${msg}</div>
+        <div class="toast-message">${msg}</div>
       </div>
+      <div class="toast-progress toast-progress-bar"></div>
     `;
+    toast.querySelector('.toast-close-btn')?.addEventListener('click', () => toast.remove());
     container.appendChild(toast);
     setTimeout(() => {
       toast.style.opacity = '0';
@@ -1960,22 +1968,34 @@ import Layout from '@layouts/Layout.astro';
           let directUploaded = false;
           let fileBase64: string | null = null;
 
-          // 1. Intentar subir mediante URL firmada (Service Role) para evitar errores 413 y políticas RLS
+          // 1. Subida directa ilimitada mediante URL firmada (/api/storage/signed-upload) para evitar límite Vercel 4.5MB
           try {
-            const signedRes = await fetch('/api/storage/signed-url', {
+            const signedRes = await fetch('/api/storage/signed-upload', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ bucket: 'peticiones', path: relativeStoragePath }),
             });
             const signedJson = await signedRes.json().catch(() => ({}));
             if (signedJson.success && signedJson.signedUrl) {
-              const putRes = await fetch(signedJson.signedUrl, {
-                method: 'PUT',
-                headers: { 'Content-Type': file.type || 'application/octet-stream' },
-                body: file,
-              });
-              if (putRes.ok) {
-                directUploaded = true;
+              if (signedJson.token && signedJson.path) {
+                const { error: signedUpErr } = await supabase.storage
+                  .from('peticiones')
+                  .uploadToSignedUrl(signedJson.path, signedJson.token, file, {
+                    contentType: file.type || 'application/octet-stream',
+                  });
+                if (!signedUpErr) {
+                  directUploaded = true;
+                }
+              }
+              if (!directUploaded) {
+                const putRes = await fetch(signedJson.signedUrl, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': file.type || 'application/octet-stream' },
+                  body: file,
+                });
+                if (putRes.ok) {
+                  directUploaded = true;
+                }
               }
             }
           } catch (signedErr) {

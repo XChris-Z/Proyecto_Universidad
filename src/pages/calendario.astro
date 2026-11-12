@@ -36,6 +36,7 @@ const {
   critCount: ssrCritCount,
   warnCount: ssrWarnCount,
   safeCount: ssrSafeCount,
+  completedCount: ssrCompletedCount,
 } = computeActivePeticionSlaCounts(ssrDeadlines);
 ---
 
@@ -437,6 +438,40 @@ const {
             </div>
             <div class="bento-card-kpi-row">
               <span class="bento-kpi tabular-nums" id="gcal-safe-count">{ssrSafeCount}</span>
+              <span class="bento-kpi-label">radicados</span>
+            </div>
+          </article>
+
+          <!-- Card 4: Completados / Cerrados -->
+          <article
+            class="bento-sla-card completed"
+            data-sla-filter="completed"
+            title="Clic para filtrar expedientes completados o respondidos"
+          >
+            <div class="bento-card-top">
+              <div class="bento-icon-badge completed">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.4"
+                  ><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg
+                >
+              </div>
+              <div class="bento-card-bottom">
+                <h4 class="bento-card-title">
+                  Completados
+                  <span class="bento-active-badge" style="display: none;">Filtro Activo &times;</span>
+                </h4>
+                <p class="bento-card-desc">
+                  Cierre oficial / Archivo
+                </p>
+              </div>
+            </div>
+            <div class="bento-card-kpi-row">
+              <span class="bento-kpi tabular-nums" id="gcal-completed-count">{ssrCompletedCount}</span>
               <span class="bento-kpi-label">radicados</span>
             </div>
           </article>
@@ -1155,15 +1190,15 @@ const {
      ========================================================================== */
   .bento-header-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(220px, 310px));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     justify-content: start;
-    gap: 20px;
+    gap: 16px;
     width: 100%;
   }
 
-  @media (max-width: 960px) {
+  @media (max-width: 1120px) {
     .bento-header-grid {
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 14px;
     }
   }
@@ -1229,22 +1264,40 @@ const {
       0 8px 18px rgba(181, 161, 96, 0.16);
   }
 
-  /* Card En Tiempo (Verde Institucional) */
+  /* Card En Tiempo */
   .bento-sla-card.safe {
     background: #ffffff;
     border-color: #DCE4E3;
-    border-left-color: #00594E;
+    border-left-color: #059669;
   }
   .bento-sla-card.safe:hover {
-    box-shadow: 0 8px 18px rgba(0, 89, 78, 0.12);
+    box-shadow: 0 8px 18px rgba(5, 150, 105, 0.12);
+    border-color: #A7F3D0;
+    border-left-color: #059669;
+  }
+  .bento-sla-card.safe.active-filter {
+    border-color: #059669;
+    box-shadow:
+      0 0 0 2px rgba(5, 150, 105, 0.22),
+      0 8px 18px rgba(5, 150, 105, 0.14);
+  }
+
+  /* Card Completados (Verde Institucional Unitrópico) */
+  .bento-sla-card.completed {
+    background: #F2F7F6;
     border-color: #B2CFCB;
     border-left-color: #00594E;
   }
-  .bento-sla-card.safe.active-filter {
+  .bento-sla-card.completed:hover {
+    box-shadow: 0 8px 18px rgba(0, 89, 78, 0.14);
+    border-color: #00594E;
+    border-left-color: #00594E;
+  }
+  .bento-sla-card.completed.active-filter {
     border-color: #00594E;
     box-shadow:
-      0 0 0 2px rgba(0, 89, 78, 0.22),
-      0 8px 18px rgba(0, 89, 78, 0.14);
+      0 0 0 2px rgba(0, 89, 78, 0.28),
+      0 8px 18px rgba(0, 89, 78, 0.18);
   }
 
   .bento-card-top {
@@ -1273,8 +1326,13 @@ const {
     color: #786832;
   }
   .bento-icon-badge.safe {
-    background: #F2F7F6;
-    color: #00594E;
+    background: #ECFDF5;
+    color: #059669;
+  }
+  .bento-icon-badge.completed {
+    background: #00594E;
+    color: #FFFFFF;
+    border-bottom: 2px solid #B5A160;
   }
 
   .live-radar-pulse {
@@ -1343,6 +1401,9 @@ const {
     color: #786832;
   }
   .bento-sla-card.safe .bento-kpi {
+    color: #059669;
+  }
+  .bento-sla-card.completed .bento-kpi {
     color: #00594E;
   }
 
@@ -1586,10 +1647,12 @@ const {
   }
 
   @media (max-width: 1080px) {
-    .bento-header-grid {
+    .promax-calendar-workspace-split {
       grid-template-columns: 1fr;
     }
-    .promax-calendar-workspace-split {
+  }
+  @media (max-width: 640px) {
+    .bento-header-grid {
       grid-template-columns: 1fr;
     }
   }
@@ -1644,14 +1707,16 @@ const {
     box-sizing: border-box;
     cursor: pointer;
     overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
     transition:
-      transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
-      box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1),
-      border-color 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+      border-color 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   }
   :global(.gcal-cell:hover) {
-    transform: translateY(-2px) scale(1.015);
+    transform: translateY(-2px);
     box-shadow: 0 10px 24px -4px rgba(0, 89, 78, 0.1);
     border-color: rgba(0, 89, 78, 0.35);
     z-index: 5;
@@ -1697,6 +1762,10 @@ const {
   :global(.gcal-sem-dot.safe) {
     background: #10b981;
     box-shadow: 0 0 4px rgba(16, 185, 129, 0.6);
+  }
+  :global(.gcal-sem-dot.completed) {
+    background: #00594E;
+    box-shadow: 0 0 0 1px #B5A160;
   }
 
   :global(.gcal-day-num) {
@@ -1759,6 +1828,10 @@ const {
     background: #ecfdf5;
     border-color: #a7f3d0;
   }
+  :global(.gcal-sem-chip.sem-completed) {
+    background: #F2F7F6;
+    border-color: #B2CFCB;
+  }
 
   :global(.chip-sla-bar) {
     width: 3px;
@@ -1774,6 +1847,9 @@ const {
   }
   :global(.chip-sla-bar.safe) {
     background: #10b981;
+  }
+  :global(.chip-sla-bar.completed) {
+    background: #00594E;
   }
 
   :global(.chip-rad-code) {
@@ -1802,6 +1878,10 @@ const {
   :global(.chip-days-badge.safe) {
     background: #d1fae5;
     color: #065f46;
+  }
+  :global(.chip-days-badge.completed) {
+    background: #00594E;
+    color: #FFFFFF;
   }
 
   :global(.gcal-more-chip) {
@@ -1957,6 +2037,11 @@ const {
     border-color: #059669;
     box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.2);
   }
+  :global(.timeline-node-pin.completed) {
+    border-color: #00594E;
+    background: #00594E;
+    box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.22);
+  }
 
   :global(.timeline-card-header) {
     display: flex;
@@ -1998,6 +2083,11 @@ const {
   :global(.timeline-sla-badge.badge-safe) {
     background: #d1fae5;
     color: #065f46;
+  }
+  :global(.timeline-sla-badge.badge-completed) {
+    background: #00594E;
+    color: #FFFFFF;
+    border: 1px solid #B5A160;
   }
 
   :global(.timeline-type-pill) {
@@ -2070,6 +2160,9 @@ const {
   }
   :global(.timeline-sla-progress-fill.safe) {
     background: linear-gradient(90deg, #10b981, #059669);
+  }
+  :global(.timeline-sla-progress-fill.completed) {
+    background: linear-gradient(90deg, #00594E, #B5A160);
   }
 
   :global(.timeline-sla-progress-labels) {
@@ -2262,26 +2355,22 @@ const {
   @keyframes proMaxFadeEnter {
     from {
       opacity: 0;
-      transform: scale(0.985) translateY(4px);
-      filter: blur(4px);
+      transform: translateY(3px);
     }
     to {
       opacity: 1;
-      transform: scale(1) translateY(0);
-      filter: blur(0px);
+      transform: translateY(0);
     }
   }
 
   @keyframes proMaxFadeLeave {
     from {
       opacity: 1;
-      transform: scale(1) translateY(0);
-      filter: blur(0px);
+      transform: translateY(0);
     }
     to {
       opacity: 0;
-      transform: scale(0.99) translateY(-2px);
-      filter: blur(2px);
+      transform: translateY(-2px);
     }
   }
 

@@ -10,8 +10,11 @@ import {
 } from '@lib/email';
 import { separarRespuestaMeta, filtrarSubcarpetasValidas } from '@lib/subcarpetas';
 import { getDeterministicPin } from '@lib/security';
+import { sanitizeRevisionTokens } from '@lib/revision-meta';
+import { logSystemActivity } from '@lib/audit';
+import { resolveSessionActor } from '@lib/request-actor';
 
-export const POST: APIRoute = async ({ request, url }) => {
+export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) => {
   try {
     const body = await request.json();
     const { peticion_id, responsable_id } = body;
@@ -111,7 +114,8 @@ export const POST: APIRoute = async ({ request, url }) => {
       }
 
       if (assignedSubs.length === 0) {
-        const { textoLimpio: cleanObs } = separarRespuestaMeta(item.observaciones_entrega || '');
+        const cleanRevObs = sanitizeRevisionTokens(item.observaciones_entrega || '').replace(/\[RECHAZADO[^\]]*\]:?[^|]*/gi, '').trim();
+        const { textoLimpio: cleanObs } = separarRespuestaMeta(cleanRevObs);
         const obsWithoutPin = cleanObs.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '').trim();
         const tagNames = Array.from(obsWithoutPin.matchAll(/\[([^\]\r\n]+)\]/g))
           .map((m) => String(m?.[1] || '').trim())
@@ -158,15 +162,36 @@ export const POST: APIRoute = async ({ request, url }) => {
         oficina: ofi.nombre,
         email: ofi.email_institucional,
         success: emailRes.success,
-        simulated: emailRes.simulated,
+        simulated: (emailRes as any).simulated,
         messageId: emailRes.messageId,
         error: emailRes.error,
       });
+
+      if (emailRes.success) {
+        const actor = await resolveSessionActor(cookies);
+        await logSystemActivity({
+          actor,
+          action: `Reenvío individual a ${ofi.nombre} (${pet.numero_radicado})`,
+          actionType: 'GESTION',
+          entity: 'Peticiones Radicadas',
+          entityId: pet.numero_radicado || pet.id,
+          details: `Notificación y credenciales reenviadas manualmente a ${ofi.nombre} (${ofi.email_institucional}).`,
+          severity: 'INFO',
+          request,
+          clientAddress,
+          cookies,
+        }).catch(() => {});
+      }
     }
 
+    const anyFailed = results.length === 0 || results.every((r) => !r.success);
     return new Response(
-      JSON.stringify({ success: true, results }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
+      JSON.stringify({
+        success: !anyFailed,
+        results,
+        error: anyFailed ? (results[0]?.error || 'No se pudo enviar el correo a la dependencia.') : undefined,
+      }),
+      { status: anyFailed ? 500 : 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (err: any) {
     console.error('Error en /api/enviar-correo-peticion:', err);

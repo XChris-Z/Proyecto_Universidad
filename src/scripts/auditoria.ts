@@ -1,7 +1,13 @@
 // src/scripts/auditoria.ts
 // Lógica de cliente para Auditoría Oficial, Logs y Trazabilidad Criptográfica en Supabase
 
-import { fetchAuditLogsFromSupabase } from '@lib/audit';
+import {
+  fetchAuditLogsFromSupabase,
+  sanitizeAuditDisplayIp,
+  cleanAuditActionTitle,
+  normalizeAuditActor,
+  formatBogotaTimestamp,
+} from '@lib/audit';
 import type { AuditLog } from '@lib/types';
 
 export async function initAuditoria() {
@@ -74,9 +80,17 @@ export async function initAuditoria() {
     tbody.innerHTML = filtered.map(log => {
       let actionBadgeClass = 'subida';
       if (log.actionType === 'ELIMINACION' || log.severity === 'CRITICAL') actionBadgeClass = 'eliminacion';
-      else if (log.actionType === 'MODIFICACION') actionBadgeClass = 'modificacion';
+      else if (log.actionType === 'MODIFICACION' || log.actionType === 'GESTION') actionBadgeClass = 'modificacion';
       else if (log.actionType === 'RESPUESTA') actionBadgeClass = 'respuesta';
       else if (log.actionType === 'SEGURIDAD') actionBadgeClass = 'seguridad';
+
+      const cleanActor = normalizeAuditActor(log.actor);
+      const cleanIp = sanitizeAuditDisplayIp(log.ip);
+      const ipDisplay = cleanIp === 'Red Local / Institucional' ? cleanIp : `IP: ${cleanIp}`;
+      const cleanAction = cleanAuditActionTitle(log.action);
+      const cleanTimestamp = log.rawTimestamp
+        ? formatBogotaTimestamp(log.rawTimestamp)
+        : log.timestamp;
 
       const shortHash = log.integrityHash.substring(0, 10) + '...' + log.integrityHash.substring(log.integrityHash.length - 8);
 
@@ -117,26 +131,26 @@ export async function initAuditoria() {
       return `
         <tr>
           <td style="white-space: nowrap;">
-            <div style="font-weight: 700; color: var(--text-main); font-size: 0.85rem;">${log.timestamp}</div>
+            <div style="font-weight: 700; color: var(--text-main); font-size: 0.85rem;">${cleanTimestamp}</div>
             <div style="font-size: 0.72rem; color: var(--text-muted); display: flex; align-items: center; gap: 4px; margin-top: 2px;">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              <span>IP: ${log.ip}</span>
+              <span>${ipDisplay}</span>
             </div>
           </td>
           <td>
             <div class="audit-user-cell">
-              <div class="audit-user-avatar" style="background: ${log.actor.avatarColor};">
-                ${log.actor.initials}
+              <div class="audit-user-avatar" style="background: ${cleanActor.avatarColor};">
+                ${cleanActor.initials}
               </div>
               <div>
-                <div class="audit-user-name">${log.actor.name}</div>
-                <div class="audit-user-role">${log.actor.role}</div>
+                <div class="audit-user-name">${cleanActor.name}</div>
+                <div class="audit-user-role">${cleanActor.role}</div>
               </div>
             </div>
           </td>
           <td>
             <span class="audit-badge-action ${actionBadgeClass}">
-              ${log.actionType === 'ELIMINACION' ? '&times;' : '&bull;'} ${log.action}
+              ${log.actionType === 'ELIMINACION' ? '&times;' : '&bull;'} ${cleanAction}
             </span>
           </td>
           <td>
@@ -261,7 +275,7 @@ export async function initAuditoria() {
 
   // Export JSON
   document.getElementById('btn-export-audit-json')?.addEventListener('click', () => {
-    const dateStr = new Date().toISOString().split('T')[0];
+    const dateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(logs, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute('href', dataStr);

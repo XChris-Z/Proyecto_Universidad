@@ -7,6 +7,7 @@ import { supabase } from '@lib/supabase';
 import { calculateDeadlineProgress } from '@lib/utils';
 import { getDeterministicPin } from '@lib/security';
 import { separarRespuestaMeta, esSubcarpetaValida, filtrarSubcarpetasValidas, isPeticionRespondida, isAuditLogOfficialResponse, getSlaBucket } from '@lib/subcarpetas';
+import { extractRejectionInfo, sanitizeRevisionTokens } from '@lib/revision-meta';
 
 // 1. Obtener todas las peticiones con select('*') de forma tolerante al esquema (idéntico enfoque seguro a archivos.astro)
 const { data: peticionesRaw, error: errPeticiones } = await (supabase
@@ -304,11 +305,13 @@ function getPetSlaTone(bucket: string, responded: boolean) {
               const responsables = pet.peticion_responsables || [];
               const prog = calculateDeadlineProgress(pet.fecha_radicacion || pet.created_at, pet.fecha_limite_entrega);
               const isResponded = isPeticionRespondida(pet);
+              const { respuestaMeta: rowMeta } = separarRespuestaMeta(pet.instrucciones_anexos || '');
+              const rowProrrogas = Array.isArray(rowMeta?.prorrogas) ? rowMeta.prorrogas : [];
               const slaBucket = isResponded ? 'safe' : getSlaBucket(prog.daysRemaining);
               const slaTone = getPetSlaTone(slaBucket, isResponded);
               const barPct = isResponded ? 100 : prog.percentage;
               const slaMetaText = isResponded
-                ? 'Petición Respondida'
+                ? 'Expediente Completo'
                 : (prog.daysRemaining > 0 ? `${prog.daysRemaining} días restantes` : 'Término expirado');
 
               return (
@@ -370,9 +373,20 @@ function getPetSlaTone(bucket: string, responded: boolean) {
                   </td>
 
                   <td style="padding: 12px 8px;">
-                    <span style="color: #786832; font-weight: 800; background: #F7F5EE; padding: 3px 8px; border-radius: 5px; border: 1px solid #DBD2B0; font-family: monospace; font-size: 0.8rem;">
-                      {pet.fecha_limite_responsable || 'Por definir'}
-                    </span>
+                    <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
+                      <span style="color: #786832; font-weight: 800; background: #F7F5EE; padding: 3px 8px; border-radius: 5px; border: 1px solid #DBD2B0; font-family: monospace; font-size: 0.8rem;">
+                        {pet.fecha_limite_responsable ? String(pet.fecha_limite_responsable).slice(0, 10) : 'Por definir'}
+                      </span>
+                      {rowProrrogas.length > 0 && (
+                        <span
+                          title={rowProrrogas[rowProrrogas.length - 1]?.motivo || 'Prórroga registrada'}
+                          style="font-size: 0.66rem; font-weight: 800; color: #786832; background: #F7F5EE; border: 1px solid #B5A160; padding: 1px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 3px;"
+                        >
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                          <span>+{rowProrrogas.length} Prórroga</span>
+                        </span>
+                      )}
+                    </div>
                   </td>
 
                   <td style="padding: 12px 8px;">
@@ -381,7 +395,9 @@ function getPetSlaTone(bucket: string, responded: boolean) {
                         const ofiNombre = r.oficinas?.nombre || 'Oficina';
                         let petSubs = filtrarSubcarpetasValidas(dbSubcarpetas.filter((s: any) => s.peticion_id === pet.id));
                         const rawObs = r.observaciones_entrega || '';
-                        const { textoLimpio } = separarRespuestaMeta(rawObs);
+                        const rejectionInfo = extractRejectionInfo(rawObs);
+                        const obsWithoutRev = sanitizeRevisionTokens(rawObs).replace(/\[RECHAZADO[^\]]*\]:?[^|]*/gi, '').trim();
+                        const { textoLimpio } = separarRespuestaMeta(obsWithoutRev);
                         const cleanObs = textoLimpio.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '').trim();
 
                         // Si no hay subcarpetas físicas registradas en la tabla, inferir desde observaciones y anexos
@@ -394,7 +410,7 @@ function getPetSlaTone(bucket: string, responded: boolean) {
                               foundMap[name.toUpperCase()] = { id: `inf-${pet.id}-${name}`, nombre: name, peticion_id: pet.id };
                             }
                           }
-                          (dbAnexos || []).filter((a: any) => a.peticion_id === pet.id).forEach((a: any) => {
+                          (dbAnexos || []).filter((a: any) => a.peticion_id === pet.id && !String(a.nombre_archivo || '').toUpperCase().includes('[RECHAZADO]')).forEach((a: any) => {
                             const fm = (a.nombre_archivo || '').match(/\[([a-zA-Z0-9_\-\s]+)\]/i);
                             if (fm && fm[1]) {
                               const name = String(fm[1] || '').trim();
@@ -414,12 +430,13 @@ function getPetSlaTone(bucket: string, responded: boolean) {
                         );
                         const totalSubs = assignedSubs.length > 0 ? assignedSubs.length : (petSubs.length > 0 ? petSubs.length : 1);
 
-                        // Contar entregas verificadas por archivo o estado
+                        // Contar entregas verificadas por archivo válido (no rechazado) o estado
                         let deliveredCount = 0;
                         if (assignedSubs.length > 0) {
                           for (const asub of assignedSubs) {
                             const subSlug = (asub.nombre || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
                             const hasFile = dbAnexos.some((a: any) => 
+                              !String(a.nombre_archivo || '').toUpperCase().includes('[RECHAZADO]') &&
                               a.peticion_responsable_id === r.id && 
                               ((a.subcarpeta_id && a.subcarpeta_id === asub.id) || 
                                (a.nombre_archivo && a.nombre_archivo.includes(`[${asub.nombre}]`)) || 
@@ -430,13 +447,13 @@ function getPetSlaTone(bucket: string, responded: boolean) {
                           }
                         }
 
-                        const isEntregado = String(r.estado_entrega || '').toLowerCase() === 'entregado';
+                        const isEntregado = !rejectionInfo && String(r.estado_entrega || '').toLowerCase() === 'entregado';
                         if (isEntregado && deliveredCount === 0) {
                           deliveredCount = totalSubs;
                         }
 
                         // Paleta estricta Unitrópico: Verde (#00594E) Entregado, Dorado (#B5A160/#786832) Parcial, Rojo (#DC2626) Pendiente
-                        let statusText = 'Pendiente';
+                        let statusText = rejectionInfo ? 'Devuelto' : 'Pendiente';
                         let dotColor = '#DC2626';
                         let badgeStyle = 'background: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA;';
 
@@ -456,9 +473,30 @@ function getPetSlaTone(bucket: string, responded: boolean) {
                           badgeStyle = 'background: #E6F4EA; color: #00594E; border: 1px solid #B2CFCB;';
                         }
 
-                        const pillTooltip = cleanObs
-                          ? `Observación de ${ofiNombre}: "${cleanObs}"`
-                          : `${ofiNombre} · ${statusText}`;
+                        const isPendingInteractive = statusText !== 'Entregado';
+                        const pillTooltip = isPendingInteractive
+                          ? 'Clic para reenviar notificación y credenciales a esta dependencia'
+                          : (cleanObs ? `Observación de ${ofiNombre}: "${cleanObs}"` : `${ofiNombre} · Entregado`);
+
+                        if (isPendingInteractive) {
+                          return (
+                            <button
+                              type="button"
+                              class="btn-resend-single-dep"
+                              data-peticion-id={pet.id}
+                              data-responsable-id={r.id}
+                              data-oficina={ofiNombre}
+                              data-radicado={pet.numero_radicado}
+                              title={pillTooltip}
+                              style={`display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 0.73rem; line-height: 1.25; max-width: 100%; cursor: pointer; font-family: inherit; transition: all 0.18s ease; ${badgeStyle}`}
+                            >
+                              <span style={`width: 7px; height: 7px; border-radius: 50%; background: ${dotColor}; flex-shrink: 0;`}></span>
+                              <span style="font-weight: 700; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{ofiNombre}</span>
+                              <span style="font-size: 0.67rem; font-weight: 800; white-space: nowrap; opacity: 0.92;">· {statusText}</span>
+                              <svg class="dep-mail-hover-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="flex-shrink: 0; opacity: 0.65; transition: opacity 0.18s ease, transform 0.18s ease;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                            </button>
+                          );
+                        }
 
                         return (
                           <div
@@ -480,16 +518,30 @@ function getPetSlaTone(bucket: string, responded: boolean) {
                   <td style="padding: 12px 8px; text-align: right; white-space: nowrap;">
                     <div style="display: inline-flex; align-items: center; gap: 6px;">
                       
-                      <!-- Botón Reenviar Correo / Diagnóstico Activo -->
+                      <!-- Botón Reenviar Correo ÚNICAMENTE a Dependencias Pendientes -->
                       <button 
                         type="button" 
                         class="btn-icon-action btn-action-mail btn-resend-mail" 
                         data-id={pet.id} 
                         data-radicado={pet.numero_radicado}
-                        title="Reenviar Notificación por Correo a Responsables"
+                        title="Reenviar Notificación por Correo Únicamente a Dependencias Pendientes"
                         style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid #DCE4E3; background: #ffffff; color: #475569; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.18s ease;"
                       >
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                      </button>
+
+                      <!-- Botón + Prórroga -->
+                      <button 
+                        type="button" 
+                        class="btn-icon-action btn-action-prorroga btn-open-prorroga" 
+                        data-id={pet.id} 
+                        data-radicado={pet.numero_radicado}
+                        data-entrega={pet.fecha_limite_entrega ? String(pet.fecha_limite_entrega).slice(0, 10) : ''}
+                        data-responsable={pet.fecha_limite_responsable ? String(pet.fecha_limite_responsable).slice(0, 10) : ''}
+                        title="Registrar Prórroga Auditada"
+                        style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid #DBD2B0; background: #F7F5EE; color: #786832; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.18s ease;"
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="10" y1="16" x2="14" y2="16"/></svg>
                       </button>
 
                       <!-- Botón Abrir Carpeta en Gestor de Archivos -->
@@ -513,8 +565,9 @@ function getPetSlaTone(bucket: string, responded: boolean) {
                         data-solicitante={pet.solicitante_nombre}
                         data-tipo={pet.solicitante_tipo || 'Ciudadano'}
                         data-email={pet.solicitante_email || ''}
-                        data-prioridad={pet.prioridad || 'Media'}
-                        data-entrega={pet.fecha_limite_entrega}
+                        data-prioridad={pet.prioridad || 'Alta'}
+                        data-entrega={pet.fecha_limite_entrega ? String(pet.fecha_limite_entrega).slice(0, 10) : ''}
+                        data-responsable={pet.fecha_limite_responsable ? String(pet.fecha_limite_responsable).slice(0, 10) : ''}
                         data-estado={pet.estado || 'en_tramite'}
                         data-descripcion={separarRespuestaMeta(pet.descripcion || '').textoLimpio}
                         title="Editar Petición"
@@ -596,7 +649,7 @@ function getPetSlaTone(bucket: string, responded: boolean) {
             <select id="edit-pet-prioridad" class="form-select">
               <option value="Baja">Baja</option>
               <option value="Media">Media</option>
-              <option value="Alta">Alta (Vencimiento Urgente)</option>
+              <option value="Alta">Alta</option>
             </select>
           </div>
 
@@ -604,23 +657,64 @@ function getPetSlaTone(bucket: string, responded: boolean) {
             <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Estado de Gestión</label>
             <select id="edit-pet-estado" class="form-select">
               <option value="en_tramite">En Trámite</option>
-              <option value="respondida">Respondida</option>
+              <option value="respondida">Expediente Completo / Respondida</option>
               <option value="archivada">Archivada</option>
             </select>
           </div>
         </div>
 
-        <div class="form-group">
-          <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Fecha Límite General de Entrega *</label>
-          <input type="date" id="edit-pet-entrega" required class="form-input" />
-          <small style="font-size: 0.70rem; color: var(--dorado-oscuro); margin-top: 4px; display: block;">
-            Al modificar esta fecha, el plazo para las oficinas se recalculará automáticamente (-5 días calendario).
-          </small>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Fecha Límite General de Entrega *</label>
+            <input type="date" id="edit-pet-entrega" required class="form-input" />
+          </div>
+          <div class="form-group">
+            <label style="font-size: 0.78rem; font-weight: 700; color: var(--dorado-oscuro); text-transform: uppercase;">Plazo Oficinas Responsables</label>
+            <input type="date" id="edit-pet-responsable" class="form-input" />
+          </div>
         </div>
 
         <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; border-top: 1px solid var(--border-subtle); padding-top: 16px;">
           <button type="button" class="btn btn-secondary" id="btn-cancel-edit-pet">Cancelar</button>
           <button type="submit" class="btn btn-primary" id="btn-save-edit-pet">Guardar Cambios</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Registrar Prórroga Auditada -->
+  <div class="modal-backdrop" id="modal-prorroga" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 2050; align-items: center; justify-content: center; padding: 16px;">
+    <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 560px; border-radius: var(--radius-md); box-shadow: var(--shadow-md); overflow: hidden; border: 1.5px solid #B5A160;">
+      <div style="background: var(--verde-principal); color: #ffffff; padding: 16px 22px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #B5A160;">
+        <div>
+          <h3 style="font-size: 1rem; font-weight: 800; margin: 0;">Registrar Prórroga de Plazo</h3>
+          <span style="font-size: 0.72rem; color: rgba(255,255,255,0.85);">Ampliación manual con registro antes/después en Auditoría</span>
+        </div>
+        <button type="button" id="btn-close-prorroga-modal" style="background: transparent; border: none; font-size: 1.5rem; color: #ffffff; cursor: pointer;">&times;</button>
+      </div>
+      <form id="form-prorroga" style="padding: 20px 22px; display: flex; flex-direction: column; gap: 14px;">
+        <input type="hidden" id="prorroga-pet-id" />
+        <div style="background: #F2F7F6; border: 1px solid #B2CFCB; border-radius: 8px; padding: 10px 14px; font-size: 0.80rem; color: #00594E; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <span>Radicado: <strong id="prorroga-disp-radicado" style="font-family: monospace;">RAD-2026</strong></span>
+          <span id="prorroga-disp-actual" style="font-size: 0.74rem; font-weight: 700; color: #475569;">Plazo actual: --</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label for="prorroga-nueva-entrega" style="font-size: 0.74rem; font-weight: 800; color: #334155; text-transform: uppercase;">Nueva Fecha Límite General *</label>
+            <input type="date" id="prorroga-nueva-entrega" required class="form-input" />
+          </div>
+          <div class="form-group">
+            <label for="prorroga-nueva-resp" style="font-size: 0.74rem; font-weight: 800; color: #786832; text-transform: uppercase;">Nuevo Límite Dependencias</label>
+            <input type="date" id="prorroga-nueva-resp" class="form-input" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="prorroga-motivo" style="font-size: 0.74rem; font-weight: 800; color: #334155; text-transform: uppercase;">Motivo de la Prórroga *</label>
+          <textarea id="prorroga-motivo" rows="3" required class="form-input" placeholder="Indique el motivo de la ampliación de plazo..." style="font-size: 0.84rem; resize: vertical;"></textarea>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #E2E8F0; padding-top: 12px;">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-prorroga">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-prorroga" style="border-bottom: 2px solid #B5A160;">Guardar Prórroga</button>
         </div>
       </form>
     </div>
@@ -726,7 +820,7 @@ function getPetSlaTone(bucket: string, responded: boolean) {
 
     searchInput?.addEventListener('input', () => applyPeticionesFilters(false));
 
-    // 2. MODAL DE EDICIÓN
+    // 2. MODAL DE EDICIÓN Y MODAL DE PRÓRROGA
     const editModal = document.getElementById('modal-edit-peticion');
     const editTitle = document.getElementById('edit-modal-title');
     const inputId = document.getElementById('edit-pet-id') as HTMLInputElement;
@@ -736,11 +830,32 @@ function getPetSlaTone(bucket: string, responded: boolean) {
     const selectPrioridad = document.getElementById('edit-pet-prioridad') as HTMLSelectElement;
     const selectEstado = document.getElementById('edit-pet-estado') as HTMLSelectElement;
     const inputEntrega = document.getElementById('edit-pet-entrega') as HTMLInputElement;
+    const inputResponsable = document.getElementById('edit-pet-responsable') as HTMLInputElement;
     const formEdit = document.getElementById('form-edit-peticion') as HTMLFormElement;
 
     const closeEdit = () => { if (editModal) editModal.style.display = 'none'; };
     document.getElementById('btn-close-edit-modal')?.addEventListener('click', closeEdit);
     document.getElementById('btn-cancel-edit-pet')?.addEventListener('click', closeEdit);
+
+    const prorrogaModal = document.getElementById('modal-prorroga');
+    const inputProrrogaId = document.getElementById('prorroga-pet-id') as HTMLInputElement | null;
+    const dispProrrogaRadicado = document.getElementById('prorroga-disp-radicado');
+    const dispProrrogaActual = document.getElementById('prorroga-disp-actual');
+    const inputProrrogaEntrega = document.getElementById('prorroga-nueva-entrega') as HTMLInputElement | null;
+    const inputProrrogaResp = document.getElementById('prorroga-nueva-resp') as HTMLInputElement | null;
+    const inputProrrogaMotivo = document.getElementById('prorroga-motivo') as HTMLTextAreaElement | null;
+    const formProrroga = document.getElementById('form-prorroga') as HTMLFormElement | null;
+    const btnSaveProrroga = document.getElementById('btn-save-prorroga') as HTMLButtonElement | null;
+
+    const closeProrroga = () => {
+      if (prorrogaModal) prorrogaModal.style.display = 'none';
+      if (formProrroga) formProrroga.reset();
+    };
+    document.getElementById('btn-close-prorroga-modal')?.addEventListener('click', closeProrroga);
+    document.getElementById('btn-cancel-prorroga')?.addEventListener('click', closeProrroga);
+    prorrogaModal?.addEventListener('click', (e) => {
+      if (e.target === prorrogaModal) closeProrroga();
+    });
 
     // 3. DELEGACIÓN GLOBAL DE ACCIONES (Abrir Carpeta, Editar, Eliminar y Reenviar)
     document.addEventListener('click', async (e) => {
@@ -771,6 +886,72 @@ function getPetSlaTone(bucket: string, responded: boolean) {
         return;
       }
 
+      // A2. Botón Reenviar Correo Individual a Dependencia Pendiente/Parcial
+      const singleDepBtn = target.closest('.btn-resend-single-dep') as HTMLButtonElement | null;
+      if (singleDepBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const peticionId = singleDepBtn.dataset.peticionId || '';
+        const responsableId = singleDepBtn.dataset.responsableId || '';
+        const oficina = singleDepBtn.dataset.oficina || 'Dependencia';
+        const radicado = singleDepBtn.dataset.radicado || '';
+        if (!peticionId || !responsableId) return;
+
+        singleDepBtn.disabled = true;
+        const origHtml = singleDepBtn.innerHTML;
+        singleDepBtn.style.opacity = '0.7';
+        singleDepBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation: spin 1s linear infinite;"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/></svg><span>Enviando...</span>`;
+
+        try {
+          const res = await fetch('/api/enviar-correo-peticion', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ peticion_id: peticionId, responsable_id: responsableId }),
+          });
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            (window as any).showToast(
+              data.error || `No se pudo notificar a ${oficina}.`,
+              'error',
+              `Reenvío ${radicado}`
+            );
+          } else {
+            (window as any).showToast(
+              data.message || `Notificación enviada únicamente a ${oficina}.`,
+              'success',
+              `Recordatorio a ${oficina}`
+            );
+          }
+        } catch {
+          (window as any).showToast(`Error de red intentando notificar a ${oficina}.`, 'error');
+        } finally {
+          singleDepBtn.disabled = false;
+          singleDepBtn.style.opacity = '';
+          singleDepBtn.innerHTML = origHtml;
+        }
+        return;
+      }
+
+      // A3. Botón Abrir Modal de Prórroga
+      const prorrogaBtn = target.closest('.btn-open-prorroga') as HTMLElement | null;
+      if (prorrogaBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const id = prorrogaBtn.dataset.id || '';
+        const radicado = prorrogaBtn.dataset.radicado || '';
+        const entrega = prorrogaBtn.dataset.entrega || '';
+        const responsable = prorrogaBtn.dataset.responsable || '';
+
+        if (inputProrrogaId) inputProrrogaId.value = id;
+        if (dispProrrogaRadicado) dispProrrogaRadicado.textContent = radicado;
+        if (dispProrrogaActual) dispProrrogaActual.textContent = `Plazo actual: ${entrega || '--'}`;
+        if (inputProrrogaEntrega) inputProrrogaEntrega.value = entrega;
+        if (inputProrrogaResp) inputProrrogaResp.value = responsable;
+        if (inputProrrogaMotivo) inputProrrogaMotivo.value = '';
+        if (prorrogaModal) prorrogaModal.style.display = 'flex';
+        return;
+      }
+
       // B. Botón Editar
       const editBtn = target.closest('.btn-edit-pet') as HTMLElement | null;
       if (editBtn) {
@@ -781,9 +962,10 @@ function getPetSlaTone(bucket: string, responded: boolean) {
         const asunto = editBtn.dataset.asunto || '';
         const solicitante = editBtn.dataset.solicitante || '';
         const tipo = editBtn.dataset.tipo || 'Ciudadano';
-        const prioridad = editBtn.dataset.prioridad || 'Media';
+        const prioridad = editBtn.dataset.prioridad || 'Alta';
         const estado = editBtn.dataset.estado || 'en_tramite';
         const entrega = editBtn.dataset.entrega || '';
+        const responsable = editBtn.dataset.responsable || '';
 
         if (editTitle) editTitle.textContent = `Editar Radicado ${radicado}`;
         if (inputId) inputId.value = id;
@@ -793,6 +975,7 @@ function getPetSlaTone(bucket: string, responded: boolean) {
         if (selectPrioridad) selectPrioridad.value = prioridad;
         if (selectEstado) selectEstado.value = estado;
         if (inputEntrega) inputEntrega.value = entrega;
+        if (inputResponsable) inputResponsable.value = responsable;
 
         if (editModal) editModal.style.display = 'flex';
         return;
@@ -880,9 +1063,9 @@ function getPetSlaTone(bucket: string, responded: boolean) {
             );
           } else {
             (window as any).showToast(
-              `Notificación enviada exitosamente para ${radicado}.`,
+              data.message || `Notificación enviada a dependencias pendientes de ${radicado}.`,
               'success',
-              'Despacho de Correo'
+              'Despacho a Pendientes'
             );
           }
         } catch (err: any) {
@@ -892,6 +1075,53 @@ function getPetSlaTone(bucket: string, responded: boolean) {
           resendBtn.innerHTML = originalContent;
         }
         return;
+      }
+    });
+
+    formProrroga?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!inputProrrogaId?.value || !inputProrrogaEntrega?.value) return;
+      const motivo = inputProrrogaMotivo?.value.trim() || '';
+      if (!motivo) {
+        (window as any).showToast('Debe indicar el motivo oficial de la prórroga.', 'warning');
+        return;
+      }
+
+      if (btnSaveProrroga) {
+        btnSaveProrroga.disabled = true;
+        btnSaveProrroga.textContent = 'Guardando prórroga...';
+      }
+
+      try {
+        const res = await fetch('/api/peticiones/prorroga', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            peticion_id: inputProrrogaId.value,
+            nueva_fecha_entrega: inputProrrogaEntrega.value,
+            nueva_fecha_responsable: inputProrrogaResp?.value || undefined,
+            motivo,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          (window as any).showToast(data.error || 'No se pudo registrar la prórroga.', 'error');
+          return;
+        }
+        closeProrroga();
+        (window as any).showToast(
+          data.message || 'Prórroga registrada con trazabilidad en Auditoría.',
+          'success',
+          'Plazo Ampliado'
+        );
+        setTimeout(() => window.location.reload(), 650);
+      } catch {
+        (window as any).showToast('Error de red registrando prórroga.', 'error');
+      } finally {
+        if (btnSaveProrroga) {
+          btnSaveProrroga.disabled = false;
+          btnSaveProrroga.textContent = 'Guardar Prórroga';
+        }
       }
     });
 
@@ -912,6 +1142,7 @@ function getPetSlaTone(bucket: string, responded: boolean) {
           prioridad: selectPrioridad.value,
           estado: selectEstado.value,
           fecha_limite_entrega: inputEntrega.value,
+          fecha_limite_responsable: inputResponsable?.value || undefined,
         };
 
         const res = await fetch('/api/peticiones/editar', {
@@ -1013,10 +1244,20 @@ function getPetSlaTone(bucket: string, responded: boolean) {
       border-color: #00594E !important;
       color: #FFFFFF !important;
     }
-    .btn-action-edit:hover {
+    .btn-action-edit:hover,
+    .btn-action-prorroga:hover {
       background: #B5A160 !important;
       border-color: #B5A160 !important;
       color: #FFFFFF !important;
+    }
+    .btn-resend-single-dep:hover:not(:disabled) {
+      box-shadow: 0 2px 8px rgba(220, 38, 38, 0.16);
+      transform: translateY(-1px);
+      filter: brightness(0.97);
+    }
+    .btn-resend-single-dep:hover .dep-mail-ico {
+      opacity: 1 !important;
+      transform: scale(1.1);
     }
     .btn-action-delete:hover {
       background: #DC2626 !important;

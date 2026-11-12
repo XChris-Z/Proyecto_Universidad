@@ -4,8 +4,10 @@ export const prerender = false;
 
 import AppLayout from '@layouts/AppLayout.astro';
 import { supabase } from '@lib/supabase';
-import { PERMISSIONS_CATALOG } from '@data/roles';
+import { RBAC_MODULES, SYSTEM_ROLES } from '@data/roles';
 import { SESSION_COOKIE_KEY } from '@lib/constants';
+import { getFirstAllowedPath, getRoleDisplayName, isAdminRoleCode } from '@lib/permissions';
+import { loadRbacState, resolveUserRbacServer } from '@lib/rbac-server';
 
 // Validación estricta de rol: únicamente Administrador puede acceder
 const sessionUserId = Astro.cookies.get(SESSION_COOKIE_KEY)?.value;
@@ -13,57 +15,78 @@ if (!sessionUserId) {
   return Astro.redirect('/login');
 }
 
-let isAdmin = false;
-if (sessionUserId === 'usr-root') {
-  isAdmin = true;
-} else {
-  const { data: currentProfile } = await supabase
-    .from('profiles')
-    .select('role')
-    .or(`id.eq.${sessionUserId},email.eq.${sessionUserId}`)
-    .maybeSingle();
-  isAdmin = currentProfile?.role === 'admin';
+const currentRbac = await resolveUserRbacServer(sessionUserId);
+if (!currentRbac.authenticated) {
+  return Astro.redirect('/login');
 }
 
-if (!isAdmin) {
-  return Astro.redirect('/dashboard');
+if (!currentRbac.isAdmin) {
+  const fallback = getFirstAllowedPath(currentRbac.effectivePermissions, false);
+  return Astro.redirect(`${fallback}?denied=1`);
 }
 
-// Consultar usuarios reales directamente desde Supabase PostgreSQL
-const { data: dbProfiles } = await supabase
-  .from('profiles')
-  .select('*')
-  .order('created_at', { ascending: true });
+// Consultar usuarios reales y estado RBAC desde Supabase PostgreSQL
+const [{ data: dbProfiles }, rbacState] = await Promise.all([
+  supabase.from('profiles').select('*').order('created_at', { ascending: true }),
+  loadRbacState(),
+]);
 
 const usersList = dbProfiles && dbProfiles.length > 0 ? dbProfiles : [];
-const totalUsers = usersList.length;
-const totalAdmins = usersList.filter((u: any) => u.role === 'admin').length;
-const totalFuncionarios = usersList.filter((u: any) => u.role !== 'admin').length;
-const dependenciasSet = new Set(usersList.map((u: any) => u.cargo || u.dependencia).filter(Boolean));
-const totalDependencias = Math.max(dependenciasSet.size, 1);
+const rolesCatalog = rbacState.roles && rbacState.roles.length > 0 ? rbacState.roles : SYSTEM_ROLES;
 
-// Agrupar catálogo de permisos por categorías
-const categories = ['Consulta', 'Operación', 'Gestión', 'Configuración', 'Seguridad'];
-const permissionsByCategory = categories.map(cat => ({
-  category: cat,
-  perms: PERMISSIONS_CATALOG.filter(p => p.category === cat)
-}));
+const enrichedUsers = usersList.map((u: any) => {
+  const email = String(u.email || '').toLowerCase();
+  const isProtectedRoot = u.id === 'usr-root';
+  const assignedRoleId =
+    isProtectedRoot || isAdminRoleCode(u.role)
+      ? 'admin'
+      : rbacState.userCustomRoles[u.id] || rbacState.userCustomRoles[email] || 'funcionario';
+  const isUserAdmin = isProtectedRoot || isAdminRoleCode(assignedRoleId);
+  const roleObj =
+    rolesCatalog.find((r) => r.id === assignedRoleId || r.code === assignedRoleId) ||
+    rolesCatalog.find((r) => r.id === (isUserAdmin ? 'admin' : 'funcionario')) ||
+    SYSTEM_ROLES[isUserAdmin ? 0 : 1]!;
+  const roleLabel = isUserAdmin ? 'Administrador' : getRoleDisplayName(roleObj.id, rolesCatalog);
+  const roleCategory = isUserAdmin ? 'admin' : roleObj.id === 'funcionario' ? 'funcionario' : 'custom';
+
+  return {
+    ...u,
+    assignedRoleId: roleObj.id,
+    roleObj,
+    roleLabel,
+    roleCategory,
+    isUserAdmin,
+    isProtectedRoot,
+  };
+});
+
+const totalUsers = enrichedUsers.length;
+const totalAdmins = enrichedUsers.filter((u: any) => u.isUserAdmin).length;
+const totalFuncionarios = enrichedUsers.filter((u: any) => !u.isUserAdmin).length;
+const customRolesCount = rolesCatalog.filter((r) => !r.isProtected).length;
+const totalRoles = rolesCatalog.length;
+
+const initialRbacBootstrap = JSON.stringify({
+  roles: rolesCatalog,
+  userCustomRoles: rbacState.userCustomRoles,
+  userPermissions: rbacState.userPermissionsOverride,
+});
 ---
 
 <AppLayout title="Usuarios" activeNav="usuarios">
-  <div class="users-admin-container" style="display: flex; flex-direction: column; gap: 24px; max-width: 1280px; margin: 0 auto; width: 100%;">
+  <div class="users-admin-container" style="display: flex; flex-direction: column; gap: 22px; max-width: 1320px; margin: 0 auto; width: 100%;">
     
     <!-- Encabezado Limpio Institucional -->
     <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
       <div>
-        <h1 style="font-size: 1.65rem; font-weight: 800; color: #111827; margin: 0; letter-spacing: -0.02em;">Usuarios</h1>
+        <h1 style="font-size: 1.65rem; font-weight: 800; color: #111827; margin: 0; letter-spacing: -0.02em;">Usuarios y Control RBAC</h1>
         <p style="font-size: 0.86rem; color: #52606D; margin: 4px 0 0 0;">
-          Gestión centralizada del directorio institucional de funcionarios, credenciales y asignación de permisos del SGD.
+          Administración centralizada de cuentas institucionales, roles personalizados y matriz de acceso para los 12 módulos del SGD.
         </p>
       </div>
     </div>
 
-    <!-- 3 Tarjetas Bento KPIs de Usuarios (Paleta Oficial #F2F7F6 / #B2CFCB / #00594E / #B5A160) -->
+    <!-- 3 Tarjetas Bento KPIs (Paleta Oficial #F2F7F6 / #B2CFCB / #00594E / #F7F5EE / #B5A160) -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;">
       
       <!-- KPI 1: Total Usuarios Registrados -->
@@ -71,65 +94,74 @@ const permissionsByCategory = categories.map(cat => ({
         <div>
           <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #52606D; letter-spacing: 0.5px; display: block;">Total Usuarios Registrados</span>
           <div style="font-size: 1.85rem; font-weight: 800; color: #00594E; margin-top: 4px; line-height: 1;" id="kpi-total-users">{totalUsers}</div>
+          <span style="font-size: 0.72rem; color: #52606D; margin-top: 4px; display: block;">{totalAdmins} Administrador(es)</span>
         </div>
         <div style="width: 44px; height: 44px; border-radius: 12px; background: #FFFFFF; border: 1.5px solid #B2CFCB; display: flex; align-items: center; justify-content: center; color: #00594E; flex-shrink: 0;">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         </div>
       </div>
 
-      <!-- KPI 2: Funcionarios Activos -->
+      <!-- KPI 2: Funcionarios y Perfiles Operativos -->
       <div style="background: #F2F7F6; border: 1.5px solid #B2CFCB; border-radius: 14px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0, 89, 78, 0.04);">
         <div>
           <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #52606D; letter-spacing: 0.5px; display: block;">Funcionarios Activos</span>
-          <div style="font-size: 1.85rem; font-weight: 800; color: #00594E; margin-top: 4px; line-height: 1;">{totalFuncionarios}</div>
+          <div style="font-size: 1.85rem; font-weight: 800; color: #00594E; margin-top: 4px; line-height: 1;" id="kpi-total-funcionarios">{totalFuncionarios}</div>
+          <span style="font-size: 0.72rem; color: #52606D; margin-top: 4px; display: block;">Acceso granular por módulo</span>
         </div>
         <div style="width: 44px; height: 44px; border-radius: 12px; background: #FFFFFF; border: 1.5px solid #B2CFCB; display: flex; align-items: center; justify-content: center; color: #00594E; flex-shrink: 0;">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </div>
       </div>
 
-      <!-- KPI 3: Dependencias Vinculadas -->
+      <!-- KPI 3: Roles RBAC Activos -->
       <div style="background: #F7F5EE; border: 1.5px solid #DBD2B0; border-radius: 14px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(181, 161, 96, 0.06);">
         <div>
-          <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #786832; letter-spacing: 0.5px; display: block;">Dependencias Vinculadas</span>
-          <div style="font-size: 1.85rem; font-weight: 800; color: #786832; margin-top: 4px; line-height: 1;">{totalDependencias}</div>
+          <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #786832; letter-spacing: 0.5px; display: block;">Roles RBAC Configurados</span>
+          <div style="font-size: 1.85rem; font-weight: 800; color: #786832; margin-top: 4px; line-height: 1;" id="kpi-total-roles">{totalRoles}</div>
+          <span style="font-size: 0.72rem; color: #786832; margin-top: 4px; display: block;" id="kpi-custom-roles-sub">{customRolesCount} rol(es) personalizado(s)</span>
         </div>
         <div style="width: 44px; height: 44px; border-radius: 12px; background: #FFFFFF; border: 1.5px solid #DBD2B0; display: flex; align-items: center; justify-content: center; color: #786832; flex-shrink: 0;">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 21h18M3 7v14M21 7v14M6 11h4M6 15h4M14 11h4M14 15h4M12 3l9 4H3l9-4z"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         </div>
       </div>
 
     </div>
 
-    <!-- Barra de Búsqueda y Filtros de la Tabla (Bento Pro Max) -->
+    <!-- Barra de Búsqueda, Filtros y Botones de Gestión RBAC -->
     <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-radius: 14px; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
       
       <!-- Buscador Instantáneo -->
-      <div style="position: relative; flex: 1; max-width: 420px; min-width: 240px;">
-        <input type="text" id="user-search-input" placeholder="Buscar por nombre, correo institucional o cargo..." class="form-input" style="padding-left: 38px; border-radius: 10px; border: 1.5px solid #DCE4E3; font-size: 0.85rem; height: 42px;" />
+      <div style="position: relative; flex: 1; max-width: 380px; min-width: 230px;">
+        <input type="text" id="user-search-input" placeholder="Buscar por nombre, correo, dependencia o rol..." class="form-input" style="padding-left: 38px; border-radius: 10px; border: 1.5px solid #DCE4E3; font-size: 0.85rem; height: 42px;" />
         <div style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #64748B; display: flex; align-items: center; pointer-events: none;">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
         </div>
       </div>
 
-      <!-- Filtros por Rol y Botón Primario en #00594E -->
-      <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-        <div style="display: flex; align-items: center; gap: 6px; background: #F8FAFC; padding: 4px; border-radius: 10px; border: 1px solid #E2E8F0;">
-          <button type="button" class="btn btn-sm user-filter-btn active" data-role="all" style="font-size: 0.76rem; font-weight: 750; border-radius: 8px; padding: 6px 14px; cursor: pointer; border: none;">Todos</button>
-          <button type="button" class="btn btn-sm user-filter-btn" data-role="admin" style="font-size: 0.76rem; font-weight: 750; border-radius: 8px; padding: 6px 14px; cursor: pointer; border: none;">Administradores</button>
-          <button type="button" class="btn btn-sm user-filter-btn" data-role="funcionario" style="font-size: 0.76rem; font-weight: 750; border-radius: 8px; padding: 6px 14px; cursor: pointer; border: none;">Funcionarios</button>
+      <!-- Filtros por Rol + Botones + Gestionar Roles y + Nuevo Usuario -->
+      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 4px; background: #F8FAFC; padding: 4px; border-radius: 10px; border: 1px solid #E2E8F0;">
+          <button type="button" class="btn btn-sm user-filter-btn active" data-role="all" style="font-size: 0.76rem; font-weight: 750; border-radius: 8px; padding: 6px 12px; cursor: pointer; border: none;">Todos</button>
+          <button type="button" class="btn btn-sm user-filter-btn" data-role="admin" style="font-size: 0.76rem; font-weight: 750; border-radius: 8px; padding: 6px 12px; cursor: pointer; border: none;">Administradores</button>
+          <button type="button" class="btn btn-sm user-filter-btn" data-role="funcionario" style="font-size: 0.76rem; font-weight: 750; border-radius: 8px; padding: 6px 12px; cursor: pointer; border: none;">Funcionarios</button>
+          <button type="button" class="btn btn-sm user-filter-btn" data-role="custom" style="font-size: 0.76rem; font-weight: 750; border-radius: 8px; padding: 6px 12px; cursor: pointer; border: none;">Personalizados</button>
         </div>
 
-        <button type="button" id="btn-open-create-user" style="display: inline-flex; align-items: center; gap: 8px; padding: 9px 20px; font-weight: 800; font-size: 0.85rem; background: #00594E; border: 1.5px solid #00594E; color: #ffffff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 89, 78, 0.25); cursor: pointer; transition: all 0.2s ease;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <button type="button" id="btn-open-roles-modal" style="display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; font-weight: 800; font-size: 0.83rem; background: #F7F5EE; border: 1.5px solid #B5A160; color: #786832; border-radius: 10px; cursor: pointer; transition: all 0.2s ease;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="14"/><line x1="9" y1="11" x2="15" y2="11"/></svg>
+          <span>Gestionar Roles</span>
+        </button>
+
+        <button type="button" id="btn-open-create-user" style="display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px; font-weight: 800; font-size: 0.83rem; background: #00594E; border: 1.5px solid #00594E; color: #ffffff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 89, 78, 0.22); cursor: pointer; transition: all 0.2s ease;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           <span>Nuevo Usuario</span>
         </button>
       </div>
     </div>
 
-    <!-- Tabla Ejecutiva de Usuarios (100% Ancho Completo, Cero Desbordamiento de Texto) -->
+    <!-- Tabla Ejecutiva de Usuarios (100% Ancho Completo) -->
     <div class="card" style="padding: 0; background: #ffffff; border: 1.5px solid #DCE4E3; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
-      <div class="table-responsive" style="overflow-x: auto; width: 100%;">
+      <div class="table-responsive pro-scroll-container" style="overflow-x: auto; width: 100%;">
         <table class="table-users" style="width: 100%; border-collapse: collapse; font-size: 0.86rem; table-layout: auto;">
           <thead>
             <tr style="background: #F8FAFC; border-bottom: 2px solid #DCE4E3; text-align: left; color: #52606D; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.5px;">
@@ -141,20 +173,31 @@ const permissionsByCategory = categories.map(cat => ({
             </tr>
           </thead>
           <tbody id="users-table-body">
-            {usersList.map((u) => {
-              const isAdmin = u.role === 'admin';
+            {enrichedUsers.map((u: any) => {
               const initials = u.full_name ? u.full_name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() : 'US';
-              const isProtectedRoot = u.id === 'usr-root';
-              const cargo = u.cargo || (isAdmin ? 'Dirección General / Administrador' : 'Despacho Institucional');
+              const cargo = u.cargo || (u.isUserAdmin ? 'Dirección General / Administrador' : 'Despacho Institucional');
               const avatarUrl = u.avatar_url;
+              const badgeBg = u.isUserAdmin ? '#F2F7F6' : u.roleCategory === 'custom' ? '#EFF6FF' : '#F7F5EE';
+              const badgeColor = u.isUserAdmin ? '#00594E' : u.roleObj?.color || '#786832';
+              const badgeBorder = u.isUserAdmin ? '#B2CFCB' : u.roleCategory === 'custom' ? '#BFDBFE' : '#DBD2B0';
 
               return (
-                <tr class="user-row" id={`row-user-${u.id}`} data-user-id={u.id} data-user-email={u.email} data-user-name={u.full_name} data-user-cargo={cargo} data-user-role={isAdmin ? 'admin' : 'funcionario'} style="border-bottom: 1px solid #E2E8F0; transition: background 0.15s ease;">
-                  
+                <tr
+                  class="user-row"
+                  id={`row-user-${u.id}`}
+                  data-user-id={u.id}
+                  data-user-email={u.email}
+                  data-user-name={u.full_name}
+                  data-user-cargo={cargo}
+                  data-user-role={u.assignedRoleId}
+                  data-user-role-cat={u.roleCategory}
+                  data-user-role-name={u.roleLabel}
+                  style="border-bottom: 1px solid #E2E8F0; transition: background 0.15s ease;"
+                >
                   <!-- Columna 1: Funcionario -->
                   <td style="padding: 14px 18px; min-width: 0; max-width: 260px;">
                     <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
-                      <div class="user-avatar-circle" style={`width: 38px; height: 38px; min-width: 38px; border-radius: 999px; background: #E6EFEF; color: #00594E; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.84rem; border: 1.5px solid #B2CFCB; overflow: hidden; flex-shrink: 0;`}>
+                      <div class="user-avatar-circle" style="width: 38px; height: 38px; min-width: 38px; border-radius: 999px; background: #E6EFEF; color: #00594E; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.84rem; border: 1.5px solid #B2CFCB; overflow: hidden; flex-shrink: 0;">
                         {avatarUrl ? (
                           <img src={avatarUrl} alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;" />
                         ) : (
@@ -162,13 +205,13 @@ const permissionsByCategory = categories.map(cat => ({
                         )}
                       </div>
                       <div style="min-width: 0; flex: 1; overflow: hidden;">
-                        <div style="font-weight: 750; color: #111827; font-size: 0.90rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title={u.full_name}>{u.full_name}</div>
-                        <div style="font-size: 0.74rem; color: #52606D; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title={cargo}>{cargo}</div>
+                        <div class="user-row-name-text" style="font-weight: 750; color: #111827; font-size: 0.90rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title={u.full_name}>{u.full_name}</div>
+                        <div class="user-row-sub-cargo" style="font-size: 0.74rem; color: #52606D; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title={cargo}>{cargo}</div>
                       </div>
                     </div>
                   </td>
 
-                  <!-- Columna 2: Correo Institucional (Overflow Fix con title y ellipsis) -->
+                  <!-- Columna 2: Correo Institucional -->
                   <td style="padding: 14px 16px; min-width: 0; max-width: 240px;">
                     <div class="user-email-chip" style="display: inline-flex; align-items: center; gap: 6px; font-family: monospace; font-size: 0.80rem; color: #111827; background: #F8FAFC; padding: 6px 10px; border-radius: 8px; border: 1.5px solid #DCE4E3; max-width: 100%; min-width: 0; box-sizing: border-box; overflow: hidden;" title={u.email}>
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#00594E" stroke-width="2.2" style="flex-shrink: 0;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -178,19 +221,21 @@ const permissionsByCategory = categories.map(cat => ({
 
                   <!-- Columna 3: Dependencia -->
                   <td style="padding: 14px 16px; color: #52606D; font-size: 0.82rem; min-width: 0; max-width: 220px;">
-                    <span style="font-weight: 600; color: #111827; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title={cargo}>{cargo}</span>
+                    <span class="user-row-cargo-text" style="font-weight: 600; color: #111827; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title={cargo}>{cargo}</span>
                   </td>
 
-                  <!-- Columna 4: Rol y Estado -->
+                  <!-- Columna 4: Rol Único y Estado -->
                   <td style="padding: 14px 16px; white-space: nowrap;">
                     <div style="display: inline-flex; align-items: center; gap: 8px;">
-                      <span style={`font-size: 0.70rem; padding: 3px 9px; font-weight: 750; border-radius: 999px; display: inline-flex; align-items: center; gap: 5px; ${isAdmin ? 'background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB;' : 'background: #F7F5EE; color: #786832; border: 1px solid #DBD2B0;'}`}>
-                        {isAdmin ? (
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
-                        ) : (
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
-                        )}
-                        <span>{isAdmin ? 'ADMINISTRADOR' : 'FUNCIONARIO'}</span>
+                      <span class="user-row-role-badge" style={`font-size: 0.70rem; padding: 3px 10px; font-weight: 800; border-radius: 999px; display: inline-flex; align-items: center; gap: 5px; background: ${badgeBg}; color: ${badgeColor}; border: 1px solid ${badgeBorder};`}>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill={u.isUserAdmin ? 'currentColor' : 'none'} stroke={u.isUserAdmin ? 'none' : 'currentColor'} stroke-width="2.3">
+                          {u.isUserAdmin ? (
+                            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>
+                          ) : (
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                          )}
+                        </svg>
+                        <span>{u.roleLabel.toUpperCase()}</span>
                       </span>
 
                       <span style="font-size: 0.68rem; font-weight: 700; color: #00594E; background: #E6EFEF; border: 1px solid #B2CFCB; padding: 2px 7px; border-radius: 9999px; display: inline-flex; align-items: center; gap: 4px;">
@@ -200,19 +245,20 @@ const permissionsByCategory = categories.map(cat => ({
                     </div>
                   </td>
 
-                  <!-- Columna 5: Acciones (3 Botones con Iconos Limpios) -->
+                  <!-- Columna 5: Acciones -->
                   <td style="padding: 14px 18px; text-align: right; white-space: nowrap;">
                     <div style="display: inline-flex; gap: 8px; align-items: center; justify-content: flex-end;">
                       
-                      <!-- Botón 1: Gestionar Permisos (Modal Exclusivo) -->
+                      <!-- Botón 1: Matriz RBAC 12 Módulos -->
                       <button 
                         type="button" 
                         class="btn-manage-perms btn btn-secondary btn-sm" 
                         data-user-id={u.id} 
+                        data-user-email={u.email}
                         data-user-name={u.full_name} 
                         data-user-cargo={cargo} 
-                        data-user-role={isAdmin ? 'admin' : 'funcionario'} 
-                        title="Configurar matriz de permisos dinámicos"
+                        data-user-role={u.assignedRoleId} 
+                        title="Configurar matriz de permisos en los 12 módulos"
                         style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; font-weight: 750; font-size: 0.78rem; border: 1.5px solid #B2CFCB; color: #00594E; background: #F2F7F6; border-radius: 8px; cursor: pointer;"
                       >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="11" r="3"/></svg>
@@ -227,28 +273,28 @@ const permissionsByCategory = categories.map(cat => ({
                         data-user-name={u.full_name} 
                         data-user-email={u.email} 
                         data-user-cargo={cargo} 
-                        data-user-role={isAdmin ? 'admin' : 'funcionario'}
-                        title="Editar información del funcionario"
+                        data-user-role={u.assignedRoleId}
+                        title="Editar información y rol del usuario"
                         style="width: 32px; height: 32px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: #ffffff; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s ease;"
                       >
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                       </button>
 
                       <!-- Botón 3: Eliminar Usuario -->
-                      {!isProtectedRoot ? (
+                      {!u.isProtectedRoot ? (
                         <button 
                           type="button" 
                           class="btn-icon-action btn-delete-user" 
                           data-user-id={u.id} 
                           data-user-name={u.full_name} 
                           data-user-email={u.email}
-                          title="Dar de baja y eliminar funcionario"
+                          title="Dar de baja y eliminar usuario"
                           style="width: 32px; height: 32px; border-radius: var(--radius-sm); border: 1px solid #FECACA; background: #FEF2F2; color: #DC2626; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s ease;"
                         >
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                         </button>
                       ) : (
-                        <span title="El superusuario root está protegido contra eliminación" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); opacity: 0.4;">
+                        <span title="La cuenta Administrador principal está protegida contra eliminación" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); opacity: 0.45;">
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                         </span>
                       )}
@@ -263,74 +309,93 @@ const permissionsByCategory = categories.map(cat => ({
       </div>
     </div>
 
-    <!-- MODAL 1: GESTIÓN DE PERMISOS DINÁMICOS EXCLUSIVO (DRAWER / PANEL MODERNO) -->
+    <!-- MODAL 1: MATRIZ RBAC DE PERMISOS POR MÓDULO (12 MÓDULOS: VER / INTERACTUAR) -->
     <div class="modal-backdrop" id="modal-permissions" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
-      <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 680px; border-radius: var(--radius-md); box-shadow: 0 20px 45px rgba(0,0,0,0.2); overflow: hidden; display: flex; flex-direction: column; max-height: 90vh;">
+      <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 780px; border-radius: var(--radius-md); box-shadow: 0 20px 45px rgba(0,0,0,0.22); overflow: hidden; display: flex; flex-direction: column; max-height: 92vh;">
         
-        <!-- Header del Modal de Permisos (Bento Pro Max) -->
         <div style="background: #ffffff; border-top: 4px solid var(--verde-principal); border-bottom: 1px solid #DCE4E3; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
           <div style="display: flex; align-items: center; gap: 12px;">
             <div style="width: 40px; height: 40px; border-radius: 10px; background: #F2F7F6; border: 1.5px solid #B2CFCB; display: flex; align-items: center; justify-content: center; color: var(--verde-principal);">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="11" r="3"/></svg>
             </div>
             <div>
-              <div style="font-size: 0.68rem; font-weight: 750; color: #B5A160; text-transform: uppercase; letter-spacing: 0.05em;">SGD UNITRÓPICO &bull; MATRIZ RBAC</div>
+              <div style="font-size: 0.68rem; font-weight: 750; color: #B5A160; text-transform: uppercase; letter-spacing: 0.05em;">SGD UNITRÓPICO &bull; MATRIZ RBAC 12 MÓDULOS</div>
               <h3 style="font-size: 1.15rem; font-weight: 800; color: #111827; margin: 2px 0 0 0;" id="perm-modal-user-name">Configurar Permisos</h3>
-              <div style="font-size: 0.76rem; color: #52606D; margin-top: 2px;" id="perm-modal-user-desc">Seleccione los permisos operativos para este funcionario</div>
+              <div style="font-size: 0.76rem; color: #52606D; margin-top: 2px;" id="perm-modal-user-desc">Define la visibilidad y capacidad de interacción por cada módulo del sistema</div>
             </div>
           </div>
           <button type="button" class="btn-close-modal" id="btn-close-perms-modal" style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid #DCE4E3; background: #F8FAFC; color: #52606D; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; line-height: 1;">&times;</button>
         </div>
 
-        <!-- Cuerpo del Modal: Cuadrícula de Toggles por Categoría -->
-        <div style="padding: 22px 24px; overflow-y: auto; flex: 1;">
+        <div class="pro-scroll-container" style="padding: 18px 24px; overflow-y: auto; flex: 1;">
           
-          <div id="perms-admin-banner" style="display: none; background: #F2F7F6; border: 1px solid #B2CFCB; color: #00594E; padding: 14px 18px; border-radius: var(--radius-sm); font-size: 0.82rem; margin-bottom: 18px;">
-            <strong>Control Total Habilitado:</strong> El rol <code>Administrador</code> cuenta por definición institucional con acceso irrestricto a todos los módulos y operaciones del sistema.
+          <div id="perms-admin-banner" style="display: none; background: #F2F7F6; border: 1px solid #B2CFCB; color: #00594E; padding: 14px 18px; border-radius: 10px; font-size: 0.82rem; margin-bottom: 16px;">
+            <strong>Control Total Habilitado:</strong> El rol <strong>Administrador</strong> dispone de acceso completo a los 12 módulos del sistema y a la administración de seguridad.
           </div>
 
-          <div id="perms-category-container" style="display: flex; flex-direction: column; gap: 20px;">
-            {permissionsByCategory.map(({ category, perms }) => (
-              <div class="perm-category-card" style="border: 1.5px solid #DCE4E3; border-radius: 10px; padding: 16px; background: #ffffff;">
-                <div style="font-size: 0.74rem; font-weight: 800; color: #786832; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
-                  <span style="width: 8px; height: 8px; border-radius: 50%; background: #B5A160;"></span>
-                  <span>Módulo: {category}</span>
-                </div>
+          <div id="perms-quick-actions" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 10px 14px;">
+            <span style="font-size: 0.76rem; font-weight: 700; color: #52606D;" id="perms-summary-count">0 de 12 módulos habilitados</span>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button type="button" class="btn-perm-preset" data-preset="view_all" style="font-size: 0.73rem; font-weight: 750; padding: 5px 10px; border-radius: 7px; border: 1px solid #DBD2B0; background: #F7F5EE; color: #786832; cursor: pointer;">Solo Ver Todo</button>
+              <button type="button" class="btn-perm-preset" data-preset="full_modules" style="font-size: 0.73rem; font-weight: 750; padding: 5px 10px; border-radius: 7px; border: 1px solid #B2CFCB; background: #F2F7F6; color: #00594E; cursor: pointer;">Ver y Gestionar Todo</button>
+              <button type="button" class="btn-perm-preset" data-preset="clear_all" style="font-size: 0.73rem; font-weight: 750; padding: 5px 10px; border-radius: 7px; border: 1px solid #FECACA; background: #FEF2F2; color: #DC2626; cursor: pointer;">Limpiar</button>
+            </div>
+          </div>
 
-                <div style="display: flex; flex-direction: column; gap: 12px;">
-                  {perms.map((p) => (
-                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 8px 10px; border-radius: 6px; background: var(--bg-body); border: 1px solid var(--border-subtle);">
-                      <div style="flex: 1;">
-                        <div style="font-weight: 700; font-size: 0.84rem; color: var(--text-main);">{p.label}</div>
-                        <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">{p.desc}</div>
-                      </div>
+          <!-- Matriz 12 Módulos -->
+          <div style="border: 1.5px solid #DCE4E3; border-radius: 12px; overflow: hidden;">
+            <div style="display: grid; grid-template-columns: 1fr 120px 150px; align-items: center; background: #F8FAFC; border-bottom: 1.5px solid #DCE4E3; padding: 11px 16px; font-size: 0.72rem; font-weight: 800; color: #52606D; text-transform: uppercase; letter-spacing: 0.04em;">
+              <span>Módulo del Sistema (12)</span>
+              <span style="text-align: center;">Ver Módulo</span>
+              <span style="text-align: center;">Interactuar / Gestionar</span>
+            </div>
 
-                      <!-- Toggle Switch Moderno -->
-                      <label class="switch">
-                        <input type="checkbox" class="perm-checkbox" data-perm-id={p.id} />
-                        <span class="slider"></span>
-                      </label>
+            <div id="user-module-matrix-rows" style="display: flex; flex-direction: column;">
+              {RBAC_MODULES.map((mod, idx) => (
+                <div
+                  class="rbac-matrix-row"
+                  data-module-id={mod.id}
+                  style={`display: grid; grid-template-columns: 1fr 120px 150px; align-items: center; padding: 11px 16px; gap: 10px; ${idx < RBAC_MODULES.length - 1 ? 'border-bottom: 1px solid #E2E8F0;' : ''} background: #FFFFFF;`}
+                >
+                  <div style="min-width: 0;">
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                      <span style="font-weight: 800; font-size: 0.84rem; color: #111827;">{mod.label}</span>
+                      <span style="font-size: 0.66rem; font-weight: 750; padding: 2px 7px; border-radius: 999px; background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB;">{mod.group}</span>
                     </div>
-                  ))}
+                    <div style="font-size: 0.73rem; color: #64748B; margin-top: 2px;">{mod.description}</div>
+                  </div>
+
+                  <div style="display: flex; justify-content: center;">
+                    <label class="switch" title={`Permitir ver ${mod.label}`}>
+                      <input type="checkbox" class="perm-checkbox perm-ver-cb" data-matrix="user" data-module-id={mod.id} data-perm-id={`${mod.id}.ver`} />
+                      <span class="slider"></span>
+                    </label>
+                  </div>
+
+                  <div style="display: flex; justify-content: center;">
+                    <label class="switch" title={`Permitir crear, editar y gestionar en ${mod.label}`}>
+                      <input type="checkbox" class="perm-checkbox perm-manage-cb" data-matrix="user" data-module-id={mod.id} data-perm-id={`${mod.id}.gestionar`} />
+                      <span class="slider slider-gold"></span>
+                    </label>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
         </div>
 
-        <!-- Footer del Modal de Permisos -->
-        <div style="padding: 16px 24px; background: #f8fafc; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+        <div style="padding: 15px 24px; background: #f8fafc; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
           <button type="button" class="btn btn-ghost" id="btn-cancel-perms-modal">Cancelar</button>
           <button type="button" class="btn btn-primary" id="btn-save-dynamic-perms" style="padding: 10px 22px; font-weight: 800; background: var(--verde-principal); border-color: var(--verde-principal);">
-            Guardar Permisos Dinámicos
+            Guardar Permisos RBAC
           </button>
         </div>
 
       </div>
     </div>
 
-    <!-- MODAL 2: CREAR NUEVO FUNCIONARIO -->
+    <!-- MODAL 2: CREAR NUEVO USUARIO -->
     <div class="modal-backdrop" id="modal-create-user" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
       <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 520px; border-radius: var(--radius-md); box-shadow: 0 20px 45px rgba(0,0,0,0.2); overflow: hidden;">
         
@@ -342,7 +407,7 @@ const permissionsByCategory = categories.map(cat => ({
             <div>
               <div style="font-size: 0.68rem; font-weight: 750; color: #B5A160; text-transform: uppercase; letter-spacing: 0.05em;">GESTIÓN DE PERSONAL</div>
               <h3 style="font-size: 1.15rem; font-weight: 800; color: #111827; margin: 2px 0 0 0;">
-                Crear Funcionario Institucional
+                Crear Usuario Institucional
               </h3>
             </div>
           </div>
@@ -365,10 +430,11 @@ const permissionsByCategory = categories.map(cat => ({
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
             <div class="form-group">
-              <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Rol Principal *</label>
-              <select id="create-user-role" class="form-input" style="cursor: pointer;">
-                <option value="funcionario" selected>Funcionario (Dinámico)</option>
-                <option value="admin">Administrador (Total)</option>
+              <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Rol Asignado *</label>
+              <select id="create-user-role" class="form-input role-select-dropdown" style="cursor: pointer;">
+                {rolesCatalog.map((r) => (
+                  <option value={r.id} selected={r.id === 'funcionario'}>{r.name}</option>
+                ))}
               </select>
             </div>
             <div class="form-group">
@@ -390,7 +456,7 @@ const permissionsByCategory = categories.map(cat => ({
           <div style="display: flex; gap: 10px; margin-top: 10px;">
             <button type="button" class="btn btn-secondary" id="btn-cancel-create-user" style="flex: 1; justify-content: center;">Cancelar</button>
             <button type="submit" id="btn-submit-create-user" class="btn btn-primary" style="flex: 1; justify-content: center; font-weight: 800;">
-              Crear Funcionario
+              Crear Usuario
             </button>
           </div>
         </form>
@@ -410,7 +476,7 @@ const permissionsByCategory = categories.map(cat => ({
             <div>
               <div style="font-size: 0.68rem; font-weight: 750; color: #B5A160; text-transform: uppercase; letter-spacing: 0.05em;">ACTUALIZACIÓN DE PERFIL</div>
               <h3 style="font-size: 1.15rem; font-weight: 800; color: #111827; margin: 2px 0 0 0;">
-                Editar Funcionario
+                Editar Usuario Institucional
               </h3>
             </div>
           </div>
@@ -435,10 +501,11 @@ const permissionsByCategory = categories.map(cat => ({
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
             <div class="form-group">
-              <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Rol Principal *</label>
-              <select id="edit-user-role" class="form-input" style="cursor: pointer;">
-                <option value="funcionario">Funcionario</option>
-                <option value="admin">Administrador</option>
+              <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Rol Asignado *</label>
+              <select id="edit-user-role" class="form-input role-select-dropdown" style="cursor: pointer;">
+                {rolesCatalog.map((r) => (
+                  <option value={r.id}>{r.name}</option>
+                ))}
               </select>
             </div>
             <div class="form-group">
@@ -447,7 +514,11 @@ const permissionsByCategory = categories.map(cat => ({
             </div>
           </div>
 
-          <div style="display: flex; gap: 10px; margin-top: 10px;">
+          <div style="background: #F2F7F6; border: 1px solid #B2CFCB; border-radius: 8px; padding: 10px 12px; font-size: 0.74rem; color: #00594E;">
+            Al cambiar el rol, se aplicará la plantilla de permisos de ese rol (luego podrás ajustarla individualmente en <strong>Permisos</strong>).
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 6px;">
             <button type="button" class="btn btn-secondary" id="btn-cancel-edit-user" style="flex: 1; justify-content: center;">Cancelar</button>
             <button type="submit" id="btn-submit-edit-user" class="btn btn-primary" style="flex: 1; justify-content: center; font-weight: 800;">
               Guardar Modificaciones
@@ -472,7 +543,7 @@ const permissionsByCategory = categories.map(cat => ({
         </div>
         <div style="padding: 22px 24px;">
           <p style="margin: 0; font-size: 0.88rem; color: var(--text-main); line-height: 1.5;">
-            ¿Está seguro de eliminar al funcionario <strong id="delete-user-modal-name"></strong> (<code id="delete-user-modal-email" style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px;"></code>)?
+            ¿Está seguro de eliminar al usuario <strong id="delete-user-modal-name"></strong> (<code id="delete-user-modal-email" style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px;"></code>)?
           </p>
           <div style="margin-top: 14px; background: #fff1f2; border: 1px solid #fecdd3; padding: 12px 14px; border-radius: var(--radius-sm); font-size: 0.78rem; color: #9f1239;">
             Advertencia institucional: Se revocarán todas sus sesiones activas y se registrará la pista inmutable en la bitácora de auditoría.
@@ -487,7 +558,123 @@ const permissionsByCategory = categories.map(cat => ({
       </div>
     </div>
 
+    <!-- MODAL 5: GESTIÓN Y CREACIÓN DE ROLES PERSONALIZADOS RBAC -->
+    <div class="modal-backdrop" id="modal-roles" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1050; align-items: center; justify-content: center; padding: 20px;">
+      <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 1020px; border-radius: var(--radius-md); box-shadow: 0 24px 55px rgba(0,0,0,0.25); overflow: hidden; display: flex; flex-direction: column; max-height: 92vh;">
+        
+        <div style="background: #ffffff; border-top: 4px solid #B5A160; border-bottom: 1px solid #DCE4E3; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 40px; height: 40px; border-radius: 10px; background: #F7F5EE; border: 1.5px solid #DBD2B0; display: flex; align-items: center; justify-content: center; color: #786832;">
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+            </div>
+            <div>
+              <div style="font-size: 0.68rem; font-weight: 750; color: #786832; text-transform: uppercase; letter-spacing: 0.05em;">ARQUITECTURA RBAC &bull; ROLES Y PERMISOS</div>
+              <h3 style="font-size: 1.15rem; font-weight: 800; color: #111827; margin: 2px 0 0 0;">Gestionar y Crear Roles Institucionales</h3>
+              <div style="font-size: 0.76rem; color: #52606D; margin-top: 2px;">Cree perfiles personalizados y defina sus permisos de consulta y gestión por módulo</div>
+            </div>
+          </div>
+          <button type="button" class="btn-close-modal" id="btn-close-roles-modal" style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid #DCE4E3; background: #F8FAFC; color: #52606D; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; line-height: 1;">&times;</button>
+        </div>
+
+        <div class="roles-modal-body">
+          <!-- Columna Izquierda: Lista de Roles -->
+          <div class="roles-list-pane pro-scroll-container">
+            <button type="button" id="btn-new-custom-role" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 14px; background: #00594E; color: #FFFFFF; border: none; border-radius: 10px; font-weight: 800; font-size: 0.82rem; cursor: pointer; margin-bottom: 12px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span>Crear Rol Personalizado</span>
+            </button>
+
+            <div id="roles-catalog-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+          </div>
+
+          <!-- Columna Derecha: Editor del Rol -->
+          <form id="form-role-editor" class="roles-editor-pane pro-scroll-container">
+            <input type="hidden" id="role-edit-id" />
+
+            <div id="role-admin-lock-banner" style="display: none; background: #F2F7F6; border: 1px solid #B2CFCB; color: #00594E; padding: 12px 14px; border-radius: 10px; font-size: 0.80rem; margin-bottom: 14px;">
+              <strong>Rol Protegido del Sistema:</strong> El rol <strong>Administrador</strong> posee control irrestricto permanente sobre los 12 módulos y la seguridad del sistema.
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 180px; gap: 12px; margin-bottom: 12px;">
+              <div>
+                <label style="font-size: 0.74rem; font-weight: 800; color: #52606D; text-transform: uppercase; display: block; margin-bottom: 5px;">Nombre del Rol *</label>
+                <input type="text" id="role-edit-name" required placeholder="Ej. Coordinador Jurídico" class="form-input" />
+              </div>
+              <div>
+                <label style="font-size: 0.74rem; font-weight: 800; color: #52606D; text-transform: uppercase; display: block; margin-bottom: 5px;">Color Identificador</label>
+                <select id="role-edit-color" class="form-input" style="cursor: pointer;">
+                  <option value="#00594E">Verde Unitrópico (#00594E)</option>
+                  <option value="#B5A160">Dorado Institucional (#B5A160)</option>
+                  <option value="#786832">Dorado Oscuro (#786832)</option>
+                  <option value="#0F766E">Verde Esmeralda (#0F766E)</option>
+                  <option value="#2563EB">Azul Jurídico (#2563EB)</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="margin-bottom: 12px;">
+              <label style="font-size: 0.74rem; font-weight: 800; color: #52606D; text-transform: uppercase; display: block; margin-bottom: 5px;">Descripción / Alcance</label>
+              <input type="text" id="role-edit-desc" placeholder="Describe las responsabilidades y alcance operativo del rol..." class="form-input" />
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 9px; padding: 9px 12px;">
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.76rem; font-weight: 700; color: #334155; cursor: pointer;">
+                <input type="checkbox" id="role-edit-propagate" checked style="accent-color: #00594E;" />
+                <span>Sincronizar permisos en usuarios asignados a este rol</span>
+              </label>
+
+              <div style="display: flex; gap: 6px;">
+                <button type="button" class="btn-role-preset" data-preset="view_all" style="font-size: 0.70rem; font-weight: 750; padding: 4px 8px; border-radius: 6px; border: 1px solid #DBD2B0; background: #F7F5EE; color: #786832; cursor: pointer;">Solo Ver</button>
+                <button type="button" class="btn-role-preset" data-preset="full_modules" style="font-size: 0.70rem; font-weight: 750; padding: 4px 8px; border-radius: 6px; border: 1px solid #B2CFCB; background: #F2F7F6; color: #00594E; cursor: pointer;">Todos</button>
+                <button type="button" class="btn-role-preset" data-preset="clear_all" style="font-size: 0.70rem; font-weight: 750; padding: 4px 8px; border-radius: 6px; border: 1px solid #FECACA; background: #FEF2F2; color: #DC2626; cursor: pointer;">Limpiar</button>
+              </div>
+            </div>
+
+            <!-- Matriz 12 Módulos del Rol -->
+            <div style="border: 1.5px solid #DCE4E3; border-radius: 10px; overflow: hidden;">
+              <div style="display: grid; grid-template-columns: 1fr 95px 125px; align-items: center; background: #F8FAFC; border-bottom: 1px solid #DCE4E3; padding: 9px 14px; font-size: 0.70rem; font-weight: 800; color: #52606D; text-transform: uppercase;">
+                <span>Módulo (12)</span>
+                <span style="text-align: center;">Ver</span>
+                <span style="text-align: center;">Gestionar</span>
+              </div>
+
+              <div>
+                {RBAC_MODULES.map((mod, idx) => (
+                  <div style={`display: grid; grid-template-columns: 1fr 95px 125px; align-items: center; padding: 8px 14px; ${idx < RBAC_MODULES.length - 1 ? 'border-bottom: 1px solid #E2E8F0;' : ''} background: #FFFFFF;`}>
+                    <div style="min-width: 0;">
+                      <div style="font-weight: 750; font-size: 0.80rem; color: #111827;">{mod.label}</div>
+                      <div style="font-size: 0.69rem; color: #64748B;">{mod.group}</div>
+                    </div>
+                    <div style="display: flex; justify-content: center;">
+                      <label class="switch switch-sm">
+                        <input type="checkbox" class="role-perm-checkbox role-ver-cb" data-matrix="role" data-module-id={mod.id} data-perm-id={`${mod.id}.ver`} />
+                        <span class="slider"></span>
+                      </label>
+                    </div>
+                    <div style="display: flex; justify-content: center;">
+                      <label class="switch switch-sm">
+                        <input type="checkbox" class="role-perm-checkbox role-manage-cb" data-matrix="role" data-module-id={mod.id} data-perm-id={`${mod.id}.gestionar`} />
+                        <span class="slider slider-gold"></span>
+                      </label>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px;">
+              <button type="button" class="btn btn-secondary" id="btn-cancel-roles-modal">Cerrar</button>
+              <button type="submit" id="btn-save-role" class="btn btn-primary" style="font-weight: 800; padding: 9px 20px;">Guardar Rol</button>
+            </div>
+          </form>
+        </div>
+
+      </div>
+    </div>
+
   </div>
+
+  <script id="rbac-bootstrap-json" type="application/json" set:html={initialRbacBootstrap}></script>
 
   <style>
     .form-input {
@@ -531,6 +718,10 @@ const permissionsByCategory = categories.map(cat => ({
       height: 24px;
       flex-shrink: 0;
     }
+    .switch-sm {
+      width: 38px;
+      height: 21px;
+    }
     .switch input {
       opacity: 0;
       width: 0;
@@ -541,7 +732,7 @@ const permissionsByCategory = categories.map(cat => ({
       cursor: pointer;
       top: 0; left: 0; right: 0; bottom: 0;
       background-color: #cbd5e1;
-      transition: .25s ease;
+      transition: .2s ease;
       border-radius: 24px;
     }
     .slider:before {
@@ -552,174 +743,331 @@ const permissionsByCategory = categories.map(cat => ({
       left: 3px;
       bottom: 3px;
       background-color: white;
-      transition: .25s ease;
+      transition: .2s ease;
       border-radius: 50%;
       box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+    .switch-sm .slider:before {
+      height: 15px;
+      width: 15px;
     }
     .switch input:checked + .slider {
       background-color: var(--verde-principal) !important;
     }
+    .switch input:checked + .slider-gold {
+      background-color: #B5A160 !important;
+    }
     .switch input:checked + .slider:before {
       transform: translateX(20px);
     }
+    .switch-sm input:checked + .slider:before {
+      transform: translateX(17px);
+    }
     .switch input:disabled + .slider {
-      opacity: 0.6;
+      opacity: 0.55;
       cursor: not-allowed;
+    }
+
+    .roles-modal-body {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .roles-list-pane {
+      padding: 18px;
+      background: #F8FAFC;
+      border-right: 1px solid #DCE4E3;
+      overflow-y: auto;
+    }
+    .roles-editor-pane {
+      padding: 18px 22px;
+      overflow-y: auto;
+      background: #FFFFFF;
+    }
+    .role-item-card {
+      padding: 11px 12px;
+      border-radius: 10px;
+      border: 1.5px solid #DCE4E3;
+      background: #FFFFFF;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .role-item-card:hover {
+      border-color: #B2CFCB;
+      background: #F2F7F6;
+    }
+    .role-item-card.active {
+      border-color: #00594E;
+      background: #F2F7F6;
+      box-shadow: 0 2px 8px rgba(0, 89, 78, 0.08);
+    }
+    @media (max-width: 820px) {
+      .roles-modal-body {
+        grid-template-columns: 1fr;
+      }
+      .roles-list-pane {
+        border-right: none;
+        border-bottom: 1px solid #DCE4E3;
+        max-height: 210px;
+      }
     }
   </style>
 
   <script>
-    import { supabase } from '@lib/supabase';
-    import { logSystemActivity } from '@lib/audit';
+    import { ALL_PERMISSION_IDS, DEFAULT_FUNCIONARIO_PERMISSIONS, RBAC_MODULES } from '@data/roles';
+    import { getRoleDisplayName, isAdminRoleCode, normalizePermissionsList } from '@lib/permissions';
+    import type { SystemRole } from '@lib/types';
 
+    const bootstrapEl = document.getElementById('rbac-bootstrap-json');
+    let bootstrapData: any = {};
+    try {
+      bootstrapData = bootstrapEl?.textContent ? JSON.parse(bootstrapEl.textContent) : {};
+    } catch {
+      bootstrapData = {};
+    }
+
+    let rolesCatalog: SystemRole[] = Array.isArray(bootstrapData.roles) ? bootstrapData.roles : [];
+    let userCustomRolesMap: Record<string, string> = bootstrapData.userCustomRoles || {};
+    let userPermissionsMap: Record<string, string[]> = bootstrapData.userPermissions || {};
     let activePermsUserId: string | null = null;
-    let userPermissionsMap: Record<string, string[]> = {};
+    let activePermsUserEmail = '';
+    let activePermsUserName = '';
+    let activeRoleEditorId = '';
 
-    // 1. Cargar Permisos desde Supabase
-    async function loadAllPermissions() {
+    async function refreshRbacStateFromServer() {
       try {
-        const { data: dbPerms } = await supabase.from('user_permissions').select('*');
-        if (dbPerms) {
-          userPermissionsMap = {};
-          dbPerms.forEach((row: any) => {
-            if (!userPermissionsMap[row.user_id]) userPermissionsMap[row.user_id] = [];
-            if (row.is_granted && row.permission_id) {
-              userPermissionsMap[row.user_id]!.push(row.permission_id);
-            }
-          });
+        const res = await fetch('/api/admin/rbac', { credentials: 'same-origin' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data?.success) {
+          rolesCatalog = Array.isArray(data.roles) ? data.roles : rolesCatalog;
+          userCustomRolesMap = data.userCustomRoles || {};
+          userPermissionsMap = data.userPermissions || {};
+          syncRoleSelectDropdowns();
+          updateRolesKpi();
         }
       } catch (err) {
-        console.warn('Aviso cargando permisos de Supabase:', err);
+        console.warn('Aviso sincronizando matriz RBAC:', err);
       }
     }
 
-    // 2. Filtrado y Búsqueda en la Tabla
+    function updateRolesKpi() {
+      const kpiRoles = document.getElementById('kpi-total-roles');
+      const kpiSub = document.getElementById('kpi-custom-roles-sub');
+      const customCount = rolesCatalog.filter((r) => !r.isProtected).length;
+      if (kpiRoles) kpiRoles.textContent = String(rolesCatalog.length);
+      if (kpiSub) kpiSub.textContent = `${customCount} rol(es) personalizado(s)`;
+    }
+
+    function syncRoleSelectDropdowns() {
+      document.querySelectorAll<HTMLSelectElement>('.role-select-dropdown').forEach((sel) => {
+        const prev = sel.value || 'funcionario';
+        sel.innerHTML = '';
+        rolesCatalog.forEach((r) => {
+          const opt = document.createElement('option');
+          opt.value = r.id;
+          opt.textContent = r.name;
+          sel.appendChild(opt);
+        });
+        if (rolesCatalog.some((r) => r.id === prev)) {
+          sel.value = prev;
+        } else {
+          sel.value = 'funcionario';
+        }
+      });
+    }
+
+    // 1. Filtrado y Búsqueda en la Tabla
     const searchInput = document.getElementById('user-search-input') as HTMLInputElement | null;
     const filterButtons = document.querySelectorAll('.user-filter-btn');
 
     function applyUserFilters() {
       const query = (searchInput?.value || '').toLowerCase().trim();
       const activeBtn = document.querySelector('.user-filter-btn.active');
-      const selectedRole = activeBtn?.getAttribute('data-role') || 'all';
+      const selectedFilter = activeBtn?.getAttribute('data-role') || 'all';
 
       const rows = document.querySelectorAll<HTMLTableRowElement>('#users-table-body .user-row');
-      rows.forEach(row => {
+      rows.forEach((row) => {
         const name = (row.dataset.userName || '').toLowerCase();
         const email = (row.dataset.userEmail || '').toLowerCase();
         const cargo = (row.dataset.userCargo || '').toLowerCase();
-        const role = row.dataset.userRole || 'funcionario';
+        const roleCat = row.dataset.userRoleCat || 'funcionario';
+        const roleName = (row.dataset.userRoleName || '').toLowerCase();
 
-        const matchesQuery = !query || name.includes(query) || email.includes(query) || cargo.includes(query);
-        const matchesRole = selectedRole === 'all' || role === selectedRole;
+        const matchesQuery =
+          !query || name.includes(query) || email.includes(query) || cargo.includes(query) || roleName.includes(query);
+        const matchesRole = selectedFilter === 'all' || roleCat === selectedFilter;
 
         row.style.display = matchesQuery && matchesRole ? '' : 'none';
       });
     }
 
     searchInput?.addEventListener('input', applyUserFilters);
-
-    filterButtons.forEach(btn => {
+    filterButtons.forEach((btn) => {
       btn.addEventListener('click', () => {
-        filterButtons.forEach(b => b.classList.remove('active'));
+        filterButtons.forEach((b) => b.classList.remove('active'));
         btn.classList.add('active');
         applyUserFilters();
       });
     });
 
-    // 3. Modal de Permisos Dinámicos
+    // 2. Acoplamiento automático entre Ver y Gestionar en matrices RBAC
+    function setupMatrixCoupling(container: HTMLElement | null, verSelector: string, manageSelector: string, onChange?: () => void) {
+      container?.addEventListener('change', (e) => {
+        const cb = e.target as HTMLInputElement | null;
+        if (!cb || cb.type !== 'checkbox') return;
+        const modId = cb.dataset.moduleId;
+        if (!modId) return;
+
+        if (cb.classList.contains(manageSelector) && cb.checked) {
+          const verCb = container.querySelector<HTMLInputElement>(`.${verSelector}[data-module-id="${modId}"]`);
+          if (verCb) verCb.checked = true;
+        } else if (cb.classList.contains(verSelector) && !cb.checked) {
+          const manCb = container.querySelector<HTMLInputElement>(`.${manageSelector}[data-module-id="${modId}"]`);
+          if (manCb) manCb.checked = false;
+        }
+        if (onChange) onChange();
+      });
+    }
+
+    function updateUserMatrixSummary() {
+      const enabledModules = RBAC_MODULES.filter((mod) => {
+        const ver = document.querySelector<HTMLInputElement>(`.perm-ver-cb[data-module-id="${mod.id}"]`)?.checked;
+        const man = document.querySelector<HTMLInputElement>(`.perm-manage-cb[data-module-id="${mod.id}"]`)?.checked;
+        return Boolean(ver || man);
+      }).length;
+      const sumEl = document.getElementById('perms-summary-count');
+      if (sumEl) sumEl.textContent = `${enabledModules} de ${RBAC_MODULES.length} módulos habilitados`;
+    }
+
+    // 3. Modal 1: Permisos RBAC 12 Módulos por Usuario
     const permsModal = document.getElementById('modal-permissions');
     const permsUserName = document.getElementById('perm-modal-user-name');
     const permsUserDesc = document.getElementById('perm-modal-user-desc');
     const permsAdminBanner = document.getElementById('perms-admin-banner');
-    const btnSavePerms = document.getElementById('btn-save-dynamic-perms');
+    const permsQuickActions = document.getElementById('perms-quick-actions');
+    const btnSavePerms = document.getElementById('btn-save-dynamic-perms') as HTMLButtonElement | null;
     const btnClosePerms = document.getElementById('btn-close-perms-modal');
     const btnCancelPerms = document.getElementById('btn-cancel-perms-modal');
+
+    setupMatrixCoupling(permsModal, 'perm-ver-cb', 'perm-manage-cb', updateUserMatrixSummary);
 
     function closePermsModal() {
       if (permsModal) permsModal.style.display = 'none';
       activePermsUserId = null;
+      activePermsUserEmail = '';
+      activePermsUserName = '';
     }
 
     btnClosePerms?.addEventListener('click', closePermsModal);
     btnCancelPerms?.addEventListener('click', closePermsModal);
 
-    function openPermsModal(userId: string, userName: string, userCargo: string, userRole: string) {
+    function applyPresetToCheckboxes(selectorPrefix: 'perm' | 'role-perm', preset: string) {
+      const allCbs = document.querySelectorAll<HTMLInputElement>(
+        selectorPrefix === 'perm' ? '.perm-checkbox' : '.role-perm-checkbox'
+      );
+      allCbs.forEach((cb) => {
+        if (cb.disabled) return;
+        const pid = cb.dataset.permId || '';
+        if (preset === 'clear_all') cb.checked = false;
+        else if (preset === 'view_all') cb.checked = pid.endsWith('.ver');
+        else if (preset === 'full_modules') cb.checked = true;
+      });
+      if (selectorPrefix === 'perm') updateUserMatrixSummary();
+    }
+
+    document.querySelectorAll<HTMLButtonElement>('.btn-perm-preset').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        applyPresetToCheckboxes('perm', btn.dataset.preset || '');
+      });
+    });
+
+    function openPermsModal(userId: string, userEmail: string, userName: string, userCargo: string, userRoleId: string) {
       activePermsUserId = userId;
+      activePermsUserEmail = userEmail.toLowerCase();
+      activePermsUserName = userName;
+
+      const roleObj = rolesCatalog.find((r) => r.id === userRoleId || r.code === userRoleId);
+      const isUserAdmin = userId === 'usr-root' || isAdminRoleCode(userRoleId);
+      const roleLabel = isUserAdmin ? 'Administrador' : roleObj?.name || getRoleDisplayName(userRoleId, rolesCatalog);
+
       if (permsUserName) permsUserName.textContent = `Permisos: ${userName}`;
-      if (permsUserDesc) permsUserDesc.textContent = `${userCargo} • ${userRole === 'admin' ? 'Administrador General' : 'Funcionario Operativo'}`;
+      if (permsUserDesc) permsUserDesc.textContent = `${userCargo} • Rol: ${roleLabel}`;
+      if (permsAdminBanner) permsAdminBanner.style.display = isUserAdmin ? 'block' : 'none';
+      if (permsQuickActions) permsQuickActions.style.display = isUserAdmin ? 'none' : 'flex';
+      if (btnSavePerms) btnSavePerms.disabled = isUserAdmin;
 
-      const isAdmin = userRole === 'admin';
-      if (permsAdminBanner) permsAdminBanner.style.display = isAdmin ? 'block' : 'none';
-      if (btnSavePerms) (btnSavePerms as HTMLButtonElement).disabled = isAdmin;
+      const hasOverrideId = Object.prototype.hasOwnProperty.call(userPermissionsMap, userId);
+      const hasOverrideEmail = Boolean(
+        activePermsUserEmail && Object.prototype.hasOwnProperty.call(userPermissionsMap, activePermsUserEmail)
+      );
+      const effectivePerms = isUserAdmin
+        ? ALL_PERMISSION_IDS
+        : hasOverrideId
+          ? normalizePermissionsList(userPermissionsMap[userId])
+          : hasOverrideEmail
+            ? normalizePermissionsList(userPermissionsMap[activePermsUserEmail])
+            : normalizePermissionsList(roleObj?.permissions || DEFAULT_FUNCIONARIO_PERMISSIONS);
 
-      const userPerms = userPermissionsMap[userId] || (isAdmin 
-        ? ['view_dashboard', 'view_files', 'upload_files', 'reassign_files', 'respond_petitions', 'manage_templates', 'manage_users', 'manage_roles', 'download_documents', 'delete_files']
-        : ['view_dashboard', 'view_files', 'respond_petitions', 'download_documents']);
-
-      const checkboxes = document.querySelectorAll<HTMLInputElement>('.perm-checkbox');
-      checkboxes.forEach((cb) => {
+      document.querySelectorAll<HTMLInputElement>('.perm-checkbox').forEach((cb) => {
         const permId = cb.dataset.permId || '';
-        cb.checked = isAdmin || userPerms.includes(permId);
-        cb.disabled = isAdmin;
+        cb.checked = isUserAdmin || effectivePerms.includes(permId);
+        cb.disabled = isUserAdmin;
       });
 
+      updateUserMatrixSummary();
       if (permsModal) permsModal.style.display = 'flex';
     }
 
     btnSavePerms?.addEventListener('click', async () => {
-      const targetUserId = activePermsUserId;
-      if (!targetUserId) return;
-
-      const checkboxes = document.querySelectorAll<HTMLInputElement>('.perm-checkbox:checked');
-      const newPerms: string[] = [];
-      checkboxes.forEach((cb) => {
-        if (cb.dataset.permId) newPerms.push(cb.dataset.permId);
+      if (!activePermsUserId) return;
+      const selectedPerms: string[] = [];
+      document.querySelectorAll<HTMLInputElement>('.perm-checkbox:checked').forEach((cb) => {
+        if (cb.dataset.permId) selectedPerms.push(cb.dataset.permId);
       });
 
-      const saveBtn = btnSavePerms as HTMLButtonElement | null;
-      if (saveBtn) {
-        saveBtn.textContent = 'Guardando cambios...';
-        saveBtn.disabled = true;
+      if (btnSavePerms) {
+        btnSavePerms.textContent = 'Guardando...';
+        btnSavePerms.disabled = true;
       }
 
       try {
-        await (supabase.from('user_permissions') as any).delete().eq('user_id', targetUserId);
-
-        if (newPerms.length > 0) {
-          const rowsToInsert = newPerms.map((permId) => ({
-            user_id: targetUserId,
-            permission_id: permId,
-            is_granted: true,
-            created_at: new Date().toISOString(),
-          }));
-          await supabase.from('user_permissions').insert(rowsToInsert);
+        const res = await fetch('/api/admin/rbac', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            action: 'save_user_permissions',
+            userId: activePermsUserId,
+            userEmail: activePermsUserEmail,
+            userName: activePermsUserName,
+            permissions: selectedPerms,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Error guardando permisos en servidor.');
         }
 
-        userPermissionsMap[targetUserId] = newPerms;
+        const savedList = Array.isArray(data.permissions) ? data.permissions : selectedPerms;
+        userPermissionsMap[activePermsUserId] = savedList;
+        if (activePermsUserEmail) userPermissionsMap[activePermsUserEmail] = savedList;
 
-        await logSystemActivity({
-          actor: { id: 'usr-root', name: 'ING. Christian Lemus', role: 'admin' },
-          action: 'Actualización de Permisos Granulares',
-          actionType: 'SEGURIDAD',
-          entity: 'Permisos Dinámicos RBAC',
-          entityId: targetUserId,
-          details: `Se actualizaron ${newPerms.length} permisos dinámicos para el usuario ${targetUserId}.`,
-          severity: 'WARN'
-        });
-
-        (window as any).showToast('Permisos dinámicos guardados exitosamente.', 'success');
+        (window as any).showToast('Matriz de permisos RBAC guardada correctamente.', 'success');
         closePermsModal();
       } catch (err: any) {
-        (window as any).showToast('Error al guardar permisos: ' + (err.message || 'Error en base de datos'), 'error');
+        (window as any).showToast(err?.message || 'Error al guardar permisos.', 'error');
       } finally {
-        if (saveBtn) {
-          saveBtn.textContent = 'Guardar Permisos Dinámicos';
-          saveBtn.disabled = false;
+        if (btnSavePerms) {
+          btnSavePerms.textContent = 'Guardar Permisos RBAC';
+          btnSavePerms.disabled = false;
         }
       }
     });
 
-    // 4. Modal de Editar Usuario
+    // 4. Modal 3: Editar Usuario y Rol
     const editUserModal = document.getElementById('modal-edit-user');
     const editUserId = document.getElementById('edit-user-id') as HTMLInputElement | null;
     const editUserName = document.getElementById('edit-user-name') as HTMLInputElement | null;
@@ -733,17 +1081,19 @@ const permissionsByCategory = categories.map(cat => ({
     function closeEditModal() {
       if (editUserModal) editUserModal.style.display = 'none';
     }
-
     btnCloseEdit?.addEventListener('click', closeEditModal);
     btnCancelEdit?.addEventListener('click', closeEditModal);
 
-    function openEditModal(userId: string, userName: string, userEmail: string, userCargo: string, userRole: string) {
+    function openEditModal(userId: string, userName: string, userEmail: string, userCargo: string, userRoleId: string) {
+      syncRoleSelectDropdowns();
       if (editUserId) editUserId.value = userId;
       if (editUserName) editUserName.value = userName;
       if (editUserEmail) editUserEmail.value = userEmail;
-      if (editUserRole) editUserRole.value = userRole;
       if (editUserCargo) editUserCargo.value = userCargo;
-
+      if (editUserRole) {
+        editUserRole.value = rolesCatalog.some((r) => r.id === userRoleId) ? userRoleId : 'funcionario';
+        editUserRole.disabled = userId === 'usr-root';
+      }
       if (editUserModal) editUserModal.style.display = 'flex';
     }
 
@@ -753,7 +1103,8 @@ const permissionsByCategory = categories.map(cat => ({
 
       const id = editUserId.value;
       const name = editUserName.value.trim();
-      const role = editUserRole.value;
+      const email = editUserEmail?.value.trim().toLowerCase() || '';
+      const roleId = editUserRole.value;
       const cargo = editUserCargo.value.trim();
 
       const submitBtn = document.getElementById('btn-submit-edit-user') as HTMLButtonElement | null;
@@ -763,48 +1114,30 @@ const permissionsByCategory = categories.map(cat => ({
       }
 
       try {
-        const nowIso = new Date().toISOString();
-        await supabase.from('profiles').update({
-          full_name: name,
-          role,
-          cargo,
-          updated_at: nowIso,
-        }).eq('id', id);
-
-        await (supabase.from('users') as any).update({
-          name,
-          role,
-          updated_at: nowIso,
-        }).eq('id', id);
-
-        // Actualizar fila en el DOM
-        const row = document.getElementById(`row-user-${id}`);
-        if (row) {
-          row.dataset.userName = name;
-          row.dataset.userCargo = cargo;
-          row.dataset.userRole = role;
-
-          const nameText = row.querySelector('td:first-child strong, td:first-child div[style*="font-weight: 800"]');
-          if (nameText) nameText.textContent = name;
-          const cargoText = row.querySelector('td:nth-child(3) span');
-          if (cargoText) cargoText.textContent = cargo;
+        const res = await fetch('/api/admin/rbac', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            action: 'update_user',
+            userId: id,
+            userEmail: email,
+            name,
+            roleId,
+            cargo,
+            applyRolePermissions: true,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'No se pudo actualizar el usuario.');
         }
 
-        await logSystemActivity({
-          actor: { id: 'usr-root', name: 'ING. Christian Lemus', role: 'admin' },
-          action: 'Modificación de Datos de Funcionario',
-          actionType: 'MODIFICACION',
-          entity: 'Control de Usuarios y Roles',
-          entityId: id,
-          details: `Se actualizaron datos de "${name}": Rol: ${role.toUpperCase()}, Cargo: "${cargo}".`,
-          severity: 'INFO'
-        });
-
-        (window as any).showToast('Funcionario modificado con éxito.', 'success');
+        (window as any).showToast('Usuario actualizado con éxito.', 'success');
         closeEditModal();
-        setTimeout(() => window.location.reload(), 500);
+        setTimeout(() => window.location.reload(), 450);
       } catch (err: any) {
-        (window as any).showToast('Error al modificar usuario: ' + (err.message || 'Error en el servidor'), 'error');
+        (window as any).showToast(err?.message || 'Error al modificar usuario.', 'error');
       } finally {
         if (submitBtn) {
           submitBtn.disabled = false;
@@ -813,7 +1146,7 @@ const permissionsByCategory = categories.map(cat => ({
       }
     });
 
-    // 5. Modal Crear Usuario
+    // 5. Modal 2: Crear Usuario
     const createModal = document.getElementById('modal-create-user');
     const btnOpenCreate = document.getElementById('btn-open-create-user');
     const btnCloseCreate = document.getElementById('btn-close-create-modal');
@@ -823,6 +1156,7 @@ const permissionsByCategory = categories.map(cat => ({
     const formCreate = document.getElementById('form-create-new-user');
 
     function toggleCreateModal(open: boolean) {
+      if (open) syncRoleSelectDropdowns();
       if (createModal) createModal.style.display = open ? 'flex' : 'none';
     }
 
@@ -844,7 +1178,7 @@ const permissionsByCategory = categories.map(cat => ({
       e.preventDefault();
       const name = (document.getElementById('create-user-name') as HTMLInputElement).value.trim();
       const email = (document.getElementById('create-user-email') as HTMLInputElement).value.trim().toLowerCase();
-      const role = (document.getElementById('create-user-role') as HTMLSelectElement).value;
+      const roleId = (document.getElementById('create-user-role') as HTMLSelectElement).value;
       const cargo = (document.getElementById('create-user-cargo') as HTMLInputElement).value.trim();
       const password = passInput?.value.trim() || '';
 
@@ -856,46 +1190,43 @@ const permissionsByCategory = categories.map(cat => ({
       const submitBtn = document.getElementById('btn-submit-create-user') as HTMLButtonElement | null;
       if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Creando funcionario...';
+        submitBtn.textContent = 'Creando usuario...';
       }
 
       try {
-        const { data: createData, error: rpcErr } = await (supabase.rpc as any)('admin_create_user', {
-          p_name: name,
-          p_email: email,
-          p_password: password,
-          p_role: role,
-          p_cargo: cargo || (role === 'admin' ? 'Administrador' : 'Funcionario')
+        const res = await fetch('/api/admin/rbac', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            action: 'create_user',
+            name,
+            email,
+            password,
+            roleId,
+            cargo,
+          }),
         });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Error creando usuario en base de datos.');
+        }
 
-        if (rpcErr) throw rpcErr;
-
-        const newId = createData?.id || `usr-${Date.now().toString(36)}`;
-        await logSystemActivity({
-          actor: { id: 'usr-root', name: 'ING. Christian Lemus', role: 'admin' },
-          action: 'Creación de Funcionario Institucional',
-          actionType: 'SEGURIDAD',
-          entity: 'Control de Usuarios y Roles',
-          entityId: newId,
-          details: `Registro oficial de "${name}" (${email}) con rol ${role.toUpperCase()} y cargo "${cargo}".`,
-          severity: 'INFO'
-        });
-
-        (window as any).showToast(`Funcionario ${name} registrado satisfactoriamente.`, 'success');
+        (window as any).showToast(data.message || `Usuario ${name} registrado satisfactoriamente.`, 'success');
         toggleCreateModal(false);
         (formCreate as HTMLFormElement).reset();
-        setTimeout(() => window.location.reload(), 600);
+        setTimeout(() => window.location.reload(), 550);
       } catch (err: any) {
-        (window as any).showToast('Error creando usuario: ' + (err.message || 'Error en base de datos'), 'error');
+        (window as any).showToast(err?.message || 'Error creando usuario.', 'error');
       } finally {
         if (submitBtn) {
           submitBtn.disabled = false;
-          submitBtn.textContent = 'Crear Funcionario';
+          submitBtn.textContent = 'Crear Usuario';
         }
       }
     });
 
-    // 6. Modal Eliminar Usuario
+    // 6. Modal 4: Eliminar Usuario
     let userToDelete: { id: string; name: string; email: string } | null = null;
     const deleteModal = document.getElementById('modal-delete-user');
     const deleteModalName = document.getElementById('delete-user-modal-name');
@@ -921,28 +1252,28 @@ const permissionsByCategory = categories.map(cat => ({
       }
 
       try {
-        const { error: delRpcErr } = await (supabase.rpc as any)('admin_delete_user', {
-          p_user_id: targetUser.id
+        const res = await fetch('/api/admin/rbac', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            action: 'delete_user',
+            userId: targetUser.id,
+            userEmail: targetUser.email,
+            userName: targetUser.name,
+          }),
         });
-        if (delRpcErr) throw delRpcErr;
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'No se pudo eliminar el usuario.');
+        }
 
-        await logSystemActivity({
-          actor: { id: 'usr-root', name: 'ING. Christian Lemus', role: 'admin' },
-          action: 'Baja y Eliminación de Funcionario',
-          actionType: 'ELIMINACION',
-          entity: 'Control de Usuarios y Roles',
-          entityId: targetUser.id,
-          details: `El Administrador dio de baja y eliminó al funcionario "${targetUser.name}" (${targetUser.email}).`,
-          severity: 'CRITICAL'
-        });
-
-        const row = document.getElementById(`row-user-${targetUser.id}`);
-        if (row) row.remove();
-
-        (window as any).showToast(`El funcionario ${targetUser.name} fue eliminado.`, 'success');
+        document.getElementById(`row-user-${targetUser.id}`)?.remove();
+        (window as any).showToast(`El usuario ${targetUser.name} fue eliminado.`, 'success');
         closeDeleteModal();
+        setTimeout(() => window.location.reload(), 400);
       } catch (err: any) {
-        (window as any).showToast('Error eliminando usuario: ' + (err.message || 'Error en el servidor'), 'error');
+        (window as any).showToast(err?.message || 'Error eliminando usuario.', 'error');
       } finally {
         if (confirmBtn) {
           confirmBtn.textContent = 'Confirmar Eliminación';
@@ -951,37 +1282,255 @@ const permissionsByCategory = categories.map(cat => ({
       }
     });
 
-    // 7. Delegación Global de Clics en la Tabla de Usuarios
+    // 7. Modal 5: Gestión y Creación de Roles Personalizados (+ Gestionar Roles)
+    const rolesModal = document.getElementById('modal-roles');
+    const btnOpenRolesModal = document.getElementById('btn-open-roles-modal');
+    const btnCloseRolesModal = document.getElementById('btn-close-roles-modal');
+    const btnCancelRolesModal = document.getElementById('btn-cancel-roles-modal');
+    const rolesListContainer = document.getElementById('roles-catalog-list');
+    const btnNewCustomRole = document.getElementById('btn-new-custom-role');
+    const formRoleEditor = document.getElementById('form-role-editor') as HTMLFormElement | null;
+    const roleEditId = document.getElementById('role-edit-id') as HTMLInputElement | null;
+    const roleEditName = document.getElementById('role-edit-name') as HTMLInputElement | null;
+    const roleEditColor = document.getElementById('role-edit-color') as HTMLSelectElement | null;
+    const roleEditDesc = document.getElementById('role-edit-desc') as HTMLInputElement | null;
+    const roleEditPropagate = document.getElementById('role-edit-propagate') as HTMLInputElement | null;
+    const roleAdminLockBanner = document.getElementById('role-admin-lock-banner');
+    const btnSaveRole = document.getElementById('btn-save-role') as HTMLButtonElement | null;
+
+    setupMatrixCoupling(rolesModal, 'role-ver-cb', 'role-manage-cb');
+
+    document.querySelectorAll<HTMLButtonElement>('.btn-role-preset').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        applyPresetToCheckboxes('role-perm', btn.dataset.preset || '');
+      });
+    });
+
+    function loadRoleIntoEditor(role?: SystemRole | null) {
+      const isNew = !role;
+      const isAdminRole = Boolean(role && role.id === 'admin');
+      const isBaseProtected = Boolean(role && role.isProtected);
+
+      activeRoleEditorId = role ? role.id : '';
+      if (roleEditId) roleEditId.value = activeRoleEditorId;
+      if (roleEditName) {
+        roleEditName.value = role ? role.name : '';
+        roleEditName.readOnly = isBaseProtected;
+        roleEditName.style.background = isBaseProtected ? '#F8FAFC' : '#FFFFFF';
+      }
+      if (roleEditColor) {
+        roleEditColor.value = role?.color || '#00594E';
+        roleEditColor.disabled = isAdminRole;
+      }
+      if (roleEditDesc) {
+        roleEditDesc.value = role?.desc || '';
+        roleEditDesc.readOnly = isAdminRole;
+      }
+      if (roleAdminLockBanner) {
+        roleAdminLockBanner.style.display = isAdminRole ? 'block' : 'none';
+      }
+      if (btnSaveRole) {
+        btnSaveRole.disabled = isAdminRole;
+        btnSaveRole.textContent = isNew ? 'Crear Rol' : 'Guardar Cambios del Rol';
+      }
+
+      const rolePerms = isAdminRole
+        ? ALL_PERMISSION_IDS
+        : normalizePermissionsList(role?.permissions || []);
+
+      document.querySelectorAll<HTMLInputElement>('.role-perm-checkbox').forEach((cb) => {
+        const pid = cb.dataset.permId || '';
+        cb.checked = isAdminRole || (!isNew && rolePerms.includes(pid));
+        cb.disabled = isAdminRole;
+      });
+
+      renderRolesCatalogList();
+    }
+
+    function renderRolesCatalogList() {
+      if (!rolesListContainer) return;
+      rolesListContainer.innerHTML = '';
+
+      rolesCatalog.forEach((r) => {
+        const isSelected = activeRoleEditorId === r.id;
+        const permCount = r.id === 'admin' ? ALL_PERMISSION_IDS.length - 1 : normalizePermissionsList(r.permissions).length;
+        const card = document.createElement('div');
+        card.className = `role-item-card ${isSelected ? 'active' : ''}`;
+        card.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+            <div style="min-width: 0;">
+              <div style="display: flex; align-items: center; gap: 7px;">
+                <span style="width: 9px; height: 9px; border-radius: 50%; background: ${r.color || '#00594E'}; flex-shrink: 0;"></span>
+                <span style="font-weight: 800; font-size: 0.84rem; color: #111827;">${r.name}</span>
+              </div>
+              <div style="font-size: 0.70rem; color: #64748B; margin-top: 3px;">
+                ${r.isProtected ? 'Rol base institucional' : 'Rol personalizado'} &bull; ${permCount} permiso(s)
+              </div>
+            </div>
+            ${!r.isProtected ? `
+              <button type="button" class="btn-delete-custom-role" data-role-id="${r.id}" data-role-name="${r.name}" title="Eliminar rol personalizado" style="width: 26px; height: 26px; border-radius: 6px; border: 1px solid #FECACA; background: #FEF2F2; color: #DC2626; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </button>
+            ` : ''}
+          </div>
+        `;
+        card.addEventListener('click', (ev) => {
+          const targetEl = ev.target as HTMLElement | null;
+          if (targetEl?.closest('.btn-delete-custom-role')) return;
+          loadRoleIntoEditor(r);
+        });
+        rolesListContainer.appendChild(card);
+      });
+    }
+
+    function openRolesModal() {
+      const initialRole = rolesCatalog.find((r) => !r.isProtected) || rolesCatalog.find((r) => r.id === 'funcionario') || rolesCatalog[0];
+      loadRoleIntoEditor(initialRole || null);
+      if (rolesModal) rolesModal.style.display = 'flex';
+    }
+
+    function closeRolesModal() {
+      if (rolesModal) rolesModal.style.display = 'none';
+    }
+
+    btnOpenRolesModal?.addEventListener('click', openRolesModal);
+    btnCloseRolesModal?.addEventListener('click', closeRolesModal);
+    btnCancelRolesModal?.addEventListener('click', closeRolesModal);
+    btnNewCustomRole?.addEventListener('click', () => loadRoleIntoEditor(null));
+
+    rolesListContainer?.addEventListener('click', async (e) => {
+      const target = e.target as HTMLElement | null;
+      const delBtn = target?.closest('.btn-delete-custom-role') as HTMLButtonElement | null;
+      if (!delBtn) return;
+
+      e.stopPropagation();
+      const roleId = delBtn.dataset.roleId || '';
+      const roleName = delBtn.dataset.roleName || 'Rol';
+      if (!roleId) return;
+
+      const confirmed = await (window as any).showConfirm(
+        `¿Eliminar el rol personalizado "${roleName}"? Los usuarios asignados pasarán automáticamente al rol Funcionario.`,
+        'Eliminar Rol RBAC'
+      );
+      if (!confirmed) return;
+
+      try {
+        const res = await fetch('/api/admin/rbac', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ action: 'delete_role', roleId }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'No se pudo eliminar el rol.');
+        }
+
+        rolesCatalog = Array.isArray(data.roles) ? data.roles : rolesCatalog.filter((r) => r.id !== roleId);
+        syncRoleSelectDropdowns();
+        updateRolesKpi();
+        loadRoleIntoEditor(rolesCatalog.find((r) => r.id === 'funcionario') || rolesCatalog[0] || null);
+        (window as any).showToast(`Rol "${roleName}" eliminado correctamente.`, 'success');
+      } catch (err: any) {
+        (window as any).showToast(err?.message || 'Error eliminando rol.', 'error');
+      }
+    });
+
+    formRoleEditor?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!roleEditName) return;
+
+      const name = roleEditName.value.trim();
+      const id = (roleEditId?.value || '').trim();
+      const desc = roleEditDesc?.value.trim() || '';
+      const color = roleEditColor?.value || '#00594E';
+      const propagateToUsers = Boolean(roleEditPropagate?.checked);
+
+      const selectedPerms: string[] = [];
+      document.querySelectorAll<HTMLInputElement>('.role-perm-checkbox:checked').forEach((cb) => {
+        if (cb.dataset.permId) selectedPerms.push(cb.dataset.permId);
+      });
+
+      if (!name) {
+        (window as any).showToast('Ingrese un nombre válido para el rol.', 'warning');
+        return;
+      }
+
+      if (btnSaveRole) {
+        btnSaveRole.disabled = true;
+        btnSaveRole.textContent = 'Guardando...';
+      }
+
+      try {
+        const res = await fetch('/api/admin/rbac', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            action: 'upsert_role',
+            id,
+            name,
+            desc,
+            color,
+            permissions: selectedPerms,
+            propagateToUsers,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'No se pudo guardar el rol.');
+        }
+
+        rolesCatalog = Array.isArray(data.roles) ? data.roles : rolesCatalog;
+        syncRoleSelectDropdowns();
+        updateRolesKpi();
+        if (data.role) {
+          loadRoleIntoEditor(data.role);
+        } else {
+          renderRolesCatalogList();
+        }
+        (window as any).showToast(data.message || `Rol "${name}" guardado correctamente.`, 'success');
+      } catch (err: any) {
+        (window as any).showToast(err?.message || 'Error guardando el rol.', 'error');
+      } finally {
+        if (btnSaveRole) {
+          btnSaveRole.disabled = activeRoleEditorId === 'admin';
+          btnSaveRole.textContent = activeRoleEditorId ? 'Guardar Cambios del Rol' : 'Crear Rol';
+        }
+      }
+    });
+
+    // 8. Delegación Global de Clics en la Tabla de Usuarios
     document.addEventListener('click', (e) => {
       const target = e.target as HTMLElement | null;
       if (!target) return;
 
-      // A. Botón Gestionar Permisos
       const permsBtn = target.closest('.btn-manage-perms') as HTMLElement | null;
       if (permsBtn) {
         e.preventDefault();
-        const uid = permsBtn.dataset.userId || '';
-        const name = permsBtn.dataset.userName || '';
-        const cargo = permsBtn.dataset.userCargo || '';
-        const role = permsBtn.dataset.userRole || 'funcionario';
-        openPermsModal(uid, name, cargo, role);
+        openPermsModal(
+          permsBtn.dataset.userId || '',
+          permsBtn.dataset.userEmail || '',
+          permsBtn.dataset.userName || '',
+          permsBtn.dataset.userCargo || '',
+          permsBtn.dataset.userRole || 'funcionario'
+        );
         return;
       }
 
-      // B. Botón Editar Usuario
       const editBtn = target.closest('.btn-edit-user') as HTMLElement | null;
       if (editBtn) {
         e.preventDefault();
-        const uid = editBtn.dataset.userId || '';
-        const name = editBtn.dataset.userName || '';
-        const email = editBtn.dataset.userEmail || '';
-        const cargo = editBtn.dataset.userCargo || '';
-        const role = editBtn.dataset.userRole || 'funcionario';
-        openEditModal(uid, name, email, cargo, role);
+        openEditModal(
+          editBtn.dataset.userId || '',
+          editBtn.dataset.userName || '',
+          editBtn.dataset.userEmail || '',
+          editBtn.dataset.userCargo || '',
+          editBtn.dataset.userRole || 'funcionario'
+        );
         return;
       }
 
-      // C. Botón Eliminar Usuario
       const deleteBtn = target.closest('.btn-delete-user') as HTMLElement | null;
       if (deleteBtn) {
         e.preventDefault();
@@ -995,19 +1544,9 @@ const permissionsByCategory = categories.map(cat => ({
           deleteModalEmail.textContent = userToDelete.email;
           deleteModal.style.display = 'flex';
         }
-        return;
       }
     });
 
-    // Inicialización
-    async function init() {
-      await loadAllPermissions();
-    }
-
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', init);
-    } else {
-      init();
-    }
+    refreshRbacStateFromServer();
   </script>
 </AppLayout>

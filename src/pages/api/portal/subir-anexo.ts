@@ -3,10 +3,12 @@ export const prerender = false;
 
 import type { APIRoute } from 'astro';
 import { supabase } from '@lib/supabase';
-import { MAX_FILE_SIZE_BYTES, SESSION_COOKIE_KEY } from '@lib/constants';
+import { SESSION_COOKIE_KEY } from '@lib/constants';
 import { isPeticionRespondida } from '@lib/subcarpetas';
+import { logSystemActivity } from '@lib/audit';
+import { resolveSessionActor } from '@lib/request-actor';
 
-export const POST: APIRoute = async ({ request, cookies }) => {
+export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
   try {
     const isStaffSession = Boolean(cookies.get(SESSION_COOKIE_KEY)?.value);
     const contentType = request.headers.get('content-type') || '';
@@ -46,12 +48,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       cargaManual = String(formData.get('carga_manual') || '') === 'true';
 
       if (file && typeof file.arrayBuffer === 'function') {
-        if (file.size > MAX_FILE_SIZE_BYTES) {
-          return new Response(
-            JSON.stringify({ success: false, error: 'El archivo excede el tamaño máximo permitido de 500 MB.' }),
-            { status: 413, headers: { 'Content-Type': 'application/json' } }
-          );
-        }
         const arrayBuffer = await file.arrayBuffer();
         fileBuffer = Buffer.from(arrayBuffer);
         fileName = file.name;
@@ -83,13 +79,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         fileMime = body.archivo_mime || 'application/octet-stream';
         fileSize = fileBuffer.length;
       }
-    }
-
-    if (fileSize > MAX_FILE_SIZE_BYTES) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'El archivo excede el tamaño máximo permitido de 500 MB.' }),
-        { status: 413, headers: { 'Content-Type': 'application/json' } }
-      );
     }
 
     const esCargaInterna = isStaffSession || cargaManual;
@@ -177,7 +166,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         return new Response(
           JSON.stringify({
             success: false,
-            error: 'El plazo de entrega para su oficina expiró. No se reciben anexos dentro de los últimos 5 días previos al cierre.',
+            error: 'El plazo límite configurado para su dependencia expiró. Solicite una prórroga a Secretaría General para habilitar nuevas cargas.',
           }),
           { status: 403, headers: { 'Content-Type': 'application/json' } }
         );
@@ -335,6 +324,26 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     } catch (petUpdErr: any) {
       console.warn('Aviso actualizando estado general de petición:', petUpdErr.message);
     }
+
+    const portalActor = isStaffSession
+      ? await resolveSessionActor(cookies)
+      : {
+          id: responsableId || 'usr-external',
+          name: oficinaNombre || emailInstitucional || 'Dependencia Asignada',
+          role: 'Dependencia Asignada',
+        };
+    await logSystemActivity({
+      actor: portalActor,
+      action: `Carga de soporte documental (${numeroRadicado || peticionId})`,
+      actionType: 'SUBIDA_ARCHIVO',
+      entity: isStaffSession ? 'Módulo Archivos' : 'Portal Entrega Anexos',
+      entityId: numeroRadicado || peticionId,
+      details: `Archivo "${fileName}" incorporado en "${subcarpetaNombre || 'Soportes Documentales'}".`,
+      severity: 'INFO',
+      request,
+      clientAddress,
+      cookies: isStaffSession ? cookies : null,
+    }).catch(() => {});
 
     return new Response(
       JSON.stringify({

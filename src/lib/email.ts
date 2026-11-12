@@ -94,6 +94,21 @@ export interface EmailRecordatorioDependenciaParams {
   portalUrl: string;
 }
 
+export interface EmailRechazoAporteParams {
+  toEmail: string;
+  oficinaNombre: string;
+  numeroRadicado: string;
+  tituloPeticion: string;
+  nombreSubcarpeta: string;
+  archivoRechazado: string;
+  motivoRechazo: string;
+  fechaLimiteDependencia?: string | null;
+  codigoAccesoDependencia: string;
+  pinAcceso?: string | null;
+  portalUrl: string;
+  revisadoPor?: string | null;
+}
+
 /**
  * Obtiene el valor de una variable de entorno buscando en process.env, Vite/Astro env
  * y lectura directa del archivo .env en disco como respaldo obligatorio para Astro SSR.
@@ -998,5 +1013,98 @@ export async function sendRespuestaSolicitanteEmail(
     subject,
     html,
     logTag: 'RESPUESTA SOLICITANTE',
+  });
+}
+
+/**
+ * 5. Correo de Devolución / Rechazo de Aporte Documental a Dependencia Responsable
+ */
+export async function enviarCorreoRechazoAporteDependencia(
+  params: EmailRechazoAporteParams
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const subject = `Devolución de Soporte Documental (${params.nombreSubcarpeta}) - Radicado ${params.numeroRadicado}`;
+  const formattedLimite = params.fechaLimiteDependencia
+    ? formatDateMediumWeekdayEs(params.fechaLimiteDependencia)
+    : 'Vigente según asignación';
+
+  const bentoCard = buildHorizontalBentoGrid([
+    { label: 'Asunto del Expediente', valueHtml: escapeEmailHtml(params.tituloPeticion) },
+    { label: 'Dependencia Responsable', valueHtml: `<strong style="color:#00594E;">${escapeEmailHtml(params.oficinaNombre)}</strong>` },
+    { label: 'Subcarpeta Evaluada', valueHtml: `<strong style="color:#786832;">${escapeEmailHtml(params.nombreSubcarpeta)}</strong>` },
+    { label: 'Archivo Devuelto', valueHtml: `<span style="color:#DC2626;font-weight:700;">${escapeEmailHtml(params.archivoRechazado)}</span>` },
+  ]);
+
+  const rejectionBox = `
+    <div style="background-color: #FFFFFF; border: 1px solid #FECACA; border-left: 4px solid #DC2626; border-radius: 12px; padding: 15px 18px; margin: 14px 0;">
+      <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: #DC2626; margin-bottom: 6px;">
+        Motivo de Devolución / Corrección Requerida
+      </div>
+      <div style="font-size: 13.5px; color: #1E293B; line-height: 1.6; white-space: pre-wrap;">${escapeEmailHtml(params.motivoRechazo)}</div>
+      ${
+        params.revisadoPor
+          ? `<div style="margin-top: 8px; font-size: 11px; color: #64748B; font-weight: 700;">Revisado por: ${escapeEmailHtml(params.revisadoPor)}</div>`
+          : ''
+      }
+    </div>
+  `;
+
+  const codigoPinHtml = params.pinAcceso
+    ? `<div style="font-family: 'JetBrains Mono', Consolas, ui-monospace, monospace; font-size: 14px; font-weight: 800; color: #00594E; letter-spacing: 0.3px; white-space: nowrap;">${escapeEmailHtml(params.codigoAccesoDependencia)}</div>
+       <div style="font-size: 11px; font-weight: 700; color: #475569; margin-top: 3px; white-space: nowrap;">PIN: <span style="font-family: 'JetBrains Mono', Consolas, ui-monospace, monospace; color: #00594E; font-weight: 800; letter-spacing: 1px;">${escapeEmailHtml(params.pinAcceso)}</span></div>`
+    : `<div style="font-family: 'JetBrains Mono', Consolas, ui-monospace, monospace; font-size: 15px; font-weight: 800; color: #00594E; letter-spacing: 0.5px; white-space: nowrap;">${escapeEmailHtml(params.codigoAccesoDependencia)}</div>`;
+
+  const credentialsAndCtaCard = buildGoldCredentialsAndCtaCard({
+    heading: 'Credenciales para Subir el Nuevo Soporte Corregido',
+    email: params.toEmail,
+    boxes: [
+      {
+        widthPct: '33%',
+        label: 'Número de Radicado',
+        valueHtml: `<div style="font-family: 'JetBrains Mono', Consolas, ui-monospace, monospace; font-size: 14.5px; font-weight: 800; color: #00594E; letter-spacing: 0.4px; white-space: nowrap;">${escapeEmailHtml(params.numeroRadicado)}</div>`,
+      },
+      {
+        widthPct: '32%',
+        label: 'Código / PIN de Acceso',
+        valueHtml: codigoPinHtml,
+      },
+      {
+        widthPct: '31%',
+        label: 'Plazo de Subsanación',
+        valueHtml: `<div style="font-size: 12.5px; font-weight: 800; color: #786832; line-height: 1.35;">${escapeEmailHtml(formattedLimite)}</div>`,
+      },
+    ],
+    ctaUrl: params.portalUrl,
+    ctaLabel: 'Ingresar al Portal y Subir Soporte Corregido',
+    helperText: 'El estado de entrega de esta subcarpeta ha vuelto a Pendiente hasta que cargue el soporte corregido en el portal.',
+  });
+
+  const bodyHtml = `
+    <div style="display: inline-block; background-color: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; border-radius: 999px; padding: 4px 12px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px;">
+      Revisión de Aportes &middot; Corrección Solicitada
+    </div>
+    <p style="margin: 0 0 6px 0; font-size: 16px; font-weight: 800; color: #00594E;">
+      Estimado(a) responsable de ${escapeEmailHtml(params.oficinaNombre)},
+    </p>
+    <p style="margin: 0 0 14px 0; font-size: 14px; line-height: 1.6; color: #475569;">
+      Le informamos que el soporte documental cargado en el radicado <strong>${escapeEmailHtml(params.numeroRadicado)}</strong> fue devuelto durante la validación interna de Secretaría General y requiere ser corregido y cargado nuevamente.
+    </p>
+    ${bentoCard}
+    ${rejectionBox}
+    ${credentialsAndCtaCard}
+  `;
+
+  const html = buildEmailLayout({
+    title: subject,
+    headerTitle: 'Notificación de Devolución Documental',
+    numeroRadicado: params.numeroRadicado,
+    bodyHtml,
+  });
+
+  return dispatchSmtpMail({
+    fromLabel: 'Revisión Documental Unitrópico',
+    toEmail: params.toEmail,
+    subject,
+    html,
+    logTag: 'RECHAZO APORTE',
   });
 }

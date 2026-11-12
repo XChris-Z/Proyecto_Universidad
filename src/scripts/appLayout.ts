@@ -4,8 +4,26 @@
 import { INSTITUTIONAL_USERS } from '@data/users';
 import { SYSTEM_ROLES } from '@data/roles';
 import { SESSION_STORAGE_KEY, SESSION_COOKIE_KEY } from '@lib/constants';
-import type { InstitutionalUser } from '@lib/types';
+import type { InstitutionalUser, SystemRole } from '@lib/types';
 import { supabase } from '@lib/supabase';
+import {
+  getFirstAllowedPath,
+  getModuleByPath,
+  getRoleDisplayName,
+  hasModulePermission,
+  isAdminRoleCode,
+} from '@lib/permissions';
+
+interface ClientRbacUserState {
+  id: string;
+  email: string;
+  fullName: string;
+  cargo: string;
+  roleId: string;
+  roleName: string;
+  isAdmin: boolean;
+  effectivePermissions: string[];
+}
 
 // Extender Window para tipado de utilidades globales
 declare global {
@@ -15,25 +33,27 @@ declare global {
     showConfirm: (message: string, title?: string) => Promise<boolean>;
     currentLoggedUser: InstitutionalUser;
     updateUserProfileUI: () => void;
+    sgdRbacState?: { user: ClientRbacUserState; roles: SystemRole[] };
   }
 }
 
 export function initAppLayout() {
   // 1. Resolver usuario activo desde storage o defecto
-  let activeUser: InstitutionalUser = { ...INSTITUTIONAL_USERS[0]! }; // ING. Christian Lemus (Root)
+  let activeUser: InstitutionalUser = { ...INSTITUTIONAL_USERS[0]! };
   try {
     const rawUser = localStorage.getItem('sgd_current_user');
     if (rawUser) {
       const parsed = JSON.parse(rawUser);
       if (parsed && parsed.name) {
+        const normalizedRoleId = parsed.roleId || (isAdminRoleCode(parsed.role) ? 'admin' : 'funcionario');
         activeUser = {
           id: parsed.id || 'usr-root',
           name: parsed.name,
           email: parsed.email || 'christianlemus.es@unitropico.edu.co',
-          role: parsed.role || 'Administrador General',
-          roleId: parsed.roleId || 'admin',
+          role: getRoleDisplayName(normalizedRoleId),
+          roleId: normalizedRoleId,
           initials: parsed.initials || 'CL',
-          avatarColor: parsed.avatarColor || '#00594E',
+          avatarColor: parsed.avatarColor || (isAdminRoleCode(normalizedRoleId) ? '#00594E' : '#B5A160'),
           avatar_url: parsed.avatar_url || parsed.avatarUrl || localStorage.getItem(`sgd_avatar_${parsed.id}`) || null,
           avatarUrl: parsed.avatar_url || parsed.avatarUrl || localStorage.getItem(`sgd_avatar_${parsed.id}`) || null,
           password: ''
@@ -46,7 +66,7 @@ export function initAppLayout() {
 
   window.currentLoggedUser = activeUser;
 
-  // 2. Función global Toast ejecutiva y de alto nivel con auto-dismiss garantizado en 2.8s
+  // 2. Función global Toast ejecutiva y de alto nivel con contenedor transparente sin doble recuadro
   window.showToast = function (
     message: string,
     typeOrIsError: boolean | 'success' | 'error' | 'warning' | 'info' | string = 'success',
@@ -59,6 +79,11 @@ export function initAppLayout() {
       container.className = 'toast-container';
       document.body.appendChild(container);
     }
+
+    container.style.background = 'transparent';
+    container.style.border = 'none';
+    container.style.boxShadow = 'none';
+    container.style.padding = '0';
 
     let type: 'success' | 'error' | 'warning' | 'info' = 'success';
     if (typeof typeOrIsError === 'boolean') {
@@ -76,16 +101,17 @@ export function initAppLayout() {
       }
     }
 
-    // Si entra un nuevo toast de resultado (éxito, error o advertencia), remover de inmediato cualquier loader/info en progreso
     const activeToasts = container.querySelectorAll('.toast');
     activeToasts.forEach((t) => {
-      const msg = (t.querySelector('.toast-message')?.textContent || '').toLowerCase();
+      const msgText = (t.querySelector('.toast-message')?.textContent || '').trim();
+      const lowerMsg = msgText.toLowerCase();
       if (
-        msg.includes('iniciando') ||
-        msg.includes('cargando') ||
-        msg.includes('procesando') ||
-        msg.includes('respaldando') ||
-        msg.includes('subiendo') ||
+        msgText === String(message || '').trim() ||
+        lowerMsg.includes('iniciando') ||
+        lowerMsg.includes('cargando') ||
+        lowerMsg.includes('procesando') ||
+        lowerMsg.includes('respaldando') ||
+        lowerMsg.includes('subiendo') ||
         type === 'error' ||
         type === 'warning'
       ) {
@@ -93,7 +119,6 @@ export function initAppLayout() {
       }
     });
 
-    // Máximo 2 Toasts visibles al mismo tiempo: si entra un 3.º, remover el más antiguo
     const currentToasts = container.querySelectorAll('.toast');
     if (currentToasts.length >= 2 && currentToasts[0]) {
       try { currentToasts[0].remove(); } catch (_) {}
@@ -149,7 +174,6 @@ export function initAppLayout() {
       removeToast();
     });
 
-    // Auto-dismiss infalible en exactamente 3200ms (3.2 segundos)
     setTimeout(() => {
       removeToast();
     }, 3200);
@@ -399,16 +423,18 @@ export function initAppLayout() {
     }
 
     if (roleBadgeEl) {
-      const role = SYSTEM_ROLES.find(r => r.id === u.roleId);
-      const roleName = role ? role.name.toUpperCase() : u.role.toUpperCase();
+      const rolesList = window.sgdRbacState?.roles || SYSTEM_ROLES;
+      const roleName = getRoleDisplayName(u.roleId || u.role, rolesList).toUpperCase();
+      const isUserAdmin = isAdminRoleCode(u.roleId) || isAdminRoleCode(u.role);
+      roleBadgeEl.className = `role-badge ${isUserAdmin ? 'admin' : 'funcionario'}`;
       roleBadgeEl.innerHTML = `
         <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
         <span>${roleName}</span>
       `;
     }
 
-    // Visibilidad exclusiva de funciones administrativas (Usuarios y Permisos)
-    const isAdmin = u.roleId === 'admin' || (u.role && u.role.toLowerCase().includes('admin'));
+    // Visibilidad exclusiva de administración de Usuarios para Administrador
+    const isAdmin = isAdminRoleCode(u.roleId) || isAdminRoleCode(u.role);
     const navUsuarios = document.getElementById('nav-usuarios');
     if (navUsuarios) {
       navUsuarios.style.display = isAdmin ? 'flex' : 'none';
@@ -417,9 +443,261 @@ export function initAppLayout() {
 
   window.updateUserProfileUI();
 
-  // 4. Sincronizar fotografía institucional desde Supabase en background
+  // 3.1 Aviso automático tras redirección por falta de permisos (?denied=1)
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('denied') === '1') {
+      params.delete('denied');
+      const cleanQuery = params.toString();
+      const nextUrl = `${window.location.pathname}${cleanQuery ? `?${cleanQuery}` : ''}${window.location.hash}`;
+      window.history.replaceState({}, '', nextUrl);
+      setTimeout(() => {
+        window.showToast(
+          'Acceso restringido: tu rol actual no cuenta con permisos de visualización para ese módulo.',
+          'warning',
+          'Control de Acceso RBAC'
+        );
+      }, 150);
+    }
+  } catch {}
+
+  // 3.2 Control RBAC dinámico (sincronización de Sidebar, roles personalizados y Modo Solo Lectura)
+  function cleanupSidebarDividers() {
+    const nav = document.getElementById('sidebar-nav-menu');
+    if (!nav) return;
+    const children = Array.from(nav.children) as HTMLElement[];
+    let seenVisibleLinkBeforeDivider = false;
+    let lastVisibleDivider: HTMLElement | null = null;
+
+    children.forEach((child) => {
+      if (child.classList.contains('nav-divider')) {
+        if (seenVisibleLinkBeforeDivider) {
+          child.style.display = '';
+          lastVisibleDivider = child;
+          seenVisibleLinkBeforeDivider = false;
+        } else {
+          child.style.display = 'none';
+        }
+      } else if (child.style.display !== 'none') {
+        seenVisibleLinkBeforeDivider = true;
+        lastVisibleDivider = null;
+      }
+    });
+
+    if (lastVisibleDivider) {
+      (lastVisibleDivider as HTMLElement).style.display = 'none';
+    }
+  }
+
+  function isSafeReadOnlyControl(el: HTMLElement): boolean {
+    const tag = el.tagName.toLowerCase();
+    const id = (el.id || '').toLowerCase();
+    const cls = (typeof el.className === 'string' ? el.className : '').toLowerCase();
+    const text = (el.textContent || '').trim().toLowerCase();
+    const typeAttr = (el.getAttribute('type') || '').toLowerCase();
+
+    if (tag === 'a' && !cls.includes('btn-delete') && !cls.includes('btn-remove')) {
+      return true;
+    }
+
+    // Botones explícitos de mutación nunca son seguros en modo solo lectura
+    const mutatingTokens = [
+      'create', 'new', 'nuevo', 'nueva', 'add', 'agregar', 'registrar',
+      'edit', 'editar', 'update', 'actualizar', 'save', 'guardar',
+      'delete', 'eliminar', 'borrar', 'remove', 'anular',
+      'upload', 'subir', 'cargar', 'send', 'enviar', 'reenviar', 'recordatorio',
+      'approve', 'aprobar', 'reject', 'rechazar', 'prorroga', 'completar',
+      'export', 'drive', 'respald', 'sync', 'sincronizar', 'config', 'smtp',
+      'manage-perms', 'manage-roles', 'submit'
+    ];
+
+    const haystack = `${id} ${cls} ${text}`;
+    const looksMutating =
+      typeAttr === 'submit' ||
+      mutatingTokens.some((tok) => haystack.includes(tok));
+
+    if (!looksMutating) {
+      return true;
+    }
+
+    // Excepciones explícitas de lectura/UI (cerrar modal, filtros, búsqueda, ver detalles)
+    const safeReadTokens = ['close', 'cerrar', 'cancel', 'cancelar', 'filter', 'tab', 'search', 'buscar', 'view-detail', 'ver-detalle', 'prev', 'next'];
+    if (safeReadTokens.some((tok) => id.includes(tok) || cls.includes(tok))) {
+      return true;
+    }
+
+    return false;
+  }
+
+  function applyClientRbacReadonlyMode(rbacUser: ClientRbacUserState) {
+    const currentPath = window.location.pathname;
+    const mod = getModuleByPath(currentPath);
+    if (!mod || rbacUser.isAdmin) return;
+
+    if (!hasModulePermission(rbacUser.effectivePermissions, mod.id, 'ver', false)) {
+      const target = getFirstAllowedPath(rbacUser.effectivePermissions, false);
+      if (target !== currentPath.replace(/\/+$/, '')) {
+        window.location.replace(`${target}?denied=1`);
+      }
+      return;
+    }
+
+    const canManage = hasModulePermission(rbacUser.effectivePermissions, mod.id, 'gestionar', false);
+    if (canManage) {
+      document.body.removeAttribute('data-sgd-readonly');
+      return;
+    }
+
+    document.body.dataset.sgdReadonly = 'true';
+
+    if (!document.getElementById('sgd-rbac-readonly-style')) {
+      const styleEl = document.createElement('style');
+      styleEl.id = 'sgd-rbac-readonly-style';
+      styleEl.textContent = `
+        body[data-sgd-readonly="true"] [data-rbac-locked="true"] {
+          opacity: 0.45 !important;
+          cursor: not-allowed !important;
+        }
+        .sgd-rbac-readonly-banner {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          background: #F7F5EE;
+          border: 1px solid #DBD2B0;
+          border-left: 4px solid #B5A160;
+          color: #786832;
+          padding: 10px 14px;
+          border-radius: 10px;
+          font-size: 0.80rem;
+          font-weight: 700;
+          margin-bottom: 16px;
+        }
+      `;
+      document.head.appendChild(styleEl);
+    }
+
+    const contentBody = document.querySelector('.content-body');
+    if (contentBody && !document.getElementById('sgd-readonly-banner')) {
+      const banner = document.createElement('div');
+      banner.id = 'sgd-readonly-banner';
+      banner.className = 'sgd-rbac-readonly-banner';
+      banner.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="flex-shrink: 0;">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+        <span>Modo Solo Lectura: tu rol (${rbacUser.roleName}) permite consultar ${mod.label}, pero las acciones de modificación están restringidas.</span>
+      `;
+      contentBody.insertAdjacentElement('afterbegin', banner);
+    }
+
+    const lockMutatingControls = () => {
+      const root = document.querySelector('.content-body');
+      if (!root) return;
+      root.querySelectorAll<HTMLElement>('button, input[type="submit"], input[type="file"]').forEach((el) => {
+        if (isSafeReadOnlyControl(el) && el.tagName.toLowerCase() !== 'input') return;
+        if (el.tagName.toLowerCase() === 'input' && (el as HTMLInputElement).type === 'file') {
+          el.setAttribute('data-rbac-locked', 'true');
+          (el as HTMLInputElement).disabled = true;
+          el.title = 'Modo Solo Lectura: carga deshabilitada';
+          return;
+        }
+        el.setAttribute('data-rbac-locked', 'true');
+        el.setAttribute('aria-disabled', 'true');
+        if (!el.title) el.title = 'Modo Solo Lectura: acción restringida por permisos RBAC';
+      });
+    };
+
+    lockMutatingControls();
+
+    const mainContainer = document.querySelector('.content-body') || document.body;
+    let rafPending = false;
+    const observer = new MutationObserver(() => {
+      if (rafPending) return;
+      rafPending = true;
+      requestAnimationFrame(() => {
+        rafPending = false;
+        lockMutatingControls();
+      });
+    });
+    observer.observe(mainContainer, { childList: true, subtree: true });
+
+    const blockMutationHandler = (e: Event) => {
+      const rawTarget = e.target as HTMLElement | null;
+      if (!rawTarget) return;
+      if (rawTarget.closest('#app-sidebar, .topbar, #sgd-system-dialog')) return;
+
+      if (e.type === 'submit') {
+        const form = rawTarget as HTMLFormElement;
+        const formId = (form.id || '').toLowerCase();
+        if (!formId.includes('search') && !formId.includes('filter')) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          window.showToast(
+            'Modo Solo Lectura: no tienes permiso de interacción/gestión en este módulo.',
+            'warning',
+            'Acción Restringida'
+          );
+        }
+        return;
+      }
+
+      const btn = rawTarget.closest('button, input[type="submit"], input[type="file"], label[for]') as HTMLElement | null;
+      if (!btn) return;
+      const isLocked = btn.getAttribute('data-rbac-locked') === 'true' || !isSafeReadOnlyControl(btn);
+      if (isLocked) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        window.showToast(
+          'Modo Solo Lectura: no tienes permiso de interacción/gestión en este módulo.',
+          'warning',
+          'Acción Restringida'
+        );
+      }
+    };
+
+    document.addEventListener('click', blockMutationHandler, true);
+    document.addEventListener('submit', blockMutationHandler, true);
+  }
+
+  // 4. Sincronizar perfil, fotografía y permisos RBAC efectivos en background
   (async () => {
     try {
+      const rbacRes = await fetch('/api/admin/rbac?mode=me', { credentials: 'same-origin' });
+      if (rbacRes.ok) {
+        const rbacData = await rbacRes.json();
+        if (rbacData?.success && rbacData.user) {
+          window.sgdRbacState = {
+            user: rbacData.user,
+            roles: Array.isArray(rbacData.roles) ? rbacData.roles : SYSTEM_ROLES,
+          };
+
+          const serverUser = rbacData.user as ClientRbacUserState;
+          activeUser = {
+            ...activeUser,
+            id: serverUser.id || activeUser.id,
+            name: serverUser.fullName || activeUser.name,
+            email: serverUser.email || activeUser.email,
+            role: serverUser.roleName || getRoleDisplayName(serverUser.roleId, window.sgdRbacState.roles),
+            roleId: serverUser.roleId || activeUser.roleId,
+            avatarColor: serverUser.isAdmin ? '#00594E' : '#B5A160',
+          };
+          window.currentLoggedUser = activeUser;
+          window.updateUserProfileUI();
+
+          // Sincronizar enlaces del Sidebar con permisos reales
+          document.querySelectorAll<HTMLElement>('#sidebar-nav-menu a[data-module-id]').forEach((link) => {
+            const modId = link.getAttribute('data-module-id');
+            if (!modId) return;
+            const visible = hasModulePermission(serverUser.effectivePermissions, modId, 'ver', serverUser.isAdmin);
+            link.style.display = visible ? '' : 'none';
+          });
+          cleanupSidebarDividers();
+          applyClientRbacReadonlyMode(serverUser);
+        }
+      }
+
       const userEmail = activeUser.email || 'christianlemus.es@unitropico.edu.co';
       const userFilter = `id.eq.${activeUser.id},email.eq.${userEmail}`;
       const { data: profile } = await supabase
@@ -447,7 +725,7 @@ export function initAppLayout() {
         window.updateUserProfileUI();
       }
     } catch (err) {
-      console.warn('Sincronización de avatar en background completada:', err);
+      console.warn('Sincronización de perfil y RBAC en background completada:', err);
     }
   })();
 

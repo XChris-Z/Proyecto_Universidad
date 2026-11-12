@@ -5,9 +5,10 @@ export const APP_NAME = 'SGD Unitrópico';
 export const APP_FULL_NAME = 'Sistema de Gestión Documental y Gobierno Institucional';
 export const INSTITUTION_NAME = 'Universidad Internacional del Trópico Americano';
 
-/** Tamaño máximo permitido para archivos (500 MB) */
-export const MAX_FILE_SIZE_MB = 500;
-export const MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024; // 524,288,000 bytes
+/** Etiqueta informativa para carga ilimitada directa a Storage */
+export const UNLIMITED_UPLOAD_LABEL = 'Capacidad Ilimitada · Soporte de Archivos Pesados';
+export const MAX_FILE_SIZE_MB = Number.MAX_SAFE_INTEGER;
+export const MAX_FILE_SIZE_BYTES = Number.MAX_SAFE_INTEGER;
 
 /** Clave usada para la cookie de sesión del middleware */
 export const SESSION_COOKIE_KEY = 'sgd_session';
@@ -24,6 +25,7 @@ export const PUBLIC_ROUTES = [
   '/api/portal',
   '/api/auth',
   '/api/consultar-respuesta',
+  '/api/storage/signed-upload',
 ];
 
 /** Rutas exclusivas de administrador/root */

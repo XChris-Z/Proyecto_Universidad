@@ -21,7 +21,7 @@ let allEvents: CalendarioEvent[] = [];
 let isGoogleConnected = false;
 let activeCategories = new Set<string>(['peticion', 'reporte', 'colegiado', 'academica', 'financiero']);
 let searchQuery = '';
-let activeSlaFilter: 'all' | 'danger' | 'warning' | 'safe' = 'all';
+let activeSlaFilter: 'all' | 'danger' | 'warning' | 'safe' | 'completed' = 'all';
 let selectedDayStr = '';
 
 const MONTH_NAMES = [
@@ -235,7 +235,7 @@ function initBentoFilters() {
   const bentoCards = document.querySelectorAll('.bento-sla-card');
   bentoCards.forEach((card) => {
     card.addEventListener('click', () => {
-      const filter = card.getAttribute('data-sla-filter') as 'danger' | 'warning' | 'safe';
+      const filter = card.getAttribute('data-sla-filter') as 'danger' | 'warning' | 'safe' | 'completed';
       if (activeSlaFilter === filter) {
         activeSlaFilter = 'all';
       } else {
@@ -275,6 +275,8 @@ function updateBentoActiveIndicator() {
       timelineSubtitle.textContent = 'Filtrando: Compromisos Próximos a Vencer (1 a 5 días)';
     } else if (activeSlaFilter === 'safe') {
       timelineSubtitle.textContent = 'Filtrando: Compromisos en Término Saludable (> 5 días)';
+    } else if (activeSlaFilter === 'completed') {
+      timelineSubtitle.textContent = 'Filtrando: Expedientes Completados / Cerrados';
     } else if (selectedDayStr) {
       timelineSubtitle.textContent = `Compromisos del día ${selectedDayStr}`;
     } else {
@@ -298,14 +300,16 @@ function readSsrDeadlines(): CalendarioEvent[] {
 }
 
 function updateSlaCountersFromEvents(events: CalendarioEvent[]) {
-  const { critCount, warnCount, safeCount } = computeActivePeticionSlaCounts(events);
+  const { critCount, warnCount, safeCount, completedCount } = computeActivePeticionSlaCounts(events);
   const critEl = document.getElementById('gcal-crit-count');
   const warnEl = document.getElementById('gcal-warn-count');
   const safeEl = document.getElementById('gcal-safe-count');
+  const completedEl = document.getElementById('gcal-completed-count');
 
   if (critEl) critEl.textContent = String(critCount);
   if (warnEl) warnEl.textContent = String(warnCount);
   if (safeEl) safeEl.textContent = String(safeCount);
+  if (completedEl) completedEl.textContent = String(completedCount);
 }
 
 /**
@@ -580,11 +584,21 @@ function renderMonthView() {
     const displayEvents = dayEvents.slice(0, 2);
     displayEvents.forEach((ev) => {
       const radCode = getRadicadoCode(ev);
+      const chipBadge =
+        ev.urgencia === 'completed' || ev.completada
+          ? 'OK'
+          : ev.diasRestantes <= 0
+          ? 'Vencido'
+          : `${ev.diasRestantes}d`;
+      const chipTitle =
+        ev.urgencia === 'completed' || ev.completada
+          ? `${ev.titulo} (Completado)`
+          : `${ev.titulo} (${ev.diasRestantes <= 0 ? 'Vencido' : `${ev.diasRestantes}d`})`;
       eventsHtml += `
-        <div class="gcal-sem-chip sem-${ev.urgencia}" data-radicado-id="${ev.id}" style="view-transition-name: radicado-card-${ev.id.replace(/[^a-zA-Z0-9_-]/g, '')};" title="${ev.titulo} (${ev.diasRestantes <= 0 ? 'Vencido' : `${ev.diasRestantes}d`})">
+        <div class="gcal-sem-chip sem-${ev.urgencia}" data-radicado-id="${ev.id}" style="view-transition-name: radicado-card-${ev.id.replace(/[^a-zA-Z0-9_-]/g, '')};" title="${chipTitle}">
           <span class="chip-sla-bar ${ev.urgencia}"></span>
           <span class="chip-rad-code">${radCode}</span>
-          <span class="chip-days-badge ${ev.urgencia}">${ev.diasRestantes <= 0 ? 'Vencido' : `${ev.diasRestantes}d`}</span>
+          <span class="chip-days-badge ${ev.urgencia}">${chipBadge}</span>
         </div>
       `;
     });
@@ -681,7 +695,14 @@ function renderTimelineMonitor(focusEventId?: string) {
       subtitleEl.textContent = `Compromisos del ${selectedDayStr} (${targetEvents.length})`;
       if (clearBtn) clearBtn.style.display = 'inline-flex';
     } else if (activeSlaFilter !== 'all') {
-      const label = activeSlaFilter === 'danger' ? 'Críticos' : activeSlaFilter === 'warning' ? 'En Alerta' : 'En Término';
+      const label =
+        activeSlaFilter === 'danger'
+          ? 'Críticos'
+          : activeSlaFilter === 'warning'
+          ? 'En Alerta'
+          : activeSlaFilter === 'completed'
+          ? 'Completados'
+          : 'En Término';
       subtitleEl.textContent = `Filtrando: Compromisos ${label} (${targetEvents.length})`;
       if (clearBtn) clearBtn.style.display = 'inline-flex';
     } else {
@@ -713,7 +734,8 @@ function renderTimelineMonitor(focusEventId?: string) {
 
   targetEvents.forEach((ev) => {
     const radCode = getRadicadoCode(ev);
-    const consumedPercent = getSlaConsumption(ev.diasRestantes, ev.tipo);
+    const isCompleted = ev.urgencia === 'completed' || !!ev.completada;
+    const consumedPercent = isCompleted ? 100 : getSlaConsumption(ev.diasRestantes, ev.tipo);
     const isFocused = focusEventId === ev.id;
 
     const card = document.createElement('div');
@@ -722,7 +744,9 @@ function renderTimelineMonitor(focusEventId?: string) {
     card.setAttribute('id', `timeline-card-${ev.id}`);
     card.style.setProperty('view-transition-name', `radicado-card-${ev.id.replace(/[^a-zA-Z0-9_-]/g, '')}`);
 
-    const urgencyLabel = ev.diasRestantes <= 0
+    const urgencyLabel = isCompleted
+      ? 'Completado'
+      : ev.diasRestantes <= 0
       ? 'Vencido'
       : ev.diasRestantes <= 2
       ? `${ev.diasRestantes}d (Atención Inmediata)`
@@ -764,8 +788,8 @@ function renderTimelineMonitor(focusEventId?: string) {
             <div class="timeline-sla-progress-fill ${ev.urgencia}" style="width: ${consumedPercent}%;"></div>
           </div>
           <div class="timeline-sla-progress-labels">
-            <span class="progress-percent">${consumedPercent}% consumido</span>
-            <span class="progress-remaining">${ev.diasRestantes <= 0 ? 'Término Vencido' : `${ev.diasRestantes} días`}</span>
+            <span class="progress-percent">${isCompleted ? 'Expediente Cerrado' : `${consumedPercent}% consumido`}</span>
+            <span class="progress-remaining">${isCompleted ? 'Archivado' : ev.diasRestantes <= 0 ? 'Término Vencido' : `${ev.diasRestantes} días`}</span>
           </div>
         </div>
         
@@ -831,9 +855,15 @@ function renderWeekView() {
       `;
     } else {
       dayEvents.forEach((ev) => {
+        const wkStatus =
+          ev.urgencia === 'completed' || ev.completada
+            ? 'Completado'
+            : ev.diasRestantes <= 0
+            ? 'Vencido'
+            : `${ev.diasRestantes}d`;
         cardsHtml += `
           <div class="gcal-week-card sem-${ev.urgencia}" data-id="${ev.id}">
-            <div class="gcal-week-card-type">${ev.tipo} &bull; ${ev.diasRestantes <= 0 ? 'Vencido' : `${ev.diasRestantes}d`}</div>
+            <div class="gcal-week-card-type">${ev.tipo} &bull; ${wkStatus}</div>
             <div class="gcal-week-card-title">${ev.titulo}</div>
             <div class="gcal-week-card-meta">${ev.hora || 'Todo el día'}</div>
           </div>
@@ -881,6 +911,7 @@ function renderDayView() {
   const critCount = dayEvents.filter((e) => e.urgencia === 'danger').length;
   const warnCount = dayEvents.filter((e) => e.urgencia === 'warning').length;
   const safeCount = dayEvents.filter((e) => e.urgencia === 'safe').length;
+  const doneCount = dayEvents.filter((e) => e.urgencia === 'completed' || e.completada).length;
 
   const headerCard = `
     <div class="gcal-day-header-card">
@@ -892,6 +923,7 @@ function renderDayView() {
         <div class="gcal-day-stat-chip"><span style="color:#ef4444;">●</span> ${critCount} Críticos</div>
         <div class="gcal-day-stat-chip"><span style="color:#f59e0b;">●</span> ${warnCount} Alerta</div>
         <div class="gcal-day-stat-chip"><span style="color:#10b981;">●</span> ${safeCount} En Término</div>
+        <div class="gcal-day-stat-chip"><span style="color:#00594E;">●</span> ${doneCount} Completados</div>
       </div>
     </div>
   `;
@@ -912,7 +944,7 @@ function renderDayView() {
           <div style="flex: 1;">
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
               <span class="badge ${ev.urgencia === 'danger' ? 'status-critico' : ev.urgencia === 'warning' ? 'status-alerta' : 'status-exito'}">
-                ${ev.diasRestantes <= 0 ? 'Término Vencido' : `${ev.diasRestantes} días restantes`}
+                ${ev.urgencia === 'completed' || ev.completada ? 'Completado' : ev.diasRestantes <= 0 ? 'Término Vencido' : `${ev.diasRestantes} días restantes`}
               </span>
               <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">${ev.hora || 'Todo el día'}</span>
               <span style="font-size: 0.75rem; color: var(--text-muted);">&bull;</span>
@@ -998,7 +1030,7 @@ function renderAgendaView() {
       rowsHtml += `
         <div class="gcal-agenda-row" style="padding: 14px 18px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; gap: 14px;">
           <div style="display: flex; align-items: center; gap: 14px; flex: 1;">
-            <div style="width: 10px; height: 10px; border-radius: 50%; background: ${ev.urgencia === 'danger' ? '#dc2626' : ev.urgencia === 'warning' ? '#f59e0b' : '#10b981'}; flex-shrink: 0; box-shadow: 0 0 6px ${ev.urgencia === 'danger' ? 'rgba(220,38,38,0.5)' : ev.urgencia === 'warning' ? 'rgba(245,158,11,0.5)' : 'rgba(16,185,129,0.5)'};"></div>
+            <div style="width: 10px; height: 10px; border-radius: 50%; background: ${ev.urgencia === 'completed' ? '#00594E' : ev.urgencia === 'danger' ? '#dc2626' : ev.urgencia === 'warning' ? '#f59e0b' : '#10b981'}; flex-shrink: 0; box-shadow: 0 0 6px ${ev.urgencia === 'completed' ? 'rgba(0,89,78,0.45)' : ev.urgencia === 'danger' ? 'rgba(220,38,38,0.5)' : ev.urgencia === 'warning' ? 'rgba(245,158,11,0.5)' : 'rgba(16,185,129,0.5)'};"></div>
             <div>
               <div style="font-weight: 800; color: var(--text-main); font-size: 0.90rem;">
                 <span style="font-family: ui-monospace, monospace; font-size: 0.8rem; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; margin-right: 6px; border: 1px solid #cbd5e1;">${radCode}</span>
@@ -1011,7 +1043,7 @@ function renderAgendaView() {
           </div>
           <div style="display: flex; align-items: center; gap: 10px;">
             <span class="badge ${ev.urgencia === 'danger' ? 'status-critico' : ev.urgencia === 'warning' ? 'status-alerta' : 'status-exito'}" style="font-size: 0.72rem;">
-              ${ev.diasRestantes <= 0 ? 'Vencido' : `${ev.diasRestantes} días`}
+              ${ev.urgencia === 'completed' || ev.completada ? 'Completado' : ev.diasRestantes <= 0 ? 'Vencido' : `${ev.diasRestantes} días`}
             </span>
             ${ev.link ? `
               <a href="${ev.link}" target="_blank" rel="noopener noreferrer" class="btn btn-ghost btn-sm" style="text-decoration: none; font-size: 0.72rem; padding: 4px 8px;">
@@ -1130,11 +1162,11 @@ function openDayModal(dateStr: string, dayEvents: CalendarioEvent[]) {
       let listHtml = '<div style="display: flex; flex-direction: column; gap: 12px;">';
       dayEvents.forEach((ev) => {
         listHtml += `
-          <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; border-left: 4px solid ${ev.urgencia === 'danger' ? '#dc2626' : ev.urgencia === 'warning' ? '#f59e0b' : '#10b981'};">
+          <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; border-left: 4px solid ${ev.urgencia === 'completed' ? '#00594E' : ev.urgencia === 'danger' ? '#dc2626' : ev.urgencia === 'warning' ? '#f59e0b' : '#10b981'};">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
               <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin: 0 0 4px 0;">${ev.titulo}</h4>
               <span class="badge ${ev.urgencia === 'danger' ? 'status-critico' : ev.urgencia === 'warning' ? 'status-alerta' : 'status-exito'}" style="font-size: 0.7rem;">
-                ${ev.diasRestantes <= 0 ? 'Vencido' : `${ev.diasRestantes}d`}
+                ${ev.urgencia === 'completed' || ev.completada ? 'Completado' : ev.diasRestantes <= 0 ? 'Vencido' : `${ev.diasRestantes}d`}
               </span>
             </div>
             <p style="font-size: 0.82rem; color: var(--text-muted); margin: 0 0 8px 0;">${ev.descripcion || 'Sin descripción adicional.'}</p>

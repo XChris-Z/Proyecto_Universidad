@@ -5,7 +5,7 @@ export const INSTITUTIONAL_USERS: InstitutionalUser[] = [
   {
     id: 'usr-root',
     name: 'ING. Christian Lemus',
-    role: 'Administrador General',
+    role: 'Administrador',
     roleId: 'admin',
     email: 'christianlemus.es@unitropico.edu.co',
     password: 'Admin123',

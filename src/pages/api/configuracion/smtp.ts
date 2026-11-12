@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import nodemailer from 'nodemailer';
 import { supabase } from '@lib/supabase';
 import { logSystemActivity } from '@lib/audit';
+import { resolveSessionActor } from '@lib/request-actor';
 
 export const GET: APIRoute = async () => {
   try {
@@ -52,7 +53,7 @@ export const GET: APIRoute = async () => {
   }
 };
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
   try {
     const body = await request.json().catch(() => ({}));
     const rawUser = String(body.user || '').trim();
@@ -123,14 +124,18 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // 3. Registrar auditoría
+    const actor = await resolveSessionActor(cookies);
     await logSystemActivity({
-      actor: { id: 'usr-root', name: 'Administrador General', role: 'admin' },
+      actor,
       action: 'Configuración SMTP Institucional',
       actionType: 'SEGURIDAD',
       entity: 'Configuración del Sistema',
       entityId: 'config_smtp',
       details: `Vinculación y verificación exitosa de correo institucional ${cleanUser} para envío de notificaciones automáticas por SMTP.`,
       severity: 'INFO',
+      request,
+      clientAddress,
+      cookies,
     }).catch(() => null);
 
     return new Response(

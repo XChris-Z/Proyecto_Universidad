@@ -217,18 +217,25 @@ export function filtrarSubcarpetasValidas<T = any>(
  * Normaliza si una petición ya cuenta con respuesta oficial despachada al solicitante.
  */
 export const OFFICIAL_RESPONSE_AUDIT_ACTION = 'Envío de Respuesta Oficial al Solicitante';
+export const COMPLETE_EXPEDIENTE_AUDIT_ACTION = 'Expediente Marcado como Completo';
 
 /**
- * Determina si un registro de `audit_logs` corresponde a un despacho oficial real
- * al solicitante (excluye ingresos al portal de dependencias y cargas previas).
+ * Determina si un registro de `audit_logs` corresponde a un cierre o respuesta oficial real
+ * del expediente (excluye ingresos al portal de dependencias y cargas previas).
  */
 export function isAuditLogOfficialResponse(
-  log: { action?: string | null; entity_id?: string | null; details?: string | null } | null | undefined,
+  log: { action?: string | null; action_type?: string | null; entity_id?: string | null; details?: string | null } | null | undefined,
   peticion: { id?: string | number | null; numero_radicado?: string | null }
 ): boolean {
   if (!log) return false;
   const actionText = String(log.action || '').trim();
-  if (actionText !== OFFICIAL_RESPONSE_AUDIT_ACTION) {
+  const actionLower = actionText.toLowerCase();
+  const isOfficialCloseAction =
+    actionText === OFFICIAL_RESPONSE_AUDIT_ACTION ||
+    actionText === COMPLETE_EXPEDIENTE_AUDIT_ACTION ||
+    actionLower.includes('marcado como completo') ||
+    actionLower.includes('expediente completo');
+  if (!isOfficialCloseAction) {
     return false;
   }
 
@@ -245,7 +252,7 @@ export function isAuditLogOfficialResponse(
 
 /**
  * Determina de forma unificada en todo el sistema (Dashboard, Peticiones, Archivos,
- * Calendario y APIs) si una petición ya cuenta con respuesta oficial despachada.
+ * Calendario y APIs) si una petición ya cuenta con respuesta oficial o cierre completo.
  */
 export function isPeticionRespondida(p: any): boolean {
   if (!p) return false;
@@ -260,13 +267,19 @@ export function isPeticionRespondida(p: any): boolean {
     st === 'cerrada' ||
     st === 'cerrado' ||
     st === 'despachada' ||
-    st === 'despachado'
+    st === 'despachado' ||
+    st === 'completada' ||
+    st === 'completado' ||
+    st === 'completa' ||
+    st === 'completo' ||
+    st === 'expediente completo'
   ) {
     return true;
   }
 
   if (
     p.respondida === true ||
+    p.expediente_completo === true ||
     p.tiene_respuesta_audit === true ||
     Boolean(p.fecha_respuesta) ||
     Boolean(p.respuesta_fecha_envio) ||
@@ -275,6 +288,11 @@ export function isPeticionRespondida(p: any): boolean {
     (typeof p.respuesta_mensaje === 'string' && p.respuesta_mensaje.trim().length > 0) ||
     Boolean(p.respuesta_pin_solicitante)
   ) {
+    return true;
+  }
+
+  const rawTextBlob = `${String(p.instrucciones_anexos || '')}\n${String(p.descripcion || '')}`;
+  if (/\[EXPEDIENTE_COMPLETO\]/i.test(rawTextBlob)) {
     return true;
   }
 
@@ -296,7 +314,8 @@ export function isPeticionRespondida(p: any): boolean {
     const { respuestaMeta } = separarRespuestaMeta(p.instrucciones_anexos);
     if (
       respuestaMeta &&
-      (respuestaMeta.fecha_envio ||
+      (respuestaMeta.expediente_completo === true ||
+        respuestaMeta.fecha_envio ||
         respuestaMeta.pin ||
         (typeof respuestaMeta.msg === 'string' && respuestaMeta.msg.trim().length > 0))
     ) {

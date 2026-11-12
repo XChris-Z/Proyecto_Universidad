@@ -5,9 +5,9 @@ import type { APIRoute } from 'astro';
 import { supabase } from '@lib/supabase';
 import { logSystemActivity } from '@lib/audit';
 import { separarRespuestaMeta } from '@lib/subcarpetas';
-import { MAX_FILE_SIZE_BYTES } from '@lib/constants';
+import { resolveSessionActor } from '@lib/request-actor';
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
   try {
     const contentType = request.headers.get('content-type') || '';
     let peticionId = '';
@@ -53,13 +53,6 @@ export const POST: APIRoute = async ({ request }) => {
       return new Response(
         JSON.stringify({ success: false, error: 'Debe adjuntar el archivo de Respuesta Final Oficial.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    if (fileSize > MAX_FILE_SIZE_BYTES) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'El archivo excede el límite máximo permitido de 500 MB.' }),
-        { status: 413, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
@@ -183,14 +176,22 @@ export const POST: APIRoute = async ({ request }) => {
 
     // 5. Registrar en Auditoría y Trazabilidad
     try {
+      const actor = await resolveSessionActor(cookies, {
+        id: 'usr-despacho',
+        name: 'Funcionario de Despacho',
+        role: 'Funcionario',
+      });
       await logSystemActivity({
-        actor: { id: 'usr-despacho', name: 'Funcionario de Despacho', role: 'funcionario' },
+        actor,
         action: 'Carga de Respuesta Final Oficial',
         actionType: 'RESPUESTA',
         entity: 'Expediente Documental',
         entityId: peticion.numero_radicado || peticion.id,
         details: `Se cargó el archivo de respuesta final oficial: "${cleanOriginalName}" (${(fileSize / 1024).toFixed(1)} KB) sin alterar su nomenclatura original.`,
         severity: 'INFO',
+        request,
+        clientAddress,
+        cookies,
       });
     } catch (auditErr: any) {
       console.warn('[Subir Respuesta Final] Error audit:', auditErr.message);

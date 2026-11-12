@@ -5,35 +5,11 @@ import AppLayout from "@layouts/AppLayout.astro";
 import { supabase } from "@lib/supabase";
 import { calculateDeadlineProgress } from "@lib/utils";
 import { isPeticionRespondida, isAuditLogOfficialResponse } from "@lib/subcarpetas";
+import { getDashboardSnapshotData } from "@lib/dashboard-data";
 
-// 1. Consultar peticiones reales en base de datos PostgreSQL
-const { data: dbPeticiones } = await (supabase
-  .from("peticiones" as any)
-  .select(
-    `
-    id,
-    numero_radicado,
-    asunto,
-    solicitante_nombre,
-    solicitante_tipo,
-    fecha_radicacion,
-    fecha_limite_entrega,
-    fecha_limite_responsable,
-    estado,
-    prioridad,
-    instrucciones_anexos,
-    respuesta_mensaje,
-    respuesta_fecha_envio,
-    respuesta_pin_solicitante,
-    peticion_anexos ( id, subcarpeta, nombre_archivo ),
-    peticion_responsables (
-      id,
-      estado_entrega,
-      oficinas ( nombre )
-    )
-  `,
-  )
-  .order("created_at", { ascending: false }) as any);
+// 1. Consultar métricas unificadas en tiempo real (sin columnas inexistentes)
+const dashSnap = await getDashboardSnapshotData();
+const dbPeticiones = dashSnap.peticiones;
 
 const { data: dbAuditRespuestas } = await (supabase
   .from("audit_logs" as any)
@@ -164,16 +140,33 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
           </div>
           <div class="number tabular-nums" id="quick-sla-compliance">
-            {slaSafePct}%
+            {dashSnap.slaSafePct}%
           </div>
           <div class="label">Cumplimiento SLA &bull; Términos en Plazo</div>
         </a>
 
+        <!-- Botón de Exportación Ejecutiva .XLSX -->
+        <a
+          href="/api/dashboard/exportar-excel"
+          download
+          class="btn-export-excel-promax"
+          id="btn-export-dashboard-excel"
+          title="Descargar informe gerencial completo en Microsoft Excel (.xlsx)"
+        >
+          <span class="export-excel-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h8"/><path d="M8 17h8"/><path d="M10 9H8"/></svg>
+          </span>
+          <span class="export-excel-text">
+            <strong>Descargar Informe Ejecutivo (.XLSX)</strong>
+            <small>4 hojas gerenciales &middot; Datos en vivo</small>
+          </span>
+        </a>
+
         <!-- Preservación segura de IDs DOM sin impacto visual -->
         <div style="display: none;" aria-hidden="true">
-          <span id="quick-total-peticiones">{totalPeticiones}</span>
-          <span id="quick-total-normas">{totalNormas}</span>
-          <span id="quick-total-convenios">{totalConvenios}</span>
+          <span id="quick-total-peticiones">{dashSnap.totalPeticiones}</span>
+          <span id="quick-total-normas">{dashSnap.totalNormas}</span>
+          <span id="quick-total-convenios">{dashSnap.totalConvenios}</span>
         </div>
       </div>
     </header>
@@ -197,14 +190,14 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
           </div>
         </div>
         <div class="kpi-value-row">
-          <div class="kpi-number tabular-nums" id="kpi-total-docs">{totalPeticiones}</div>
+          <div class="kpi-number tabular-nums" id="kpi-total-docs">{dashSnap.totalPeticiones}</div>
           <span class="kpi-trend-badge warning" id="kpi-pending-docs">
-            {totalPendientes} Pendientes
+            {dashSnap.totalPendientes} Pendientes
           </span>
         </div>
         <div class="kpi-footer">
           <span class="footer-label">Eficacia Institucional</span>
-          <span class="footer-val gold" id="kpi-response-rate">{responseRate}% Resuelto</span>
+          <span class="footer-val gold" id="kpi-response-rate">{dashSnap.responseRate}% Resuelto</span>
         </div>
       </a>
 
@@ -222,12 +215,12 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
           </div>
         </div>
         <div class="kpi-value-row">
-          <div class="kpi-number tabular-nums" id="kpi-total-normas">{totalNormas}</div>
-          <span class="kpi-trend-badge success">CSU &bull; CA &bull; Rec</span>
+          <div class="kpi-number tabular-nums" id="kpi-total-normas">{dashSnap.totalNormas}</div>
+          <span class="kpi-trend-badge success">{dashSnap.acuerdosCount} Acuerdos &bull; {dashSnap.resolucionesCount} Resol.</span>
         </div>
         <div class="kpi-footer">
           <span class="footer-label">Actos Sistematizados</span>
-          <span class="footer-val emerald">100% Vigentes</span>
+          <span class="footer-val emerald">{dashSnap.actasCount} Actas Vigentes</span>
         </div>
       </a>
 
@@ -245,7 +238,7 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
           </div>
         </div>
         <div class="kpi-value-row">
-          <div class="kpi-number tabular-nums" id="kpi-total-convenios">{totalConvenios}</div>
+          <div class="kpi-number tabular-nums" id="kpi-total-convenios">{dashSnap.totalConvenios}</div>
           <span class="kpi-trend-badge info">Nal &bull; Int &bull; Guber</span>
         </div>
         <div class="kpi-footer">
@@ -268,7 +261,7 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
           </div>
         </div>
         <div class="kpi-value-row">
-          <div class="kpi-number tabular-nums" id="kpi-total-juridicos-dash">0</div>
+          <div class="kpi-number tabular-nums" id="kpi-total-juridicos-dash">{dashSnap.totalJuridicos}</div>
           <span class="kpi-trend-badge success">Expedientes</span>
         </div>
         <div class="kpi-footer">
@@ -291,7 +284,7 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
           </div>
         </div>
         <div class="kpi-value-row">
-          <div class="kpi-number tabular-nums" id="kpi-total-juzgamiento-dash">0</div>
+          <div class="kpi-number tabular-nums" id="kpi-total-juzgamiento-dash">{dashSnap.totalJuzgamiento}</div>
           <span class="kpi-trend-badge warning">Procesos</span>
         </div>
         <div class="kpi-footer">
@@ -314,7 +307,7 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
           </div>
         </div>
         <div class="kpi-value-row">
-          <div class="kpi-number tabular-nums" id="kpi-total-budget-dash">0</div>
+          <div class="kpi-number tabular-nums" id="kpi-total-budget-dash">{dashSnap.totalPlaneacion}</div>
           <span class="kpi-trend-badge subtle">Informes</span>
         </div>
         <div class="kpi-footer">
@@ -330,7 +323,7 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
     <!-- ================================================================= -->
     <div class="dashboard-split-grid bento-split-main">
       
-      <!-- COLUMNA PRINCIPAL: REPARTO RECTORAL PRIORITARIO CON FILTRO SEGMENTADO -->
+      <!-- COLUMNA PRINCIPAL: REPARTO PRIORITARIO CON FILTRO SEGMENTADO -->
       <section class="panel-box bento-panel-main" aria-labelledby="reparto-main-heading">
         
         <div class="panel-header bento-panel-header">
@@ -339,7 +332,7 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
               <div class="panel-icon-wrap gold">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
               </div>
-              <h3 id="reparto-main-heading" class="panel-heading-text">Reparto Rectoral Prioritario</h3>
+              <h3 id="reparto-main-heading" class="panel-heading-text">Reparto Prioritario</h3>
             </div>
             <p class="panel-subheading-text">Monitoreo y asignación de expedientes oficiales con plazos institucionales</p>
           </div>
@@ -367,8 +360,8 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
           class="critical-docs-flow"
         >
           {
-            urgentPeticiones.length > 0 ? (
-              urgentPeticiones.map((doc: any) => {
+            dashSnap.urgentPeticiones.length > 0 ? (
+              dashSnap.urgentPeticiones.map((doc: any) => {
                 const { progress, statusCategory } = doc;
 
                 return (
@@ -475,7 +468,7 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
               class="badge-response-status responded promax-efficacy-pill"
               id="widget-efficacy-badge"
             >
-              {responseRate}% Resuelto
+              {dashSnap.responseRate}% Resuelto
             </a>
           </div>
 
@@ -501,11 +494,11 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
                     r={gaugeRadius}
                     stroke-width="8"
                     stroke-dasharray={gaugeCircumference}
-                    stroke-dashoffset={gaugeOffset}
+                    stroke-dashoffset={Math.round(gaugeCircumference * (1 - dashSnap.responseRate / 100))}
                   />
                 </svg>
                 <div class="gauge-center-content">
-                  <span class="gauge-number tabular-nums">{responseRate}%</span>
+                  <span class="gauge-number tabular-nums">{dashSnap.responseRate}%</span>
                   <span class="gauge-caption">Eficacia</span>
                 </div>
               </div>
@@ -514,16 +507,16 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
                 <div class="efficacy-metric-pill">
                   <span class="metric-dot green"></span>
                   <div>
-                    <span class="efficacy-metric-num tabular-nums" id="widget-responded-count">{totalRespondidas}</span>
-                    <span class="efficacy-metric-label">Oficios Emitidos</span>
+                    <span class="efficacy-metric-num tabular-nums" id="widget-responded-count">{dashSnap.oficiosEmitidos}</span>
+                    <span class="efficacy-metric-label">Oficios Emitidos ({dashSnap.totalRespondidas} cerradas)</span>
                   </div>
                 </div>
 
                 <div class="efficacy-metric-pill">
                   <span class="metric-dot gold"></span>
                   <div>
-                    <span class="efficacy-metric-num tabular-nums" id="widget-pending-count">{totalPendientes}</span>
-                    <span class="efficacy-metric-label">Pendientes de Trámite</span>
+                    <span class="efficacy-metric-num tabular-nums" id="widget-pending-count">{dashSnap.oficiosPendientes}</span>
+                    <span class="efficacy-metric-label">Oficios Pendientes ({dashSnap.totalPendientes} radicados)</span>
                   </div>
                 </div>
               </div>
@@ -533,13 +526,13 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
             <div class="dist-item efficacy-progress-section">
               <div class="dist-meta">
                 <span class="progress-legend">Tasa de Respuesta Institucional</span>
-                <span id="widget-response-pct" class="progress-val-accent tabular-nums">{responseRate}%</span>
+                <span id="widget-response-pct" class="progress-val-accent tabular-nums">{dashSnap.responseRate}%</span>
               </div>
               <div class="dist-progress-bg promax-track">
                 <div
                   class="dist-progress-fill promax-fill"
                   id="widget-response-bar"
-                  style={`width: ${responseRate}%;`}
+                  style={`width: ${dashSnap.responseRate}%;`}
                 ></div>
               </div>
             </div>
@@ -558,7 +551,7 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
                 class="badge-counter promax-counter-badge"
                 id="widget-pending-badge"
               >
-                {totalPendientes}
+                {dashSnap.totalPendientes}
               </span>
             </a>
           </div>
@@ -586,14 +579,14 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
                   <span>En Término Óptimo (&lt;50%)</span>
                 </span>
                 <span id="dist-count-safe" class="sla-count-chip green tabular-nums">
-                  {slaSafe} docs ({slaSafePct}%)
+                  {dashSnap.slaSafe} docs ({dashSnap.slaSafePct}%)
                 </span>
               </div>
               <div class="dist-progress-bg promax-track">
                 <div
                   class="dist-progress-fill safe-fill"
                   id="dist-bar-safe"
-                  style={`width: ${slaSafePct}%;`}
+                  style={`width: ${dashSnap.slaSafePct}%;`}
                 ></div>
               </div>
             </div>
@@ -606,14 +599,14 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
                   <span>Advertencia Media (50%-80%)</span>
                 </span>
                 <span id="dist-count-warn" class="sla-count-chip warn tabular-nums">
-                  {slaWarn} docs ({slaWarnPct}%)
+                  {dashSnap.slaWarn} docs ({dashSnap.slaWarnPct}%)
                 </span>
               </div>
               <div class="dist-progress-bg promax-track">
                 <div
                   class="dist-progress-fill warn-fill"
                   id="dist-bar-warn"
-                  style={`width: ${slaWarnPct}%;`}
+                  style={`width: ${dashSnap.slaWarnPct}%;`}
                 ></div>
               </div>
             </div>
@@ -626,14 +619,14 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
                   <span>Alerta Crítica (&gt;80%)</span>
                 </span>
                 <span id="dist-count-danger" class="sla-count-chip danger tabular-nums">
-                  {slaDanger} docs ({slaDangerPct}%)
+                  {dashSnap.slaDanger} docs ({dashSnap.slaDangerPct}%)
                 </span>
               </div>
               <div class="dist-progress-bg promax-track">
                 <div
                   class="dist-progress-fill danger-fill"
                   id="dist-bar-danger"
-                  style={`width: ${slaDangerPct}%;`}
+                  style={`width: ${dashSnap.slaDangerPct}%;`}
                 ></div>
               </div>
             </div>
@@ -673,7 +666,7 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
             <span>Cuerpos Colegiados: Resoluciones y Acuerdos</span>
           </div>
           <a href="/normas" class="panel-link-action" title="Explorar todo el catálogo de actos colegiados">
-            <span>Explorar ({totalNormas})</span>
+            <span>Explorar ({dashSnap.totalNormas})</span>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </a>
         </div>
@@ -683,8 +676,8 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
           id="dashboard-colegiados-recent-list"
         >
           {
-            recentNormas.length > 0 ? (
-              recentNormas.map((norma: any) => (
+            dashSnap.recentNormas.length > 0 ? (
+              dashSnap.recentNormas.map((norma: any) => (
                 <div class="colegiado-mini-item promax-feed-item">
                   <div class="feed-item-main">
                     <div class="feed-meta-top">
@@ -856,6 +849,60 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
     flex-direction: column;
     align-items: center;
     text-align: center;
+  }
+
+  .btn-export-excel-promax {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 18px;
+    border-radius: 14px;
+    background: #ffffff;
+    color: #00594E;
+    border: 1px solid #B5A160;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.14);
+    text-decoration: none;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, background 0.2s ease;
+    cursor: pointer;
+  }
+
+  .btn-export-excel-promax:hover {
+    transform: translateY(-2px);
+    background: #F7F5EE;
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.18);
+  }
+
+  .export-excel-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: #00594E;
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .export-excel-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    line-height: 1.25;
+  }
+
+  .export-excel-text strong {
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #00594E;
+    white-space: nowrap;
+  }
+
+  .export-excel-text small {
+    font-size: 0.70rem;
+    font-weight: 600;
+    color: #786832;
+    margin-top: 2px;
   }
 
   .hero-cta-buttons {

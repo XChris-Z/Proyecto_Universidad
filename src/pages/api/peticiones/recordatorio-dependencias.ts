@@ -10,7 +10,11 @@ import {
 } from '@lib/email';
 import { logSystemActivity } from '@lib/audit';
 import { getDeterministicPin } from '@lib/security';
-import { separarRespuestaMeta, filtrarSubcarpetasValidas } from '@lib/subcarpetas';
+import {
+  separarRespuestaMeta,
+  filtrarSubcarpetasValidas,
+  isPeticionRespondida,
+} from '@lib/subcarpetas';
 
 const inFlightMarkers = new Set<string>();
 let activeRunPromise: Promise<RecordatorioRunResult> | null = null;
@@ -71,7 +75,10 @@ function diffCalendarDays(targetYmd: string, baseYmd: string): number {
   return Math.round((tMs - bMs) / 86_400_000);
 }
 
-async function runReminderSweep(originUrl: string): Promise<RecordatorioRunResult> {
+async function runReminderSweep(
+  originUrl: string,
+  auditContext?: { request?: Request; clientAddress?: string | null }
+): Promise<RecordatorioRunResult> {
   const todayYmd = getTodayBogotaYmd();
 
   // 1. Consultar peticiones con responsables y anexos
@@ -146,6 +153,18 @@ async function runReminderSweep(originUrl: string): Promise<RecordatorioRunResul
     }
   } catch {}
 
+  const anexoSubcarpetaMap: Record<string, string> = {};
+  try {
+    const { data: anexoSubs } = await (supabase
+      .from('peticion_anexos' as any)
+      .select('id, subcarpeta_id') as any);
+    if (Array.isArray(anexoSubs)) {
+      anexoSubs.forEach((a: any) => {
+        if (a?.id && a?.subcarpeta_id) anexoSubcarpetaMap[a.id] = a.subcarpeta_id;
+      });
+    }
+  } catch {}
+
   // 3. Cargar marcadores ya enviados desde audit_logs para evitar duplicados
   const sentMarkers = new Set<string>();
   try {
@@ -178,21 +197,29 @@ async function runReminderSweep(originUrl: string): Promise<RecordatorioRunResul
   const peticiones = (dbPeticiones as any[]) || [];
 
   for (const pet of peticiones) {
-    const estadoLower = String(pet?.estado || '').trim().toLowerCase();
-    if (['respondida', 'completada', 'cerrada', 'archivada', 'finalizada'].includes(estadoLower)) {
+    if (isPeticionRespondida(pet)) {
       continue;
     }
 
     const { textoLimpio: instruccionesLimpias, respuestaMeta } = separarRespuestaMeta(
       pet.instrucciones_anexos || pet.descripcion || ''
     );
-    if (respuestaMeta && (respuestaMeta.fecha_envio || respuestaMeta.msg)) {
+    if (respuestaMeta && (respuestaMeta.fecha_envio || respuestaMeta.msg || respuestaMeta.expediente_completo)) {
       continue;
     }
 
     const responsables = Array.isArray(pet.peticion_responsables) ? pet.peticion_responsables : [];
     const anexos = Array.isArray(pet.peticion_anexos) ? pet.peticion_anexos : [];
     const subcarpetasPet = filtrarSubcarpetasValidas(subcarpetasPorPeticion[pet.id] || []);
+
+    const validOfficeAnexos = anexos.filter((a: any) => {
+      const n = String(a?.nombre_archivo || '').trim();
+      const lower = n.toLowerCase();
+      if (!n) return false;
+      if (n.toUpperCase().includes('[RECHAZADO]')) return false;
+      if (lower.startsWith('respuesta oficial')) return false;
+      return true;
+    });
 
     for (const resp of responsables) {
       checked++;
@@ -206,32 +233,95 @@ async function runReminderSweep(originUrl: string): Promise<RecordatorioRunResul
         continue;
       }
 
-      // Verificar si ya entregó por estado_entrega o por archivo subido en peticion_anexos
-      const estadoEntLower = String(resp.estado_entrega || '').trim().toLowerCase();
-      const yaEntregadoPorEstado = ['entregado', 'entregada', 'completado', 'completada', 'respondido', 'respondida'].includes(
-        estadoEntLower
-      );
-      const yaTieneAnexo = anexos.some((a: any) => {
+      // Resolver subcarpeta asignada e instrucción específica antes de validar entrega real
+      const subId = resp.subcarpeta_id || respSubcarpetaMap[resp.id] || null;
+      let nombreSubcarpeta = '';
+      let instruccionSubcarpeta = '';
+
+      if (subId) {
+        const subObj = subcarpetasPet.find((s: any) => String(s.id) === String(subId));
+        if (subObj) {
+          nombreSubcarpeta = String(subObj.nombre || '').trim();
+          instruccionSubcarpeta = subObj.descripcion ? limpiarTextoRequerimiento(subObj.descripcion) : '';
+        }
+      }
+
+      const obsRaw = String(resp.observaciones_entrega || '');
+      const obsUpper = obsRaw.toUpperCase();
+
+      if (!nombreSubcarpeta) {
+        const { textoLimpio: cleanRespObs } = separarRespuestaMeta(obsRaw);
+        const withoutPin = cleanRespObs
+          .replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '')
+          .replace(/\[(RECHAZADO|APROBADO)[^\]]*\]:?[^|\r\n]*/gi, '')
+          .trim();
+        const tagMatches = Array.from(withoutPin.matchAll(/\[([^\]\r\n]+)\]/g))
+          .map((m) => String(m?.[1] || '').trim())
+          .filter((name) => name && !name.toUpperCase().includes('RESPUESTA_META'));
+
+        if (tagMatches.length > 0) {
+          nombreSubcarpeta = tagMatches.join(' / ');
+          const matchedObjs = subcarpetasPet.filter((s: any) =>
+            tagMatches.some((t) => t.toLowerCase() === String(s.nombre || '').trim().toLowerCase())
+          );
+          if (matchedObjs.length > 0) {
+            instruccionSubcarpeta = matchedObjs
+              .map((s: any) => (s.descripcion ? limpiarTextoRequerimiento(s.descripcion) : ''))
+              .filter(Boolean)
+              .join('\n');
+          }
+        }
+      }
+
+      // Verificar si la dependencia realmente entregó un soporte válido (no rechazado) en ESTA subcarpeta/asignación
+      const targetSubNames = nombreSubcarpeta
+        ? nombreSubcarpeta.split('/').map((s) => s.trim().toLowerCase()).filter(Boolean)
+        : [];
+
+      const yaTieneAnexo = validOfficeAnexos.some((a: any) => {
         if (a?.peticion_responsable_id && String(a.peticion_responsable_id) === String(resp.id)) {
           return true;
         }
-        if (a?.es_anexo_oficina && ofiEmail && String(a.subido_por_email || '').trim().toLowerCase() === ofiEmail.toLowerCase()) {
+        const annexSubId = anexoSubcarpetaMap[a?.id];
+        if (subId && annexSubId && String(annexSubId) === String(subId)) {
+          return true;
+        }
+        const nLower = String(a?.nombre_archivo || '').toLowerCase();
+        if (targetSubNames.length > 0 && targetSubNames.some((subName) => nLower.includes(`[${subName}]`))) {
+          return true;
+        }
+        if (
+          !a?.peticion_responsable_id &&
+          !annexSubId &&
+          !subId &&
+          a?.es_anexo_oficina &&
+          ofiEmail &&
+          String(a.subido_por_email || '').trim().toLowerCase() === ofiEmail.toLowerCase()
+        ) {
           return true;
         }
         return false;
       });
+
+      const wasRejected = obsUpper.includes('[RECHAZADO');
+      const estadoEntLower = String(resp.estado_entrega || '').trim().toLowerCase();
+      const yaEntregadoPorEstado =
+        !wasRejected &&
+        ['entregado', 'entregada', 'completado', 'completada', 'respondido', 'respondida', 'aprobado'].includes(
+          estadoEntLower
+        );
 
       if (yaEntregadoPorEstado || yaTieneAnexo) {
         skippedAlreadyDelivered++;
         continue;
       }
 
-      // Calcular fecha límite de la dependencia y días restantes
+      // Calcular fecha límite de la dependencia (priorizando prórrogas y fecha manual) y días restantes
       const fechaEntregaYmd = extractYmd(pet.fecha_limite_entrega);
       const deadlineYmd =
-        extractYmd(pet.fecha_limite_dependencias) ||
-        extractYmd(pet.fecha_limite_responsable) ||
         extractYmd(resp.fecha_expiracion_codigo) ||
+        extractYmd(pet.fecha_limite_responsable) ||
+        extractYmd(pet.fecha_limite_dependencias) ||
         (fechaEntregaYmd ? subtractDaysYmd(fechaEntregaYmd, 5) : null);
 
       if (!deadlineYmd) {
@@ -250,40 +340,6 @@ async function runReminderSweep(originUrl: string): Promise<RecordatorioRunResul
       if (sentMarkers.has(markerKey) || inFlightMarkers.has(markerKey)) {
         skippedAlreadyNotified++;
         continue;
-      }
-
-      // Resolver subcarpeta asignada e instrucción específica
-      const subId = resp.subcarpeta_id || respSubcarpetaMap[resp.id] || null;
-      let nombreSubcarpeta = '';
-      let instruccionSubcarpeta = '';
-
-      if (subId) {
-        const subObj = subcarpetasPet.find((s: any) => String(s.id) === String(subId));
-        if (subObj) {
-          nombreSubcarpeta = String(subObj.nombre || '').trim();
-          instruccionSubcarpeta = subObj.descripcion ? limpiarTextoRequerimiento(subObj.descripcion) : '';
-        }
-      }
-
-      if (!nombreSubcarpeta) {
-        const { textoLimpio: cleanRespObs } = separarRespuestaMeta(resp.observaciones_entrega || '');
-        const withoutPin = cleanRespObs.replace(/^PIN:\s*[0-9A-Z]{6}(\s*\|\s*)?/i, '').trim();
-        const tagMatches = Array.from(withoutPin.matchAll(/\[([^\]\r\n]+)\]/g))
-          .map((m) => String(m?.[1] || '').trim())
-          .filter((name) => name && !name.toUpperCase().includes('RESPUESTA_META'));
-
-        if (tagMatches.length > 0) {
-          nombreSubcarpeta = tagMatches.join(' / ');
-          const matchedObjs = subcarpetasPet.filter((s: any) =>
-            tagMatches.some((t) => t.toLowerCase() === String(s.nombre || '').trim().toLowerCase())
-          );
-          if (matchedObjs.length > 0) {
-            instruccionSubcarpeta = matchedObjs
-              .map((s: any) => (s.descripcion ? limpiarTextoRequerimiento(s.descripcion) : ''))
-              .filter(Boolean)
-              .join('\n');
-          }
-        }
       }
 
       if (!nombreSubcarpeta) {
@@ -333,7 +389,9 @@ async function runReminderSweep(originUrl: string): Promise<RecordatorioRunResul
           remindersSent++;
 
           await logSystemActivity({
-            actor: { id: 'usr-root', name: 'Sistema Automático SGD', role: 'Automatización' },
+            request: auditContext?.request,
+            clientAddress: auditContext?.clientAddress,
+            actor: { id: 'usr-root', name: 'Automatización SGD', role: 'Automatización SGD' },
             action: `Recordatorio 3 días enviado a ${ofiNombre} (${pet.numero_radicado})`,
             actionType: 'GESTION',
             entity: pet.numero_radicado,
@@ -391,11 +449,11 @@ async function runReminderSweep(originUrl: string): Promise<RecordatorioRunResul
   };
 }
 
-export const POST: APIRoute = async ({ request, url }) => {
+export const POST: APIRoute = async ({ request, url, clientAddress }) => {
   try {
     const publicBaseUrl = resolvePublicBaseUrl(request, url);
     if (!activeRunPromise) {
-      activeRunPromise = runReminderSweep(publicBaseUrl).finally(() => {
+      activeRunPromise = runReminderSweep(publicBaseUrl, { request, clientAddress }).finally(() => {
         activeRunPromise = null;
       });
     }

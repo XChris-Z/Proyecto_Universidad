@@ -5,13 +5,29 @@
 // Permisos y Roles
 // ──────────────────────────────────────────────
 
-export type PermissionCategory = 'Consulta' | 'Operación' | 'Gestión' | 'Configuración' | 'Seguridad';
+export type PermissionCategory =
+  | 'Módulos Institucionales'
+  | 'Consulta'
+  | 'Operación'
+  | 'Gestión'
+  | 'Configuración'
+  | 'Seguridad'
+  | string;
 
 export interface Permission {
   id: string;
   label: string;
   desc: string;
   category: PermissionCategory;
+}
+
+export interface RbacModuleDef {
+  id: string;
+  label: string;
+  href: string;
+  sidebarId: string;
+  group: string;
+  description: string;
 }
 
 export interface SystemRole {
@@ -24,6 +40,13 @@ export interface SystemRole {
   color: string;
   isProtected: boolean;
   permissions: string[];
+}
+
+export interface RbacConfigState {
+  roles: SystemRole[];
+  userCustomRoles: Record<string, string>;
+  userPermissionsOverride: Record<string, string[]>;
+  updatedAt?: string;
 }
 
 // ──────────────────────────────────────────────
@@ -277,7 +300,7 @@ export interface PlaneacionData {
 // ──────────────────────────────────────────────
 
 export type CalendarioEventType = 'colegiado' | 'reporte' | 'financiero' | 'academica' | 'peticion';
-export type EventUrgency = 'danger' | 'warning' | 'safe';
+export type EventUrgency = 'danger' | 'warning' | 'safe' | 'completed';
 
 export interface CalendarioEvent {
   id: string;
@@ -288,6 +311,7 @@ export interface CalendarioEvent {
   responsable: string;
   urgencia: EventUrgency;
   diasRestantes: number;
+  completada?: boolean;
   descripcion: string;
   link?: string;
   hora?: string;

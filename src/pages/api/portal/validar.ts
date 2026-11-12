@@ -8,7 +8,7 @@ import { getDeterministicPin } from '@lib/security';
 import { separarRespuestaMeta, esSubcarpetaValida, filtrarSubcarpetasValidas } from '@lib/subcarpetas';
 import { limpiarTextoRequerimiento } from '@lib/email';
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, clientAddress }) => {
   try {
     const { email, codigo, pin } = await request.json().catch(() => ({}));
 
@@ -148,13 +148,15 @@ export const POST: APIRoute = async ({ request }) => {
 
     if (!resultado || !resultado.success) {
       await logSystemActivity({
-        actor: { id: 'usr-external', name: cleanEmail, role: 'oficina_responsable' },
-        action: `Fallo de autenticación en Portal Externo (${resultado?.code || 'AUTH_FAIL'})`,
+        actor: { id: 'usr-external', name: cleanEmail, role: 'Dependencia Asignada' },
+        action: 'Acceso Denegado en Portal de Dependencias',
         actionType: 'SEGURIDAD',
         entity: 'Portal Entrega Anexos',
         entityId: rawCodigo,
         details: `Intento de acceso denegado para correo "${cleanEmail}". Motivo: ${resultado?.message || 'Credenciales inválidas'}.`,
         severity: 'WARN',
+        request,
+        clientAddress,
       }).catch(() => {});
 
       return new Response(
@@ -245,13 +247,15 @@ export const POST: APIRoute = async ({ request }) => {
 
       if (!isKnownPin && !isValid6Digit) {
         await logSystemActivity({
-          actor: { id: 'usr-external', name: cleanEmail, role: 'oficina_responsable' },
+          actor: { id: 'usr-external', name: cleanEmail, role: 'Dependencia Asignada' },
           action: 'Formato de PIN inválido en Portal Externo',
           actionType: 'SEGURIDAD',
           entity: 'Peticiones Radicadas',
           entityId: resultado.numero_radicado || resultado.peticion_id,
           details: `PIN ingresado "${cleanPin}" no cumple con el formato requerido de 6 dígitos para el radicado ${resultado.numero_radicado || ''}.`,
           severity: 'WARN',
+          request,
+          clientAddress,
         }).catch(() => {});
 
         return new Response(
@@ -293,13 +297,15 @@ export const POST: APIRoute = async ({ request }) => {
         }
 
         await logSystemActivity({
-          actor: { id: 'usr-external', name: cleanEmail, role: 'oficina_responsable' },
+          actor: { id: 'usr-external', name: cleanEmail, role: 'Dependencia Asignada' },
           action: 'Auto-sincronización de PIN en Portal Externo',
           actionType: 'SEGURIDAD',
           entity: 'Peticiones Radicadas',
           entityId: resultado.numero_radicado || resultado.peticion_id,
           details: `PIN "${cleanPin}" autenticado y sincronizado con éxito para la dependencia "${resultado.oficina_nombre || ''}".`,
           severity: 'INFO',
+          request,
+          clientAddress,
         }).catch(() => {});
       }
     }
@@ -481,13 +487,15 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Registrar acceso exitoso en auditoría
     await logSystemActivity({
-      actor: { id: resultado.responsable_id, name: resultado.oficina_nombre || cleanEmail, role: 'oficina_responsable' },
+      actor: { id: resultado.responsable_id, name: resultado.oficina_nombre || cleanEmail, role: 'Dependencia Asignada' },
       action: `Acceso concedido a Portal de Anexos — ${resultado.numero_radicado}`,
       actionType: 'RESPUESTA',
       entity: 'Peticiones Radicadas',
       entityId: resultado.numero_radicado,
       details: `La dependencia ${resultado.oficina_nombre} validó credenciales y PIN correctamente para el radicado ${resultado.numero_radicado}.`,
       severity: 'INFO',
+      request,
+      clientAddress,
     }).catch(() => {});
 
     return new Response(

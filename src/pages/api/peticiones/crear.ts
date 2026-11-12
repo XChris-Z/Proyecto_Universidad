@@ -12,7 +12,7 @@ import {
 import { separarRespuestaMeta } from '@lib/subcarpetas';
 import { logSystemActivity } from '@lib/audit';
 import { generatePin6 } from '@lib/security';
-import { MAX_FILE_SIZE_BYTES } from '@lib/constants';
+import { resolveSessionActor } from '@lib/request-actor';
 
 export interface SubcarpetaInput {
   nombre: string;
@@ -20,7 +20,7 @@ export interface SubcarpetaInput {
   oficina_ids: string[];
 }
 
-export const POST: APIRoute = async ({ request, url }) => {
+export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) => {
   try {
     const contentType = request.headers.get('content-type') || '';
     
@@ -31,8 +31,9 @@ export const POST: APIRoute = async ({ request, url }) => {
     let solicitante_email = '';
     let solicitante_tipo = 'Ciudadano';
     let categoria = 'Petición General';
-    let prioridad = 'Media';
+    let prioridad = 'Alta';
     let fecha_limite_entrega = '';
+    let fecha_limite_responsable = '';
     let oficina_ids: string[] = [];
     let subcarpetas: SubcarpetaInput[] = [];
     let primaryFile: File | null = null;
@@ -52,8 +53,9 @@ export const POST: APIRoute = async ({ request, url }) => {
       solicitante_email = (formData.get('solicitante_email') as string) || '';
       solicitante_tipo = (formData.get('solicitante_tipo') as string) || 'Ciudadano';
       categoria = (formData.get('categoria') as string) || 'Petición General';
-      prioridad = (formData.get('prioridad') as string) || 'Media';
+      prioridad = (formData.get('prioridad') as string) || 'Alta';
       fecha_limite_entrega = (formData.get('fecha_limite_entrega') as string) || '';
+      fecha_limite_responsable = (formData.get('fecha_limite_responsable') as string) || '';
       
       const rawSubcarpetasJson = formData.get('subcarpetas_json') as string;
       if (rawSubcarpetasJson) {
@@ -83,8 +85,9 @@ export const POST: APIRoute = async ({ request, url }) => {
       solicitante_email = body.solicitante_email;
       solicitante_tipo = body.solicitante_tipo || 'Ciudadano';
       categoria = body.categoria || 'Petición General';
-      prioridad = body.prioridad || 'Media';
+      prioridad = body.prioridad || 'Alta';
       fecha_limite_entrega = body.fecha_limite_entrega;
+      fecha_limite_responsable = body.fecha_limite_responsable || '';
       oficina_ids = body.oficina_ids || [];
       if (Array.isArray(body.subcarpetas)) {
         subcarpetas = body.subcarpetas;
@@ -115,17 +118,6 @@ export const POST: APIRoute = async ({ request, url }) => {
           error: 'Campos obligatorios faltantes: asunto, solicitante_nombre o fecha_limite_entrega.',
         }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const declaredSize = primaryFile?.size || rawBase64File?.buffer.length || directFileSize || 0;
-    if (declaredSize > MAX_FILE_SIZE_BYTES) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'El archivo adjunto supera el límite máximo permitido de 500 MB.',
-        }),
-        { status: 413, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
@@ -184,8 +176,11 @@ export const POST: APIRoute = async ({ request, url }) => {
     // 1. Insertar Petición en Base de Datos con su PIN de 6 dígitos oficial
     const finalInstrucciones = instrucciones_anexos || descripcion || null;
     const pinAcceso = generatePin6();
+    const cleanFechaResp = /^\d{4}-\d{2}-\d{2}$/.test(String(fecha_limite_responsable || '').trim())
+      ? String(fecha_limite_responsable).trim()
+      : '';
 
-    // Intentar insertar primero con la columna pin_acceso para que coincida 100% con BD y correo
+    // Intentar insertar primero con la columna pin_acceso y fecha_limite_responsable manual si fue suministrada
     const payloadWithPin: any = {
       asunto,
       descripcion: finalInstrucciones,
@@ -196,6 +191,7 @@ export const POST: APIRoute = async ({ request, url }) => {
       categoria,
       prioridad,
       fecha_limite_entrega,
+      ...(cleanFechaResp ? { fecha_limite_responsable: cleanFechaResp } : {}),
       pin_acceso: pinAcceso,
     };
 
@@ -243,11 +239,16 @@ export const POST: APIRoute = async ({ request, url }) => {
 
     peticionData.pin_acceso = finalPinAcceso;
 
-    // Intentar actualizar la columna pin_acceso de forma no bloqueante si ya fue creada en PostgreSQL
+    // Sincronizar pin_acceso y fecha_limite_responsable manual (en caso de trigger en DB)
     try {
+      const postUpdate: Record<string, any> = { pin_acceso: finalPinAcceso };
+      if (cleanFechaResp) {
+        postUpdate.fecha_limite_responsable = cleanFechaResp;
+        peticionData.fecha_limite_responsable = cleanFechaResp;
+      }
       await (supabase
         .from('peticiones' as any)
-        .update({ pin_acceso: finalPinAcceso } as any)
+        .update(postUpdate as any)
         .eq('id', peticionData.id) as any);
     } catch (pinUpdateErr) {
       // Silencioso si la columna física aún no existe en el schema cache
@@ -498,6 +499,16 @@ export const POST: APIRoute = async ({ request, url }) => {
       );
     }
 
+    // Respetar fecha_limite_responsable manual en expiración de accesos externos
+    if (cleanFechaResp) {
+      try {
+        await (supabase
+          .from('peticion_responsables' as any)
+          .update({ fecha_expiracion_codigo: `${cleanFechaResp}T23:59:59-05:00` } as any)
+          .eq('peticion_id', peticionData.id) as any);
+      } catch {}
+    }
+
     // 6. Política de cero adjuntos físicos por correo: el memorial original se consulta y descarga en el portal
 
     // 7. Enviar Notificación SMTP Inteligente y Consolidada por Dependencia
@@ -578,14 +589,22 @@ export const POST: APIRoute = async ({ request, url }) => {
     console.log(`[PETICIÓN CREADA] Radicado: ${peticionData.numero_radicado} - Subcarpetas: ${subcarpetas.length} - Dependencias únicas: ${oficinasData.length} - Notificaciones enviadas: ${emailNotifications.length}`);
 
     // Registrar en auditoría
+    const actor = await resolveSessionActor(cookies, {
+      id: 'usr-funcionario',
+      name: 'Funcionario Radicador',
+      role: 'Funcionario',
+    });
     await logSystemActivity({
-      actor: { id: 'usr-root', name: solicitante_nombre || 'Funcionario Radicador', role: 'funcionario' },
+      actor,
       action: `Radicación de petición ${peticionData.numero_radicado}`,
       actionType: 'SUBIDA_ARCHIVO',
       entity: 'Peticiones Radicadas',
       entityId: peticionData.numero_radicado,
       details: `Radicación oficial de la solicitud "${asunto}" con ${subcarpetas.length} subcarpeta(s) y ${oficinasData.length} dependencia(s) requerida(s).`,
       severity: 'INFO',
+      request,
+      clientAddress,
+      cookies,
     }).catch((auditErr) => console.warn('Aviso registrando auditoría de radicación:', auditErr));
 
     return new Response(

@@ -7,8 +7,9 @@ import { sendRespuestaSolicitanteEmail, resolvePublicBaseUrl } from '@lib/email'
 import { logSystemActivity } from '@lib/audit';
 import { separarRespuestaMeta, limpiarBloquesRespuestaMeta } from '@lib/subcarpetas';
 import { getDeterministicPin } from '@lib/security';
+import { resolveSessionActor } from '@lib/request-actor';
 
-export const POST: APIRoute = async ({ request, url }) => {
+export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) => {
   try {
     const body = await request.json().catch(() => ({}));
     const {
@@ -324,14 +325,22 @@ export const POST: APIRoute = async ({ request, url }) => {
 
     // 4. Registrar en Auditoría y Trazabilidad
     try {
+      const actor = await resolveSessionActor(cookies, {
+        id: 'usr-funcionario',
+        name: funcionarioResp,
+        role: 'Funcionario',
+      });
       await logSystemActivity({
-        actor: { id: 'usr-funcionario', name: funcionarioResp, role: 'funcionario' },
+        actor,
         action: 'Envío de Respuesta Oficial al Solicitante',
         actionType: 'RESPUESTA',
         entity: 'Expediente Documental',
         entityId: peticion.numero_radicado || peticion_id,
         details: `Se emitió y despachó la respuesta oficial del radicado ${peticion.numero_radicado} para ${peticion.solicitante_nombre} (${effectiveEmail}). PIN: ${pinSolicitante}. Acceso habilitado por 10 días calendario (Vence: ${expiraAt.split('T')[0]}).`,
         severity: 'INFO',
+        request,
+        clientAddress,
+        cookies,
       });
     } catch (auditErr: any) {
       console.warn('[RESPONDER] Aviso de auditoría:', auditErr.message);

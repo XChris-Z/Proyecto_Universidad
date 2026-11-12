@@ -7,6 +7,7 @@ import { supabase } from '@lib/supabase';
 const { data: dbLogs } = await supabase
   .from('audit_logs')
   .select('*')
+  .or('entity.is.null,entity.neq.rbac_state_snapshot')
   .order('raw_timestamp', { ascending: false });
 
 const totalLogs = dbLogs?.length ?? 0;
@@ -99,7 +100,9 @@ const totalRespuestas = dbLogs?.filter(l => l.action_type === 'RESPUESTA' || (l.
             <option value="SUBIDA_ARCHIVO">Subida y Radicación</option>
             <option value="ELIMINACION">Eliminación / Baja</option>
             <option value="MODIFICACION">Modificación</option>
+            <option value="GESTION">Gestión / Prórrogas y Cierres</option>
             <option value="RESPUESTA">Oficio / Respuesta</option>
+            <option value="ACCESO">Accesos al Sistema</option>
             <option value="SEGURIDAD">Seguridad y Sesiones</option>
           </select>
         </div>

@@ -2,7 +2,12 @@
 // Servicio de integración en tiempo real con Google Calendar API y Supabase
 
 import { supabase } from '@lib/supabase';
-import { isPeticionRespondida, isAuditLogOfficialResponse, getSlaBucket } from '@lib/subcarpetas';
+import {
+  isPeticionRespondida,
+  isAuditLogOfficialResponse,
+  getSlaBucket,
+  separarRespuestaMeta,
+} from '@lib/subcarpetas';
 import type { CalendarioEvent, CalendarioEventType, EventUrgency } from '@lib/types';
 
 /**
@@ -200,66 +205,114 @@ export async function fetchSupabaseDeadlines(): Promise<CalendarioEvent[]> {
   const events: CalendarioEvent[] = [];
 
   try {
-    // 1. Peticiones activas con SLA / fecha límite de respuesta y de dependencias
-    const { data: peticiones, error: petError } = await (supabase
-      .from('peticiones' as any)
-      .select(
-        'id, numero_radicado, asunto, fecha_limite_entrega, fecha_limite_responsable, estado, solicitante_nombre, instrucciones_anexos, respuesta_mensaje, respuesta_fecha_envio, respuesta_pin_solicitante, peticion_anexos(id, subcarpeta, nombre_archivo)'
-      ) as any);
+    // 1. Peticiones institucionales (activas y completadas) sin joins frágiles ni columnas inexistentes
+    const [petRes, anexosRes, auditRes, respRes] = await Promise.all([
+      (supabase
+        .from('peticiones' as any)
+        .select('*')
+        .order('fecha_limite_entrega', { ascending: true }) as any),
+      (supabase
+        .from('peticion_anexos' as any)
+        .select('id, peticion_id, nombre_archivo, es_anexo_oficina') as any),
+      (supabase
+        .from('audit_logs' as any)
+        .select('action, action_type, entity_id, details')
+        .limit(450) as any),
+      (supabase
+        .from('peticion_responsables' as any)
+        .select('peticion_id, estado') as any),
+    ]);
 
-    const { data: auditRespData } = await (supabase
-      .from('audit_logs' as any)
-      .select('action, entity_id, details')
-      .eq('action_type', 'RESPUESTA')
-      .limit(400) as any);
-    const auditRespLogs = auditRespData || [];
+    const peticiones = petRes?.data || [];
+    const petError = petRes?.error;
+    const anexosByPet = new Map<string, any[]>();
+    ((anexosRes?.data || []) as any[]).forEach((ax) => {
+      if (!ax?.peticion_id) return;
+      const list = anexosByPet.get(ax.peticion_id) || [];
+      list.push(ax);
+      anexosByPet.set(ax.peticion_id, list);
+    });
+
+    const respCountByPet = new Map<string, number>();
+    ((respRes?.data || []) as any[]).forEach((rp) => {
+      if (!rp?.peticion_id) return;
+      respCountByPet.set(rp.peticion_id, (respCountByPet.get(rp.peticion_id) || 0) + 1);
+    });
+
+    const auditRespLogs = ((auditRes?.data || []) as any[]).filter((l) => {
+      const t = String(l?.action_type || '').toUpperCase();
+      return t === 'RESPUESTA' || t === 'GESTION' || String(l?.action || '').includes('EXPEDIENTE_COMPLETO');
+    });
 
     if (petitionsHasActiveRows(peticiones)) {
       (peticiones || []).forEach((pet: any) => {
         const auditMatch = auditRespLogs.some((log: any) =>
           isAuditLogOfficialResponse(log, pet)
         );
-        if (isPeticionRespondida({ ...pet, tiene_respuesta_audit: auditMatch })) return;
+        const petAnexos = anexosByPet.get(pet.id) || [];
+        const completada = isPeticionRespondida({
+          ...pet,
+          peticion_anexos: petAnexos,
+          tiene_respuesta_audit: auditMatch,
+        });
 
-        const entregaFecha = normalizeCalendarDate(pet.fecha_limite_entrega);
+        const { respuestaMeta } = separarRespuestaMeta(pet.instrucciones_anexos || '');
+        const prorrogasList = Array.isArray((respuestaMeta as any)?.prorrogas)
+          ? (respuestaMeta as any).prorrogas
+          : [];
+        const ultimaProrroga = prorrogasList.length > 0 ? prorrogasList[prorrogasList.length - 1] : null;
+
+        const entregaFecha =
+          normalizeCalendarDate(pet.fecha_limite_entrega) ||
+          normalizeCalendarDate(ultimaProrroga?.nueva_fecha_entrega) ||
+          normalizeCalendarDate(pet.created_at);
         const radicadoUrl = pet.numero_radicado
           ? `/archivos?radicado=${encodeURIComponent(pet.numero_radicado)}`
           : '/archivos';
+        const depCount = respCountByPet.get(pet.id) || 0;
+        const destinoTxt = depCount > 0 ? `${depCount} dependencia(s) asignadas` : 'Expediente Institucional';
 
         if (entregaFecha) {
-          const { diasRestantes, urgencia } = calculateEventUrgency(entregaFecha);
+          const { diasRestantes, urgencia: rawUrgencia } = calculateEventUrgency(entregaFecha);
+          const urgencia: EventUrgency = completada ? 'completed' : rawUrgencia;
           events.push({
             id: `pet-${pet.id}`,
-            titulo: `Vence Radicado ${pet.numero_radicado}: ${pet.asunto}`,
+            titulo: completada
+              ? `Completado ${pet.numero_radicado}: ${pet.asunto}`
+              : `Vence Radicado ${pet.numero_radicado}: ${pet.asunto}`,
             tipo: 'peticion',
             fecha: entregaFecha,
-            destino: 'Oficinas Responsables',
+            destino: destinoTxt,
             responsable: pet.solicitante_nombre || 'SGD Unitrópico',
             urgencia,
-            diasRestantes,
-            descripcion: `Petición oficial con plazo institucional de entrega hasta el ${entregaFecha}.`,
+            diasRestantes: completada ? Math.max(diasRestantes, 1) : diasRestantes,
+            completada,
+            descripcion: completada
+              ? `Expediente completado y archivado institucionalmente (límite ${entregaFecha}).`
+              : `Petición oficial con plazo de entrega hasta el ${entregaFecha}.`,
             link: radicadoUrl,
-            hora: '17:00 (Cierre de Despacho)',
+            hora: completada ? 'Expediente Completo' : '17:00 (Cierre de Despacho)',
           });
         }
 
-        const depFecha = normalizeCalendarDate(pet.fecha_limite_responsable)
-          || (entregaFecha ? subtractCalendarDays(entregaFecha, 5) : '');
+        const depFecha = normalizeCalendarDate(pet.fecha_limite_responsable) ||
+          normalizeCalendarDate(ultimaProrroga?.nueva_fecha_responsable);
 
-        if (depFecha) {
+        if (!completada && depFecha && depFecha !== entregaFecha) {
           const { diasRestantes, urgencia } = calculateEventUrgency(depFecha);
           events.push({
             id: `pet-dep-${pet.id}`,
-            titulo: `Cierre Oficinas ${pet.numero_radicado}: ${pet.asunto}`,
+            titulo: `Límite Dependencias ${pet.numero_radicado}: ${pet.asunto}`,
             tipo: 'peticion',
             fecha: depFecha,
-            destino: 'Dependencias Asignadas',
+            destino: destinoTxt,
             responsable: pet.solicitante_nombre || 'SGD Unitrópico',
             urgencia,
             diasRestantes,
-            descripcion: `Fecha límite interna de dependencias (-5 días) para radicado ${pet.numero_radicado}.`,
+            completada: false,
+            descripcion: `Fecha límite configurada para aportes de dependencias en ${pet.numero_radicado}.`,
             link: radicadoUrl,
-            hora: '17:00 (Cierre Interno)',
+            hora: '17:00 (Cierre Dependencias)',
           });
         }
       });
@@ -364,8 +417,9 @@ export function computeActivePeticionSlaCounts(events: CalendarioEvent[]): {
   critCount: number;
   warnCount: number;
   safeCount: number;
+  completedCount: number;
 } {
-  const petUrgencies = new Map<string, 'danger' | 'warning' | 'safe'>();
+  const petUrgencies = new Map<string, EventUrgency>();
 
   (events || []).forEach((ev) => {
     if (!ev || ev.tipo !== 'peticion') return;
@@ -375,7 +429,7 @@ export function computeActivePeticionSlaCounts(events: CalendarioEvent[]): {
       : String(ev.id || '');
     if (!key) return;
     if (!petUrgencies.has(key)) {
-      petUrgencies.set(key, ev.urgencia);
+      petUrgencies.set(key, ev.completada ? 'completed' : ev.urgencia);
     }
   });
 
@@ -385,21 +439,23 @@ export function computeActivePeticionSlaCounts(events: CalendarioEvent[]): {
     if (!String(ev.id || '').startsWith('pet-dep-')) return;
     const key = String(ev.id).slice(8);
     if (key && !petUrgencies.has(key)) {
-      petUrgencies.set(key, ev.urgencia);
+      petUrgencies.set(key, ev.completada ? 'completed' : ev.urgencia);
     }
   });
 
   let critCount = 0;
   let warnCount = 0;
   let safeCount = 0;
+  let completedCount = 0;
 
   petUrgencies.forEach((urg) => {
-    if (urg === 'danger') critCount++;
+    if (urg === 'completed') completedCount++;
+    else if (urg === 'danger') critCount++;
     else if (urg === 'warning') warnCount++;
     else safeCount++;
   });
 
-  return { critCount, warnCount, safeCount };
+  return { critCount, warnCount, safeCount, completedCount };
 }
 
 export async function getUnifiedCalendarEvents(
@@ -411,6 +467,7 @@ export async function getUnifiedCalendarEvents(
   critCount: number;
   warnCount: number;
   safeCount: number;
+  completedCount: number;
   error?: string;
 }> {
   const [googleRes, supabaseEvents] = await Promise.all([
@@ -424,7 +481,7 @@ export async function getUnifiedCalendarEvents(
   // Ordenar cronológicamente
   allEvents.sort((a, b) => a.fecha.localeCompare(b.fecha));
 
-  const { critCount, warnCount, safeCount } = computeActivePeticionSlaCounts(allEvents);
+  const { critCount, warnCount, safeCount, completedCount } = computeActivePeticionSlaCounts(allEvents);
 
   return {
     events: allEvents,
@@ -432,6 +489,7 @@ export async function getUnifiedCalendarEvents(
     critCount,
     warnCount,
     safeCount,
+    completedCount,
     error: googleRes.error,
   };
 }

@@ -291,8 +291,8 @@ try {
   const { data: auditData } = await (supabase
     .from('audit_logs' as any)
     .select('action, entity_id, details')
-    .eq('action_type', 'RESPUESTA')
-    .limit(400) as any);
+    .or('action_type.eq.RESPUESTA,action.ilike.%Expediente Marcado como Completo%')
+    .limit(500) as any);
   if (auditData) auditRespLogs = auditData;
 } catch {}
 
@@ -370,14 +370,14 @@ function getCardSlaMeta(prog: any, isResponded: boolean) {
   const slaTone = getSlaTone(filterSla);
   let cardBadgeText = prog.statusBadge;
   if (isResponded) {
-    cardBadgeText = 'Respondida';
+    cardBadgeText = 'Expediente Completo';
   } else if (prog.daysRemaining <= 0) {
     cardBadgeText = 'Vencido';
   } else if (prog.daysRemaining <= 5) {
     cardBadgeText = `Vence en ${prog.daysRemaining}d`;
   }
   const cardPct = isResponded ? 100 : prog.percentage;
-  const cardPctText = isResponded ? 'Despachada' : `${prog.percentage}% consumido`;
+  const cardPctText = isResponded ? 'Completado' : `${prog.percentage}% consumido`;
   return { filterSla, slaTone, cardBadgeText, cardPct, cardPctText };
 }
 
@@ -475,7 +475,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
           </button>
           <button class="filter-tab" data-filter="responded">
             <span class="dist-dot" style="background: #00594E;"></span>
-            <span>Respondidas</span>
+            <span>Completadas / Respondidas</span>
             <span class="filter-count" id="count-responded">{respondedCount}</span>
           </button>
           <button class="filter-tab" data-filter="safe">
@@ -914,205 +914,97 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
     </div>
   </div>
 
-  <!-- Input oculto para carga de Respuesta Final Oficial (conservando nombre intacto, hasta 500 MB) -->
+  <!-- Input oculto para carga de Respuesta Final Oficial (conservando nombre intacto, capacidad ilimitada) -->
   <input type="file" id="input-subir-respuesta-final" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip" style="display: none;" />
 
-  <!-- Modal: Compositor de Correo Electrónico Oficial (Webmail Ejecutivo UI/UX Pro Max) -->
-  <div class="modal-backdrop" id="modal-responder-solicitante" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.72); z-index: 2100; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(5px);">
-    <div class="modal-card composer-modal-card" style="width: 100%; max-width: 840px; background: #FFFFFF; border-radius: 16px; box-shadow: 0 25px 60px rgba(0, 89, 78, 0.24), 0 10px 30px -10px rgba(15, 23, 42, 0.12); overflow: hidden; display: flex; flex-direction: column; max-height: 92vh; border: 1.5px solid #00594E;">
-      
-      <!-- 1. BARRA SUPERIOR DE VENTANA DE CORREO -->
-      <div style="background: #00594E; padding: 15px 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 3.5px solid #B5A160; color: #FFFFFF;">
-        <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
-          <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(255, 255, 255, 0.12); color: #B5A160; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid rgba(181, 161, 96, 0.35);">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B5A160" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+  <!-- Modal: Devolver / Rechazar Aporte Documental de Dependencia -->
+  <div class="modal-backdrop" id="modal-rechazar-aporte" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 2100; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(4px);">
+    <div class="modal-card" style="width: 100%; max-width: 560px; background: #FFFFFF; border-radius: 14px; box-shadow: 0 24px 54px rgba(15, 23, 42, 0.22); overflow: hidden; display: flex; flex-direction: column; border: 1.5px solid #DCE4E3;">
+      <div style="background: #00594E; padding: 15px 22px; display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid #B5A160; color: #FFFFFF;">
+        <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+          <div style="width: 34px; height: 34px; border-radius: 8px; background: rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(181, 161, 96, 0.4);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F7F5EE" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
           </div>
           <div style="min-width: 0;">
-            <h3 style="font-size: 1.02rem; font-weight: 800; color: #FFFFFF; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 8px; letter-spacing: -0.02em;">
-              <span>Nuevo Mensaje de Respuesta Oficial</span>
-              <span style="color: rgba(255,255,255,0.4);">&bull;</span>
-              <span id="composer-disp-radicado" style="color: #F7F5EE; font-family: monospace; font-weight: 800;">RAD-2026-XXXXX</span>
-            </h3>
-            <span style="font-size: 0.72rem; color: rgba(255, 255, 255, 0.85); font-weight: 500;">Despacho Certificado y Notificación al Solicitante</span>
+            <h3 style="margin: 0; font-size: 0.98rem; font-weight: 800; color: #FFFFFF;">Devolver / Rechazar Aporte Documental</h3>
+            <div style="font-size: 0.72rem; color: rgba(255,255,255,0.85);">Notifica corrección a la dependencia y retorna estado a Pendiente</div>
           </div>
         </div>
-        <button type="button" id="btn-close-responder-modal" style="background: transparent; border: none; color: #FFFFFF; font-size: 1.6rem; line-height: 1; cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s ease;" title="Cerrar ventana">&times;</button>
+        <button type="button" id="btn-close-rechazar-modal" style="background: transparent; border: none; color: #FFFFFF; font-size: 1.5rem; cursor: pointer; line-height: 1; padding: 2px 6px;">&times;</button>
       </div>
 
-      <!-- FORMULARIO DEL COMPOSITOR DE CORREO -->
-      <form id="form-responder-solicitante" style="display: flex; flex-direction: column; overflow-y: auto; flex: 1; padding: 0; margin: 0;">
-        <input type="hidden" id="responder-pet-id" />
+      <form id="form-rechazar-aporte" style="padding: 20px 22px; display: flex; flex-direction: column; gap: 14px;">
+        <input type="hidden" id="rechazar-anexo-id" />
+        <input type="hidden" id="rechazar-peticion-id" />
+        <input type="hidden" id="rechazar-responsable-id" />
+        <input type="hidden" id="rechazar-subcarpeta-nombre" />
 
-        <!-- 2. CABECERAS CLÁSICAS DE CORREO (DE, PARA, ASUNTO) -->
-        <div style="background: #F8FAFC; border-bottom: 1.5px solid #DCE4E3; padding: 14px 24px; display: flex; flex-direction: column; gap: 10px;">
-          
-          <!-- FILA 1: DE: -->
-          <div style="display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #DCE4E3; padding-bottom: 8px;">
-            <span style="min-width: 75px; width: 75px; white-space: nowrap; font-weight: 700; color: #475569; font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0;">De:</span>
-            <div style="flex: 1; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-              <div style="display: inline-flex; align-items: center; gap: 8px; background: #E6EFEF; color: #00594E; border: 1.5px solid #B2CFCB; padding: 4px 12px; border-radius: 9999px; font-size: 0.78rem; font-weight: 750;">
-                <img 
-                  id="composer-sender-avatar"
-                  class="sender-avatar" 
-                  src="https://unavatar.io/google/notificaciones@unitropico.edu.co" 
-                  alt="Avatar"
-                  onerror="this.onerror=null; this.src='https://unavatar.io/notificaciones@unitropico.edu.co'; this.onerror=function(){this.style.display='none'; const fb=document.getElementById('composer-sender-avatar-fallback'); if(fb) fb.style.display='inline-flex';};" 
-                  style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 1px solid #B2CFCB;" 
-                />
-                <div id="composer-sender-avatar-fallback" style="display: none; width: 24px; height: 24px; border-radius: 50%; background: #00594E; color: #FFFFFF; font-size: 0.70rem; font-weight: 800; align-items: center; justify-content: center;">
-                  U
-                </div>
-                <span id="composer-sender-display">Gestión Documental Unitrópico &lt;notificaciones@unitropico.edu.co&gt;</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- FILA 2: PARA: -->
-          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid #DCE4E3; padding-bottom: 8px;">
-            <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 260px;">
-              <span style="min-width: 75px; width: 75px; white-space: nowrap; font-weight: 700; color: #475569; font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0;">Para:</span>
-              <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
-                <div style="position: relative; width: 26px; height: 26px; flex-shrink: 0;">
-                  <img 
-                    id="composer-recipient-avatar" 
-                    src="https://unavatar.io/google/default" 
-                    alt="Avatar" 
-                    onerror="this.onerror=null; this.src='https://unavatar.io/default'; this.onerror=function(){this.style.display='none'; const fb=document.getElementById('composer-recipient-avatar-fallback'); if(fb) fb.style.display='inline-flex';};" 
-                    style="width: 26px; height: 26px; border-radius: 50%; object-fit: cover; border: 1px solid #B2CFCB; display: block;" 
-                  />
-                  <div 
-                    id="composer-recipient-avatar-fallback" 
-                    style="display: none; width: 26px; height: 26px; border-radius: 50%; background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; font-size: 0.72rem; font-weight: 800; align-items: center; justify-content: center; position: absolute; inset: 0;"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00594E" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                  </div>
-                </div>
-                <input 
-                  type="email" 
-                  id="responder-solicitante-email" 
-                  name="modal-para-email"
-                  class="composer-clean-input"
-                  required 
-                  placeholder="correo@solicitante.com" 
-                />
-              </div>
-            </div>
-
-            <!-- Badges informativos de Radicado y PIN a la derecha en Paleta Institucional -->
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="font-size: 0.70rem; font-weight: 800; background: #F7F5EE; color: #786832; border: 1px solid #DBD2B0; padding: 3px 9px; border-radius: 6px;" id="composer-disp-pin-badge">PIN: ------</span>
-              <span style="font-size: 0.70rem; font-weight: 750; background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; padding: 3px 9px; border-radius: 6px;">Vigencia: 10 Días</span>
-            </div>
-          </div>
-
-          <!-- FILA 3: ASUNTO: -->
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <span style="min-width: 75px; width: 75px; white-space: nowrap; font-weight: 700; color: #475569; font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0;">Asunto:</span>
-            <input 
-              type="text" 
-              id="responder-asunto-input" 
-              class="composer-clean-input"
-              required 
-              placeholder="Respuesta Oficial a su Petición..."
-            />
-          </div>
-
+        <div style="background: #F7F5EE; border: 1px solid #DBD2B0; border-left: 4px solid #B5A160; border-radius: 8px; padding: 10px 14px; font-size: 0.80rem; color: #334155;">
+          <div><strong style="color: #786832;">Dependencia:</strong> <span id="rechazar-disp-oficina">--</span> (<span id="rechazar-disp-subcarpeta">--</span>)</div>
+          <div style="margin-top: 3px;"><strong style="color: #786832;">Archivo evaluado:</strong> <span id="rechazar-disp-archivo" style="word-break: break-all; font-weight: 700;">--</span></div>
         </div>
 
-        <!-- 3. CUERPO DE REDACCIÓN DEL MENSAJE -->
-        <div style="padding: 16px 24px 12px 24px; display: flex; flex-direction: column; gap: 10px;">
-          
-          <!-- Barra de Apoyo Superior: Botón Plantilla Formal + Contador -->
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <button 
-                type="button" 
-                id="btn-composer-insert-template" 
-                style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.74rem; font-weight: 750; padding: 5px 12px; border-radius: 7px; border: 1px solid #B2CFCB; background: #F2F7F6; color: #00594E; cursor: pointer; transition: all 0.2s ease;"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-                <span>Insertar Saludo Institucional Formal</span>
-              </button>
-            </div>
-            <div style="font-size: 0.72rem; color: #64748B; font-weight: 600;" id="composer-char-count">
-              0 palabras &bull; 0 caracteres
-            </div>
-          </div>
-
-          <!-- Área de Redacción Amplia y Proporcionada -->
-          <textarea 
-            id="responder-mensaje-input" 
-            class="composer-clean-textarea"
-            rows="5" 
-            placeholder="Redacte aquí la respuesta formal y de fondo al solicitante..." 
-            required 
-          ></textarea>
-
-          <!-- Remitente / Dependencia -->
-          <div style="display: flex; align-items: center; gap: 10px; margin-top: 2px;">
-            <label for="responder-funcionario-input" style="font-size: 0.75rem; font-weight: 700; color: #475569; white-space: nowrap;">
-              Remitente / Cargo:
-            </label>
-            <input 
-              type="text" 
-              id="responder-funcionario-input" 
-              class="composer-clean-input"
-              value="Oficina de Correspondencia y Gestión Documental" 
-              required 
-            />
-          </div>
+        <div class="form-group">
+          <label for="rechazar-motivo-input" style="font-size: 0.76rem; font-weight: 800; color: #334155; text-transform: uppercase; letter-spacing: 0.3px;">Motivo de Devolución / Corrección *</label>
+          <textarea id="rechazar-motivo-input" rows="4" required class="form-input" style="font-size: 0.84rem; resize: vertical; line-height: 1.5;"></textarea>
         </div>
 
-        <!-- 4. BLOQUE INFERIOR DE ADJUNTOS BENTO EN DOS NIVELES -->
-        <div style="margin: 0 24px 16px 24px; display: flex; flex-direction: column;">
-          
-          <!-- NIVEL 1: RESPUESTA FINAL OFICIAL (OBLIGATORIA) -->
-          <div id="composer-adjunto-container">
-            <!-- Renderizado dinámicamente por renderComposerAdjunto(pet) -->
-          </div>
-
-          <!-- NIVEL 2: SOPORTES DE SUBCARPETAS / DEPENDENCIAS (OPCIONALES CON CHECKBOXES) -->
-          <div id="composer-anexos-opcionales-wrapper" class="composer-anexos-bento">
-            <div class="composer-anexos-header">
-              <div class="composer-anexos-title-group">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00594E" stroke-width="2">
-                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-                </svg>
-                <span class="composer-anexos-title">Anexos de Dependencias para Incluir (Opcional)</span>
-                <span id="composer-anexos-count-pill" class="composer-anexos-count-pill">0 seleccionados</span>
-              </div>
-              <div class="composer-anexos-actions" id="composer-anexos-actions-group">
-                <button type="button" id="btn-anexos-select-all" class="btn-anexos-quick">Seleccionar todos</button>
-                <button type="button" id="btn-anexos-clear-all" class="btn-anexos-quick muted">Limpiar</button>
-              </div>
-            </div>
-
-            <div id="composer-anexos-list" class="pro-scroll-container composer-anexos-scroll-list">
-              <!-- Filas generadas dinámicamente por renderComposerAnexosOpcionales(pet) -->
-            </div>
-          </div>
-
-        </div>
-
-        <!-- 5. BARRA INFERIOR DE ENVÍO -->
-        <div style="background: #F8FAFC; border-top: 1.5px solid #DCE4E3; padding: 14px 24px; display: flex; justify-content: flex-end; align-items: center; gap: 12px; border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
-          <button 
-            type="button" 
-            id="btn-cancel-responder-modal" 
-            style="padding: 10px 20px; font-size: 0.82rem; font-weight: 700; color: #475569; background: #FFFFFF; border: 1.5px solid #DCE4E3; border-radius: 10px; cursor: pointer; transition: all 0.2s ease;"
-          >
-            Cancelar
-          </button>
-          <button 
-            type="submit" 
-            id="btn-submit-responder" 
-            style="padding: 10px 24px; font-size: 0.84rem; font-weight: 800; color: #FFFFFF; background: #00594E; border: 1.5px solid #00594E; border-bottom: 3px solid #B5A160; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(0, 89, 78, 0.22); transition: all 0.2s ease;"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            <span id="btn-submit-responder-text">Enviar Respuesta Oficial</span>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; padding-top: 8px; border-top: 1px solid #E2E8F0;">
+          <button type="button" id="btn-cancel-rechazar-modal" class="btn btn-secondary">Cancelar</button>
+          <button type="submit" id="btn-submit-rechazar-modal" style="padding: 9px 18px; border-radius: 8px; border: 1px solid #B91C1C; background: #DC2626; color: #FFFFFF; font-size: 0.82rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <span id="btn-submit-rechazar-text">Devolver y Notificar</span>
           </button>
         </div>
+      </form>
+    </div>
+  </div>
 
+  <!-- Modal: Registrar Prórroga Auditada -->
+  <div class="modal-backdrop" id="modal-prorroga" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 2100; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(4px);">
+    <div class="modal-card" style="width: 100%; max-width: 560px; background: #FFFFFF; border-radius: 14px; box-shadow: 0 24px 54px rgba(15, 23, 42, 0.22); overflow: hidden; display: flex; flex-direction: column; border: 1.5px solid #B5A160;">
+      <div style="background: #00594E; padding: 15px 22px; display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid #B5A160; color: #FFFFFF;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 34px; height: 34px; border-radius: 8px; background: rgba(181, 161, 96, 0.2); display: flex; align-items: center; justify-content: center; border: 1px solid #B5A160;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F7F5EE" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="10" y1="16" x2="14" y2="16"/></svg>
+          </div>
+          <div>
+            <h3 style="margin: 0; font-size: 0.98rem; font-weight: 800; color: #FFFFFF;">Registrar Prórroga de Plazo</h3>
+            <div style="font-size: 0.72rem; color: rgba(255,255,255,0.85);">Ampliación de vencimiento con registro antes/después en Auditoría</div>
+          </div>
+        </div>
+        <button type="button" id="btn-close-prorroga-modal" style="background: transparent; border: none; color: #FFFFFF; font-size: 1.5rem; cursor: pointer; line-height: 1; padding: 2px 6px;">&times;</button>
+      </div>
+
+      <form id="form-prorroga" style="padding: 20px 22px; display: flex; flex-direction: column; gap: 14px;">
+        <input type="hidden" id="prorroga-peticion-id" />
+        <div style="background: #F2F7F6; border: 1px solid #B2CFCB; border-radius: 8px; padding: 10px 14px; font-size: 0.80rem; color: #00594E; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <span>Radicado: <strong id="prorroga-disp-radicado" style="font-family: monospace;">RAD-2026</strong></span>
+          <span id="prorroga-disp-actual" style="font-size: 0.74rem; font-weight: 700; color: #475569;">Plazo actual: --</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label for="prorroga-nueva-entrega" style="font-size: 0.74rem; font-weight: 800; color: #334155; text-transform: uppercase;">Nueva Fecha Límite General *</label>
+            <input type="date" id="prorroga-nueva-entrega" required class="form-input" />
+          </div>
+          <div class="form-group">
+            <label for="prorroga-nueva-resp" style="font-size: 0.74rem; font-weight: 800; color: #786832; text-transform: uppercase;">Nuevo Límite Dependencias</label>
+            <input type="date" id="prorroga-nueva-resp" class="form-input" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="prorroga-motivo" style="font-size: 0.74rem; font-weight: 800; color: #334155; text-transform: uppercase;">Motivo / Justificación de Prórroga *</label>
+          <textarea id="prorroga-motivo" rows="3" required class="form-input" placeholder="Ej. Ampliación aprobada mediante memorando de Secretaría General por complejidad de soportes..." style="font-size: 0.84rem; resize: vertical;"></textarea>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px; padding-top: 8px; border-top: 1px solid #E2E8F0;">
+          <button type="button" id="btn-cancel-prorroga-modal" class="btn btn-secondary">Cancelar</button>
+          <button type="submit" id="btn-submit-prorroga" style="padding: 9px 18px; border-radius: 8px; border: 1.5px solid #B5A160; background: #00594E; color: #FFFFFF; font-size: 0.82rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+            <span id="btn-submit-prorroga-text">Guardar Prórroga Auditada</span>
+          </button>
+        </div>
       </form>
     </div>
   </div>
@@ -2400,7 +2292,14 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
   <script>
     import { separarRespuestaMeta, esSubcarpetaValida, filtrarSubcarpetasValidas, isPeticionRespondida, getSlaBucket } from '@lib/subcarpetas';
     import { supabase } from '@lib/supabase';
-    import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from '@lib/constants';
+    import {
+      extractApprovedAnexoIds,
+      addApprovedAnexoMarker,
+      removeApprovedAnexoMarker,
+      setRejectedMarker,
+      extractRejectionInfo,
+      sanitizeRevisionTokens,
+    } from '@lib/revision-meta';
 
     interface PeticionAnexo {
       id: string;
@@ -2470,21 +2369,33 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
     async function uploadFileToPeticionesStorage(file: File, relativePath: string): Promise<string | null> {
       const cleanRelPath = relativePath.replace(/^peticiones\//, '').replace(/^\/+/, '');
       try {
-        const signedRes = await fetch('/api/storage/signed-url', {
+        const signedRes = await fetch('/api/storage/signed-upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ bucket: 'peticiones', path: cleanRelPath }),
         });
         const signedData = await signedRes.json().catch(() => ({}));
-        if (signedRes.ok && signedData.success && signedData.signedUrl) {
-          const putRes = await fetch(signedData.signedUrl, {
-            method: 'PUT',
-            headers: { 'Content-Type': file.type || 'application/octet-stream' },
-            body: file,
-          });
-          if (putRes.ok) {
-            const storedRel = String(signedData.path || cleanRelPath).replace(/^peticiones\//, '');
-            return `peticiones/${storedRel}`;
+        if (signedRes.ok && signedData.success) {
+          const storedRel = String(signedData.path || cleanRelPath).replace(/^peticiones\//, '');
+          if (signedData.token) {
+            const { error: sdkSignedErr } = await supabase.storage
+              .from('peticiones')
+              .uploadToSignedUrl(storedRel, signedData.token, file, {
+                contentType: file.type || 'application/octet-stream',
+              });
+            if (!sdkSignedErr) {
+              return `peticiones/${storedRel}`;
+            }
+          }
+          if (signedData.signedUrl) {
+            const putRes = await fetch(signedData.signedUrl, {
+              method: 'PUT',
+              headers: { 'Content-Type': file.type || 'application/octet-stream' },
+              body: file,
+            });
+            if (putRes.ok) {
+              return `peticiones/${storedRel}`;
+            }
           }
         }
       } catch (signErr) {
@@ -2515,14 +2426,14 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
             card.setAttribute('data-sla', 'safe');
             const badge = card.querySelector('.folder-sla-badge') as HTMLElement | null;
             if (badge) {
-              badge.textContent = 'Respondida';
+              badge.textContent = 'Expediente Completo';
               badge.style.background = '#F2F7F6';
               badge.style.color = '#00594E';
               badge.style.borderColor = '#B2CFCB';
             }
             const pct = card.querySelector('.sla-chart-pct') as HTMLElement | null;
             if (pct) {
-              pct.textContent = 'Respondida';
+              pct.textContent = 'Completado';
               pct.style.color = '#00594E';
             }
             const fill = card.querySelector('.sla-chart-fill') as HTMLElement | null;
@@ -2539,7 +2450,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
             row.setAttribute('data-sla', 'safe');
             const pill = row.querySelector('.row-status-pill') as HTMLElement | null;
             if (pill) {
-              pill.textContent = 'Respondida';
+              pill.textContent = 'Expediente Completo';
               pill.style.background = '#E6EFEF';
               pill.style.color = '#00594E';
               pill.style.borderColor = '#B2CFCB';
@@ -3002,7 +2913,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                 data-id="${escapeHtml(peticion.id)}"
                 data-radicado="${escapeHtml(peticion.numero_radicado)}"
                 title="Respaldar estructura completa de carpetas y archivos en Google Drive sin comprimir"
-                style="display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 0.82rem; padding: 7px 16px; background: #F2F7F6; border: 1.5px solid #00594E; color: #00594E; border-radius: 6px; cursor: pointer; transition: all 0.2s ease;"
+                style="display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 0.82rem; padding: 7px 14px; background: #F2F7F6; border: 1.5px solid #00594E; color: #00594E; border-radius: 6px; cursor: pointer; transition: all 0.2s ease;"
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><polyline points="12 11 12 17"/><polyline points="9 14 12 11 15 14"/></svg>
                 <span>Respaldar en Drive</span>
@@ -3010,14 +2921,36 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
 
               <button 
                 type="button" 
-                class="btn btn-primary btn-sm btn-open-responder-modal" 
+                class="btn btn-secondary btn-sm btn-open-prorroga-modal" 
                 data-id="${escapeHtml(peticion.id)}"
-                title="Despachar respuesta formal y habilitar portal temporal al solicitante"
-                style="display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 0.82rem; padding: 7px 16px; background: #00594E; border-color: #00594E; color: #ffffff; box-shadow: 0 2px 6px rgba(0, 89, 78, 0.2); cursor: pointer;"
+                title="Ampliar plazo de vencimiento con trazabilidad de auditoría"
+                style="display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 0.82rem; padding: 7px 14px; background: #F7F5EE; border: 1.5px solid #B5A160; color: #786832; border-radius: 6px; cursor: pointer; transition: all 0.2s ease;"
               >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                <span>Enviar Respuesta al Solicitante</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="10" y1="16" x2="14" y2="16"/></svg>
+                <span>+ Prórroga</span>
               </button>
+
+              ${isRespondidaFolder ? `
+                <span
+                  style="display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 0.82rem; padding: 7px 14px; background: #E6EFEF; border: 1.5px solid #00594E; color: #00594E; border-radius: 6px;"
+                  title="Expediente cerrado internamente en Secretaría General"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>Expediente Completo</span>
+                </span>
+              ` : `
+                <button 
+                  type="button" 
+                  class="btn btn-primary btn-sm btn-completar-expediente" 
+                  data-id="${escapeHtml(peticion.id)}"
+                  data-radicado="${escapeHtml(peticion.numero_radicado)}"
+                  title="Cerrar internamente el expediente sin enviar correo externo"
+                  style="display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 0.82rem; padding: 7px 16px; background: #00594E; border-color: #00594E; color: #ffffff; box-shadow: 0 2px 6px rgba(0, 89, 78, 0.2); cursor: pointer;"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>Marcar Expediente como Completo</span>
+                </button>
+              `}
 
               <button 
                 type="button" 
@@ -3045,28 +2978,45 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap;">
                   <span class="radicado-chip" style="font-size: 1.05rem; padding: 4px 12px;">${escapeHtml(peticion.numero_radicado)}</span>
                   <span style="font-size: 0.74rem; font-weight: 800; padding: 4px 10px; border-radius: 4px; border: 1px solid ${isRespondidaFolder ? '#B2CFCB' : '#DBD2B0'}; ${isRespondidaFolder ? 'background: #E6EFEF; color: #00594E;' : 'background: #F7F5EE; color: #786832;'}">
-                    ${isRespondidaFolder ? 'Respondida' : 'En Trámite'}
+                    ${isRespondidaFolder ? 'Expediente Completo' : 'En Trámite'}
                   </span>
                   ${(() => {
+                    const prorrogasList = Array.isArray(respuestaMeta?.prorrogas) ? respuestaMeta.prorrogas : [];
+                    if (prorrogasList.length === 0) return '';
+                    const lastPr = prorrogasList[prorrogasList.length - 1];
+                    return `
+                      <span
+                        style="font-size: 0.74rem; font-weight: 800; background: #F7F5EE; color: #786832; border: 1px solid #B5A160; padding: 4px 10px; border-radius: 4px; display: inline-flex; align-items: center; gap: 5px;"
+                        title="${escapeHtml(lastPr?.motivo || 'Prórroga registrada en auditoría')}"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        <span>Prórroga (${prorrogasList.length})</span>
+                      </span>
+                    `;
+                  })()}
+                  ${(() => {
                     const fechaEnvio = peticion.respuesta_fecha_envio || respuestaMeta?.fecha_envio;
+                    const fechaCierre = respuestaMeta?.fecha_cierre;
                     const expiraAt = peticion.respuesta_expira_at || respuestaMeta?.expira;
-                    if (fechaEnvio || isRespondidaFolder) {
-                      const now = Date.now();
-                      const exp = expiraAt ? new Date(expiraAt).getTime() : 0;
-                      const isExpired = exp > 0 && now > exp;
-                      const daysLeft = exp > 0 ? Math.max(0, Math.ceil((exp - now) / (1000 * 60 * 60 * 24))) : 10;
-                      if (isExpired) {
+                    if (respuestaMeta?.expediente_completo || isRespondidaFolder) {
+                      if (fechaCierre && !respuestaMeta?.pin) {
                         return `
-                          <span style="font-size: 0.74rem; font-weight: 750; background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; padding: 4px 10px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
-                            <span>Respuesta Enviada (Caducada)</span>
+                          <span style="font-size: 0.74rem; font-weight: 750; background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; padding: 4px 10px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
+                            <span>Cierre Interno Oficial (${escapeHtml(safeFormatDate(fechaCierre))})</span>
                           </span>
                         `;
                       }
-                      return `
-                        <span style="font-size: 0.74rem; font-weight: 750; background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; padding: 4px 10px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
-                          <span>Respuesta Enviada (Activa por ${daysLeft} día${daysLeft === 1 ? '' : 's'} restante${daysLeft === 1 ? '' : 's'})</span>
-                        </span>
-                      `;
+                      if (fechaEnvio && expiraAt) {
+                        const now = Date.now();
+                        const exp = new Date(expiraAt).getTime();
+                        const isExpired = exp > 0 && now > exp;
+                        const daysLeft = exp > 0 ? Math.max(0, Math.ceil((exp - now) / (1000 * 60 * 60 * 24))) : 10;
+                        return `
+                          <span style="font-size: 0.74rem; font-weight: 750; background: ${isExpired ? '#fef2f2' : '#F2F7F6'}; color: ${isExpired ? '#991b1b' : '#00594E'}; border: 1px solid ${isExpired ? '#fecaca' : '#B2CFCB'}; padding: 4px 10px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
+                            <span>${isExpired ? 'Completado (Vigencia portal caducada)' : `Completado (Portal activo ${daysLeft}d)`}</span>
+                          </span>
+                        `;
+                      }
                     }
                     return '';
                   })()}
@@ -3394,8 +3344,9 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                   subcarpetas.forEach((sub: any, subIdx: number) => {
                     const subResps = responsables.filter((r) => isRespForSub(r, sub, subIdx));
 
-                    // Filtrar anexos estrictamente correspondientes a esta subcarpeta
+                    // Filtrar anexos estrictamente correspondientes a esta subcarpeta (excluyendo rechazados)
                     const subAnexos = anexosOficinas.filter((a) => {
+                      if (!a || String(a.nombre_archivo || '').toUpperCase().includes('[RECHAZADO]')) return false;
                       if (isFileForSub(a, sub.nombre, sub.id)) return true;
                       if (a.peticion_responsable_id && subResps.some((sr: any) => sr.id === a.peticion_responsable_id)) {
                         const otherSubNames = subcarpetas.filter((s: any) => s.id !== sub.id).map((s: any) => (s.nombre || '').toLowerCase().trim());
@@ -3406,10 +3357,11 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                       return false;
                     });
 
-                    // Contar dependencias que ya entregaron archivos en esta subcarpeta
+                    // Contar dependencias que ya entregaron archivos válidos en esta subcarpeta
                     const deliveredCount = subResps.filter((r) => {
                       const ofiHasFiles = subAnexos.some((a) => a.peticion_responsable_id === r.id);
-                      const isStateEntregado = String(r.estado_entrega || '').toLowerCase() === 'entregado';
+                      const rejectionInfo = extractRejectionInfo(r.observaciones_entrega, sub.nombre);
+                      const isStateEntregado = !rejectionInfo && String(r.estado_entrega || '').toLowerCase() === 'entregado';
                       return ofiHasFiles || (subcarpetas.length === 1 && isStateEntregado);
                     }).length;
 
@@ -3428,15 +3380,20 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                             ((a as any).dependencia_id && (a as any).dependencia_id === ofiId) ||
                             (a.nombre_archivo && ofiNombre && a.nombre_archivo.toLowerCase().includes(`[aporte de ${ofiNombre.toLowerCase()}]`))
                           );
-                          const isStateEntregado = String(r.estado_entrega || (r as any).estado || '').toLowerCase() === 'entregado' || (r as any).completado === true;
+                          const rejectionInfo = extractRejectionInfo(r.observaciones_entrega, sub.nombre);
+                          const isStateEntregado = !rejectionInfo && (String(r.estado_entrega || (r as any).estado || '').toLowerCase() === 'entregado' || (r as any).completado === true);
                           const entregado = ofiHasFiles || (subcarpetas.length === 1 && isStateEntregado);
+                          const hasApprovedFile = ofiHasFiles && extractApprovedAnexoIds(r.observaciones_entrega).size > 0;
+                          const pillTitle = entregado
+                            ? (hasApprovedFile ? `${ofiNombre}: Aporte aprobado` : `${ofiNombre}: Aporte entregado`)
+                            : (rejectionInfo ? `${ofiNombre}: Pendiente / Devuelto (${rejectionInfo.motivo})` : `${ofiNombre}: Pendiente de entrega`);
 
                           return `
                             <span
                               class="dep-status-pill ${entregado ? 'is-delivered' : 'is-pending'}"
                               data-resp-id="${escapeHtml(String(r.id || ''))}"
                               data-sub-id="${escapeHtml(String(sub.id || ''))}"
-                              title="${entregado ? `${escapeHtml(ofiNombre)}: Aporte entregado` : `${escapeHtml(ofiNombre)}: Pendiente de entrega`}"
+                              title="${escapeHtml(pillTitle)}"
                             >
                               <span class="dep-status-dot"></span>
                               <span class="dep-status-name">${escapeHtml(ofiNombre)}</span>
@@ -3482,18 +3439,22 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                             <div style="padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; background: #ffffff; border-top: 1px solid rgba(15, 23, 42, 0.06);">
                               ${subResps.length > 0 ? subResps.map((r) => {
                                 const ofiAnexos = subAnexos.filter((a) => a && a.peticion_responsable_id === r.id);
-                                const isStateEntregado = String(r.estado_entrega || '').toLowerCase() === 'entregado';
+                                const rawObs = (r as any).observaciones_entrega || '';
+                                const approvedIds = extractApprovedAnexoIds(rawObs);
+                                const rejectionInfo = extractRejectionInfo(rawObs, sub.nombre);
+                                const isStateEntregado = !rejectionInfo && String(r.estado_entrega || '').toLowerCase() === 'entregado';
                                 const isDelivered = ofiAnexos.length > 0 || (subcarpetas.length === 1 && isStateEntregado);
                                 const ofiNombre = Array.isArray(r.oficinas) ? (r.oficinas[0]?.nombre || 'Oficina Responsable') : (r.oficinas?.nombre || 'Oficina Responsable');
                                 const ofiCodigo = Array.isArray(r.oficinas) ? (r.oficinas[0]?.codigo || '') : (r.oficinas?.codigo || '');
                                 const ofiId = Array.isArray(r.oficinas) ? (r.oficinas[0]?.id || '') : (r.oficinas?.id || (r as any).oficina_id || (r as any).dependencia_id || '');
-                                const rawObs = (r as any).observaciones_entrega || '';
-                                const cleanObs = extractSubObs(rawObs, sub.nombre);
+                                const obsSinRevision = sanitizeRevisionTokens(rawObs).replace(/\[RECHAZADO[^\]]*\]:?[^|]*/gi, '').trim();
+                                const cleanObs = extractSubObs(obsSinRevision, sub.nombre);
                                 const subReqText = (sub.descripcion || '').trim().toLowerCase();
                                 const obsText = cleanObs.trim().toLowerCase();
                                 const isSameAsRequirement = Boolean(subReqText && (obsText === subReqText || obsText.startsWith(subReqText) || subReqText.startsWith(obsText)));
                                 const hasRealFiles = ofiAnexos.length > 0;
                                 const showAporteObs = hasRealFiles && cleanObs && !isSameAsRequirement;
+                                const anyApprovedInResp = hasRealFiles && ofiAnexos.some((a) => approvedIds.has(String(a.id)));
 
                                 return `
                                   <div style="background: #f8fafc; border: 1px solid rgba(15, 23, 42, 0.07); border-radius: 8px; padding: 14px 16px;">
@@ -3504,8 +3465,14 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                                       </div>
                                       <div style="display: flex; align-items: center; gap: 6px;">
                                         <span style="font-family: monospace; font-size: 0.74rem; font-weight: 800; color: #00594E; background: #ffffff; padding: 2px 7px; border-radius: 4px; border: 1px solid #B2CFCB;" title="Código Único de Acceso">${escapeHtml(r.codigo_acceso || 'UPQ')}</span>
-                                        <span style="font-size: 0.70rem; font-weight: 800; padding: 2px 8px; border-radius: 4px; border: 1px solid; ${isDelivered ? 'background: #E6EFEF; color: #00594E; border-color: #B2CFCB;' : 'background: #F7F5EE; color: #786832; border-color: #DBD2B0;'}">
-                                          ${isDelivered ? 'Entregado' : 'Pendiente de aporte'}
+                                        <span style="font-size: 0.70rem; font-weight: 800; padding: 2px 8px; border-radius: 4px; border: 1px solid; ${
+                                          rejectionInfo && !hasRealFiles
+                                            ? 'background: #FEF2F2; color: #DC2626; border-color: #FECACA;'
+                                            : isDelivered
+                                              ? 'background: #E6EFEF; color: #00594E; border-color: #B2CFCB;'
+                                              : 'background: #F7F5EE; color: #786832; border-color: #DBD2B0;'
+                                        }">
+                                          ${rejectionInfo && !hasRealFiles ? 'Pendiente / Devuelto' : (anyApprovedInResp ? 'Entregado y Aprobado' : (isDelivered ? 'Entregado' : 'Pendiente de aporte'))}
                                         </span>
                                       </div>
                                     </div>
@@ -3513,21 +3480,62 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                                     ${ofiAnexos.length > 0 ? `
                                       <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
                                         <div style="font-size: 0.70rem; font-weight: 750; color: #475569; text-transform: uppercase; letter-spacing: 0.3px;">Documentos aportados en esta subcarpeta:</div>
-                                        ${ofiAnexos.map((oa) => `
-                                          <div style="background: #ffffff; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 6px; padding: 9px 12px; display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; gap: 10px;">
-                                            <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                                        ${ofiAnexos.map((oa) => {
+                                          const cleanOaName = (oa.nombre_archivo || 'anexo.pdf').replace(/^\[[^\]]+\]\s*/, '');
+                                          const isApproved = approvedIds.has(String(oa.id));
+                                          return `
+                                          <div style="background: #ffffff; border: 1px solid ${isApproved ? '#B2CFCB' : 'rgba(15, 23, 42, 0.08)'}; border-radius: 6px; padding: 9px 12px; display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; gap: 10px; flex-wrap: wrap;">
+                                            <div style="display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1;">
                                               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00594E" stroke-width="1.75" style="flex-shrink: 0;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                                               <div style="min-width: 0;">
                                                 <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                                                  <strong style="color: #0f172a; word-break: break-all;">[Aporte de: ${escapeHtml(ofiNombre)}] - ${escapeHtml((oa.nombre_archivo || 'anexo.pdf').replace(/^\[[^\]]+\]\s*/, ''))}</strong>
+                                                  <strong style="color: #0f172a; word-break: break-all;">[Aporte de: ${escapeHtml(ofiNombre)}] - ${escapeHtml(cleanOaName)}</strong>
                                                   <span style="font-size: 0.66rem; font-weight: 750; color: #00594E; background: #E6EFEF; padding: 1px 6px; border-radius: 3px; border: 1px solid #B2CFCB;">${escapeHtml(subDisplayTitle)}</span>
+                                                  ${isApproved ? `
+                                                    <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.66rem; font-weight: 800; color: #00594E; background: #E6EFEF; padding: 1px 7px; border-radius: 999px; border: 1px solid #00594E;">
+                                                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                                                      <span>Aprobado</span>
+                                                    </span>
+                                                  ` : ''}
                                                 </div>
                                                 <div style="font-size: 0.68rem; color: #64748b; margin-top: 2px;">
                                                   ${formatFileSize(oa.tamano_bytes)}${oa.created_at ? ` • Subido el ${new Date(oa.created_at).toLocaleDateString('es-CO')}` : ''}
                                                 </div>
                                               </div>
                                             </div>
-                                            <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                                            <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0; flex-wrap: wrap;">
+                                              ${!isApproved ? `
+                                                <button
+                                                  type="button"
+                                                  class="btn-aprobar-aporte"
+                                                  data-anexo-id="${escapeHtml(String(oa.id))}"
+                                                  data-peticion-id="${escapeHtml(String(peticion.id))}"
+                                                  data-responsable-id="${escapeHtml(String(r.id))}"
+                                                  data-sub-nombre="${escapeHtml(sub.nombre)}"
+                                                  data-file-name="${escapeHtml(cleanOaName)}"
+                                                  data-ofi-nombre="${escapeHtml(ofiNombre)}"
+                                                  title="Aprobar soporte documental"
+                                                  style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; font-size: 0.72rem; font-weight: 750; border-radius: 6px; background: #E6EFEF; color: #00594E; border: 1px solid #00594E; cursor: pointer; transition: all 0.2s ease;"
+                                                >
+                                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><polyline points="20 6 9 17 4 12"/></svg>
+                                                  <span>Aprobar</span>
+                                                </button>
+                                              ` : ''}
+                                              <button
+                                                type="button"
+                                                class="btn-rechazar-aporte"
+                                                data-anexo-id="${escapeHtml(String(oa.id))}"
+                                                data-peticion-id="${escapeHtml(String(peticion.id))}"
+                                                data-responsable-id="${escapeHtml(String(r.id))}"
+                                                data-sub-nombre="${escapeHtml(sub.nombre)}"
+                                                data-file-name="${escapeHtml(cleanOaName)}"
+                                                data-ofi-nombre="${escapeHtml(ofiNombre)}"
+                                                title="Rechazar / devolver soporte y notificar a la dependencia"
+                                                style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; font-size: 0.72rem; font-weight: 750; border-radius: 6px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; cursor: pointer; transition: all 0.2s ease;"
+                                              >
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                                <span>Rechazar</span>
+                                              </button>
                                               <a 
                                                 href="${getPublicStorageUrl(oa.storage_path)}" 
                                                 download="${escapeHtml(oa.nombre_archivo)}" 
@@ -3543,11 +3551,18 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                                               </a>
                                             </div>
                                           </div>
-                                        `).join('')}
+                                          `;
+                                        }).join('')}
                                       </div>
                                     ` : `
+                                      ${rejectionInfo ? `
+                                        <div style="margin-top: 8px; padding: 9px 12px; background: #FEF2F2; border: 1px solid #FECACA; border-left: 3.5px solid #DC2626; border-radius: 6px; font-size: 0.76rem; color: #7F1D1D;">
+                                          <strong style="color: #DC2626; text-transform: uppercase; font-size: 0.68rem;">Devolución previa solicitada:</strong>
+                                          <span>${escapeHtml(rejectionInfo.motivo)}</span>
+                                        </div>
+                                      ` : ''}
                                       <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 8px; padding: 10px 12px; background: #ffffff; border: 1px dashed #cbd5e1; border-radius: 6px;">
-                                        <span style="font-size: 0.76rem; color: #64748b; font-style: italic;">Pendiente de entrega (Sin archivos cargados aún)</span>
+                                        <span style="font-size: 0.76rem; color: #64748b; font-style: italic;">Pendiente de entrega (${rejectionInfo ? 'esperando corrección de la dependencia' : 'sin archivos cargados aún'})</span>
                                         <button type="button" class="btn btn-secondary btn-sm btn-subir-soporte-manual" onclick="event.stopPropagation()" data-resp-id="${escapeHtml(r.id)}" data-dependencia-id="${escapeHtml(String(ofiId || ''))}" data-codigo-acceso="${escapeHtml(String(r.codigo_acceso || ''))}" data-subfolder-path="${escapeHtml(String(r.storage_subfolder_path || ''))}" data-sub-id="${escapeHtml(sub.id)}" data-sub-nombre="${escapeHtml(sub.nombre)}" data-ofi-nombre="${escapeHtml(ofiNombre)}" style="font-size: 0.72rem; padding: 4px 10px; font-weight: 750; border: 1px solid #00594E; color: #00594E; background: #E6EFEF;">
                                           Subir soporte manualmente
                                         </button>
@@ -3678,14 +3693,6 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
             fileInput.onchange = async () => {
               const file = fileInput.files?.[0];
               if (!file) {
-                document.body.removeChild(fileInput);
-                return;
-              }
-
-              if (file.size > MAX_FILE_SIZE_BYTES) {
-                if (typeof (window as any).showToast === 'function') {
-                  (window as any).showToast(`El archivo excede el límite máximo permitido de ${MAX_FILE_SIZE_MB} MB.`, 'error');
-                }
                 document.body.removeChild(fileInput);
                 return;
               }
@@ -3885,13 +3892,44 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         return;
       }
 
-      // C. Botón Enviar Respuesta al Solicitante
-      const responderBtn = target.closest('.btn-open-responder-modal') as HTMLElement | null;
-      if (responderBtn) {
+      // C. Botón Marcar Expediente como Completo (Cierre Interno sin correo externo)
+      const completarBtn = target.closest('.btn-completar-expediente') as HTMLButtonElement | null;
+      if (completarBtn) {
         e.preventDefault();
         e.stopPropagation();
-        const petId = responderBtn.getAttribute('data-id') || '';
-        if (petId) openResponderModal(petId);
+        const petId = completarBtn.getAttribute('data-id') || '';
+        const radicado = completarBtn.getAttribute('data-radicado') || '';
+        if (petId) {
+          handleCompletarExpediente(petId, radicado, completarBtn);
+        }
+        return;
+      }
+
+      // C2. Botón + Prórroga
+      const prorrogaBtn = target.closest('.btn-open-prorroga-modal') as HTMLElement | null;
+      if (prorrogaBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const petId = prorrogaBtn.getAttribute('data-id') || '';
+        if (petId) openProrrogaModal(petId);
+        return;
+      }
+
+      // C3. Botón Aprobar Aporte Documental
+      const aprobarBtn = target.closest('.btn-aprobar-aporte') as HTMLButtonElement | null;
+      if (aprobarBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleAprobarAporte(aprobarBtn);
+        return;
+      }
+
+      // C4. Botón Rechazar / Devolver Aporte Documental
+      const rechazarBtn = target.closest('.btn-rechazar-aporte') as HTMLButtonElement | null;
+      if (rechazarBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        openRechazarModal(rechazarBtn);
         return;
       }
 
@@ -4326,324 +4364,295 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       }
     });
 
-    // 7.2 Modal: Compositor de Correo Electrónico Oficial y Gestión de Respuesta Final Oficial
-    const responderModal = document.getElementById('modal-responder-solicitante');
-    const formResponder = document.getElementById('form-responder-solicitante');
-    const closeResponder = () => { if (responderModal) responderModal.style.display = 'none'; };
-    document.getElementById('btn-close-responder-modal')?.addEventListener('click', closeResponder);
-    document.getElementById('btn-cancel-responder-modal')?.addEventListener('click', closeResponder);
-
-    const responderPetIdInput = document.getElementById('responder-pet-id') as HTMLInputElement | null;
-    const composerDispRadicado = document.getElementById('composer-disp-radicado');
-    const composerDispSolNombre = document.getElementById('composer-disp-sol-nombre');
-    const composerDispPinBadge = document.getElementById('composer-disp-pin-badge');
-    const responderEmailInput = document.getElementById('responder-solicitante-email') as HTMLInputElement | null;
-    const responderAsuntoInput = document.getElementById('responder-asunto-input') as HTMLInputElement | null;
-    const responderMensajeInput = document.getElementById('responder-mensaje-input') as HTMLTextAreaElement | null;
-    const responderFuncionarioInput = document.getElementById('responder-funcionario-input') as HTMLInputElement | null;
-    const composerCharCount = document.getElementById('composer-char-count');
-    const composerAdjuntoContainer = document.getElementById('composer-adjunto-container');
-    const btnComposerInsertTemplate = document.getElementById('btn-composer-insert-template');
+    // 7.2 Gestión de Cierre Interno, Revisión de Aportes (Aprobar / Rechazar), Prórrogas y Respuesta Final Oficial
     const inputSubirRespuestaFinal = document.getElementById('input-subir-respuesta-final') as HTMLInputElement | null;
-
     let currentUploadPetId = '';
 
-    function updateComposerCharCount() {
-      if (!responderMensajeInput || !composerCharCount) return;
-      const text = responderMensajeInput.value.trim();
-      const words = text ? text.split(/\s+/).length : 0;
-      const chars = responderMensajeInput.value.length;
-      composerCharCount.textContent = `${words} palabra${words === 1 ? '' : 's'} • ${chars} carácteres`;
+    // 7.2.1 Modal Rechazar Aporte Documental
+    const rechazarModal = document.getElementById('modal-rechazar-aporte');
+    const formRechazar = document.getElementById('form-rechazar-aporte');
+    const rechazarAnexoId = document.getElementById('rechazar-anexo-id') as HTMLInputElement | null;
+    const rechazarPetId = document.getElementById('rechazar-peticion-id') as HTMLInputElement | null;
+    const rechazarRespId = document.getElementById('rechazar-responsable-id') as HTMLInputElement | null;
+    const rechazarSubNombre = document.getElementById('rechazar-subcarpeta-nombre') as HTMLInputElement | null;
+    const rechazarMotivoInput = document.getElementById('rechazar-motivo-input') as HTMLTextAreaElement | null;
+    const closeRechazar = () => { if (rechazarModal) rechazarModal.style.display = 'none'; };
+    document.getElementById('btn-close-rechazar-modal')?.addEventListener('click', closeRechazar);
+    document.getElementById('btn-cancel-rechazar-modal')?.addEventListener('click', closeRechazar);
+
+    function openRechazarModal(btn: HTMLElement) {
+      const anexoId = btn.getAttribute('data-anexo-id') || '';
+      const petId = btn.getAttribute('data-peticion-id') || '';
+      const respId = btn.getAttribute('data-responsable-id') || '';
+      const subNombre = btn.getAttribute('data-sub-nombre') || 'Soportes Documentales';
+      const fileName = btn.getAttribute('data-file-name') || 'Documento';
+      const ofiNombre = btn.getAttribute('data-ofi-nombre') || 'Dependencia Responsable';
+
+      if (rechazarAnexoId) rechazarAnexoId.value = anexoId;
+      if (rechazarPetId) rechazarPetId.value = petId;
+      if (rechazarRespId) rechazarRespId.value = respId;
+      if (rechazarSubNombre) rechazarSubNombre.value = subNombre;
+
+      const dispOfi = document.getElementById('rechazar-disp-oficina');
+      const dispSub = document.getElementById('rechazar-disp-subcarpeta');
+      const dispArc = document.getElementById('rechazar-disp-archivo');
+      if (dispOfi) dispOfi.textContent = ofiNombre;
+      if (dispSub) dispSub.textContent = subNombre;
+      if (dispArc) dispArc.textContent = fileName;
+
+      if (rechazarMotivoInput) {
+        rechazarMotivoInput.value = `El soporte "${fileName}" remitido para la subcarpeta ${subNombre} no cumple con los requisitos solicitados. Por favor revisar y cargar nuevamente el documento corregido en el portal.`;
+      }
+      if (rechazarModal) rechazarModal.style.display = 'flex';
     }
 
-    responderMensajeInput?.addEventListener('input', updateComposerCharCount);
+    async function handleAprobarAporte(btn: HTMLButtonElement) {
+      const anexoId = btn.getAttribute('data-anexo-id') || '';
+      const petId = btn.getAttribute('data-peticion-id') || '';
+      const respId = btn.getAttribute('data-responsable-id') || '';
+      const subNombre = btn.getAttribute('data-sub-nombre') || '';
+      if (!anexoId || !petId) return;
 
-    btnComposerInsertTemplate?.addEventListener('click', () => {
-      const petId = responderPetIdInput?.value || '';
-      const pet = petId ? (peticionesMap.get(petId) || allPeticiones.find((p) => p.id === petId)) : null;
-      const solName = pet?.solicitante_nombre || 'Ciudadano(a)';
-      const radNum = pet?.numero_radicado || 'RAD-2026';
-      const funcName = responderFuncionarioInput?.value.trim() || 'Oficina de Correspondencia y Gestión Documental';
-
-      const template = `Estimado(a) ${solName},\n\nEn atención a su solicitud oficial radicada bajo el N° ${radNum}, nos permitimos emitir formal pronunciamiento institucional y dar respuesta integral y de fondo a los puntos expuestos en su petición.\n\nEl documento oficial de respuesta y sus soportes asociados se encuentran disponibles para su consulta y descarga segura en nuestro Portal Institucional de Respuestas utilizando las credenciales indicadas a continuación.\n\nAtentamente,\n${funcName}\nUniversidad Internacional del Trópico Americano — Unitrópico`;
-
-      if (responderMensajeInput) {
-        responderMensajeInput.value = template;
-        updateComposerCharCount();
-        responderMensajeInput.focus();
-      }
-    });
-
-    function getRespuestaFinalFile(pet: PeticionExpediente | any) {
-      if (!pet) return null;
-      const { respuestaMeta } = separarRespuestaMeta(pet.instrucciones_anexos || '');
-      const respObj = pet.respuesta_archivo || respuestaMeta?.archivo_respuesta || respuestaMeta?.respuesta_archivo || null;
-      if (respObj && (respObj.storage_path || respObj.nombre_archivo)) return respObj;
-      const anexos = Array.isArray(pet.peticion_anexos) ? pet.peticion_anexos : [];
-      return anexos.find((a: any) => a && a.storage_path && a.storage_path.includes('/respuesta_final/')) || null;
-    }
-
-    function updateRecipientAvatar(email: string) {
-      const avatarImg = document.getElementById('composer-recipient-avatar') as HTMLImageElement | null;
-      const avatarFallback = document.getElementById('composer-recipient-avatar-fallback');
-      const cleanEmail = (email || '').trim().toLowerCase();
-      if (!avatarImg) return;
-
-      if (!cleanEmail || !cleanEmail.includes('@')) {
-        avatarImg.style.display = 'none';
-        if (avatarFallback) avatarFallback.style.display = 'inline-flex';
-        return;
-      }
-
-      avatarImg.style.display = 'block';
-      if (avatarFallback) avatarFallback.style.display = 'none';
-      avatarImg.src = `https://unavatar.io/google/${encodeURIComponent(cleanEmail)}`;
-      avatarImg.onerror = () => {
-        avatarImg.onerror = null;
-        avatarImg.src = `https://unavatar.io/${encodeURIComponent(cleanEmail)}`;
-        avatarImg.onerror = () => {
-          avatarImg.style.display = 'none';
-          if (avatarFallback) avatarFallback.style.display = 'inline-flex';
-        };
-      };
-    }
-
-    responderEmailInput?.addEventListener('input', () => {
-      updateRecipientAvatar(responderEmailInput.value);
-    });
-
-    function renderComposerAdjunto(pet: PeticionExpediente | any) {
-      if (!composerAdjuntoContainer) return;
-      const file = getRespuestaFinalFile(pet);
-
-      if (file) {
-        composerAdjuntoContainer.innerHTML = `
-          <div style="background: #F2F7F6; border: 1px solid #B2CFCB; border-left: 4px solid #00594E; border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-            <div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1;">
-              <div style="width: 32px; height: 32px; border-radius: 8px; background: #FFFFFF; color: #00594E; border: 1px solid #B2CFCB; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#00594E" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="m9 15 2 2 4-4"/></svg>
-              </div>
-              <div style="min-width: 0; flex: 1;">
-                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                  <strong style="font-size: 0.84rem; font-weight: 700; color: #111827; word-break: break-all;">${escapeHtml(file.nombre_archivo)}</strong>
-                  <span style="font-size: 0.68rem; font-weight: 700; color: #FFFFFF; background: #00594E; padding: 2px 8px; border-radius: 999px; white-space: nowrap;">Obligatorio &middot; Incluido</span>
-                  <span style="font-size: 0.72rem; color: #64748B; font-weight: 600;">${formatFileSize(file.tamano_bytes)}</span>
-                </div>
-              </div>
-            </div>
-            <button 
-              type="button" 
-              class="btn btn-sm btn-action-trigger-upload" 
-              data-peticion-id="${escapeHtml(pet.id)}"
-              style="height: 30px; padding: 0 11px; font-size: 0.74rem; font-weight: 600; background: #FFFFFF; color: #00594E; border: 1px solid #B2CFCB; border-radius: 7px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: all 0.2s ease; flex-shrink: 0;"
-              onmouseover="this.style.background='#E6EFEF'; this.style.borderColor='#00594E';"
-              onmouseout="this.style.background='#FFFFFF'; this.style.borderColor='#B2CFCB';"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              <span>Cambiar Archivo</span>
-            </button>
-          </div>
-        `;
-      } else {
-        composerAdjuntoContainer.innerHTML = `
-          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; background: #F7F5EE; border: 1px solid #DBD2B0; border-left: 4px solid #B5A160; border-radius: 10px; padding: 10px 14px;">
-            <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
-              <div style="width: 32px; height: 32px; border-radius: 8px; background: #FFFFFF; color: #786832; border: 1px solid #DBD2B0; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#786832" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
-              </div>
-              <div style="font-size: 0.78rem; color: #475569;">
-                <strong style="color: #786832;">Respuesta Final Oficial (Obligatoria):</strong> Aún no se ha cargado el oficio definitivo.
-              </div>
-            </div>
-            <button 
-              type="button" 
-              class="btn btn-sm btn-action-trigger-upload" 
-              data-peticion-id="${escapeHtml(pet.id)}"
-              style="height: 32px; padding: 0 14px; border-radius: 7px; background: #00594E; color: #FFFFFF; font-size: 0.76rem; font-weight: 700; border: 1px solid #00594E; border-bottom: 2px solid #B5A160; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(0, 89, 78, 0.14); transition: all 0.2s ease; flex-shrink: 0;"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              <span>Subir Respuesta Final</span>
-            </button>
-          </div>
-        `;
-      }
-
-      composerAdjuntoContainer.querySelectorAll('.btn-action-trigger-upload').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          currentUploadPetId = pet.id;
-          if (inputSubirRespuestaFinal) {
-            inputSubirRespuestaFinal.value = '';
-            inputSubirRespuestaFinal.click();
-          }
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/peticiones/anexos/revisar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            accion: 'aprobar',
+            anexo_id: anexoId,
+            peticion_id: petId,
+            responsable_id: respId,
+            subcarpeta_nombre: subNombre,
+          }),
         });
-      });
-    }
-
-    function updateAnexosCountPill() {
-      const listContainer = document.getElementById('composer-anexos-list');
-      const countPill = document.getElementById('composer-anexos-count-pill');
-      if (!listContainer || !countPill) return;
-      const checkedCount = listContainer.querySelectorAll('input[name="anexos_opcionales"]:checked').length;
-      countPill.textContent = `${checkedCount} seleccionado${checkedCount === 1 ? '' : 's'}`;
-    }
-
-    function renderComposerAnexosOpcionales(pet: PeticionExpediente | any) {
-      const listContainer = document.getElementById('composer-anexos-list');
-      const actionsGroup = document.getElementById('composer-anexos-actions-group');
-      if (!listContainer) return;
-
-      const respFinal = getRespuestaFinalFile(pet);
-      const allAnexos = Array.isArray(pet.peticion_anexos) ? pet.peticion_anexos : [];
-
-      // Extraer únicamente aportes de subcarpetas/oficinas (excluyendo la respuesta final y el documento base radicado)
-      const anexosOficinas = allAnexos.filter((a: any) => {
-        if (!a) return false;
-        if (respFinal && (a.id === respFinal.id || a.storage_path === respFinal.storage_path)) return false;
-        if (a.storage_path && a.storage_path.includes('/respuesta_final/')) return false;
-        return Boolean(a.es_anexo_oficina || a.peticion_responsable_id || a.subcarpeta_id);
-      });
-
-      if (anexosOficinas.length === 0) {
-        listContainer.innerHTML = `<div class="composer-anexos-empty">No hay aportes cargados en las subcarpetas de este expediente.</div>`;
-        if (actionsGroup) actionsGroup.style.display = 'none';
-        updateAnexosCountPill();
-        return;
-      }
-
-      if (actionsGroup) actionsGroup.style.display = 'flex';
-
-      const subcarpetas = filtrarSubcarpetasValidas(
-        (pet.subcarpetas && pet.subcarpetas.length > 0)
-          ? pet.subcarpetas
-          : inferSubcarpetas(pet)
-      ).sort((a: any, b: any) => {
-        const na = String(a?.nombre ?? '').replace(/^subcarpeta\s+/i, '').trim();
-        const nb = String(b?.nombre ?? '').replace(/^subcarpeta\s+/i, '').trim();
-        return na.localeCompare(nb, 'es', { numeric: true, sensitivity: 'base' });
-      });
-
-      const responsables = Array.isArray(pet.peticion_responsables) ? pet.peticion_responsables : [];
-
-      const { respuestaMeta } = separarRespuestaMeta(pet.instrucciones_anexos || '');
-      const prevIncluded = Array.isArray(pet.respuesta_archivos_incluidos)
-        ? pet.respuesta_archivos_incluidos
-        : (Array.isArray(respuestaMeta?.files) ? respuestaMeta.files : []);
-      const prevIncludedSet = new Set(prevIncluded.map((x: any) => String(x)));
-
-      // Enriquecer cada anexo con el código de su subcarpeta y su dependencia
-      const enriched = anexosOficinas.map((a: any) => {
-        // Buscar subcarpeta correspondiente
-        let matchedSub: any = null;
-        if (a.subcarpeta_id) {
-          matchedSub = subcarpetas.find((s: any) => String(s.id) === String(a.subcarpeta_id)) || null;
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'No se pudo aprobar el aporte.');
         }
-        if (!matchedSub) {
-          const cleanNameLower = String(a.nombre_archivo || '').toLowerCase();
-          const pathLower = String(a.storage_path || '').toLowerCase();
-          matchedSub = subcarpetas.find((s: any) => {
-            const subClean = String(s.nombre || '').replace(/^subcarpeta\s+/i, '').trim().toLowerCase();
-            if (!subClean) return false;
-            const slug = subClean.replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-            return cleanNameLower.includes(`[${subClean}]`) ||
-              cleanNameLower.includes(`[subcarpeta ${subClean}]`) ||
-              (slug && pathLower.includes(`/${slug}/`));
-          }) || null;
-        }
-        if (!matchedSub && a.peticion_responsable_id) {
-          const respForSub = responsables.find((r: any) => String(r.id) === String(a.peticion_responsable_id));
-          if (respForSub && respForSub.subcarpeta_id) {
-            matchedSub = subcarpetas.find((s: any) => String(s.id) === String(respForSub.subcarpeta_id)) || null;
+
+        const pet = peticionesMap.get(petId) || allPeticiones.find((p) => p.id === petId);
+        if (pet && Array.isArray(pet.peticion_responsables)) {
+          const respObj = pet.peticion_responsables.find((r) => String(r.id) === String(data.responsable_id || respId));
+          if (respObj) {
+            respObj.estado_entrega = 'Entregado';
+            respObj.observaciones_entrega = addApprovedAnexoMarker(respObj.observaciones_entrega, anexoId, subNombre);
           }
-        }
-        if (!matchedSub && subcarpetas.length === 1) {
-          matchedSub = subcarpetas[0];
-        }
-
-        const subCode = matchedSub
-          ? String(matchedSub.nombre || '').replace(/^subcarpeta\s+/i, '').trim()
-          : 'General';
-
-        // Buscar dependencia correspondiente
-        const matchedResp = responsables.find((r: any) =>
-          (a.peticion_responsable_id && String(r.id) === String(a.peticion_responsable_id)) ||
-          (matchedSub && r.subcarpeta_id && String(r.subcarpeta_id) === String(matchedSub.id))
-        );
-        let depName = 'Dependencia';
-        if (matchedResp) {
-          depName = Array.isArray(matchedResp.oficinas)
-            ? (matchedResp.oficinas[0]?.nombre || 'Dependencia')
-            : (matchedResp.oficinas?.nombre || 'Dependencia');
-        } else {
-          const depMatch = String(a.nombre_archivo || '').match(/\[Aporte de:\s*([^\]]+)\]/i);
-          if (depMatch && depMatch[1]) depName = depMatch[1].trim();
+          indexPeticion(pet);
+          if (currentActiveFolderId === petId) openFolderDetail(petId);
         }
 
-        // Nombre original limpio del archivo (quitando prefijos internos de subcarpeta/aporte si existen)
-        const rawFilename = String(a.nombre_archivo || 'Documento_Anexo.pdf');
-        const cleanFilename = rawFilename
-          .replace(/^\[[^\]]+\]\s*/g, '')
-          .replace(/^\[[^\]]+\]\s*/g, '')
-          .trim() || rawFilename;
-
-        const isChecked = prevIncludedSet.has(String(a.id)) || prevIncludedSet.has(String(a.storage_path));
-
-        return {
-          anexo: a,
-          subCode,
-          depName,
-          cleanFilename,
-          isChecked,
-        };
-      });
-
-      // Ordenar estrictamente usando localeCompare numérico en subCode
-      enriched.sort((x: any, y: any) => {
-        const subCmp = String(x.subCode).localeCompare(String(y.subCode), 'es', { numeric: true, sensitivity: 'base' });
-        if (subCmp !== 0) return subCmp;
-        return String(x.cleanFilename).localeCompare(String(y.cleanFilename), 'es', { numeric: true, sensitivity: 'base' });
-      });
-
-      listContainer.innerHTML = enriched.map((item: any) => `
-        <label class="pro-anexo-check-item">
-          <div class="pro-anexo-left">
-            <input
-              type="checkbox"
-              name="anexos_opcionales"
-              value="${escapeHtml(item.anexo.id)}"
-              class="pro-anexo-checkbox"
-              ${item.isChecked ? 'checked' : ''}
-            />
-            <span class="pro-anexo-sub-badge">[${escapeHtml(item.subCode)} &middot; ${escapeHtml(item.depName)}]</span>
-            <span class="pro-anexo-filename" title="${escapeHtml(item.cleanFilename)}">${escapeHtml(item.cleanFilename)}</span>
-          </div>
-          <span class="pro-anexo-size">${formatFileSize(item.anexo.tamano_bytes)}</span>
-        </label>
-      `).join('');
-
-      listContainer.querySelectorAll('input[name="anexos_opcionales"]').forEach((chk) => {
-        chk.addEventListener('change', updateAnexosCountPill);
-      });
-
-      updateAnexosCountPill();
+        if (typeof (window as any).showToast === 'function') {
+          (window as any).showToast('Aporte documental aprobado correctamente.', 'success');
+        }
+      } catch (err: any) {
+        btn.disabled = false;
+        if (typeof (window as any).showToast === 'function') {
+          (window as any).showToast(err?.message || 'Error al aprobar aporte.', 'error');
+        }
+      }
     }
 
-    document.getElementById('btn-anexos-select-all')?.addEventListener('click', () => {
-      const listContainer = document.getElementById('composer-anexos-list');
-      if (!listContainer) return;
-      listContainer.querySelectorAll('input[name="anexos_opcionales"]').forEach((chk: any) => {
-        chk.checked = true;
-      });
-      updateAnexosCountPill();
+    let isSubmittingRechazo = false;
+    formRechazar?.addEventListener('submit', async (e: Event) => {
+      e.preventDefault();
+      if (isSubmittingRechazo) return;
+      const anexoId = rechazarAnexoId?.value || '';
+      const petId = rechazarPetId?.value || '';
+      const respId = rechazarRespId?.value || '';
+      const subNombre = rechazarSubNombre?.value || '';
+      const motivo = rechazarMotivoInput?.value.trim() || '';
+      if (!anexoId || !petId || !motivo) return;
+
+      const submitBtn = document.getElementById('btn-submit-rechazar-modal') as HTMLButtonElement | null;
+      const submitTxt = document.getElementById('btn-submit-rechazar-text');
+      isSubmittingRechazo = true;
+      if (submitBtn) submitBtn.disabled = true;
+      if (submitTxt) submitTxt.textContent = 'Devolviendo y notificando...';
+
+      try {
+        const res = await fetch('/api/peticiones/anexos/revisar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            accion: 'rechazar',
+            anexo_id: anexoId,
+            peticion_id: petId,
+            responsable_id: respId,
+            subcarpeta_nombre: subNombre,
+            motivo,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'No se pudo rechazar el aporte.');
+        }
+
+        const pet = peticionesMap.get(petId) || allPeticiones.find((p) => p.id === petId);
+        if (pet) {
+          if (Array.isArray(pet.peticion_anexos)) {
+            pet.peticion_anexos = pet.peticion_anexos.filter((a) => String(a.id) !== String(anexoId));
+          }
+          if (Array.isArray(pet.peticion_responsables)) {
+            const respObj = pet.peticion_responsables.find((r) => String(r.id) === String(data.responsable_id || respId));
+            if (respObj) {
+              respObj.estado_entrega = data.estado_entrega || 'Pendiente';
+              const cleanApproved = removeApprovedAnexoMarker(respObj.observaciones_entrega, anexoId);
+              respObj.observaciones_entrega = setRejectedMarker(cleanApproved, subNombre, motivo);
+            }
+          }
+          indexPeticion(pet);
+          syncExplorerCountsAndCard(pet);
+          if (currentActiveFolderId === petId) openFolderDetail(petId);
+        }
+
+        closeRechazar();
+        if (typeof (window as any).showToast === 'function') {
+          const msgMail = data.email_sent
+            ? 'Aporte devuelto y dependencia notificada por correo.'
+            : 'Aporte devuelto al estado Pendiente.';
+          (window as any).showToast(msgMail, 'success');
+        }
+      } catch (err: any) {
+        if (typeof (window as any).showToast === 'function') {
+          (window as any).showToast(err?.message || 'Error al rechazar aporte.', 'error');
+        }
+      } finally {
+        isSubmittingRechazo = false;
+        if (submitBtn) submitBtn.disabled = false;
+        if (submitTxt) submitTxt.textContent = 'Devolver y Notificar';
+      }
     });
 
-    document.getElementById('btn-anexos-clear-all')?.addEventListener('click', () => {
-      const listContainer = document.getElementById('composer-anexos-list');
-      if (!listContainer) return;
-      listContainer.querySelectorAll('input[name="anexos_opcionales"]').forEach((chk: any) => {
-        chk.checked = false;
-      });
-      updateAnexosCountPill();
+    // 7.2.2 Modal Prórroga Auditada
+    const prorrogaModal = document.getElementById('modal-prorroga');
+    const formProrroga = document.getElementById('form-prorroga');
+    const prorrogaPetId = document.getElementById('prorroga-peticion-id') as HTMLInputElement | null;
+    const prorrogaNuevaEntrega = document.getElementById('prorroga-nueva-entrega') as HTMLInputElement | null;
+    const prorrogaNuevaResp = document.getElementById('prorroga-nueva-resp') as HTMLInputElement | null;
+    const prorrogaMotivo = document.getElementById('prorroga-motivo') as HTMLTextAreaElement | null;
+    const closeProrroga = () => { if (prorrogaModal) prorrogaModal.style.display = 'none'; };
+    document.getElementById('btn-close-prorroga-modal')?.addEventListener('click', closeProrroga);
+    document.getElementById('btn-cancel-prorroga-modal')?.addEventListener('click', closeProrroga);
+
+    function openProrrogaModal(petId: string) {
+      const pet = peticionesMap.get(petId) || allPeticiones.find((p) => p.id === petId);
+      if (!pet) return;
+      if (prorrogaPetId) prorrogaPetId.value = pet.id;
+      const dispRad = document.getElementById('prorroga-disp-radicado');
+      const dispAct = document.getElementById('prorroga-disp-actual');
+      const entYmd = pet.fecha_limite_entrega ? String(pet.fecha_limite_entrega).slice(0, 10) : '';
+      const respYmd = pet.fecha_limite_responsable ? String(pet.fecha_limite_responsable).slice(0, 10) : '';
+      if (dispRad) dispRad.textContent = pet.numero_radicado || pet.id;
+      if (dispAct) dispAct.textContent = `Plazo actual: ${entYmd || '--'}${respYmd ? ` · Oficinas: ${respYmd}` : ''}`;
+      if (prorrogaNuevaEntrega) prorrogaNuevaEntrega.value = entYmd;
+      if (prorrogaNuevaResp) prorrogaNuevaResp.value = respYmd;
+      if (prorrogaMotivo) prorrogaMotivo.value = '';
+      if (prorrogaModal) prorrogaModal.style.display = 'flex';
+    }
+
+    let isSubmittingProrroga = false;
+    formProrroga?.addEventListener('submit', async (e: Event) => {
+      e.preventDefault();
+      if (isSubmittingProrroga) return;
+      const petId = prorrogaPetId?.value || '';
+      const nuevaEntrega = prorrogaNuevaEntrega?.value || '';
+      const nuevaResp = prorrogaNuevaResp?.value || '';
+      const motivo = prorrogaMotivo?.value.trim() || '';
+      if (!petId || !nuevaEntrega || !motivo) return;
+
+      const submitBtn = document.getElementById('btn-submit-prorroga') as HTMLButtonElement | null;
+      const submitTxt = document.getElementById('btn-submit-prorroga-text');
+      isSubmittingProrroga = true;
+      if (submitBtn) submitBtn.disabled = true;
+      if (submitTxt) submitTxt.textContent = 'Registrando prórroga...';
+
+      try {
+        const res = await fetch('/api/peticiones/prorroga', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            peticion_id: petId,
+            nueva_fecha_entrega: nuevaEntrega,
+            nueva_fecha_responsable: nuevaResp || null,
+            motivo,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'No se pudo registrar la prórroga.');
+        }
+
+        const pet = peticionesMap.get(petId) || allPeticiones.find((p) => p.id === petId);
+        if (pet) {
+          if (data.peticion?.fecha_limite_entrega) pet.fecha_limite_entrega = data.peticion.fecha_limite_entrega;
+          if (data.peticion?.fecha_limite_responsable) pet.fecha_limite_responsable = data.peticion.fecha_limite_responsable;
+          if (data.peticion?.instrucciones_anexos) pet.instrucciones_anexos = data.peticion.instrucciones_anexos;
+          indexPeticion(pet);
+          syncExplorerCountsAndCard(pet);
+          if (currentActiveFolderId === petId) openFolderDetail(petId);
+        }
+
+        closeProrroga();
+        if (typeof (window as any).showToast === 'function') {
+          (window as any).showToast('Prórroga guardada y auditada correctamente.', 'success');
+        }
+      } catch (err: any) {
+        if (typeof (window as any).showToast === 'function') {
+          (window as any).showToast(err?.message || 'Error al guardar la prórroga.', 'error');
+        }
+      } finally {
+        isSubmittingProrroga = false;
+        if (submitBtn) submitBtn.disabled = false;
+        if (submitTxt) submitTxt.textContent = 'Guardar Prórroga Auditada';
+      }
     });
+
+    // 7.2.3 Marcar Expediente como Completo (Cierre Interno)
+    async function handleCompletarExpediente(petId: string, radicado: string, btn: HTMLButtonElement) {
+      const confirmed = typeof (window as any).showConfirm === 'function'
+        ? await (window as any).showConfirm(
+            `¿Desea marcar internamente el expediente ${radicado || petId} como Completo?\n\nEl expediente pasará a la pestaña Completadas / Respondidas y actualizará el Dashboard y Calendario sin enviar correos externos.`,
+            'Confirmar Cierre Interno'
+          )
+        : true;
+      if (!confirmed) return;
+
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/peticiones/completar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ peticion_id: petId }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'No se pudo marcar el expediente como completo.');
+        }
+
+        const pet = peticionesMap.get(petId) || allPeticiones.find((p) => p.id === petId);
+        if (pet) {
+          if (data.peticion?.estado) pet.estado = data.peticion.estado;
+          if (data.peticion?.instrucciones_anexos) pet.instrucciones_anexos = data.peticion.instrucciones_anexos;
+          pet.respondida = true;
+          indexPeticion(pet);
+          syncExplorerCountsAndCard(pet);
+          const activeTab = document.querySelector('#archivos-filter-tabs .filter-tab.active');
+          const activeFilter = activeTab ? activeTab.getAttribute('data-filter') || 'all' : 'all';
+          applyFilters(activeFilter, (searchInput ? searchInput.value : '').toLowerCase().trim(), false);
+          if (currentActiveFolderId === petId) openFolderDetail(petId);
+        }
+
+        if (typeof (window as any).showToast === 'function') {
+          (window as any).showToast(`Expediente ${radicado || petId} marcado como Completo internamente.`, 'success');
+        }
+      } catch (err: any) {
+        btn.disabled = false;
+        if (typeof (window as any).showToast === 'function') {
+          (window as any).showToast(err?.message || 'Error completando expediente.', 'error');
+        }
+      }
+    }
 
     // Manejador Global de Subida de Respuesta Final Oficial (respetando nombre 100% original)
     document.addEventListener('click', (e) => {
@@ -4663,13 +4672,6 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
     inputSubirRespuestaFinal?.addEventListener('change', async () => {
       const file = inputSubirRespuestaFinal.files?.[0];
       if (!file || !currentUploadPetId) return;
-
-      if (file.size > MAX_FILE_SIZE_BYTES) {
-        if (typeof (window as any).showToast === 'function') {
-          (window as any).showToast(`El archivo excede el límite máximo permitido de ${MAX_FILE_SIZE_MB} MB.`, 'error');
-        }
-        return;
-      }
 
       if (typeof (window as any).showToast === 'function') {
         (window as any).showToast(`Subiendo Respuesta Final Oficial (${file.name})...`, 'info');
@@ -4725,11 +4727,6 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
           }
           indexPeticion(pet);
 
-          // Si el modal está abierto, refrescar su tarjeta de adjunto
-          if (responderModal && responderModal.style.display !== 'none' && responderPetIdInput?.value === currentUploadPetId) {
-            renderComposerAdjunto(pet);
-          }
-
           // Si la vista de detalle de la carpeta está activa, refrescarla al instante
           if (currentActiveFolderId === currentUploadPetId) {
             openFolderDetail(currentUploadPetId);
@@ -4743,173 +4740,6 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         console.error('Error subiendo respuesta final:', uploadErr);
         if (typeof (window as any).showToast === 'function') {
           (window as any).showToast(uploadErr.message || 'Error al subir el archivo.', 'error');
-        }
-      }
-    });
-
-    function openResponderModal(petId: string) {
-      const pet = peticionesMap.get(petId) || allPeticiones.find((p) => p.id === petId);
-      if (!pet) return;
-
-      if (responderPetIdInput) responderPetIdInput.value = pet.id;
-      if (composerDispRadicado) composerDispRadicado.textContent = pet.numero_radicado || 'RAD-2026';
-      if (composerDispSolNombre) composerDispSolNombre.textContent = pet.solicitante_nombre || 'Ciudadano(a)';
-      if (responderEmailInput) {
-        responderEmailInput.value = pet.solicitante_email || '';
-        updateRecipientAvatar(pet.solicitante_email || '');
-      }
-      if (composerDispPinBadge) composerDispPinBadge.textContent = `PIN: ${pet.pin_acceso || pet.respuesta_pin_solicitante || '849201'}`;
-
-      // Configurar remitente dinámico según usuario en sesión o cuenta institucional
-      const currentUser = (window as any).currentLoggedUser;
-      const senderEmail = currentUser?.email || 'notificaciones@unitropico.edu.co';
-      const senderName = currentUser?.name || 'Gestión Documental Unitrópico';
-      const senderAvatarImg = document.getElementById('composer-sender-avatar') as HTMLImageElement | null;
-      const senderDisplay = document.getElementById('composer-sender-display');
-      if (senderAvatarImg) {
-        senderAvatarImg.src = `https://unavatar.io/google/${encodeURIComponent(senderEmail)}`;
-      }
-      if (senderDisplay) {
-        senderDisplay.textContent = `${senderName} <${senderEmail}>`;
-      }
-
-      if (responderAsuntoInput) {
-        const radStr = pet.numero_radicado || 'RAD-2026';
-        const asuntoStr = pet.asunto || 'Petición Oficial';
-        responderAsuntoInput.value = `Respuesta Oficial a su Petición Radicado N.° [${radStr}] - ${asuntoStr}`;
-      }
-
-      if (responderFuncionarioInput) {
-        responderFuncionarioInput.value = pet.respuesta_funcionario || 'Oficina de Correspondencia y Gestión Documental';
-      }
-
-      const defaultMensaje = pet.respuesta_mensaje || `Estimado(a) ${pet.solicitante_nombre || 'solicitante'}, en atención a su comunicación oficial radicada bajo el N° ${pet.numero_radicado}, nos permitimos informarle formalmente que la Universidad Internacional del Trópico Americano ha emitido pronunciamiento de fondo.\n\nEl documento oficial de respuesta y sus soportes asociados se encuentran disponibles para su consulta y descarga segura en nuestro Portal Institucional de Respuestas utilizando las credenciales indicadas a continuación.`;
-      if (responderMensajeInput) {
-        responderMensajeInput.value = defaultMensaje;
-        updateComposerCharCount();
-      }
-
-      renderComposerAdjunto(pet);
-      renderComposerAnexosOpcionales(pet);
-
-      if (responderModal) responderModal.style.display = 'flex';
-    }
-
-    let isSubmittingRespuesta = false;
-    formResponder?.addEventListener('submit', async (e: Event) => {
-      e.preventDefault();
-      if (isSubmittingRespuesta) return;
-
-      const petId = responderPetIdInput?.value || '';
-      const email = responderEmailInput?.value.trim().toLowerCase() || '';
-      const asunto = responderAsuntoInput?.value.trim() || '';
-      const mensaje = responderMensajeInput?.value.trim() || '';
-      const funcionario = responderFuncionarioInput?.value.trim() || '';
-      const currentPet = petId ? (peticionesMap.get(petId) || allPeticiones.find((p) => p.id === petId)) : null;
-      const driveUrl = currentPet?.respuesta_drive_url || null;
-      const respFile = getRespuestaFinalFile(currentPet);
-
-      if (!petId || !mensaje) {
-        if (typeof (window as any).showToast === 'function') {
-          (window as any).showToast('Por favor ingrese el texto de la respuesta oficial.', 'warning');
-        }
-        return;
-      }
-
-      if (!email || !email.includes('@')) {
-        if (typeof (window as any).showToast === 'function') {
-          (window as any).showToast('Por favor ingrese un correo válido para el solicitante.', 'warning');
-        }
-        return;
-      }
-
-      if (!respFile) {
-        if (typeof (window as any).showToast === 'function') {
-          (window as any).showToast('Debe cargar el archivo obligatorio de Respuesta Final Oficial antes de enviar.', 'warning');
-        }
-        return;
-      }
-
-      const anexosOpcionalesIds: string[] = Array.from(
-        document.querySelectorAll('#composer-anexos-list input[name="anexos_opcionales"]:checked')
-      ).map((el: any) => String(el.value || '').trim()).filter(Boolean);
-
-      const submitBtn = document.getElementById('btn-submit-responder') as HTMLButtonElement | null;
-      const submitText = document.getElementById('btn-submit-responder-text');
-
-      isSubmittingRespuesta = true;
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        if (submitText) submitText.textContent = 'Enviando y notificando por correo...';
-      }
-
-      try {
-        const res = await fetch('/api/peticiones/responder', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            peticion_id: petId,
-            solicitante_email: email,
-            pin_solicitante: currentPet?.pin_acceso || currentPet?.respuesta_pin_solicitante || null,
-            asunto,
-            respuesta_mensaje: mensaje,
-            respuesta_funcionario: funcionario,
-            respuesta_drive_url: driveUrl,
-            archivo_respuesta: respFile,
-            anexos_opcionales: anexosOpcionalesIds,
-            respuesta_archivos_incluidos: anexosOpcionalesIds,
-          }),
-        });
-
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok || !data.success) {
-          if (typeof (window as any).showToast === 'function') {
-            (window as any).showToast('Error: ' + (data.error || 'No se pudo enviar la respuesta'), 'error');
-          }
-          return;
-        }
-
-        if (typeof (window as any).showToast === 'function') {
-          (window as any).showToast('Respuesta oficial despachada con éxito. Solicitante notificado por correo.', 'success');
-        }
-        closeResponder();
-
-        // Actualizar peticion en el array local, contadores/tarjetas y recargar vista de la carpeta
-        const pet = peticionesMap.get(petId) || allPeticiones.find((p) => p.id === petId);
-        if (pet) {
-          pet.estado = data.estado_actual || 'Respondida';
-          pet.respondida = true;
-          pet.solicitante_email = pet.solicitante_email || email;
-          pet.respuesta_mensaje = mensaje;
-          pet.respuesta_funcionario = funcionario;
-          pet.respuesta_fecha_envio = new Date().toISOString();
-          pet.respuesta_expira_at = data.expira_at;
-          pet.respuesta_pin_solicitante = data.pin_solicitante;
-          if (data.pin_solicitante && !pet.pin_acceso) {
-            pet.pin_acceso = data.pin_solicitante;
-          }
-          pet.respuesta_drive_url = driveUrl || null;
-          pet.respuesta_archivos_incluidos = anexosOpcionalesIds;
-
-          indexPeticion(pet);
-          syncExplorerCountsAndCard(pet);
-          const activeTab = document.querySelector('#archivos-filter-tabs .filter-tab.active');
-          const activeFilter = activeTab ? activeTab.getAttribute('data-filter') || 'all' : 'all';
-          applyFilters(activeFilter, (searchInput ? searchInput.value : '').toLowerCase().trim(), false);
-          openFolderDetail(petId);
-        } else {
-          setTimeout(() => window.location.reload(), 600);
-        }
-      } catch (err: any) {
-        console.error('Error al despachar respuesta:', err);
-        if (typeof (window as any).showToast === 'function') {
-          (window as any).showToast('Error de red al despachar la respuesta oficial.', 'error');
-        }
-      } finally {
-        isSubmittingRespuesta = false;
-        if (submitBtn) {
-          submitBtn.disabled = false;
-          if (submitText) submitText.textContent = 'Enviar Respuesta Oficial';
         }
       }
     });
