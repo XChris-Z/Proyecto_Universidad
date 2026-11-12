@@ -13,6 +13,10 @@ import { separarRespuestaMeta } from '@lib/subcarpetas';
 import { logSystemActivity } from '@lib/audit';
 import { generatePin6 } from '@lib/security';
 import { resolveSessionActor } from '@lib/request-actor';
+import {
+  isGoogleDriveConfigured,
+  inicializarEstructuraExpedienteDrive,
+} from '@lib/google-drive';
 
 export interface SubcarpetaInput {
   nombre: string;
@@ -607,9 +611,24 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
       cookies,
     }).catch((auditErr) => console.warn('Aviso registrando auditoría de radicación:', auditErr));
 
+    // Sincronización automática inicial en Google Drive (no bloqueante)
+    let driveUrl: string | null = null;
+    let driveSynced = false;
+    if (isGoogleDriveConfigured()) {
+      try {
+        const driveRes = await inicializarEstructuraExpedienteDrive(peticionData.id);
+        driveSynced = Boolean(driveRes.synced);
+        driveUrl = driveRes.webViewLink || null;
+      } catch (driveErr: any) {
+        console.warn('[CREAR PETICIÓN] Aviso sincronizando carpeta inicial en Drive (no fatal):', driveErr?.message);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
+        driveSynced,
+        driveUrl,
         peticion: {
           id: peticionData.id,
           numero_radicado: peticionData.numero_radicado,
@@ -618,6 +637,7 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
           fecha_limite_entrega: peticionData.fecha_limite_entrega,
           fecha_limite_responsable: peticionData.fecha_limite_responsable,
           storage_folder_path: peticionData.storage_folder_path,
+          respuesta_drive_url: driveUrl,
           pin_acceso: finalPinAcceso,
           archivo_principal: savedPrimaryFile,
         },

@@ -9,6 +9,10 @@ import {
   separarRespuestaMeta,
 } from '@lib/subcarpetas';
 import { resolveSessionActor } from '@lib/request-actor';
+import {
+  isGoogleDriveConfigured,
+  respaldarExpedienteLimpioEnDrive,
+} from '@lib/google-drive';
 
 function isCheckConstraintError(err: any): boolean {
   const code = String(err?.code || '').trim();
@@ -154,12 +158,27 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
       cookies,
     }).catch((err) => console.warn('[COMPLETAR EXPEDIENTE] Error registrando auditoría:', err));
 
+    // Sincronización automática del cierre oficial en Google Drive (no bloqueante)
+    let driveSynced = false;
+    let driveUrl: string | null = updated?.respuesta_drive_url || null;
+    if (isGoogleDriveConfigured()) {
+      try {
+        const driveRes = await respaldarExpedienteLimpioEnDrive(peticionId);
+        driveSynced = true;
+        driveUrl = driveRes.webViewLink || driveUrl;
+      } catch (driveErr: any) {
+        console.warn('[COMPLETAR EXPEDIENTE] Aviso sincronizando cierre en Drive (no fatal):', driveErr?.message);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
-        peticion: updated,
+        peticion: updated ? { ...updated, respuesta_drive_url: driveUrl || updated.respuesta_drive_url } : updated,
         expediente_completo: true,
         fecha_cierre: closedAtIso,
+        driveSynced,
+        driveUrl,
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );

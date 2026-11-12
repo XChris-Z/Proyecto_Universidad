@@ -12,6 +12,10 @@ import { separarRespuestaMeta } from '@lib/subcarpetas';
 import { logSystemActivity } from '@lib/audit';
 import { extractClientIp, resolveSessionActor } from '@lib/request-actor';
 import { generatePin6, getDeterministicPin } from '@lib/security';
+import {
+  isGoogleDriveConfigured,
+  inicializarEstructuraExpedienteDrive,
+} from '@lib/google-drive';
 
 export const POST: APIRoute = async ({ request, url, cookies, clientAddress }) => {
   try {
@@ -290,9 +294,24 @@ export const POST: APIRoute = async ({ request, url, cookies, clientAddress }) =
       ip: extractClientIp(request, clientAddress),
     }).catch(() => {});
 
+    // Sincronización incremental de la nueva subcarpeta en Google Drive (no bloqueante)
+    let driveSynced = false;
+    let driveUrl: string | null = null;
+    if (isGoogleDriveConfigured()) {
+      try {
+        const driveRes = await inicializarEstructuraExpedienteDrive(peticion.id);
+        driveSynced = Boolean(driveRes.synced);
+        driveUrl = driveRes.webViewLink || null;
+      } catch (driveErr: any) {
+        console.warn('[SUBCARPETAS CREAR] Aviso sincronizando subcarpeta en Drive (no fatal):', driveErr?.message);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
+        driveSynced,
+        driveUrl,
         subcarpeta: nuevaSub,
         responsables: respInsertados.map((r: any) => {
           const ofi = oficinasData.find((o: any) => o.id === r.oficina_id);

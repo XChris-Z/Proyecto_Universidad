@@ -6,6 +6,10 @@ import { supabase } from '@lib/supabase';
 import { logSystemActivity } from '@lib/audit';
 import { separarRespuestaMeta } from '@lib/subcarpetas';
 import { resolveSessionActor } from '@lib/request-actor';
+import {
+  isGoogleDriveConfigured,
+  sincronizarRespuestaFinalEnDrive,
+} from '@lib/google-drive';
 
 export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
   try {
@@ -197,11 +201,26 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
       console.warn('[Subir Respuesta Final] Error audit:', auditErr.message);
     }
 
+    // 5.1 Sincronizar respuesta final en subcarpeta dedicada de Google Drive (no bloqueante)
+    let driveSynced = false;
+    let driveUrl: string | null = null;
+    if (isGoogleDriveConfigured()) {
+      try {
+        const driveRes = await sincronizarRespuestaFinalEnDrive(peticion.id);
+        driveSynced = Boolean(driveRes.synced);
+        driveUrl = driveRes.driveUrl || null;
+      } catch (driveErr: any) {
+        console.warn('[Subir Respuesta Final] Aviso sincronizando en Drive (no fatal):', driveErr?.message);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
         message: 'Respuesta Final Oficial cargada exitosamente con su nombre original.',
         archivo: archivoRespuesta,
+        driveSynced,
+        driveUrl,
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );

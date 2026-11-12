@@ -12,6 +12,11 @@ import {
   removeApprovedAnexoMarker,
   setRejectedMarker,
 } from '@lib/revision-meta';
+import {
+  isGoogleDriveConfigured,
+  sincronizarAporteAprobadoEnDrive,
+  eliminarAporteRechazadoDeDrive,
+} from '@lib/google-drive';
 
 function extractPinFromObs(obs?: string | null): string | null {
   const match = String(obs || '').match(/PIN:\s*([0-9A-Z]{6})/i);
@@ -148,13 +153,34 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
         cookies,
       }).catch((e) => console.warn('[REVISAR ANEXO] Error auditoría aprobar:', e));
 
+      // Sincronización automática en vivo hacia Google Drive del aporte aprobado
+      let driveSynced = false;
+      let driveUrl: string | null = null;
+      if (isGoogleDriveConfigured()) {
+        try {
+          const driveRes = await sincronizarAporteAprobadoEnDrive(
+            peticionId,
+            anexoId,
+            effectiveSubName,
+            targetResp?.id || null
+          );
+          driveSynced = Boolean(driveRes.synced);
+          driveUrl = driveRes.driveUrl || null;
+        } catch (driveErr: any) {
+          console.warn('[REVISAR ANEXO] Aviso sincronizando aporte aprobado en Drive (no fatal):', driveErr?.message);
+        }
+      }
+
       return new Response(
         JSON.stringify({
           success: true,
+          ok: true,
           accion: 'aprobar',
           anexo_id: anexoId,
           responsable_id: targetResp?.id || null,
           estado_entrega: 'Entregado',
+          driveSynced,
+          driveUrl,
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
@@ -293,15 +319,33 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
       cookies,
     }).catch((e) => console.warn('[REVISAR ANEXO] Error auditoría rechazar:', e));
 
+    // Eliminar archivo rechazado de Google Drive si existe carpeta sincronizada (no bloqueante)
+    let driveRemoved = false;
+    if (isGoogleDriveConfigured()) {
+      try {
+        const remRes = await eliminarAporteRechazadoDeDrive(
+          peticionId,
+          cleanFileName,
+          recipientOffice,
+          effectiveSubName
+        );
+        driveRemoved = Boolean(remRes.removed);
+      } catch (driveErr: any) {
+        console.warn('[REVISAR ANEXO] Aviso eliminando aporte rechazado de Drive (no fatal):', driveErr?.message);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
+        ok: true,
         accion: 'rechazar',
         anexo_id: anexoId,
         responsable_id: targetResp?.id || null,
         estado_entrega: remainingValidForResp > 0 ? targetResp?.estado_entrega : 'Pendiente',
         email_sent: emailSent,
         email_error: emailError || null,
+        driveRemoved,
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );

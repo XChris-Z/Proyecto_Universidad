@@ -98,6 +98,7 @@ const { data: dbPeticiones } = await (supabase
     fecha_limite_entrega,
     fecha_limite_responsable,
     storage_folder_path,
+    respuesta_drive_url,
     estado,
     prioridad,
     created_at,
@@ -2912,17 +2913,44 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
 
             <!-- Acciones de Cabecera -->
             <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-              <button 
-                type="button" 
-                class="btn btn-secondary btn-sm btn-export-drive" 
-                data-id="${escapeHtml(peticion.id)}"
-                data-radicado="${escapeHtml(peticion.numero_radicado)}"
-                title="Respaldar estructura completa de carpetas y archivos en Google Drive sin comprimir"
-                style="display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 0.82rem; padding: 7px 14px; background: #F2F7F6; border: 1.5px solid #00594E; color: #00594E; border-radius: 6px; cursor: pointer; transition: all 0.2s ease;"
-              >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><polyline points="12 11 12 17"/><polyline points="9 14 12 11 15 14"/></svg>
-                <span>Respaldar en Drive</span>
-              </button>
+              ${peticion.respuesta_drive_url ? `
+                <button 
+                  type="button" 
+                  class="btn btn-secondary btn-sm btn-export-drive" 
+                  data-id="${escapeHtml(peticion.id)}"
+                  data-radicado="${escapeHtml(peticion.numero_radicado)}"
+                  data-has-drive="true"
+                  title="Sincronizar con reemplazo limpio en Google Drive (solo aportes aprobados, sin duplicados)"
+                  style="display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 0.82rem; padding: 7px 14px; background: #F2F7F6; border: 1.5px solid #00594E; color: #00594E; border-radius: 6px; cursor: pointer; transition: all 0.2s ease;"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                  <span>Actualizar Carpeta en Drive</span>
+                </button>
+                <a
+                  href="${escapeHtml(peticion.respuesta_drive_url)}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="btn btn-secondary btn-sm btn-open-drive-link"
+                  title="Abrir carpeta oficial del expediente en Google Drive"
+                  style="display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 0.82rem; padding: 7px 14px; background: #F7F5EE; border: 1.5px solid #B5A160; color: #786832; border-radius: 6px; text-decoration: none; transition: all 0.2s ease;"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                  <span>Abrir en Drive ↗</span>
+                </a>
+              ` : `
+                <button 
+                  type="button" 
+                  class="btn btn-secondary btn-sm btn-export-drive" 
+                  data-id="${escapeHtml(peticion.id)}"
+                  data-radicado="${escapeHtml(peticion.numero_radicado)}"
+                  data-has-drive="false"
+                  title="Respaldar estructura completa de carpetas y archivos aprobados en Google Drive"
+                  style="display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 0.82rem; padding: 7px 14px; background: #F2F7F6; border: 1.5px solid #00594E; color: #00594E; border-radius: 6px; cursor: pointer; transition: all 0.2s ease;"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><polyline points="12 11 12 17"/><polyline points="9 14 12 11 15 14"/></svg>
+                  <span>Respaldar en Drive</span>
+                </button>
+              `}
 
               <button 
                 type="button" 
@@ -4437,18 +4465,26 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         }
 
         const pet = peticionesMap.get(petId) || allPeticiones.find((p) => p.id === petId);
-        if (pet && Array.isArray(pet.peticion_responsables)) {
-          const respObj = pet.peticion_responsables.find((r) => String(r.id) === String(data.responsable_id || respId));
-          if (respObj) {
-            respObj.estado_entrega = 'Entregado';
-            respObj.observaciones_entrega = addApprovedAnexoMarker(respObj.observaciones_entrega, anexoId, subNombre);
+        if (pet) {
+          if (data.driveUrl) {
+            pet.respuesta_drive_url = data.driveUrl;
+          }
+          if (Array.isArray(pet.peticion_responsables)) {
+            const respObj = pet.peticion_responsables.find((r) => String(r.id) === String(data.responsable_id || respId));
+            if (respObj) {
+              respObj.estado_entrega = 'Entregado';
+              respObj.observaciones_entrega = addApprovedAnexoMarker(respObj.observaciones_entrega, anexoId, subNombre);
+            }
           }
           indexPeticion(pet);
           if (currentActiveFolderId === petId) openFolderDetail(petId);
         }
 
         if (typeof (window as any).showToast === 'function') {
-          (window as any).showToast('Aporte documental aprobado correctamente.', 'success');
+          const okMsg = data.driveSynced
+            ? '✓ Aporte aprobado y sincronizado automáticamente en Google Drive'
+            : '✓ Aporte documental aprobado correctamente.';
+          (window as any).showToast(okMsg, 'success');
         }
       } catch (err: any) {
         btn.disabled = false;
@@ -4513,9 +4549,12 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
 
         closeRechazar();
         if (typeof (window as any).showToast === 'function') {
-          const msgMail = data.email_sent
+          let msgMail = data.email_sent
             ? 'Aporte devuelto y dependencia notificada por correo.'
             : 'Aporte devuelto al estado Pendiente.';
+          if (data.driveRemoved) {
+            msgMail += ' También fue retirado de Google Drive.';
+          }
           (window as any).showToast(msgMail, 'success');
         }
       } catch (err: any) {
@@ -4639,6 +4678,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         if (pet) {
           if (data.peticion?.estado) pet.estado = data.peticion.estado;
           if (data.peticion?.instrucciones_anexos) pet.instrucciones_anexos = data.peticion.instrucciones_anexos;
+          if (data.driveUrl) pet.respuesta_drive_url = data.driveUrl;
           pet.respondida = true;
           indexPeticion(pet);
           syncExplorerCountsAndCard(pet);
@@ -4649,7 +4689,10 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         }
 
         if (typeof (window as any).showToast === 'function') {
-          (window as any).showToast(`Expediente ${radicado || petId} marcado como Completo internamente.`, 'success');
+          const closeMsg = data.driveSynced
+            ? `Expediente ${radicado || petId} cerrado y respaldado automáticamente en Google Drive.`
+            : `Expediente ${radicado || petId} marcado como Completo internamente.`;
+          (window as any).showToast(closeMsg, 'success');
         }
       } catch (err: any) {
         btn.disabled = false;
@@ -4723,6 +4766,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         const pet = peticionesMap.get(currentUploadPetId) || allPeticiones.find((p) => p.id === currentUploadPetId);
         if (pet) {
           pet.respuesta_archivo = data.archivo;
+          if (data.driveUrl) pet.respuesta_drive_url = data.driveUrl;
           if (!pet.peticion_anexos) pet.peticion_anexos = [];
           const existingIdx = pet.peticion_anexos.findIndex((a: any) => a.storage_path && a.storage_path.includes('/respuesta_final/'));
           if (existingIdx >= 0) {
@@ -4739,7 +4783,10 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         }
 
         if (typeof (window as any).showToast === 'function') {
-          (window as any).showToast(`Respuesta Final Oficial guardada exitosamente: "${file.name}"`, 'success');
+          const uploadOkMsg = data.driveSynced
+            ? `Respuesta Final guardada y sincronizada en Google Drive: "${file.name}"`
+            : `Respuesta Final Oficial guardada exitosamente: "${file.name}"`;
+          (window as any).showToast(uploadOkMsg, 'success');
         }
       } catch (uploadErr: any) {
         console.error('Error subiendo respuesta final:', uploadErr);
@@ -4749,29 +4796,27 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       }
     });
 
-    // 7.3 Exportar Expediente a Google Drive (Estructura y Archivos sin comprimir)
+    // 7.3 Respaldar / Actualizar Expediente en Google Drive (Reemplazo limpio idempotente)
     let isExportingDrive = false;
-    async function handleExportToGoogleDrive(petId: string, radicado: string, clickedBtn: HTMLElement) {
+    async function handleExportToGoogleDrive(petId: string, radicado: string, _clickedBtn: HTMLElement) {
       if (isExportingDrive) return;
 
       const allDriveBtns = document.querySelectorAll<HTMLButtonElement>(`.btn-export-drive[data-id="${petId}"]`);
+      const hadExistingDrive = Array.from(allDriveBtns).some((b) => b.getAttribute('data-has-drive') === 'true');
       isExportingDrive = true;
       allDriveBtns.forEach((btn) => {
         btn.disabled = true;
         btn.innerHTML = `
           <svg class="spin-animation" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-          <span>Creando carpetas y subiendo archivos a Drive...</span>
+          <span>Sincronizando carpeta limpia en Drive...</span>
         `;
       });
 
-      if (typeof (window as any).showToast === 'function') {
-        (window as any).showToast(`Iniciando respaldo de ${radicado} en Google Drive...`, 'info', 'Procesando Respaldo');
-      }
-
       let isSuccess = false;
       try {
-        const res = await fetch('/api/exportar-drive', {
+        const res = await fetch('/api/peticiones/respaldar-drive', {
           method: 'POST',
+          credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ peticionId: petId }),
         });
@@ -4788,9 +4833,9 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
               );
             }
           } else {
-            const errorMsg = data.error || 'No se pudo exportar el expediente a Google Drive.';
+            const errorMsg = data.error || 'No se pudo respaldar el expediente en Google Drive.';
             if (typeof (window as any).showToast === 'function') {
-              (window as any).showToast(errorMsg, 'error', 'Error de Exportación');
+              (window as any).showToast(errorMsg, 'error', 'Error de Sincronización Drive');
             }
           }
           return;
@@ -4798,52 +4843,53 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
 
         isSuccess = true;
 
-        // Éxito: Actualizar en memoria el drive url
+        // Actualizar enlace en memoria y re-renderizar detalle para mostrar "Actualizar Carpeta" + "Abrir en Drive ↗"
         const pet = peticionesMap.get(petId) || allPeticiones.find((p) => p.id === petId);
         if (pet) {
           pet.respuesta_drive_url = data.webViewLink;
           indexPeticion(pet);
         }
-
-        // Mostrar notificación Toast flotante con acciones directas
-        showDriveSuccessToast(radicado, data.webViewLink, data.archivosSubidos || 0, data.subcarpetasCreadas || 0);
-
-        if (typeof (window as any).showToast === 'function') {
-          (window as any).showToast(`¡Expediente ${radicado} respaldado exitosamente en Google Drive!`, 'success', 'Operación Exitosa');
+        if (currentActiveFolderId === petId) {
+          openFolderDetail(petId);
         }
 
-        allDriveBtns.forEach((btn) => {
-          btn.innerHTML = `
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00594E" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-            <span>Respaldado en Drive</span>
-          `;
-          btn.style.background = '#E6EFEF';
-          btn.style.borderColor = '#00594E';
-          btn.style.color = '#00594E';
-        });
+        // Mostrar única confirmación visual ejecutiva con enlace directo y copia rápida
+        showDriveSuccessToast(
+          radicado,
+          data.webViewLink,
+          data.archivosSubidos || 0,
+          data.subcarpetasCreadas || 0,
+          data.aprobadosCount
+        );
       } catch (err: any) {
-        console.error('Error al exportar a Google Drive:', err);
+        console.error('Error al sincronizar con Google Drive:', err);
         if (typeof (window as any).showToast === 'function') {
           (window as any).showToast('Error de comunicación con el servicio de Google Drive.', 'error', 'Error de Conexión');
         }
       } finally {
         isExportingDrive = false;
-        allDriveBtns.forEach((btn) => {
-          btn.disabled = false;
-          if (!isSuccess) {
-            btn.innerHTML = `
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><polyline points="12 11 12 17"/><polyline points="9 14 12 11 15 14"/></svg>
-              <span>Respaldar en Drive</span>
-            `;
+        if (!isSuccess) {
+          const restBtns = document.querySelectorAll<HTMLButtonElement>(`.btn-export-drive[data-id="${petId}"]`);
+          restBtns.forEach((btn) => {
+            btn.disabled = false;
+            btn.innerHTML = hadExistingDrive
+              ? `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg><span>Actualizar Carpeta en Drive</span>`
+              : `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><polyline points="12 11 12 17"/><polyline points="9 14 12 11 15 14"/></svg><span>Respaldar en Drive</span>`;
             btn.style.background = '#F2F7F6';
             btn.style.borderColor = '#00594E';
             btn.style.color = '#00594E';
-          }
-        });
+          });
+        }
       }
     }
 
-    function showDriveSuccessToast(radicado: string, webViewLink: string, archivosCount: number, subcarpetasCount: number) {
+    function showDriveSuccessToast(
+      radicado: string,
+      webViewLink: string,
+      archivosCount: number,
+      subcarpetasCount: number,
+      aprobadosCount?: number
+    ) {
       const toast = document.getElementById('drive-success-toast');
       const openBtn = document.getElementById('btn-drive-open-link') as HTMLAnchorElement | null;
       const copyBtn = document.getElementById('btn-drive-copy-link');
@@ -4854,7 +4900,11 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
 
       if (openBtn) openBtn.href = webViewLink;
       if (msg) {
-        msg.textContent = `Se ha creado en Google Drive la carpeta "${radicado}" con ${archivosCount} archivo(s) organizados en ${subcarpetasCount} subcarpeta(s) sin comprimir.`;
+        const extraAprobados =
+          typeof aprobadosCount === 'number'
+            ? ` (${aprobadosCount} aporte${aprobadosCount === 1 ? '' : 's'} aprobado${aprobadosCount === 1 ? '' : 's'})`
+            : '';
+        msg.textContent = `Carpeta limpia "${radicado}" sincronizada en Google Drive con ${archivosCount} archivo(s)${extraAprobados} en ${subcarpetasCount} subcarpeta(s).`;
       }
 
       if (copyBtn) {
