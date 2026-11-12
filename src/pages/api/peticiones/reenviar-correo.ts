@@ -81,7 +81,7 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
         .select('id, nombre, descripcion')
         .eq('peticion_id', peticion.id) as any);
       if (subs) subcarpetasData = filtrarSubcarpetasValidas(subs);
-    } catch {}
+    } catch { }
 
     let validAnexos: any[] = [];
     try {
@@ -97,7 +97,7 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
           return true;
         });
       }
-    } catch {}
+    } catch { }
 
     const baseUrl = resolvePublicBaseUrl(request, url);
     const { textoLimpio: rawInstLimpia } = separarRespuestaMeta(peticion.instrucciones_anexos || peticion.descripcion || '');
@@ -242,7 +242,7 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
       request,
       clientAddress,
       cookies,
-    }).catch(() => {});
+    }).catch(() => { });
 
     if (exitosos === 0 && fallidos > 0) {
       const primerError = resultados.find((r) => r.status === 'error')?.error || 'Error enviando correo SMTP';

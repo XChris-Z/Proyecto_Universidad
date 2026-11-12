@@ -41,7 +41,7 @@ const {
 ---
 
 <AppLayout
-  title="Calendario Institucional y Semáforo SLA"
+  title="Agenda de Vencimientos y Entregas"
   activeNav="calendario"
 >
   <script id="calendario-ssr-events" type="application/json" is:inline set:html={ssrDeadlinesJson}></script>
@@ -184,31 +184,8 @@ const {
       <!-- CABECERA INSTITUCIONAL Y ACCIONES DE NAVEGACIÓN -->
       <header class="promax-module-header">
         <div class="header-titles">
-          <div class="header-pretitle">
-            <span class="live-status-pill" id="gcal-sync-badge">
-              <span class="badge-dot-live"></span>
-              {
-                isConnected
-                  ? "Google Calendar Activo"
-                  : "Base de Datos en Tiempo Real"
-              }
-            </span>
-            <span class="account-chip" title={userEmail}>
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                ><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"
-                ></path><circle cx="12" cy="7" r="4"></circle></svg
-              >
-              <span>{userEmail}</span>
-            </span>
-          </div>
-          <h2 class="module-main-title">Calendario Institucional</h2>
-          <p class="module-subtitle">Agenda ejecutiva unificada</p>
+          <h2 class="module-main-title">Agenda de Vencimientos</h2>
+          <p class="module-subtitle">Control cronológico de plazos por dependencia y cierre de expedientes</p>
         </div>
 
         <div class="header-actions">
@@ -553,27 +530,8 @@ const {
             </div>
           </div>
 
-          <!-- Derecha: Selector de Vista con Indicador Deslizante (Shared Element) & Filtros -->
+          <!-- Derecha: Selector de Vista con Indicador Deslizante (Shared Element) -->
           <div class="nav-views-group">
-            <!-- Categorías discretas -->
-            <div class="categories-filter-popover" id="gcal-category-filters">
-              <label class="filter-chip-toggle">
-                <input type="checkbox" value="peticion" checked />
-                <span class="chip-color-dot peticion"></span>
-                <span>Peticiones</span>
-              </label>
-              <label class="filter-chip-toggle">
-                <input type="checkbox" value="reporte" checked />
-                <span class="chip-color-dot reporte"></span>
-                <span>Reportes</span>
-              </label>
-              <label class="filter-chip-toggle">
-                <input type="checkbox" value="colegiado" checked />
-                <span class="chip-color-dot colegiado"></span>
-                <span>Colegiados</span>
-              </label>
-            </div>
-
             <!-- Selector de Vista Segmentado -->
             <div class="view-segmented-control" id="gcal-view-switcher">
               <div class="view-indicator-pill" id="view-switcher-indicator">
@@ -643,14 +601,14 @@ const {
             </div>
           </section>
 
-          <!-- PANEL DERECHO: AGENDA & MONITOR SLA (TIMELINE VERTICAL 1fr) -->
+          <!-- PANEL DERECHO: VENCIMIENTOS Y ENTREGAS (TIMELINE VERTICAL 1fr) -->
           <aside class="promax-timeline-column" id="gcal-timeline-monitor">
             <div class="timeline-monitor-card">
               <div class="timeline-header">
                 <div class="timeline-title-wrap">
                   <div class="timeline-title-row">
                     <span class="timeline-live-node"></span>
-                    <h3 class="timeline-heading">Agenda & Monitor SLA</h3>
+                    <h3 class="timeline-heading">Vencimientos y Entregas</h3>
                   </div>
                   <p
                     class="timeline-subheading"
@@ -1194,6 +1152,7 @@ const {
     justify-content: start;
     gap: 16px;
     width: 100%;
+    margin-bottom: 22px;
   }
 
   @media (max-width: 1120px) {
@@ -1641,8 +1600,8 @@ const {
      ========================================================================== */
   .promax-calendar-workspace-split {
     display: grid;
-    grid-template-columns: 1.6fr 1fr;
-    gap: 20px;
+    grid-template-columns: 1.55fr 1fr;
+    gap: 24px;
     align-items: start;
   }
 
@@ -1699,9 +1658,8 @@ const {
     border: 1px solid rgba(226, 232, 240, 0.9);
     border-radius: 14px;
     padding: 8px;
-    min-height: 112px;
-    max-height: 112px;
-    height: 112px;
+    min-height: 96px;
+    height: auto;
     display: flex;
     flex-direction: column;
     box-sizing: border-box;

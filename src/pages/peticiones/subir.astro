@@ -130,21 +130,36 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
           </div>
 
           <div id="file-selected-indicator" class="subir-file-preview" style="display: none;">
-            <div class="subir-file-info">
-              <div class="subir-file-badge-icon">
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-              </div>
-              <div style="min-width: 0;">
-                <strong class="subir-file-name" id="selected-file-name">archivo.pdf</strong>
-                <div class="subir-file-meta">
-                  <span id="selected-file-size">0 KB</span>
-                  <span class="subir-file-ok-pill">Listo para radicar</span>
+            <div class="subir-file-card-top">
+              <div class="subir-file-info">
+                <div class="subir-file-badge-icon">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00594E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                </div>
+                <div style="min-width: 0; flex: 1;">
+                  <div style="font-size: 0.66rem; font-weight: 800; color: #786832; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;">Archivo Cargado</div>
+                  <strong class="subir-file-name" id="selected-file-name">archivo.pdf</strong>
+                  <div class="subir-file-meta">
+                    <span class="subir-meta-pill">Tamaño: <strong id="selected-file-size">0 KB</strong></span>
+                    <span class="subir-meta-pill">Formato: <strong id="selected-file-ext">PDF</strong></span>
+                    <span class="subir-file-ok-pill">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><polyline points="20 6 9 17 4 12"/></svg>
+                      <span>Listo para radicar</span>
+                    </span>
+                  </div>
                 </div>
               </div>
+              <div class="subir-file-actions">
+                <button type="button" id="btn-change-selected-file" class="subir-btn-change-file">
+                  Cambiar archivo
+                </button>
+                <button type="button" id="btn-remove-selected-file" class="subir-btn-remove-file">
+                  Quitar
+                </button>
+              </div>
             </div>
-            <button type="button" id="btn-remove-selected-file" class="subir-btn-remove-file">
-              Quitar archivo
-            </button>
+            <div class="subir-file-verify-track" aria-hidden="true">
+              <div class="subir-file-verify-fill"></div>
+            </div>
           </div>
         </div>
 
@@ -188,8 +203,8 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
           </div>
           <div>
-            <h3 class="subir-card-title">3. Datos del Solicitante y Clasificación Jurídica</h3>
-            <p class="subir-card-subtitle">Asunto principal, datos de notificación del ciudadano y prioridad SLA</p>
+            <h3 class="subir-card-title">3. Datos del Solicitante y Clasificación</h3>
+            <p class="subir-card-subtitle">Asunto principal, datos de contacto del solicitante y prioridad institucional</p>
           </div>
         </div>
 
@@ -660,30 +675,40 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
     }
 
     .subir-file-preview {
-      margin-top: 12px;
-      background: #F2F7F6;
-      border: 1px solid #B2CFCB;
-      border-radius: 12px;
-      padding: 12px 14px;
+      margin-top: 8px;
+      background: #FFFFFF;
+      border: 1.5px solid #B2CFCB;
+      border-radius: 14px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: 0 4px 14px rgba(0, 89, 78, 0.06);
+      animation: subirCrossfade 0.22s ease;
+    }
+
+    .subir-file-card-top {
+      display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
-      animation: subirCrossfade 0.22s ease;
+      gap: 14px;
+      flex-wrap: wrap;
     }
 
     .subir-file-info {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
       min-width: 0;
+      flex: 1;
     }
 
     .subir-file-badge-icon {
-      width: 36px;
-      height: 36px;
-      border-radius: 9px;
-      background: #FFFFFF;
-      border: 1px solid #B2CFCB;
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: #F2F7F6;
+      border: 1.5px solid #B2CFCB;
       color: #00594E;
       display: flex;
       align-items: center;
@@ -694,48 +719,107 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
     .subir-file-name {
       display: block;
       color: #111827;
-      font-size: 0.84rem;
+      font-size: 0.90rem;
       font-weight: 800;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      word-break: break-word;
+      line-height: 1.3;
     }
 
     .subir-file-meta {
       display: flex;
       align-items: center;
-      gap: 8px;
+      flex-wrap: wrap;
+      gap: 6px;
       font-size: 0.72rem;
       color: #475569;
-      margin-top: 2px;
+      margin-top: 6px;
+    }
+
+    .subir-meta-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #F8FAFC;
+      border: 1px solid #DCE4E3;
+      color: #475569;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.70rem;
+    }
+    .subir-meta-pill strong {
+      color: #111827;
+      font-weight: 800;
     }
 
     .subir-file-ok-pill {
-      background: #FFFFFF;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #F2F7F6;
       color: #00594E;
       border: 1px solid #B2CFCB;
-      padding: 1px 7px;
+      padding: 2px 9px;
       border-radius: 999px;
-      font-weight: 700;
-      font-size: 0.68rem;
+      font-weight: 800;
+      font-size: 0.70rem;
+    }
+
+    .subir-file-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .subir-btn-change-file {
+      background: #F2F7F6;
+      border: 1px solid #B2CFCB;
+      color: #00594E;
+      border-radius: 8px;
+      padding: 7px 12px;
+      font-size: 0.75rem;
+      font-weight: 750;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.16s ease;
+    }
+    .subir-btn-change-file:hover {
+      background: #00594E;
+      color: #FFFFFF;
+      border-color: #00594E;
     }
 
     .subir-btn-remove-file {
-      background: #FFFFFF;
-      border: 1px solid #CBD5E1;
-      color: #475569;
+      background: #FEF2F2;
+      border: 1px solid #FECACA;
+      color: #DC2626;
       border-radius: 8px;
-      padding: 5px 10px;
-      font-size: 0.73rem;
-      font-weight: 700;
+      padding: 7px 12px;
+      font-size: 0.75rem;
+      font-weight: 750;
       cursor: pointer;
       white-space: nowrap;
       transition: all 0.16s ease;
     }
 
     .subir-btn-remove-file:hover {
-      border-color: #111827;
-      color: #111827;
+      background: #DC2626;
+      border-color: #DC2626;
+      color: #FFFFFF;
+    }
+
+    .subir-file-verify-track {
+      width: 100%;
+      height: 5px;
+      background: #E2E8F0;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .subir-file-verify-fill {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #00594E 0%, #B5A160 100%);
+      border-radius: 999px;
     }
 
     .subir-field-label {
@@ -914,12 +998,16 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
     const fileIndicator = document.getElementById('file-selected-indicator');
     const selectedFileName = document.getElementById('selected-file-name');
     const selectedFileSize = document.getElementById('selected-file-size');
+    const selectedFileExt = document.getElementById('selected-file-ext');
+    const btnChangeFile = document.getElementById('btn-change-selected-file');
     const btnRemoveFile = document.getElementById('btn-remove-selected-file');
     const asuntoInput = document.getElementById('peticion-asunto') as HTMLInputElement;
 
     function setPrimaryFile(file: File) {
       primaryFile = file;
       if (selectedFileName) selectedFileName.textContent = file.name;
+      const extMatch = file.name.split('.').pop();
+      if (selectedFileExt) selectedFileExt.textContent = extMatch ? extMatch.toUpperCase() : 'DOC';
       const sizeText = file.size >= 1024 * 1024
         ? `${(file.size / (1024 * 1024)).toFixed(2)} MB`
         : `${(file.size / 1024).toFixed(1)} KB`;
@@ -938,12 +1026,16 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
       }
     }
 
-      function removePrimaryFile() {
+    function removePrimaryFile() {
       primaryFile = null;
       if (fileInput) fileInput.value = '';
       if (fileIndicator) fileIndicator.style.display = 'none';
       if (dropZone) dropZone.style.display = 'flex';
     }
+
+    btnChangeFile?.addEventListener('click', () => {
+      fileInput?.click();
+    });
 
     if (dropZone && fileInput) {
       dropZone.addEventListener('click', () => fileInput.click());

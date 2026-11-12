@@ -97,9 +97,9 @@ export async function initCalendario() {
     if (!isGoogleConnected) {
       const confirmed = typeof (window as any).showConfirm === 'function'
         ? await (window as any).showConfirm(
-            '¿Deseas conectar tu cuenta institucional de Google Workspace para sincronizar tus eventos en tiempo real?',
-            'Google Calendar Institucional'
-          )
+          '¿Deseas conectar tu cuenta institucional de Google Workspace para sincronizar tus eventos en tiempo real?',
+          'Google Calendar Institucional'
+        )
         : true;
 
       if (confirmed) {
@@ -588,8 +588,8 @@ function renderMonthView() {
         ev.urgencia === 'completed' || ev.completada
           ? 'OK'
           : ev.diasRestantes <= 0
-          ? 'Vencido'
-          : `${ev.diasRestantes}d`;
+            ? 'Vencido'
+            : `${ev.diasRestantes}d`;
       const chipTitle =
         ev.urgencia === 'completed' || ev.completada
           ? `${ev.titulo} (Completado)`
@@ -699,10 +699,10 @@ function renderTimelineMonitor(focusEventId?: string) {
         activeSlaFilter === 'danger'
           ? 'Críticos'
           : activeSlaFilter === 'warning'
-          ? 'En Alerta'
-          : activeSlaFilter === 'completed'
-          ? 'Completados'
-          : 'En Término';
+            ? 'En Alerta'
+            : activeSlaFilter === 'completed'
+              ? 'Completados'
+              : 'En Término';
       subtitleEl.textContent = `Filtrando: Compromisos ${label} (${targetEvents.length})`;
       if (clearBtn) clearBtn.style.display = 'inline-flex';
     } else {
@@ -747,10 +747,10 @@ function renderTimelineMonitor(focusEventId?: string) {
     const urgencyLabel = isCompleted
       ? 'Completado'
       : ev.diasRestantes <= 0
-      ? 'Vencido'
-      : ev.diasRestantes <= 2
-      ? `${ev.diasRestantes}d (Atención Inmediata)`
-      : `${ev.diasRestantes} días restantes`;
+        ? 'Vencido'
+        : ev.diasRestantes <= 2
+          ? `${ev.diasRestantes}d (Atención Inmediata)`
+          : `${ev.diasRestantes} días restantes`;
 
     card.innerHTML = `
       <div class="timeline-node-pin ${ev.urgencia}"></div>
@@ -793,18 +793,24 @@ function renderTimelineMonitor(focusEventId?: string) {
           </div>
         </div>
         
-        ${ev.link ? `
-          <div class="timeline-card-actions">
-            <a href="${ev.link}" target="_blank" rel="noopener noreferrer" class="timeline-action-link">
-              <span>Abrir en Google Calendar</span>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
-            </a>
-          </div>
-        ` : ''}
+        ${ev.link ? (() => {
+          const isExternal = ev.link.startsWith('http');
+          return `
+            <div class="timeline-card-actions">
+              <a href="${ev.link}" ${isExternal ? 'target="_blank" rel="noopener noreferrer"' : ''} class="timeline-action-link">
+                <span>${isExternal ? 'Abrir en Google Calendar' : 'Abrir Carpeta de Expediente'}</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              </a>
+            </div>
+          `;
+        })() : ''}
       </div>
     `;
 
-    card.addEventListener('click', () => {
+    card.addEventListener('click', (evClick) => {
+      if ((evClick.target as HTMLElement | null)?.closest('.timeline-action-link')) {
+        return;
+      }
       openDayModal(ev.fecha, [ev]);
     });
 
@@ -859,8 +865,8 @@ function renderWeekView() {
           ev.urgencia === 'completed' || ev.completada
             ? 'Completado'
             : ev.diasRestantes <= 0
-            ? 'Vencido'
-            : `${ev.diasRestantes}d`;
+              ? 'Vencido'
+              : `${ev.diasRestantes}d`;
         cardsHtml += `
           <div class="gcal-week-card sem-${ev.urgencia}" data-id="${ev.id}">
             <div class="gcal-week-card-type">${ev.tipo} &bull; ${wkStatus}</div>
@@ -1266,7 +1272,7 @@ function setupCreateEventModal() {
 
       const cleanDate = fecha.replace(/-/g, "");
       const gcalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(titulo)}&dates=${cleanDate}/${cleanDate}&details=${encodeURIComponent(destino + " - " + titulo)}&location=${encodeURIComponent("Unitrópico")}`;
-      
+
       if (!result.success) {
         window.open(gcalUrl, "_blank");
       }

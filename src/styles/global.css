@@ -7132,6 +7132,52 @@ p, h1, h2, h3, h4, h5, h6, span, label, td, th {
   transition: all 0.2s ease !important;
 }
 
+/* ==========================================================================
+   Selectores Personalizados UI/UX Pro Max (Globales SGD Unitrópico)
+   ========================================================================== */
+select.form-input,
+select.pro-select,
+#audit-filter-action,
+#audit-filter-severity,
+.role-select-dropdown {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  background-color: #FFFFFF !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2300594E' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 11px center !important;
+  background-size: 15px 15px !important;
+  padding-right: 36px !important;
+  border: 1.5px solid #DCE4E3 !important;
+  border-radius: 10px !important;
+  color: #111827 !important;
+  font-family: inherit !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease !important;
+}
+
+select.form-input:hover,
+select.pro-select:hover,
+#audit-filter-action:hover,
+#audit-filter-severity:hover,
+.role-select-dropdown:hover {
+  border-color: #B2CFCB !important;
+  background-color: #F2F7F6 !important;
+}
+
+select.form-input:focus,
+select.pro-select:focus,
+#audit-filter-action:focus,
+#audit-filter-severity:focus,
+.role-select-dropdown:focus {
+  outline: none !important;
+  border-color: #00594E !important;
+  box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.14) !important;
+}
+
+
 
 
 

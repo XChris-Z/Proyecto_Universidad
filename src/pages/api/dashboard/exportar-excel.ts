@@ -17,12 +17,12 @@ export const GET: APIRoute = async () => {
     // Hoja 1: Resumen Ejecutivo
     const sheet1: XlsxSheetSpec = {
       name: 'Resumen Ejecutivo',
-      colWidths: [38, 22, 42],
+      colWidths: [38, 22, 48],
       rows: [
         [
-          { value: 'INFORME EJECUTIVO INSTITUCIONAL — SGD UNITRÓPICO', style: 1 },
+          { value: 'INFORME EJECUTIVO DE TRAZABILIDAD DE PETICIONES Y EXPEDIENTES', style: 1 },
           { value: `Generado: ${snap.generatedAtBogota}`, style: 1 },
-          { value: 'Rectoría y Secretaría General', style: 1 },
+          { value: 'SGD Unitrópico · Secretaría General', style: 1 },
         ],
         [
           { value: 'Indicador Clave de Gestión', style: 2 },
@@ -86,9 +86,17 @@ export const GET: APIRoute = async () => {
     };
 
     // Hoja 2: Detalle Peticiones
+    const todayYmd = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Bogota',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+
     const sheet2Rows: XlsxCell[][] = [
       [
-        { value: 'REGISTRO DETALLADO DE PETICIONES RADICADAS', style: 1 },
+        { value: 'TRAZABILIDAD DE PETICIONES Y CARPETAS DE EXPEDIENTES', style: 1 },
+        { value: '', style: 1 },
         { value: '', style: 1 },
         { value: '', style: 1 },
         { value: '', style: 1 },
@@ -103,21 +111,49 @@ export const GET: APIRoute = async () => {
         { value: 'Solicitante', style: 2 },
         { value: 'Prioridad', style: 2 },
         { value: 'Estado', style: 2 },
+        { value: '% Avance Aportes', style: 2 },
         { value: 'Fecha Radicación', style: 2 },
-        { value: 'Límite Oficinas', style: 2 },
+        { value: 'Plazo Oficinas Responsables', style: 2 },
         { value: 'Cierre General', style: 2 },
       ],
     ];
 
     snap.peticiones.forEach((p: any, idx: number) => {
       const st: XlsxStyleId = idx % 2 === 0 ? 4 : 5;
-      const estadoLabel = p.respondida ? 'Expediente Completo / Respondida' : p.estado || 'En Trámite';
+      const resps: any[] = Array.isArray(p.peticion_responsables) ? p.peticion_responsables : [];
+      const totalDeps = resps.length;
+      const deliveredDeps = resps.filter((r: any) => {
+        const obs = String(r?.observaciones_entrega || '').toUpperCase();
+        const isRej = obs.includes('[RECHAZADO]') || obs.includes('DEVUELTO');
+        const isAppr = obs.includes('[APROBADO]') || obs.includes('ESTADO:APROBADO');
+        const est = String(r?.estado_entrega || '').toLowerCase();
+        return !isRej && (est === 'entregado' || est === 'aprobado' || isAppr);
+      }).length;
+      const avanceLabel = p.respondida
+        ? '100%'
+        : totalDeps > 0
+          ? `${Math.round((deliveredDeps / totalDeps) * 100)}% (${deliveredDeps}/${totalDeps})`
+          : 'Sin dependencias';
+
+      let estadoLabel = 'En Trámite (Al Día)';
+      if (p.respondida) {
+        estadoLabel = 'Expediente Completo';
+      } else if (p.fecha_limite_entrega) {
+        const limitYmd = String(p.fecha_limite_entrega).slice(0, 10);
+        const daysRem = Math.round((Date.parse(`${limitYmd}T00:00:00Z`) - Date.parse(`${todayYmd}T00:00:00Z`)) / 86_400_000);
+        if (!Number.isNaN(daysRem)) {
+          if (daysRem < 0) estadoLabel = 'Vencido';
+          else if (daysRem <= 3) estadoLabel = 'Próximo a Vencer';
+        }
+      }
+
       sheet2Rows.push([
         { value: p.numero_radicado || String(p.id).slice(0, 8), style: st },
         { value: p.asunto || '', style: st },
         { value: p.solicitante_nombre || '', style: st },
         { value: p.prioridad || 'Media', style: st },
-        { value: estadoLabel, style: st },
+        { value: estadoLabel, style: p.respondida ? 6 : st },
+        { value: avanceLabel, style: st },
         { value: String(p.fecha_radicacion || p.created_at || '').slice(0, 10) || '--', style: st },
         { value: String(p.fecha_limite_responsable || '--').slice(0, 10), style: st },
         { value: String(p.fecha_limite_entrega || '--').slice(0, 10), style: st },
@@ -126,7 +162,7 @@ export const GET: APIRoute = async () => {
 
     const sheet2: XlsxSheetSpec = {
       name: 'Detalle Peticiones',
-      colWidths: [18, 42, 26, 12, 28, 16, 16, 16],
+      colWidths: [18, 42, 26, 12, 24, 20, 16, 26, 16],
       rows: sheet2Rows,
     };
 
@@ -218,11 +254,17 @@ export const GET: APIRoute = async () => {
 
     snap.auditLogsRecientes.slice(0, 40).forEach((log: any, idx: number) => {
       const st = idx % 2 === 0 ? 4 : 5;
+      const rawName = String(log.actor_name || '').trim();
+      const actorDisplay =
+        !rawName ||
+        /^(admin|admin general|administrador general|administrador del sistema|sistema sgd)$/i.test(rawName)
+          ? 'ING. Christian Lemus'
+          : rawName;
       sheet4Rows.push([
         { value: log.action_type || 'EVENTO', style: st },
         { value: log.entity_id || log.entity || '--', style: st },
-        { value: log.actor_name || 'Sistema SGD', style: st },
-        { value: formatBogotaDateTime(log.raw_timestamp), style: st },
+        { value: actorDisplay, style: st },
+        { value: formatBogotaDateTime(log.raw_timestamp || log.created_at), style: st },
         { value: log.details || log.action || '', style: st },
       ]);
     });
@@ -246,7 +288,9 @@ export const GET: APIRoute = async () => {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'Content-Disposition': `attachment; filename="Informe_Ejecutivo_SGD_Unitropico_${todayIso}.xlsx"`,
-        'Cache-Control': 'no-store',
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        Pragma: 'no-cache',
+        Expires: '0',
       },
     });
   } catch (err: any) {

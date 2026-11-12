@@ -2,7 +2,7 @@
 // Constantes globales del SGD Unitrópico
 
 export const APP_NAME = 'SGD Unitrópico';
-export const APP_FULL_NAME = 'Sistema de Gestión Documental y Gobierno Institucional';
+export const APP_FULL_NAME = 'Plataforma de Trazabilidad de Peticiones y Expedientes';
 export const INSTITUTION_NAME = 'Universidad Internacional del Trópico Americano';
 
 /** Etiqueta informativa para carga ilimitada directa a Storage */
@@ -34,12 +34,12 @@ export const ADMIN_ROUTES = ['/admin/usuarios', '/admin/roles'];
 /** Mapa de rutas a etiquetas de navegación */
 export const NAV_LABELS: Record<string, string> = {
   '/dashboard':      'Dashboard — Panel de Control',
-  '/archivos':       'Módulo de Archivos y TRD',
+  '/archivos':       'Carpetas de Expedientes',
   '/peticiones':     'Derechos de Petición y PQRS',
   '/normas':         'Cuerpos Colegiados y Normatividad',
   '/juridicos':      'Asuntos Jurídicos y Tutelas',
   '/juzgamiento':    'Fase de Juzgamiento Disciplinario',
-  '/calendario':     'Calendario Institucional',
+  '/calendario':     'Agenda de Vencimientos',
   '/programas':      'Programas Académicos',
   '/planeacion':     'Planeación y Gestión CSU',
   '/relacionamiento':'Relacionamiento Institucional',

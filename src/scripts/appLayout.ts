@@ -922,7 +922,8 @@ export function initAppLayout() {
       SESSION_COOKIE_KEY,
       'sb-access-token',
       'sb-refresh-token',
-      'sgd_session_user'
+      'sgd_session_user',
+      'sgd_session_email'
     ];
     cookiesToPurge.forEach(name => {
       document.cookie = `${name}=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
@@ -991,6 +992,9 @@ export function initAppLayout() {
         const payload = { userId: u.id, email: u.email, loggedAt: new Date().toISOString() };
         localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(payload));
         document.cookie = `${SESSION_COOKIE_KEY}=${u.id}; path=/; max-age=${7 * 24 * 3600}; SameSite=Lax`;
+        if (u.email) {
+          document.cookie = `sgd_session_email=${encodeURIComponent(u.email)}; path=/; max-age=${7 * 24 * 3600}; SameSite=Lax`;
+        }
         window.updateUserProfileUI();
         if (switchUserModal) switchUserModal.style.display = 'none';
         window.showToast(`Perfil conmutado a: ${u.name} (${u.role})`, 'info');

@@ -484,9 +484,12 @@ function getPetSlaTone(bucket: string, responded: boolean) {
                               type="button"
                               class="btn-resend-single-dep"
                               data-peticion-id={pet.id}
-                              data-responsable-id={r.id}
-                              data-oficina={ofiNombre}
                               data-radicado={pet.numero_radicado}
+                              data-asignacion-id={r.id}
+                              data-responsable-id={r.id}
+                              data-dependencia-nombre={ofiNombre}
+                              data-oficina={ofiNombre}
+                              data-correo={r.oficinas?.email_institucional || ''}
                               title={pillTooltip}
                               style={`display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 0.73rem; line-height: 1.25; max-width: 100%; cursor: pointer; font-family: inherit; transition: all 0.18s ease; ${badgeStyle}`}
                             >
@@ -518,18 +521,6 @@ function getPetSlaTone(bucket: string, responded: boolean) {
                   <td style="padding: 12px 8px; text-align: right; white-space: nowrap;">
                     <div style="display: inline-flex; align-items: center; gap: 6px;">
                       
-                      <!-- Botón Reenviar Correo ÚNICAMENTE a Dependencias Pendientes -->
-                      <button 
-                        type="button" 
-                        class="btn-icon-action btn-action-mail btn-resend-mail" 
-                        data-id={pet.id} 
-                        data-radicado={pet.numero_radicado}
-                        title="Reenviar Notificación por Correo Únicamente a Dependencias Pendientes"
-                        style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid #DCE4E3; background: #ffffff; color: #475569; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.18s ease;"
-                      >
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                      </button>
-
                       <!-- Botón + Prórroga -->
                       <button 
                         type="button" 
@@ -892,10 +883,11 @@ function getPetSlaTone(bucket: string, responded: boolean) {
         e.preventDefault();
         e.stopPropagation();
         const peticionId = singleDepBtn.dataset.peticionId || '';
-        const responsableId = singleDepBtn.dataset.responsableId || '';
-        const oficina = singleDepBtn.dataset.oficina || 'Dependencia';
+        const asignacionId = singleDepBtn.dataset.asignacionId || singleDepBtn.dataset.responsableId || '';
+        const oficina = singleDepBtn.dataset.dependenciaNombre || singleDepBtn.dataset.oficina || 'Dependencia';
         const radicado = singleDepBtn.dataset.radicado || '';
-        if (!peticionId || !responsableId) return;
+        const correo = singleDepBtn.dataset.correo || '';
+        if (!peticionId && !radicado && !asignacionId) return;
 
         singleDepBtn.disabled = true;
         const origHtml = singleDepBtn.innerHTML;
@@ -905,8 +897,16 @@ function getPetSlaTone(bucket: string, responded: boolean) {
         try {
           const res = await fetch('/api/enviar-correo-peticion', {
             method: 'POST',
+            credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ peticion_id: peticionId, responsable_id: responsableId }),
+            body: JSON.stringify({
+              peticion_id: peticionId,
+              radicado,
+              responsable_id: asignacionId,
+              asignacion_id: asignacionId,
+              dependencia_nombre: oficina,
+              correo,
+            }),
           });
           const data = await res.json();
           if (!res.ok || !data.success) {

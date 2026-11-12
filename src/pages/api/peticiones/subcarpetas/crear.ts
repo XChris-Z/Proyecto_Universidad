@@ -10,9 +10,10 @@ import {
 } from '@lib/email';
 import { separarRespuestaMeta } from '@lib/subcarpetas';
 import { logSystemActivity } from '@lib/audit';
+import { extractClientIp, resolveSessionActor } from '@lib/request-actor';
 import { generatePin6, getDeterministicPin } from '@lib/security';
 
-export const POST: APIRoute = async ({ request, url }) => {
+export const POST: APIRoute = async ({ request, url, cookies, clientAddress }) => {
   try {
     const body = await request.json().catch(() => ({}));
     const { peticion_id, nombre, descripcion, oficina_ids } = body;
@@ -276,14 +277,17 @@ export const POST: APIRoute = async ({ request, url }) => {
     await Promise.allSettled(emailPromises);
 
     // 7. Registro de Auditoría
+    const actor = await resolveSessionActor(cookies);
     await logSystemActivity({
-      actor: { id: 'usr-root', name: 'Administrador Documental', role: 'funcionario' },
+      actor,
       action: `Nueva Subcarpeta "${cleanNombre}" en ${peticion.numero_radicado}`,
       actionType: 'MODIFICACION',
       entity: 'Peticiones Radicadas',
       entityId: peticion.numero_radicado,
       details: `Se registró en base de datos la subcarpeta "${cleanNombre}" con ${oficinasData.length} dependencias asignadas.`,
       severity: 'INFO',
+      cookies,
+      ip: extractClientIp(request, clientAddress),
     }).catch(() => {});
 
     return new Response(

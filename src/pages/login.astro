@@ -1011,6 +1011,7 @@ import AuthLayout from "@layouts/AuthLayout.astro";
       // Cookie de sesión que verifica el middleware (max-age 7 días si remember, o 1 día)
       const maxAge = remember ? 7 * 24 * 3600 : 24 * 3600;
       document.cookie = `${SESSION_COOKIE_KEY}=${sessionUser.id}; path=/; max-age=${maxAge}; SameSite=Lax`;
+      document.cookie = `sgd_session_email=${encodeURIComponent(email)}; path=/; max-age=${maxAge}; SameSite=Lax`;
 
       // 4. Registro oficial de trazabilidad en auditoría
       try {

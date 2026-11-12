@@ -385,7 +385,7 @@ const peticionesJson = JSON.stringify(peticiones);
 const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64');
 ---
 
-<AppLayout title="Gestor de Archivos y Carpetas de Radicados" activeNav="archivos">
+<AppLayout title="Carpetas y Expedientes" activeNav="archivos">
   <div class="archivos-wrapper" style="display: flex; flex-direction: column; gap: 20px;">
 
     <!-- =========================================================================
@@ -403,10 +403,10 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
           </div>
           <div>
             <div class="archivos-header-title-row">
-              <span class="archivos-header-title">Gestor de Archivos y Expedientes</span>
+              <span class="archivos-header-title">Carpetas y Expedientes</span>
               <span class="archivos-total-pill">{totalCount} expediente{totalCount === 1 ? '' : 's'}</span>
             </div>
-            <div class="archivos-header-subtitle">Directorio raíz de expedientes virtuales y control preventivo</div>
+            <div class="archivos-header-subtitle">Repositorio central de expedientes, trazabilidad de aportes por dependencia y cierre de peticiones</div>
             {totalCount > 0 && (
               <div class="archivos-sla-chart-strip" title={`Distribución SLA: ${respondedCount} Respondida, ${safeCount} Saludable, ${warnCount} Próximo a Vencer, ${criticalCount} Crítico`}>
                 <div class="archivos-chart-bar" role="img" aria-label="Distribución de plazos de expedientes">
@@ -683,25 +683,29 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
 
                 return (
                   <tr class="doc-row" id={`row-folder-${doc.id}`} data-id={doc.id} data-radicado={doc.numero_radicado} data-pin={doc.pin_acceso || '849201'} data-asunto={doc.asunto} data-solicitante={doc.solicitante_nombre} data-status={isResponded ? 'responded' : 'pending'} data-sla={filterSla}>
-                    <td>
-                      <div style="display: flex; align-items: center; gap: 10px;">
-                        <div class="doc-icon-badge pdf" style="width: 34px; height: 34px; font-size: 0.68rem; background: var(--verde-suave-bg); color: var(--verde-principal); border: 1px solid var(--verde-borde); display: flex; align-items: center; justify-content: center; border-radius: 6px;">
-                          <span>DOC</span>
+                    <td style="vertical-align: middle; min-width: 260px;">
+                      <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+                        <div class="doc-icon-badge" style="width: 38px; height: 38px; flex-shrink: 0; background: #F2F7F6; color: #00594E; border: 1.5px solid #B2CFCB; display: flex; align-items: center; justify-content: center; border-radius: 10px;">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00594E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                         </div>
-                        <div>
-                          <div style="font-weight: 700; font-size: 0.88rem; color: var(--text-main);">{doc.asunto}</div>
-                          <div style="font-size: 0.74rem; color: var(--text-muted);">
-                            {(doc.solicitante_tipo === 'Docente' ? 'Profesor' : doc.solicitante_tipo) || 'Peticionario'} &bull; {doc.solicitante_nombre}
+                        <div style="min-width: 0; flex: 1;">
+                          <div style="font-weight: 750; font-size: 0.88rem; color: #111827; line-height: 1.3; margin-bottom: 3px;" title={doc.asunto}>{doc.asunto}</div>
+                          <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 0.74rem; color: #64748B;">
+                            <span>{(doc.solicitante_tipo === 'Docente' ? 'Profesor' : doc.solicitante_tipo) || 'Peticionario'} &bull; {doc.solicitante_nombre}</span>
                             {anexoPrincipal && (
-                              <span style="color: var(--verde-principal); font-weight: 600; margin-left: 6px;">
-                                ({anexoPrincipal.nombre_archivo})
+                              <span
+                                title={anexoPrincipal.nombre_archivo}
+                                style="display: inline-flex; align-items: center; gap: 4px; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; border-radius: 6px; padding: 1px 7px; font-weight: 600; font-size: 0.70rem;"
+                              >
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="flex-shrink: 0;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{anexoPrincipal.nombre_archivo}</span>
                               </span>
                             )}
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td>
+                    <td style="vertical-align: middle; white-space: nowrap;">
                       <span class="radicado-chip">{doc.numero_radicado}</span>
                       <div style="margin-top: 4px; display: inline-flex; align-items: center; gap: 4px; background: #F7F5EE; border: 1px solid #DBD2B0; padding: 2px 6px; border-radius: 5px;">
                         <span style="font-family: monospace; font-size: 0.68rem; font-weight: 800; color: #786832;">PIN {doc.pin_acceso || '849201'}</span>
@@ -716,33 +720,34 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                         </button>
                       </div>
                     </td>
-                    <td style="font-size: 0.8rem;">
-                      <div>Rad: <strong>{doc.fecha_radicacion || '--'}</strong></div>
-                      <div style="color: var(--text-muted); font-size: 0.74rem;">Límite: {doc.fecha_limite_entrega}</div>
+                    <td style="font-size: 0.8rem; vertical-align: middle; white-space: nowrap;">
+                      <div style="color: #111827;">Rad: <strong>{doc.fecha_radicacion || '--'}</strong></div>
+                      <div style="color: #64748B; font-size: 0.74rem;">Límite: {doc.fecha_limite_entrega}</div>
                     </td>
-                    <td>
+                    <td style="vertical-align: middle; min-width: 110px;">
                       <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.72rem; margin-bottom: 3px;">
                         <span style={`font-weight: 800; color: ${prog.color};`}>{prog.percentage}%</span>
-                        <span style="color: var(--text-muted); font-size: 0.68rem;">{prog.daysRemaining} días</span>
+                        <span style="color: #64748B; font-size: 0.68rem;">{prog.daysRemaining} días</span>
                       </div>
                       <div style="width: 100%; height: 5px; background: #E2E8F0; border-radius: 9999px; overflow: hidden;">
                         <div style={`width: ${prog.percentage}%; height: 100%; background: ${prog.color}; border-radius: 9999px;`}></div>
                       </div>
                     </td>
-                    <td>
-                      <span style="font-size: 0.78rem; font-weight: 700; color: var(--text-main);">
+                    <td style="vertical-align: middle; white-space: nowrap;">
+                      <span style="font-size: 0.78rem; font-weight: 700; color: #111827;">
                         {responsables.length} asignadas
                       </span>
-                      <div style="font-size: 0.70rem; color: var(--dorado-oscuro);">Límite: {doc.fecha_limite_responsable}</div>
+                      <div style="font-size: 0.70rem; color: #786832;">Límite: {doc.fecha_limite_responsable}</div>
                     </td>
-                    <td>
-                      <span class="row-status-pill" style={`font-size: 0.72rem; font-weight: 700; padding: 4px 8px; border-radius: 4px; border: 1px solid ${isResponded ? '#B2CFCB' : '#DBD2B0'}; ${isResponded ? 'background: #E6EFEF; color: #00594E;' : 'background: #F7F5EE; color: #786832;'}`}>
-                        {isResponded ? 'Respondida' : 'En Trámite'}
+                    <td style="vertical-align: middle; white-space: nowrap;">
+                      <span class="row-status-pill" style={`display: inline-flex; align-items: center; gap: 5px; white-space: nowrap !important; font-size: 0.72rem; font-weight: 750; padding: 4px 10px; border-radius: 999px; border: 1px solid ${isResponded ? '#B2CFCB' : '#DBD2B0'}; ${isResponded ? 'background: #F2F7F6; color: #00594E;' : 'background: #F7F5EE; color: #786832;'}`}>
+                        <span style={`width: 6px; height: 6px; border-radius: 50%; background: ${isResponded ? '#00594E' : '#B5A160'}; flex-shrink: 0;`}></span>
+                        <span>{isResponded ? 'Expediente Completo' : 'En Trámite'}</span>
                       </span>
                     </td>
-                    <td style="text-align: right; white-space: nowrap;">
-                      <div style="display: inline-flex; align-items: center; gap: 6px;">
-                        <button type="button" class="btn btn-primary btn-sm btn-open-folder btn-abrir-carpeta" data-folder-id={doc.id} data-radicado={doc.numero_radicado} onclick={`window.openFolderDetail && window.openFolderDetail('${doc.id || doc.numero_radicado}')`} style="font-size: 0.75rem; font-weight: 700; cursor: pointer;">
+                    <td style="text-align: right; white-space: nowrap; vertical-align: middle;">
+                      <div style="display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px;">
+                        <button type="button" class="btn btn-primary btn-sm btn-open-folder btn-abrir-carpeta" data-folder-id={doc.id} data-radicado={doc.numero_radicado} onclick={`window.openFolderDetail && window.openFolderDetail('${doc.id || doc.numero_radicado}')`} style="font-size: 0.75rem; font-weight: 750; cursor: pointer; padding: 6px 12px; border-radius: 8px; background: #00594E; border-color: #00594E; color: #FFFFFF;">
                           Abrir
                         </button>
 
@@ -758,7 +763,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                           data-entrega={doc.fecha_limite_entrega}
                           data-estado={doc.estado || 'en_tramite'}
                           title="Editar Expediente"
-                          style="width: 30px; height: 30px; border-radius: var(--radius-sm); border: 1px solid var(--dorado-borde); background: var(--dorado-suave-bg); color: var(--dorado-oscuro); display: flex; align-items: center; justify-content: center; cursor: pointer;"
+                          style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid #DBD2B0; background: #F7F5EE; color: #786832; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;"
                         >
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                         </button>
@@ -769,7 +774,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                           data-id={doc.id} 
                           data-radicado={doc.numero_radicado}
                           title="Eliminar Expediente"
-                          style="width: 30px; height: 30px; border-radius: var(--radius-sm); border: 1px solid #FECACA; background: #FEF2F2; color: #DC2626; display: flex; align-items: center; justify-content: center; cursor: pointer;"
+                          style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid #FECACA; background: #FEF2F2; color: #DC2626; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;"
                         >
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                         </button>

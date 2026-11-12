@@ -14,7 +14,7 @@ export const RBAC_MODULES: RbacModuleDef[] = [
   },
   {
     id: 'archivos',
-    label: 'Módulo Archivos',
+    label: 'Carpetas de Expedientes',
     href: '/archivos',
     sidebarId: 'nav-archivos',
     group: 'Navegación Principal',
@@ -62,7 +62,7 @@ export const RBAC_MODULES: RbacModuleDef[] = [
   },
   {
     id: 'calendario',
-    label: 'Calendario Institucional',
+    label: 'Agenda de Vencimientos',
     href: '/calendario',
     sidebarId: 'nav-calendario',
     group: 'Control y Disciplinario',

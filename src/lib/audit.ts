@@ -202,6 +202,7 @@ export async function logSystemActivity(params: LogSystemActivityParams): Promis
     try {
       const res = await fetch('/api/audit/log', {
         method: 'POST',
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         keepalive: true,
         body: JSON.stringify({

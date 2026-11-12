@@ -319,12 +319,13 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
     </section>
 
     <!-- ================================================================= -->
-    <!-- SECCIÓN C: SPLIT GRID PRINCIPAL (REPARTO + EFICACIA Y SEMÁFORO)   -->
+    <!-- SECCIÓN C: SPLIT GRID PRINCIPAL EQUILIBRADO (SIN HUECOS VACÍOS)   -->
     <!-- ================================================================= -->
     <div class="dashboard-split-grid bento-split-main">
       
-      <!-- COLUMNA PRINCIPAL: REPARTO PRIORITARIO CON FILTRO SEGMENTADO -->
-      <section class="panel-box bento-panel-main" aria-labelledby="reparto-main-heading">
+      <!-- COLUMNA IZQUIERDA (1.65fr): REPARTO PRIORITARIO + CUERPOS COLEGIADOS -->
+      <div class="bento-main-left-stack">
+        <section class="panel-box bento-panel-main" aria-labelledby="reparto-main-heading">
         
         <div class="panel-header bento-panel-header">
           <div class="panel-title-wrap">
@@ -417,11 +418,11 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
                     <!-- Botón de acción con micro-animación -->
                     <div class="doc-action-cell">
                       <a
-                        href="/peticiones"
+                        href={`/archivos?radicado=${encodeURIComponent(doc.numero_radicado || doc.id)}`}
                         class="btn-promax-card-action"
-                        title="Ver detalle del radicado"
+                        title="Abrir expediente del radicado"
                       >
-                        <span>Ver Radicado</span>
+                        <span>Ver Carpeta</span>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
                       </a>
                     </div>
@@ -449,7 +450,62 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
           </div>
         </div>
 
-      </section>
+        </section>
+
+        <!-- Panel Cuerpos Colegiados alineado a la izquierda junto al Semáforo SLA -->
+        <div class="panel-box bento-feed-card">
+          <div class="panel-header">
+            <div class="panel-title">
+              <div class="panel-icon-wrap amber">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+              </div>
+              <span>Cuerpos Colegiados: Resoluciones y Acuerdos</span>
+            </div>
+            <a href="/normas" class="panel-link-action" title="Explorar todo el catálogo de actos colegiados">
+              <span>Explorar ({dashSnap.totalNormas})</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+          </div>
+
+          <div
+            class="dashboard-colegiados-mini-list bento-feed-list"
+            id="dashboard-colegiados-recent-list"
+          >
+            {
+              dashSnap.recentNormas.length > 0 ? (
+                dashSnap.recentNormas.slice(0, 4).map((norma: any) => (
+                  <div class="colegiado-mini-item promax-feed-item">
+                    <div class="feed-item-main">
+                      <div class="feed-meta-top">
+                        <span class="colegiado-badge-tag">
+                          {norma.tipo} {norma.numero}
+                        </span>
+                        <span class="feed-date tabular-nums">{norma.fecha}</span>
+                        {norma.organo && <span class="feed-organo-tag">{norma.organo}</span>}
+                      </div>
+                      <div class="feed-title" title={norma.titulo}>
+                        {norma.titulo}
+                      </div>
+                    </div>
+                    <a
+                      href="/normas"
+                      class="btn-promax-feed-action"
+                      title="Ver contenido del acto"
+                    >
+                      <span>Ver</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </a>
+                  </div>
+                ))
+              ) : (
+                <div class="bento-empty-state">
+                  <p class="empty-desc">No hay actos colegiados registrados actualmente.</p>
+                </div>
+              )
+            }
+          </div>
+        </div>
+      </div>
 
       <!-- COLUMNA DERECHA: EFICACIA INSTITUCIONAL + TÉRMINOS SLA -->
       <aside class="dashboard-side-column bento-side-column">
@@ -652,87 +708,30 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
     </div>
 
     <!-- ================================================================= -->
-    <!-- SECCIÓN D: FILA INFERIOR 2x2 (COLEGIADOS RECIENTES & AGENDA)      -->
+    <!-- SECCIÓN D: AGENDA UNIFICADA (1 TARJETA BENTO POR EXPEDIENTE)      -->
     <!-- ================================================================= -->
-    <section class="dashboard-grid-2x2 bento-grid-bottom" aria-label="Resoluciones y Agenda">
-      
-      <!-- Panel Colegiados Recientes -->
-      <div class="panel-box bento-feed-card">
-        <div class="panel-header">
-          <div class="panel-title">
-            <div class="panel-icon-wrap amber">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-            </div>
-            <span>Cuerpos Colegiados: Resoluciones y Acuerdos</span>
-          </div>
-          <a href="/normas" class="panel-link-action" title="Explorar todo el catálogo de actos colegiados">
-            <span>Explorar ({dashSnap.totalNormas})</span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </a>
-        </div>
-
-        <div
-          class="dashboard-colegiados-mini-list bento-feed-list"
-          id="dashboard-colegiados-recent-list"
-        >
-          {
-            dashSnap.recentNormas.length > 0 ? (
-              dashSnap.recentNormas.map((norma: any) => (
-                <div class="colegiado-mini-item promax-feed-item">
-                  <div class="feed-item-main">
-                    <div class="feed-meta-top">
-                      <span class="colegiado-badge-tag">
-                        {norma.tipo} {norma.numero}
-                      </span>
-                      <span class="feed-date tabular-nums">{norma.fecha}</span>
-                      {norma.organo && <span class="feed-organo-tag">{norma.organo}</span>}
-                    </div>
-                    <div class="feed-title" title={norma.titulo}>
-                      {norma.titulo}
-                    </div>
-                  </div>
-                  <a
-                    href="/normas"
-                    class="btn-promax-feed-action"
-                    title="Ver contenido del acto"
-                  >
-                    <span>Ver</span>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                  </a>
-                </div>
-              ))
-            ) : (
-              <div class="bento-empty-state">
-                <p class="empty-desc">No hay actos colegiados registrados actualmente.</p>
-              </div>
-            )
-          }
-        </div>
-      </div>
-
-      <!-- Panel Agenda Rectoral y Google Calendar -->
+    <section class="dashboard-agenda-full" aria-label="Agenda de Vencimientos">
       <div class="panel-box bento-feed-card">
         <div class="panel-header">
           <div class="panel-title">
             <div class="panel-icon-wrap emerald">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             </div>
-            <span>Agenda Institucional & Google Calendar</span>
+            <span>Agenda Institucional &amp; Google Calendar</span>
           </div>
-          <a href="/calendario" class="panel-link-action" title="Abrir calendario interactivo">
-            <span>Ver calendario</span>
+          <a href="/calendario" class="panel-link-action" title="Abrir Agenda de Vencimientos">
+            <span>Ver agenda completa</span>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </a>
         </div>
 
         <div
-          class="dashboard-cal-mini-list bento-feed-list"
+          class="dashboard-cal-mini-list bento-agenda-cards-list"
           id="dashboard-calendar-recent-list"
         >
-          <!-- Eventos institucionales cargados dinámicamente por initDashboard() -->
+          <!-- Eventos agrupados 1 por expediente cargados dinámicamente por initDashboard() -->
         </div>
       </div>
-
     </section>
 
   </div>
@@ -1131,6 +1130,13 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
     grid-template-columns: 1.65fr 1fr;
     gap: 24px;
     align-items: start;
+  }
+
+  .bento-main-left-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    min-width: 0;
   }
 
   .bento-panel-main {
@@ -1711,8 +1717,37 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
   }
 
   /* ==========================================================================
-     D. FILA INFERIOR 2x2: COLEGIADOS Y AGENDA
+     D. AGENDA UNIFICADA (1 TARJETA BENTO HORIZONTAL POR EXPEDIENTE)
      ========================================================================== */
+  .dashboard-agenda-full {
+    width: 100%;
+  }
+
+  .bento-agenda-cards-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 14px;
+  }
+
+  :global(.dash-agenda-bento-card) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 18px;
+    background: #FFFFFF;
+    border: 1.5px solid #DCE4E3;
+    border-radius: 14px;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    flex-wrap: wrap;
+  }
+  :global(.dash-agenda-bento-card:hover) {
+    transform: translateY(-1px);
+    border-color: #B2CFCB;
+    box-shadow: 0 6px 16px rgba(0, 89, 78, 0.08);
+  }
+
   .bento-grid-bottom {
     display: grid;
     grid-template-columns: 1fr 1fr;

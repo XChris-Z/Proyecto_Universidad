@@ -273,17 +273,49 @@ export async function initAuditoria() {
   closeVerifyBtn?.addEventListener('click', closeVerifyModal);
   confirmVerifyBtn?.addEventListener('click', closeVerifyModal);
 
-  // Export JSON
-  document.getElementById('btn-export-audit-json')?.addEventListener('click', () => {
-    const dateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(logs, null, 2));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `auditoria_unitropico_${dateStr}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-    (window as any).showToast('Pista de auditoría exportada exitosamente en formato JSON oficial.');
+  // Exportar bitácora oficial en Microsoft Excel (.xlsx)
+  const exportBtn = document.getElementById('btn-export-audit-json') as HTMLButtonElement | null;
+  exportBtn?.addEventListener('click', async () => {
+    const actionVal = (document.getElementById('audit-filter-action') as HTMLSelectElement | null)?.value || 'ALL';
+    const severityVal = (document.getElementById('audit-filter-severity') as HTMLSelectElement | null)?.value || 'ALL';
+    const searchVal = (document.getElementById('audit-search-input') as HTMLInputElement | null)?.value?.trim() || '';
+
+    const originalHtml = exportBtn.innerHTML;
+    exportBtn.disabled = true;
+    exportBtn.innerHTML = '<span>Generando Excel (.xlsx)...</span>';
+
+    try {
+      const qs = new URLSearchParams({
+        action: actionVal,
+        severity: severityVal,
+        q: searchVal,
+        _ts: String(Date.now()),
+      });
+      const res = await fetch(`/api/audit/exportar-excel?${qs.toString()}`, {
+        credentials: 'same-origin',
+        cache: 'no-store',
+      });
+      if (!res.ok) {
+        throw new Error('No se pudo generar el libro Excel de auditoría.');
+      }
+      const blob = await res.blob();
+      const dateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+      const blobUrl = URL.createObjectURL(blob);
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.href = blobUrl;
+      downloadAnchor.download = `Auditoria_SGD_Unitropico_${dateStr}.xlsx`;
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      URL.revokeObjectURL(blobUrl);
+
+      (window as any).showToast?.('Pista de auditoría exportada exitosamente en formato Excel (.xlsx).', 'success');
+    } catch (err: any) {
+      (window as any).showToast?.(err?.message || 'Error al exportar la pista de auditoría en Excel.', 'error');
+    } finally {
+      exportBtn.disabled = false;
+      exportBtn.innerHTML = originalHtml;
+    }
   });
 
   // Initial render

@@ -9,50 +9,125 @@ import {
   limpiarTextoRequerimiento,
 } from '@lib/email';
 import { separarRespuestaMeta, filtrarSubcarpetasValidas } from '@lib/subcarpetas';
-import { getDeterministicPin } from '@lib/security';
+import { getDeterministicPin, generatePin6 } from '@lib/security';
 import { sanitizeRevisionTokens } from '@lib/revision-meta';
 import { logSystemActivity } from '@lib/audit';
 import { resolveSessionActor } from '@lib/request-actor';
 
 export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) => {
   try {
-    const body = await request.json();
-    const { peticion_id, responsable_id } = body;
+    const body = await request.json().catch(() => ({}));
+    const peticionIdRaw = String(body.peticion_id || body.peticionId || '').trim();
+    const radicadoRaw = String(body.radicado || body.numero_radicado || '').trim();
+    const responsableIdRaw = String(body.responsable_id || body.asignacion_id || body.asignacionId || '').trim();
+    const depNombreRaw = String(body.dependencia_nombre || body.oficina || '').trim();
+    const correoRaw = String(body.correo || '').trim().toLowerCase();
 
-    if (!peticion_id && !responsable_id) {
+    if (!peticionIdRaw && !radicadoRaw && !responsableIdRaw) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Se requiere peticion_id o responsable_id' }),
+        JSON.stringify({ success: false, error: 'Se requiere identificar el radicado o la dependencia.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    const buildRowsQuery = (withSubcarpetaCol: boolean) => {
-      const cols = withSubcarpetaCol
-        ? `id, subcarpeta_id, codigo_acceso, observaciones_entrega, peticion_id,
-           oficina:oficina_id (id, nombre, email_institucional),
-           peticion:peticion_id (id, numero_radicado, asunto, categoria, prioridad, instrucciones_anexos, descripcion, fecha_radicacion, fecha_limite_entrega, fecha_limite_responsable, pin_acceso, created_at)`
-        : `id, codigo_acceso, observaciones_entrega, peticion_id,
-           oficina:oficina_id (id, nombre, email_institucional),
-           peticion:peticion_id (id, numero_radicado, asunto, categoria, prioridad, instrucciones_anexos, descripcion, fecha_radicacion, fecha_limite_entrega, fecha_limite_responsable, pin_acceso, created_at)`;
-      let q = supabase.from('peticion_responsables' as any).select(cols);
-      if (responsable_id) q = q.eq('id', responsable_id);
-      else if (peticion_id) q = q.eq('peticion_id', peticion_id);
-      return q as any;
-    };
-
-    let { data: rows, error: queryError } = await buildRowsQuery(true);
-    if (queryError && String(queryError.message || '').includes('subcarpeta_id')) {
-      ({ data: rows, error: queryError } = await buildRowsQuery(false));
+    // 1. Cargar peticiones, oficinas y asignaciones sin joins frágiles
+    let targetPet: any = null;
+    if (peticionIdRaw) {
+      const { data } = await (supabase.from('peticiones' as any).select('*').eq('id', peticionIdRaw).maybeSingle() as any);
+      targetPet = data || null;
+    }
+    if (!targetPet && radicadoRaw) {
+      const { data } = await (supabase.from('peticiones' as any).select('*').eq('numero_radicado', radicadoRaw).maybeSingle() as any);
+      targetPet = data || null;
     }
 
-    if (queryError || !rows || rows.length === 0) {
+    let respRows: any[] = [];
+    if (responsableIdRaw) {
+      const { data } = await (supabase
+        .from('peticion_responsables' as any)
+        .select('*')
+        .eq('id', responsableIdRaw) as any);
+      if (Array.isArray(data) && data.length > 0) {
+        respRows = data;
+      }
+    }
+
+    if (respRows.length === 0 && targetPet?.id) {
+      const { data } = await (supabase
+        .from('peticion_responsables' as any)
+        .select('*')
+        .eq('peticion_id', targetPet.id) as any);
+      if (Array.isArray(data)) {
+        respRows = data;
+      }
+    }
+
+    const { data: allOficinas } = await (supabase
+      .from('oficinas' as any)
+      .select('id, nombre, email_institucional, codigo') as any);
+    const oficinaById = new Map<string, any>();
+    const oficinasArr: any[] = Array.isArray(allOficinas) ? allOficinas : [];
+    for (const o of oficinasArr) {
+      if (o?.id) oficinaById.set(String(o.id), o);
+    }
+
+    // Si respRows tiene varias dependencias de una misma petición, filtrar por nombre/correo solicitado si se especificó
+    if (respRows.length > 0 && (depNombreRaw || correoRaw)) {
+      const targetDepLower = depNombreRaw.toLowerCase();
+      const matched = respRows.filter((r: any) => {
+        const ofi = oficinaById.get(String(r.oficina_id || ''));
+        const ofiName = String(ofi?.nombre || '').trim().toLowerCase();
+        const ofiEmail = String(ofi?.email_institucional || '').trim().toLowerCase();
+        if (correoRaw && ofiEmail === correoRaw) return true;
+        if (targetDepLower && ofiName && (ofiName === targetDepLower || ofiName.includes(targetDepLower) || targetDepLower.includes(ofiName))) return true;
+        return false;
+      });
+      if (matched.length > 0) {
+        respRows = matched;
+      }
+    }
+
+    // Si llegó por radicado/dependencia sin fila previa encontrada, intentar asociar la oficina real
+    if (respRows.length === 0 && targetPet?.id && (depNombreRaw || correoRaw)) {
+      const targetDepLower = depNombreRaw.toLowerCase();
+      const ofiMatch = oficinasArr.find((o: any) => {
+        const em = String(o?.email_institucional || '').trim().toLowerCase();
+        const nm = String(o?.nombre || '').trim().toLowerCase();
+        return (correoRaw && em === correoRaw) || (targetDepLower && (nm === targetDepLower || nm.includes(targetDepLower) || targetDepLower.includes(nm)));
+      });
+      if (ofiMatch) {
+        respRows = [{
+          id: responsableIdRaw || `virtual-${ofiMatch.id}`,
+          peticion_id: targetPet.id,
+          oficina_id: ofiMatch.id,
+          codigo_acceso: generatePin6(),
+          observaciones_entrega: '',
+          estado_entrega: 'pendiente',
+        }];
+      }
+    }
+
+    if (respRows.length === 0) {
       return new Response(
-        JSON.stringify({ success: false, error: 'No se encontraron asignaciones para notificar.' }),
+        JSON.stringify({ success: false, error: 'No se encontraron asignaciones pendientes para notificar en este radicado.' }),
         { status: 404, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    const peticionIds = Array.from(new Set(rows.map((r: any) => r.peticion_id).filter(Boolean)));
+    // Resolver peticiones faltantes si solo vino responsable_id
+    const petMap = new Map<string, any>();
+    if (targetPet?.id) petMap.set(String(targetPet.id), targetPet);
+    const missingPetIds = Array.from(new Set(respRows.map((r: any) => r.peticion_id).filter((pid: any) => pid && !petMap.has(String(pid)))));
+    if (missingPetIds.length > 0) {
+      const { data: extraPets } = await (supabase.from('peticiones' as any).select('*').in('id', missingPetIds) as any);
+      if (Array.isArray(extraPets)) {
+        for (const ep of extraPets) {
+          if (ep?.id) petMap.set(String(ep.id), ep);
+        }
+      }
+    }
+
+    const peticionIds = Array.from(petMap.keys());
     const subcarpetasByPetId: Record<string, any[]> = {};
     if (peticionIds.length > 0) {
       try {
@@ -74,11 +149,12 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
     const baseUrl = resolvePublicBaseUrl(request, url);
     const results = [];
 
-    for (const item of rows) {
-      const ofi = item.oficina;
-      const pet = item.peticion;
+    for (const item of respRows) {
+      const ofi = oficinaById.get(String(item.oficina_id || '')) ||
+        (correoRaw ? { nombre: depNombreRaw || 'Dependencia Asignada', email_institucional: correoRaw } : null);
+      const pet = petMap.get(String(item.peticion_id || '')) || targetPet;
 
-      if (!ofi || !ofi.email_institucional) continue;
+      if (!ofi || !ofi.email_institucional || !pet) continue;
 
       const pinMatch = String(item.observaciones_entrega || '').match(/PIN:\s*([0-9A-Z]{6})/i);
       const effectivePin =
@@ -94,6 +170,7 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
           pet.pin_acceso = effectivePin;
         } catch {}
       }
+
       const portalUrl =
         `${baseUrl}/portal-responsable?radicado=${encodeURIComponent(pet.numero_radicado)}` +
         `&codigo=${encodeURIComponent(item.codigo_acceso)}` +
@@ -189,6 +266,7 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
       JSON.stringify({
         success: !anyFailed,
         results,
+        message: !anyFailed ? `Recordatorio y credenciales enviados a ${results.map((r) => r.oficina).join(', ')}.` : undefined,
         error: anyFailed ? (results[0]?.error || 'No se pudo enviar el correo a la dependencia.') : undefined,
       }),
       { status: anyFailed ? 500 : 200, headers: { 'Content-Type': 'application/json' } }
@@ -201,4 +279,3 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
     );
   }
 };
-

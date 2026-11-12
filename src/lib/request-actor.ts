@@ -113,30 +113,56 @@ export async function resolveSessionActor(
     } catch {}
   }
 
-  if (sessionId === 'usr-root') {
-    try {
-      const { data: adminProf } = await (supabase
-        .from('profiles' as any)
-        .select('id, full_name, role')
-        .in('role', ['admin', 'Administrador', 'administrador'])
-        .limit(1)
-        .maybeSingle() as any);
-      if (adminProf?.full_name) {
-        return {
-          id: adminProf.id || 'usr-root',
-          name: String(adminProf.full_name).trim(),
-          role: 'Administrador',
-        };
-      }
-    } catch {}
+  if (!sessionId || sessionId === 'usr-root') {
+    const cookieEmail = decodeURIComponent(
+      cookies?.get('sgd_session_email')?.value || ''
+    )
+      .trim()
+      .toLowerCase();
+
+    if (cookieEmail) {
+      try {
+        const { data: emailProf } = await (supabase
+          .from('profiles' as any)
+          .select('id, full_name, role')
+          .eq('email', cookieEmail)
+          .maybeSingle() as any);
+        if (emailProf?.full_name) {
+          return {
+            id: emailProf.id || sessionId || 'usr-root',
+            name: String(emailProf.full_name).trim(),
+            role: normalizeInstitutionalRole(emailProf.role),
+          };
+        }
+      } catch {}
+    }
+
+    if (sessionId === 'usr-root') {
+      try {
+        const { data: rootProf } = await (supabase
+          .from('profiles' as any)
+          .select('id, full_name, role')
+          .or('id.eq.usr-root,email.eq.christianlemus.es@unitropico.edu.co')
+          .limit(1)
+          .maybeSingle() as any);
+        if (rootProf?.full_name) {
+          return {
+            id: rootProf.id || 'usr-root',
+            name: String(rootProf.full_name).trim(),
+            role: normalizeInstitutionalRole(rootProf.role || 'Administrador'),
+          };
+        }
+      } catch {}
+    }
   }
 
   const fbName = String(fallbackActor?.name || '').trim();
   const fbRole = normalizeInstitutionalRole(fallbackActor?.role);
+  const isGenericFb = /^(admin|admin general|administrador|administrador general|administrador del sistema|administrador documental|sistema sgd)$/i.test(fbName);
 
   return {
     id: sessionId || 'usr-root',
-    name: fbName && !/^administrador general$/i.test(fbName) ? fbName : 'ING. Christian Lemus',
+    name: fbName && !isGenericFb ? fbName : 'ING. Christian Lemus',
     role: fbRole || 'Administrador',
   };
 }
