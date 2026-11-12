@@ -985,17 +985,17 @@ function getPetSlaTone(bucket: string, responded: boolean) {
       }
 
       // C. Botón Eliminar
-      const deleteBtn = target.closest('.btn-delete-pet') as HTMLElement | null;
-      if (deleteBtn) {
+      const deleteBtn = (target ? target.closest('button[data-id], button[data-radicado], .btn-delete-pet, .btn-action-delete') : null) as HTMLElement | null;
+      if (deleteBtn && (deleteBtn.classList.contains('btn-delete-pet') || deleteBtn.classList.contains('btn-action-delete') || (deleteBtn.getAttribute('title') || '').includes('Eliminar'))) {
         e.preventDefault();
         e.stopPropagation();
-        const id = deleteBtn.dataset.id;
-        const radicado = deleteBtn.dataset.radicado;
-        if (!id) return;
+        const id = deleteBtn.getAttribute('data-id') || deleteBtn.dataset.id || '';
+        const radicado = deleteBtn.getAttribute('data-radicado') || deleteBtn.dataset.radicado || '';
+        if (!id && !radicado) return;
 
         const confirmed = typeof (window as any).showConfirm === 'function'
           ? await (window as any).showConfirm(
-              `¿Está seguro de que desea eliminar definitivamente el radicado ${radicado}?\n\nEsta acción purgará los registros de oficinas asignadas, archivos en el repositorio y registrará el evento de eliminación en la Auditoría institucional.`,
+              `¿Está seguro de que desea eliminar definitivamente el radicado ${radicado || id}?\n\nEsta acción purgará los registros de oficinas asignadas, archivos en el repositorio y registrará el evento de eliminación en la Auditoría institucional.`,
               'Confirmar Eliminación'
             )
           : true;
@@ -1007,29 +1007,36 @@ function getPetSlaTone(bucket: string, responded: boolean) {
           const res = await fetch('/api/peticiones/eliminar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id }),
+            body: JSON.stringify({ id, radicado }),
           });
 
           const data = await res.json();
-          if (!res.ok || !data.success) {
+          if (!res.ok || (!data.success && !data.ok)) {
             (window as any).showToast('Error al eliminar: ' + (data.error || 'No se pudo procesar la eliminación'), 'error');
             deleteBtn.removeAttribute('disabled');
             return;
           }
 
-          const row = document.getElementById(`row-pet-${id}`);
-          if (row) {
-            row.style.transition = 'opacity 0.25s ease';
-            row.style.opacity = '0';
-            setTimeout(() => {
-              row.remove();
-              updatePeticionesCounts();
-            }, 260);
+          const delId = data.deletedId || id;
+          const delRad = data.radicado || radicado;
+
+          const toRemove = document.querySelectorAll(`[id="row-pet-${delId}"], tr[data-id="${delId}"], tr[data-radicado="${delRad}"]`);
+          if (toRemove.length > 0) {
+            toRemove.forEach((el) => {
+              const r = el as HTMLElement;
+              r.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+              r.style.opacity = '0';
+              r.style.transform = 'scale(0.98)';
+              setTimeout(() => {
+                r.remove();
+                updatePeticionesCounts();
+              }, 260);
+            });
           } else {
             updatePeticionesCounts();
           }
 
-          (window as any).showToast(`El radicado ${radicado} ha sido eliminado satisfactoriamente.`, 'success');
+          (window as any).showToast(`El radicado ${delRad || delId} ha sido eliminado satisfactoriamente.`, 'success');
         } catch (err: any) {
           (window as any).showToast('Error al comunicarse con el servidor para la eliminación.', 'error');
           deleteBtn.removeAttribute('disabled');

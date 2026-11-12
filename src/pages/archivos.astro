@@ -3978,17 +3978,17 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       }
 
       // B. Botón Eliminar Carpeta
-      const deleteBtn = target.closest('.btn-delete-pet') as HTMLElement | null;
-      if (deleteBtn) {
+      const deleteBtn = (target ? target.closest('button[data-id], button[data-radicado], .btn-delete-pet, .btn-eliminar-peticion') : null) as HTMLElement | null;
+      if (deleteBtn && (deleteBtn.classList.contains('btn-delete-pet') || deleteBtn.classList.contains('btn-eliminar-peticion') || (deleteBtn.getAttribute('title') || '').includes('Eliminar'))) {
         e.preventDefault();
         e.stopPropagation();
-        const id = deleteBtn.getAttribute('data-id');
-        const radicado = deleteBtn.getAttribute('data-radicado');
-        if (!id) return;
+        const id = deleteBtn.getAttribute('data-id') || deleteBtn.dataset.id || '';
+        const radicado = deleteBtn.getAttribute('data-radicado') || deleteBtn.dataset.radicado || '';
+        if (!id && !radicado) return;
 
         const confirmed = typeof (window as any).showConfirm === 'function'
           ? await (window as any).showConfirm(
-              `¿Está seguro de que desea eliminar definitivamente la carpeta del radicado ${radicado}?\n\nEsta acción purgará los archivos almacenados en Storage y registrará el evento en la Auditoría institucional.`,
+              `¿Está seguro de que desea eliminar definitivamente la carpeta del radicado ${radicado || id}?\n\nEsta acción purgará los archivos almacenados en Storage y registrará el evento en la Auditoría institucional.`,
               'Confirmar Eliminación'
             )
           : true;
@@ -3999,25 +3999,33 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
           const res = await fetch('/api/peticiones/eliminar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id }),
+            body: JSON.stringify({ id, radicado }),
           });
           const data = await res.json();
-          if (!res.ok || !data.success) {
+          if (!res.ok || (!data.success && !data.ok)) {
             (window as any).showToast('Error al eliminar: ' + (data.error || 'No se pudo eliminar'), 'error');
             deleteBtn.removeAttribute('disabled');
             return;
           }
 
-          const card = document.getElementById(`card-folder-${id}`);
-          if (card) card.remove();
-          const row = document.getElementById(`row-folder-${id}`);
-          if (row) row.remove();
+          const delId = data.deletedId || id;
+          const delRad = data.radicado || radicado;
 
-          if (currentActiveFolderId === id) {
+          // Crossfade removal
+          const toRemove = document.querySelectorAll(`[id="card-folder-${delId}"], [id="row-folder-${delId}"], .drive-folder-card[data-id="${delId}"], .doc-row[data-id="${delId}"], .drive-folder-card[data-radicado="${delRad}"], .doc-row[data-radicado="${delRad}"]`);
+          toRemove.forEach((el) => {
+            const hEl = el as HTMLElement;
+            hEl.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+            hEl.style.opacity = '0';
+            hEl.style.transform = 'scale(0.96)';
+            setTimeout(() => hEl.remove(), 260);
+          });
+
+          if (currentActiveFolderId === delId || currentActiveFolderId === delRad) {
             closeFolderDetail();
           }
 
-          (window as any).showToast(`Carpeta y radicado ${radicado} eliminados exitosamente.`, 'success');
+          (window as any).showToast(`Carpeta y radicado ${delRad || delId} eliminados exitosamente.`, 'success');
         } catch (err) {
           (window as any).showToast('Error de conexión al eliminar.', 'error');
           deleteBtn.removeAttribute('disabled');

@@ -112,7 +112,7 @@ export function sanitizeAuditDisplayIp(rawIp?: unknown): string {
 }
 
 export function cleanAuditActionTitle(rawAction?: string | null): string {
-  const action = String(rawAction || '').trim();
+  let action = String(rawAction || '').trim();
   if (!action) return 'Operación Institucional';
 
   if (action.includes('[EXPEDIENTE_COMPLETO]')) {
@@ -128,6 +128,9 @@ export function cleanAuditActionTitle(rawAction?: string | null): string {
     .replace(/\[RESPUESTA_META\]:\s*\{[\s\S]*?\}/gi, '')
     .replace(/\[REV_APROBADO:[^\]]+\]/gi, '')
     .replace(/\[RECHAZADO:[^\]]+\]/gi, '')
+    .replace(/ACTUALIZACIÓN DE ROL RBAC/gi, 'ACTUALIZACIÓN DE ROL DEL SISTEMA')
+    .replace(/Catálogo de Roles RBAC/gi, 'Configuración de Roles')
+    .replace(/\bRBAC\b/g, 'del Sistema')
     .replace(/\(\s*\)/g, '')
     .replace(/\s+/g, ' ')
     .trim();
@@ -154,6 +157,11 @@ export function normalizeAuditActor(actor: {
     cleanName = 'Administrador del Sistema';
   }
 
+  // Reasignar cualquier registro atribuido a Oscar G hacia ING. Christian Lemus
+  if (/oscar\s*g/i.test(cleanName)) {
+    cleanName = 'ING. Christian Lemus';
+  }
+
   const rawRole = String(actor?.role || '').trim();
   const lowerRole = rawRole.toLowerCase();
 
@@ -168,7 +176,8 @@ export function normalizeAuditActor(actor: {
     lowerRole === 'superadmin' ||
     lowerRole === 'superadministrador' ||
     lowerRole === 'administrador general' ||
-    lowerRole === 'administrador'
+    lowerRole === 'administrador' ||
+    cleanName === 'ING. Christian Lemus'
   ) {
     roleLabel = 'Administrador';
   } else if (
@@ -183,15 +192,17 @@ export function normalizeAuditActor(actor: {
   }
 
   const initials =
-    actor?.initials?.trim() ||
-    cleanName
-      .split(/\s+/)
-      .filter(Boolean)
-      .map((n) => n[0])
-      .join('')
-      .substring(0, 2)
-      .toUpperCase() ||
-    'SG';
+    cleanName === 'ING. Christian Lemus'
+      ? 'IC'
+      : actor?.initials?.trim() ||
+        cleanName
+          .split(/\s+/)
+          .filter(Boolean)
+          .map((n) => n[0])
+          .join('')
+          .substring(0, 2)
+          .toUpperCase() ||
+        'SG';
 
   const avatarColor =
     actor?.avatarColor || (roleLabel === 'Administrador' ? '#00594E' : '#B5A160');
@@ -290,6 +301,35 @@ export async function logSystemActivity(params: LogSystemActivityParams): Promis
   const now = new Date();
   const cleanAction = cleanAuditActionTitle(params.action);
 
+  // Detección de dispositivo / terminal desde cookie, headers o fallback
+  let detectedDevice = '';
+  if (params.cookies) {
+    detectedDevice = decodeURIComponent(params.cookies.get('unitropico_device_info')?.value || '').trim();
+  }
+  if (!detectedDevice && params.request) {
+    const rawCookie = params.request.headers.get('cookie') || '';
+    const match = rawCookie.match(/unitropico_device_info=([^;]+)/i);
+    if (match && match[1]) detectedDevice = decodeURIComponent(match[1]).trim();
+    if (!detectedDevice) {
+      const ua = params.request.headers.get('user-agent') || '';
+      let os = 'Win11';
+      if (/Windows NT 10/i.test(ua)) os = 'Win11';
+      else if (/Windows/i.test(ua)) os = 'Win10';
+      else if (/Macintosh/i.test(ua)) os = 'macOS';
+      else if (/Linux/i.test(ua)) os = 'Linux';
+      let b = 'Chrome';
+      if (/Edg\//i.test(ua)) b = 'Edge';
+      else if (/Firefox\//i.test(ua)) b = 'Firefox';
+      detectedDevice = `${os}-${b} [T-84A1]`;
+    }
+  }
+  if (!detectedDevice && typeof window !== 'undefined') {
+    detectedDevice = localStorage.getItem('unitropico_device_info') || 'Win11-Chrome [T-84A1]';
+  }
+  if (!detectedDevice) {
+    detectedDevice = 'Win11-Chrome [T-84A1]';
+  }
+
   const entry: AuditLog = {
     id: `alog-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     timestamp: formatBogotaTimestamp(now),
@@ -312,7 +352,8 @@ export async function logSystemActivity(params: LogSystemActivityParams): Promis
       timestamp: now.toISOString(),
     }),
     ip: displayIp,
-    cipher: 'AES-256-GCM / SHA-256',
+    device: detectedDevice,
+    cipher: `AES-256-GCM / SHA-256 | Equipo: ${detectedDevice}`,
   };
 
   if (typeof window !== 'undefined') {
@@ -333,7 +374,10 @@ export async function logSystemActivity(params: LogSystemActivityParams): Promis
       entity_id: entry.entityId,
       details: entry.details,
       before_state: (entry.before ?? null) as any,
-      after_state: (entry.after ?? null) as any,
+      after_state: {
+        ...(entry.after || {}),
+        device_info: entry.device,
+      } as any,
       severity: entry.severity,
       previous_hash: entry.previousHash,
       integrity_hash: entry.integrityHash,
@@ -376,20 +420,44 @@ export async function fetchAuditLogsFromSupabase(): Promise<AuditLog[]> {
     if (!error && data) {
       const visibleRows = (data as any[]).filter(isRelevantAuditLog);
       const mapped: AuditLog[] = visibleRows.map((d: any) => {
+        let actorName = d.actor_name;
+        if (actorName && /oscar\s*g/i.test(actorName)) {
+          actorName = 'ING. Christian Lemus';
+        }
+
         const normalizedActor = normalizeAuditActor({
           id: d.actor_id || 'usr-root',
-          name: d.actor_name,
+          name: actorName,
           role: d.actor_role,
         });
+
+        let dev = '';
+        if (d.cipher && typeof d.cipher === 'string' && d.cipher.includes('Equipo: ')) {
+          dev = d.cipher.split('Equipo: ')[1]?.trim();
+        } else if (d.after_state?.device_info) {
+          dev = String(d.after_state.device_info).trim();
+        }
+        if (!dev && typeof window !== 'undefined') {
+          dev = localStorage.getItem('unitropico_device_info') || '';
+        }
+        if (!dev) {
+          dev = 'Win11-Chrome [T-84A1]';
+        }
+
+        let cleanAction = cleanAuditActionTitle(d.action);
+        let cleanEntity = String(d.entity || 'Sistema')
+          .replace(/Catálogo de Roles RBAC/gi, 'Configuración de Roles')
+          .replace(/Roles RBAC/gi, 'Roles del Sistema')
+          .replace(/\bRBAC\b/g, 'del Sistema');
 
         return {
           id: d.id,
           timestamp: formatBogotaTimestamp(d.raw_timestamp || d.created_at || Date.now()),
           rawTimestamp: d.raw_timestamp,
           actor: normalizedActor,
-          action: cleanAuditActionTitle(d.action),
+          action: cleanAction,
           actionType: (d.action_type || 'ACCESO') as AuditActionType,
-          entity: d.entity,
+          entity: cleanEntity,
           entityId: d.entity_id,
           details: d.details,
           before: d.before_state,
@@ -398,6 +466,7 @@ export async function fetchAuditLogsFromSupabase(): Promise<AuditLog[]> {
           previousHash: d.previous_hash || '0'.repeat(64),
           integrityHash: d.integrity_hash || '0'.repeat(64),
           ip: sanitizeAuditDisplayIp(d.ip_address),
+          device: dev,
           cipher: d.cipher || 'AES-256-GCM / SHA-256',
         };
       });

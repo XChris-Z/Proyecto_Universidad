@@ -21,3 +21,14 @@ export const supabase = createClient<Database>(
   supabaseUrl,
   supabaseAnonKey
 );
+
+const serviceRoleKey = (
+  (typeof process !== 'undefined' ? process.env?.SUPABASE_SERVICE_ROLE_KEY || process.env?.SUPABASE_SERVICE_KEY : undefined) ||
+  import.meta.env?.SUPABASE_SERVICE_ROLE_KEY ||
+  supabaseAnonKey
+) as string;
+
+export const supabaseAdmin = createClient<Database>(
+  supabaseUrl,
+  serviceRoleKey || supabaseAnonKey
+);

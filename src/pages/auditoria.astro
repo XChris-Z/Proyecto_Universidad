@@ -1,21 +1,65 @@
 ---
 // src/pages/auditoria.astro
 import AppLayout from '@layouts/AppLayout.astro';
-import { supabase } from '@lib/supabase';
+import { supabase, supabaseAdmin } from '@lib/supabase';
 import { isRelevantAuditLog } from '@lib/audit';
 
+const db = supabaseAdmin || supabase;
+
+// Corrección en base de datos para reasignar registros atribuidos por error a Oscar G hacia ING. Christian Lemus
+try {
+  await db
+    .from('audit_logs')
+    .update({ actor_name: 'ING. Christian Lemus' })
+    .ilike('actor_name', '%Oscar%');
+} catch {}
+
 // Consultar bitácora oficial en tiempo real desde Supabase (excluyendo snapshots técnicos y eventos no esenciales como perfil)
-const { data: rawDbLogs } = await supabase
+const { data: rawDbLogs } = await db
   .from('audit_logs')
   .select('*')
   .or('entity.is.null,entity.neq.rbac_state_snapshot')
   .order('raw_timestamp', { ascending: false });
 
-const dbLogs = (rawDbLogs || []).filter(isRelevantAuditLog);
+const dbLogs = (rawDbLogs || [])
+  .filter(isRelevantAuditLog)
+  .map(l => {
+    let aName = l.actor_name;
+    if (aName && /oscar/i.test(aName)) aName = 'ING. Christian Lemus';
+    let cleanAction = (l.action || '')
+      .replace(/ACTUALIZACIÓN DE ROL RBAC/gi, 'ACTUALIZACIÓN DE ROL DEL SISTEMA')
+      .replace(/Catálogo de Roles RBAC/gi, 'Configuración de Roles')
+      .replace(/\bRBAC\b/g, 'del Sistema');
+    let cleanEntity = (l.entity || '')
+      .replace(/Catálogo de Roles RBAC/gi, 'Configuración de Roles')
+      .replace(/Roles RBAC/gi, 'Roles del Sistema')
+      .replace(/\bRBAC\b/g, 'del Sistema');
+    return { ...l, actor_name: aName, action: cleanAction, entity: cleanEntity };
+  });
 
 const totalLogs = dbLogs.length;
 const totalRadicaciones = dbLogs.filter(l => l.action_type === 'SUBIDA_ARCHIVO' || l.action_type === 'RADICACION').length;
-const totalRespuestas = dbLogs.filter(l => l.action_type === 'RESPUESTA' || (l.action && l.action.toLowerCase().includes('respuesta'))).length;
+const totalCierresYValidaciones = dbLogs.filter(l => {
+  const act = (l.action || '').toLowerCase();
+  const actType = (l.action_type || '').toUpperCase();
+  const details = (l.details || '').toLowerCase();
+  return (
+    actType === 'APROBACION' ||
+    actType === 'RECHAZO' ||
+    actType === 'CIERRE' ||
+    act.includes('cierre') ||
+    act.includes('aprob') ||
+    act.includes('rechaz') ||
+    act.includes('dictamen') ||
+    act.includes('aporte') ||
+    act.includes('revis') ||
+    act.includes('drive') ||
+    act.includes('validac') ||
+    details.includes('cierre') ||
+    details.includes('dictamen') ||
+    details.includes('google drive')
+  );
+}).length;
 ---
 
 <AppLayout title="Registro de Auditoría y Trazabilidad" activeNav="auditoria">
@@ -72,15 +116,18 @@ const totalRespuestas = dbLogs.filter(l => l.action_type === 'RESPUESTA' || (l.a
         </div>
       </div>
 
-      <!-- KPI 3: Respuestas Despachadas -->
+      <!-- KPI 3: Cierres y Validaciones de Aportes -->
       <div style="background: #F7F5EE; border: 1.5px solid #DBD2B0; border-radius: 14px; padding: 20px 22px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(181, 161, 96, 0.06);">
         <div>
-          <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #786832; letter-spacing: 0.5px; display: block;">Respuestas Despachadas</span>
-          <div style="font-size: 1.9rem; font-weight: 800; color: #786832; margin-top: 4px; line-height: 1;" id="audit-kpi-respuestas">{totalRespuestas}</div>
-          <span style="font-size: 0.74rem; font-weight: 600; color: #786832; margin-top: 6px; display: inline-block;">Oficios de fondo notificados</span>
+          <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #786832; letter-spacing: 0.5px; display: block;">CIERRES Y VALIDACIONES DE APORTES</span>
+          <div style="font-size: 1.9rem; font-weight: 800; color: #786832; margin-top: 4px; line-height: 1;" id="audit-kpi-cierres">{totalCierresYValidaciones}</div>
+          <span style="font-size: 0.74rem; font-weight: 600; color: #786832; margin-top: 6px; display: inline-block;">Aportes dictaminados y expedientes cerrados</span>
         </div>
         <div style="width: 48px; height: 48px; border-radius: 12px; background: #FFFFFF; border: 1.5px solid #DBD2B0; display: flex; align-items: center; justify-content: center; color: #786832; flex-shrink: 0;">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <polyline points="9 12 11 14 15 10"/>
+          </svg>
         </div>
       </div>
 

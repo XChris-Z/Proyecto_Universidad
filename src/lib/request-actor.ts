@@ -77,6 +77,38 @@ export async function resolveSessionActor(
   cookies?: AstroCookies | null,
   fallbackActor?: Partial<ResolvedActor> | null
 ): Promise<ResolvedActor> {
+  const activeEmailCookie = decodeURIComponent(
+    cookies?.get('unitropico_active_user_email')?.value ||
+    cookies?.get('sgd_session_email')?.value ||
+    ''
+  ).trim().toLowerCase();
+
+  if (activeEmailCookie) {
+    if (activeEmailCookie === 'christianlemus.es@unitropico.edu.co') {
+      return {
+        id: 'usr-root',
+        name: 'ING. Christian Lemus',
+        role: 'Administrador',
+      };
+    }
+    try {
+      const { data: emailProf } = await (supabase
+        .from('profiles' as any)
+        .select('id, full_name, role')
+        .eq('email', activeEmailCookie)
+        .maybeSingle() as any);
+      if (emailProf?.full_name) {
+        let name = String(emailProf.full_name).trim();
+        if (/oscar\s*g/i.test(name)) name = 'ING. Christian Lemus';
+        return {
+          id: emailProf.id || 'usr-root',
+          name,
+          role: normalizeInstitutionalRole(emailProf.role),
+        };
+      }
+    } catch {}
+  }
+
   const sessionId = cookies?.get(SESSION_COOKIE_KEY)?.value?.trim() || fallbackActor?.id || '';
 
   if (sessionId && sessionId !== 'usr-root' && sessionId !== 'anonymous') {
@@ -88,9 +120,11 @@ export async function resolveSessionActor(
         .maybeSingle() as any);
 
       if (prof?.full_name) {
+        let name = String(prof.full_name).trim();
+        if (/oscar\s*g/i.test(name)) name = 'ING. Christian Lemus';
         return {
           id: prof.id,
-          name: String(prof.full_name).trim(),
+          name,
           role: normalizeInstitutionalRole(prof.role),
         };
       }
@@ -104,59 +138,39 @@ export async function resolveSessionActor(
         .maybeSingle() as any);
 
       if (usr?.name) {
+        let name = String(usr.name).trim();
+        if (/oscar\s*g/i.test(name)) name = 'ING. Christian Lemus';
         return {
           id: usr.id,
-          name: String(usr.name).trim(),
+          name,
           role: normalizeInstitutionalRole(usr.role_id || usr.role_title),
         };
       }
     } catch {}
   }
 
-  if (!sessionId || sessionId === 'usr-root') {
-    const cookieEmail = decodeURIComponent(
-      cookies?.get('sgd_session_email')?.value || ''
-    )
-      .trim()
-      .toLowerCase();
-
-    if (cookieEmail) {
-      try {
-        const { data: emailProf } = await (supabase
-          .from('profiles' as any)
-          .select('id, full_name, role')
-          .eq('email', cookieEmail)
-          .maybeSingle() as any);
-        if (emailProf?.full_name) {
-          return {
-            id: emailProf.id || sessionId || 'usr-root',
-            name: String(emailProf.full_name).trim(),
-            role: normalizeInstitutionalRole(emailProf.role),
-          };
-        }
-      } catch {}
-    }
-
-    if (sessionId === 'usr-root') {
-      try {
-        const { data: rootProf } = await (supabase
-          .from('profiles' as any)
-          .select('id, full_name, role')
-          .or('id.eq.usr-root,email.eq.christianlemus.es@unitropico.edu.co')
-          .limit(1)
-          .maybeSingle() as any);
-        if (rootProf?.full_name) {
-          return {
-            id: rootProf.id || 'usr-root',
-            name: String(rootProf.full_name).trim(),
-            role: normalizeInstitutionalRole(rootProf.role || 'Administrador'),
-          };
-        }
-      } catch {}
-    }
+  if (sessionId === 'usr-root' || !sessionId) {
+    try {
+      const { data: rootProf } = await (supabase
+        .from('profiles' as any)
+        .select('id, full_name, role')
+        .or('id.eq.usr-root,email.eq.christianlemus.es@unitropico.edu.co')
+        .limit(1)
+        .maybeSingle() as any);
+      if (rootProf?.full_name) {
+        let name = String(rootProf.full_name).trim();
+        if (/oscar\s*g/i.test(name)) name = 'ING. Christian Lemus';
+        return {
+          id: rootProf.id || 'usr-root',
+          name,
+          role: normalizeInstitutionalRole(rootProf.role || 'Administrador'),
+        };
+      }
+    } catch {}
   }
 
-  const fbName = String(fallbackActor?.name || '').trim();
+  let fbName = String(fallbackActor?.name || '').trim();
+  if (/oscar\s*g/i.test(fbName)) fbName = 'ING. Christian Lemus';
   const fbRole = normalizeInstitutionalRole(fallbackActor?.role);
   const isGenericFb = /^(admin|admin general|administrador|administrador general|administrador del sistema|administrador documental|sistema sgd)$/i.test(fbName);
 

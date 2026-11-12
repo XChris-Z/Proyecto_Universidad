@@ -459,6 +459,7 @@ export interface AuditLog {
   integrityHash: string;
   previousHash: string;
   ip: string;
+  device?: string;
   cipher: string;
 }
 

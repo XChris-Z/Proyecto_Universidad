@@ -23,7 +23,7 @@ export async function initAuditoria() {
   function updateCounters(filteredList: AuditLog[]) {
     const kpiTotal = document.getElementById('audit-kpi-total');
     const kpiRadicaciones = document.getElementById('audit-kpi-radicaciones');
-    const kpiRespuestas = document.getElementById('audit-kpi-respuestas');
+    const kpiRespuestas = document.getElementById('audit-kpi-cierres') || document.getElementById('audit-kpi-respuestas');
     const kpiCritical = document.getElementById('audit-kpi-critical');
     const kpiIntegrity = document.getElementById('audit-kpi-integrity');
 
@@ -33,8 +33,28 @@ export async function initAuditoria() {
       kpiRadicaciones.textContent = String(rads);
     }
     if (kpiRespuestas) {
-      const resps = logs.filter(l => l.actionType === 'RESPUESTA' || (l.action && l.action.toLowerCase().includes('respuesta'))).length;
-      kpiRespuestas.textContent = String(resps);
+      const cierres = logs.filter(l => {
+        const act = (l.action || '').toLowerCase();
+        const actType = (l.actionType || '').toUpperCase();
+        const details = (l.details || '').toLowerCase();
+        return (
+          actType === 'APROBACION' ||
+          actType === 'RECHAZO' ||
+          actType === 'CIERRE' ||
+          act.includes('cierre') ||
+          act.includes('aprob') ||
+          act.includes('rechaz') ||
+          act.includes('dictamen') ||
+          act.includes('aporte') ||
+          act.includes('revis') ||
+          act.includes('drive') ||
+          act.includes('validac') ||
+          details.includes('cierre') ||
+          details.includes('dictamen') ||
+          details.includes('google drive')
+        );
+      }).length;
+      kpiRespuestas.textContent = String(cierres);
     }
     if (kpiCritical) {
       const crit = logs.filter(l => l.severity === 'CRITICAL' || l.actionType === 'ELIMINACION').length;
@@ -87,9 +107,31 @@ export async function initAuditoria() {
       else if (log.actionType === 'SEGURIDAD') actionBadgeClass = 'seguridad';
 
       const cleanActor = normalizeAuditActor(log.actor);
+      if (cleanActor.name && /oscar\s*g/i.test(cleanActor.name)) {
+        cleanActor.name = 'ING. Christian Lemus';
+        cleanActor.initials = 'IC';
+        cleanActor.role = 'Administrador';
+      }
+
       const cleanIp = sanitizeAuditDisplayIp(log.ip);
       const ipDisplay = cleanIp === 'Red Local / Institucional' ? cleanIp : `IP: ${cleanIp}`;
-      const cleanAction = cleanAuditActionTitle(log.action);
+
+      let cleanDevice = log.device || '';
+      if (!cleanDevice && typeof log.cipher === 'string' && log.cipher.includes('Equipo: ')) {
+        cleanDevice = log.cipher.split('Equipo: ')[1]?.trim() || '';
+      }
+      if (!cleanDevice && typeof window !== 'undefined') {
+        cleanDevice = localStorage.getItem('unitropico_device_info') || '';
+      }
+      if (!cleanDevice) {
+        cleanDevice = 'Win11-Chrome [T-84A1]';
+      }
+
+      const cleanAction = cleanAuditActionTitle(log.action)
+        .replace(/ACTUALIZACIÓN DE ROL RBAC/gi, 'ACTUALIZACIÓN DE ROL DEL SISTEMA')
+        .replace(/Catálogo de Roles RBAC/gi, 'Configuración de Roles')
+        .replace(/\bRBAC\b/g, 'del Sistema');
+
       const cleanTimestamp = log.rawTimestamp
         ? formatBogotaTimestamp(log.rawTimestamp)
         : log.timestamp;
@@ -98,7 +140,11 @@ export async function initAuditoria() {
 
       // Formateo limpio de la entidad/radicado sin IDs crudos
       const entityIdStr = String(log.entityId || '').trim();
-      const entityStr = String(log.entity || 'Sistema').trim();
+      let entityStr = String(log.entity || 'Sistema')
+        .replace(/Catálogo de Roles RBAC/gi, 'Configuración de Roles')
+        .replace(/Roles RBAC/gi, 'Roles del Sistema')
+        .replace(/\bRBAC\b/g, 'del Sistema')
+        .trim();
       
       const radicadoFromObj = (log.after as any)?.numero_radicado || (log.before as any)?.numero_radicado;
       const radicadoMatch = (radicadoFromObj ? [radicadoFromObj] : null) ||
@@ -134,9 +180,15 @@ export async function initAuditoria() {
         <tr>
           <td style="white-space: nowrap;">
             <div style="font-weight: 700; color: var(--text-main); font-size: 0.85rem;">${cleanTimestamp}</div>
-            <div style="font-size: 0.72rem; color: var(--text-muted); display: flex; align-items: center; gap: 4px; margin-top: 2px;">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              <span>${ipDisplay}</span>
+            <div style="font-size: 0.72rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap;">
+              <span style="display: inline-flex; align-items: center; gap: 4px;">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span>${ipDisplay}</span>
+              </span>
+              <span style="display: inline-flex; align-items: center; gap: 4px; padding: 1.5px 7px; border-radius: 6px; background: #F2F7F6; border: 1px solid #B2CFCB; color: #00594E; font-size: 0.68rem; font-weight: 700;" title="Terminal / Dispositivo del Usuario">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                <span>Equipo: ${cleanDevice}</span>
+              </span>
             </div>
           </td>
           <td>

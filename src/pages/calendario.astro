@@ -181,11 +181,14 @@ const {
     <!-- ================================================================= -->
     <!-- ESTADO 2: CONTENEDOR PRINCIPAL CALENDARIO PRO MAX                -->
     <!-- ================================================================= -->
-    <div id="state-connected" style="display: block;">
-      <!-- CABECERA INSTITUCIONAL Y ACCIONES DE NAVEGACIÓN -->
+    <div id="state-connected" style="display: flex; flex-direction: column; gap: 18px; width: 100%;">
+      <!-- BLOQUE INDEPENDIENTE 1: CABECERA INSTITUCIONAL Y ACCIONES DE NAVEGACIÓN -->
       <header class="promax-module-header">
         <div class="header-titles">
-          <h2 class="module-main-title">Agenda de Vencimientos</h2>
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px;">
+            <h2 class="module-main-title" style="margin: 0;">Agenda de Vencimientos</h2>
+            <span style="font-size: 0.72rem; font-weight: 800; background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; padding: 3px 10px; border-radius: 999px;">Plazos Oficiales</span>
+          </div>
           <p class="module-subtitle">Control cronológico de plazos por dependencia y cierre de expedientes</p>
         </div>
 
@@ -965,19 +968,19 @@ const {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   }
 
-  /* Header del módulo */
+  /* Header del módulo (Bloque Independiente 1) */
   .promax-module-header {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
-    gap: 20px;
+    gap: 18px;
     flex-wrap: wrap;
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(16px);
-    border: 1px solid rgba(226, 232, 240, 0.8);
-    border-radius: 20px;
-    padding: 20px 24px;
-    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03);
+    background: #FFFFFF;
+    border: 1px solid #DCE4E3;
+    border-top: 3.5px solid #00594E;
+    border-radius: 16px;
+    padding: 18px 24px;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
   }
   .header-pretitle {
     display: flex;
@@ -1145,15 +1148,26 @@ const {
   }
 
   /* ==========================================================================
-     BENTO HEADER INTELIGENTE (RESUMEN SEMÁFORO SLA)
+     BLOQUE INDEPENDIENTE 2: BENTO HEADER INTELIGENTE (RESUMEN SEMÁFORO SLA)
      ========================================================================== */
+  .promax-calendar-surface {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    width: 100%;
+    background: transparent;
+    border: none;
+    padding: 0;
+    box-shadow: none;
+  }
+
   .bento-header-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     justify-content: start;
     gap: 16px;
     width: 100%;
-    margin-bottom: 22px;
+    margin-bottom: 0;
   }
 
   @media (max-width: 1120px) {
@@ -1390,7 +1404,7 @@ const {
   }
 
   /* ==========================================================================
-     BARRA DE CONTROL Y NAVEGACIÓN EJECUTIVA
+     BLOQUE INDEPENDIENTE 3: BARRA DE CONTROL Y NAVEGACIÓN EJECUTIVA
      ========================================================================== */
   .promax-executive-nav {
     display: flex;
@@ -1398,12 +1412,13 @@ const {
     justify-content: space-between;
     gap: 16px;
     padding: 12px 18px;
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(16px);
-    border: 1px solid rgba(226, 232, 240, 0.9);
-    border-radius: 16px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.02);
+    background: #FFFFFF;
+    border: 1px solid #DCE4E3;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
     flex-wrap: wrap;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .nav-date-group {
@@ -1597,13 +1612,14 @@ const {
   }
 
   /* ==========================================================================
-     CUERPO PRINCIPAL ASIMÉTRICO (1.6fr 1fr)
+     BLOQUE INDEPENDIENTE 4: CUERPO PRINCIPAL ASIMÉTRICO (1.55fr 1fr - 2 CARDS)
      ========================================================================== */
   .promax-calendar-workspace-split {
     display: grid;
     grid-template-columns: 1.55fr 1fr;
-    gap: 24px;
+    gap: 20px;
     align-items: start;
+    width: 100%;
   }
 
   @media (max-width: 1080px) {
@@ -1617,17 +1633,16 @@ const {
     }
   }
 
-  /* LIENZO DE CALENDARIO (PANEL IZQUIERDO) */
+  /* LIENZO DE CALENDARIO (PANEL IZQUIERDO - CARD BENTO INDEPENDIENTE) */
   .promax-canvas-column {
     min-width: 0;
   }
   .canvas-view-card {
-    background: rgba(248, 250, 252, 0.9);
-    backdrop-filter: blur(16px);
-    border: 1px solid rgba(226, 232, 240, 0.9);
-    border-radius: 20px;
-    padding: 16px;
-    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03);
+    background: #FFFFFF;
+    border: 1px solid #DCE4E3;
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.03);
   }
 
   .month-weekdays-header {
@@ -1860,11 +1875,11 @@ const {
     min-width: 0;
   }
   .timeline-monitor-card {
-    background: #ffffff;
-    border: 1px solid rgba(226, 232, 240, 0.9);
-    border-radius: 20px;
-    padding: 20px;
-    box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.04);
+    background: #FFFFFF;
+    border: 1px solid #DCE4E3;
+    border-radius: 16px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.03);
   }
 
   .timeline-header {

@@ -30,6 +30,37 @@ Astro.response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate
           document.documentElement.setAttribute('data-sidebar-collapsed', 'true');
           if (document.body) document.body.classList.add('sidebar-collapsed');
         }
+
+        // 1. Huella Única de Terminal / Computador + Navegador + SO
+        var terminalId = localStorage.getItem('unitropico_terminal_id');
+        if (!terminalId) {
+          var rand = Math.floor(1000 + Math.random() * 9000).toString(16).toUpperCase();
+          terminalId = 'T-' + (rand.length < 4 ? (rand + 'A1').substring(0, 4) : rand);
+          localStorage.setItem('unitropico_terminal_id', terminalId);
+        }
+
+        var ua = navigator.userAgent || '';
+        var os = 'Win11';
+        if (/Windows NT 10/i.test(ua)) os = 'Win11';
+        else if (/Windows/i.test(ua)) os = 'Win10';
+        else if (/Macintosh|Mac OS X/i.test(ua)) os = 'macOS';
+        else if (/Linux/i.test(ua)) os = 'Linux';
+        else if (/Android/i.test(ua)) os = 'Android';
+        else if (/iPhone|iPad/i.test(ua)) os = 'iOS';
+
+        var browser = 'Chrome';
+        if (/Edg\//i.test(ua)) browser = 'Edge';
+        else if (/Firefox\//i.test(ua)) browser = 'Firefox';
+        else if (/Safari\//i.test(ua) && !/Chrome/i.test(ua)) browser = 'Safari';
+        else if (/Chrome\//i.test(ua)) browser = 'Chrome';
+
+        var deviceInfo = os + '-' + browser + ' [' + terminalId + ']';
+        localStorage.setItem('unitropico_device_info', deviceInfo);
+        document.cookie = 'unitropico_device_info=' + encodeURIComponent(deviceInfo) + '; path=/; max-age=31536000; SameSite=Lax';
+
+        // 2. Cookie prioritaria de sesión institucional para trazabilidad
+        var activeEmail = localStorage.getItem('unitropico_active_user_email') || 'christianlemus.es@unitropico.edu.co';
+        document.cookie = 'unitropico_active_user_email=' + encodeURIComponent(activeEmail) + '; path=/; max-age=31536000; SameSite=Lax';
       } catch (e) {}
     })();
   </script>
