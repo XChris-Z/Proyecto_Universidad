@@ -168,16 +168,35 @@ export function esSubcarpetaValida(sub: any): boolean {
   if (!nombre) return false;
 
   const upper = nombre.toUpperCase();
-  if (upper.includes('RESPUESTA_META') || upper === 'EXPEDIENTE GENERAL' || upper.startsWith('PIN')) {
+  if (
+    upper.includes('RESPUESTA_META') ||
+    upper.includes('RECHAZADO') ||
+    upper.includes('REV_APROBADO') ||
+    upper === 'EXPEDIENTE GENERAL' ||
+    upper.startsWith('PIN')
+  ) {
     return false;
   }
-  if (nombre.includes('{"') || nombre.includes('"}') || nombre.includes('","') || nombre.includes('":') || nombre.includes('["') || nombre.includes('"]')) {
+  if (
+    nombre.includes('{"') ||
+    nombre.includes('"}') ||
+    nombre.includes('","') ||
+    nombre.includes('":') ||
+    nombre.includes('["') ||
+    nombre.includes('"]')
+  ) {
     return false;
   }
   if (/^["']?[0-9a-f]{8}-[0-9a-f]{4}-/i.test(nombre)) {
     return false;
   }
-  if (desc.startsWith('{"pin":') || desc.includes('"fecha_envio":') || desc.includes('"expira":')) {
+  const upperDesc = desc.toUpperCase();
+  if (
+    desc.startsWith('{"pin":') ||
+    desc.includes('"fecha_envio":') ||
+    desc.includes('"expira":') ||
+    upperDesc.includes('REV_APROBADO')
+  ) {
     return false;
   }
   return true;

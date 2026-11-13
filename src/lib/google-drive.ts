@@ -2,8 +2,8 @@
 import { google, type drive_v3 } from 'googleapis';
 import { Readable } from 'node:stream';
 import type { ReadableStream as NodeWebReadableStream } from 'node:stream/web';
-import { supabase } from '@lib/supabase';
-import { filtrarSubcarpetasValidas, limpiarNombreCarpeta, separarRespuestaMeta } from '@lib/subcarpetas';
+import { supabase, supabaseAdmin } from '@lib/supabase';
+import { esSubcarpetaValida, filtrarSubcarpetasValidas, limpiarNombreCarpeta, separarRespuestaMeta } from '@lib/subcarpetas';
 import { extractApprovedAnexoIds } from '@lib/revision-meta';
 
 export const DRIVE_RESPUESTA_FINAL_FOLDER = 'Respuesta al Solicitante (Cierre Oficial)';
@@ -438,7 +438,8 @@ export async function downloadFileStreamOrBuffer(
 
   for (const pathAttempt of Array.from(new Set([cleanPath, decodedPath]))) {
     try {
-      const { data, error } = await supabase.storage.from('peticiones').download(pathAttempt);
+      const dbStorage = (supabaseAdmin || supabase).storage;
+      const { data, error } = await dbStorage.from('peticiones').download(pathAttempt);
       if (!error && data) {
         if (typeof data.stream === 'function' && data.size > STREAM_THRESHOLD_BYTES) {
           return {
@@ -455,7 +456,7 @@ export async function downloadFileStreamOrBuffer(
     } catch {}
   }
 
-  const { data: publicData } = supabase.storage.from('peticiones').getPublicUrl(cleanPath);
+  const { data: publicData } = (supabaseAdmin || supabase).storage.from('peticiones').getPublicUrl(cleanPath);
   const candidateUrls = [
     publicData?.publicUrl,
     `https://irjjpjtvhxoakiazfswn.supabase.co/storage/v1/object/public/peticiones/${cleanPath}`,
@@ -490,7 +491,7 @@ function inferSubcarpetasExpediente(p: any): any[] {
       if (match) {
         const name = (match[1] || '').trim();
         const desc = (match[2] || '').trim();
-        if (name) {
+        if (name && esSubcarpetaValida({ nombre: name, descripcion: desc })) {
           const key = name.toLowerCase();
           mapByName[key] = {
             id: `sub-${idx + 1}`,
@@ -509,7 +510,7 @@ function inferSubcarpetasExpediente(p: any): any[] {
       const match = rawObs.match(/^\[([^\]]+)\]/);
       if (match) {
         const name = (match[1] || '').trim();
-        if (name) {
+        if (name && esSubcarpetaValida({ nombre: name })) {
           const key = name.toLowerCase();
           if (!mapByName[key]) {
             mapByName[key] = {
@@ -617,44 +618,77 @@ export interface FullExpedienteDriveData {
 export async function fetchFullExpedienteParaDrive(
   peticionId: string
 ): Promise<FullExpedienteDriveData | null> {
-  const { data: peticion, error: petErr } = await (supabase
-    .from('peticiones' as any)
-    .select(
-      `
-      id,
-      numero_radicado,
-      asunto,
-      descripcion,
-      categoria,
-      instrucciones_anexos,
-      solicitante_nombre,
-      solicitante_email,
-      storage_folder_path,
-      respuesta_drive_url
-    `
-    )
-    .eq('id', peticionId)
-    .maybeSingle() as any);
+  const targetId = String(peticionId || '').trim();
+  if (!targetId) return null;
 
-  if (petErr || !peticion) return null;
+  const client = (supabaseAdmin || supabase) as any;
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(targetId);
+  let peticion: any = null;
 
-  const { data: anexosData } = await (supabase
-    .from('peticion_anexos' as any)
+  if (isUuid) {
+    const { data } = await client
+      .from('peticiones')
+      .select('*')
+      .eq('id', targetId)
+      .maybeSingle();
+    peticion = data;
+  }
+
+  if (!peticion) {
+    const { data } = await client
+      .from('peticiones')
+      .select('*')
+      .eq('numero_radicado', targetId)
+      .maybeSingle();
+    peticion = data;
+  }
+
+  if (!peticion) {
+    const { data } = await client
+      .from('peticiones')
+      .select('*')
+      .ilike('numero_radicado', `%${targetId}%`)
+      .limit(1)
+      .maybeSingle();
+    peticion = data;
+  }
+
+  if (!peticion) {
+    const { data: allPets } = await client
+      .from('peticiones')
+      .select('*')
+      .limit(100);
+    if (Array.isArray(allPets)) {
+      peticion = allPets.find(
+        (p: any) =>
+          String(p.id) === targetId ||
+          String(p.numero_radicado || '').toUpperCase() === targetId.toUpperCase() ||
+          String(p.numero_radicado || '').toUpperCase().includes(targetId.toUpperCase())
+      );
+    }
+  }
+
+  if (!peticion) return null;
+
+  const realPeticionUuid = peticion.id;
+
+  const { data: anexosData } = await client
+    .from('peticion_anexos')
     .select('*')
-    .eq('peticion_id', peticionId)
-    .order('created_at', { ascending: true }) as any);
+    .eq('peticion_id', realPeticionUuid)
+    .order('created_at', { ascending: true });
 
-  const { data: respData } = await (supabase
-    .from('peticion_responsables' as any)
+  const { data: respData } = await client
+    .from('peticion_responsables')
     .select('*, oficinas ( id, codigo, nombre, email_institucional )')
-    .eq('peticion_id', peticionId)
-    .order('created_at', { ascending: true }) as any);
+    .eq('peticion_id', realPeticionUuid)
+    .order('created_at', { ascending: true });
 
-  const { data: dbSubs } = await (supabase
-    .from('peticion_subcarpetas' as any)
+  const { data: dbSubs } = await client
+    .from('peticion_subcarpetas')
     .select('id, peticion_id, nombre, descripcion, created_at')
-    .eq('peticion_id', peticionId)
-    .order('created_at', { ascending: true }) as any);
+    .eq('peticion_id', realPeticionUuid)
+    .order('created_at', { ascending: true });
 
   const anexos: any[] = Array.isArray(anexosData) ? anexosData : [];
   const responsables: any[] = Array.isArray(respData) ? respData : [];
@@ -676,7 +710,7 @@ export async function fetchFullExpedienteParaDrive(
     if (respAnexo) anexoRespuestaFinal = respAnexo;
   }
 
-  const anexoPrincipal =
+  let anexoPrincipal =
     anexos.find(
       (a: any) =>
         !a.es_anexo_oficina &&
@@ -688,6 +722,22 @@ export async function fetchFullExpedienteParaDrive(
       (anexos[0].id !== anexoRespuestaFinal.id && anexos[0].storage_path !== anexoRespuestaFinal.storage_path))
       ? anexos[0]
       : null);
+
+  // Si no está en anexos pero la petición tiene archivo_url registrado, construir anexo principal sintético
+  if (!anexoPrincipal && peticion.archivo_url) {
+    const synthName = sanitizeDriveName(
+      peticion.asunto ? `${peticion.asunto}.pdf` : 'Documento_Base.pdf',
+      'Documento_Base.pdf'
+    );
+    anexoPrincipal = {
+      id: `principal-${peticion.id}`,
+      peticion_id: peticion.id,
+      nombre_archivo: synthName,
+      storage_path: peticion.archivo_url,
+      mime_type: 'application/pdf',
+      es_anexo_oficina: false,
+    };
+  }
 
   const anexosDependencias = anexos.filter(
     (a: any) =>
@@ -756,10 +806,19 @@ async function ensureFolderShareAndGetUrl(drive: drive_v3.Drive, folderId: strin
 
 async function persistDriveUrlInDb(peticionId: string, webViewLink: string): Promise<void> {
   try {
-    await (supabase
-      .from('peticiones' as any)
-      .update({ respuesta_drive_url: webViewLink } as any)
-      .eq('id', peticionId) as any);
+    const client = (supabaseAdmin || supabase) as any;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(peticionId);
+    if (isUuid) {
+      await client
+        .from('peticiones')
+        .update({ respuesta_drive_url: webViewLink })
+        .eq('id', peticionId);
+    } else {
+      await client
+        .from('peticiones')
+        .update({ respuesta_drive_url: webViewLink })
+        .eq('numero_radicado', peticionId);
+    }
   } catch (err: any) {
     console.warn('[Google Drive] Aviso guardando respuesta_drive_url en BD:', err?.message);
   }

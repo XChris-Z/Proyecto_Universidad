@@ -12,13 +12,26 @@ import {
 export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
   try {
     const body = await request.json().catch(() => ({}));
-    const peticionId = typeof body?.peticionId === 'string' ? body.peticionId.trim() : '';
+    const url = new URL(request.url);
+    const rawId =
+      body?.id ||
+      body?.peticionId ||
+      body?.peticion_id ||
+      body?.radicado ||
+      body?.numero_radicado ||
+      url.searchParams.get('id') ||
+      url.searchParams.get('peticionId') ||
+      url.searchParams.get('peticion_id') ||
+      url.searchParams.get('radicado') ||
+      url.searchParams.get('numero_radicado');
+
+    const peticionId = typeof rawId === 'string' ? rawId.trim() : '';
 
     if (!peticionId) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: 'Debe suministrar el identificador (peticionId) del expediente.',
+          error: 'Debe suministrar el identificador (id o radicado) del expediente.',
         }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
@@ -63,9 +76,13 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
     return new Response(
       JSON.stringify({
         success: true,
+        ok: true,
+        driveUrl: result.webViewLink,
+        webViewLink: result.webViewLink,
+        folderUrl: result.webViewLink,
         folderId: result.folderId,
         folderName: result.folderName,
-        webViewLink: result.webViewLink,
+        numeroRadicado: result.numeroRadicado,
         archivosSubidos: result.archivosSubidos,
         subcarpetasCreadas: result.subcarpetasCreadas,
         aprobadosCount: result.aprobadosCount,

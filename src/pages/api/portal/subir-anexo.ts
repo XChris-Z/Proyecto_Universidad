@@ -2,14 +2,17 @@
 export const prerender = false;
 
 import type { APIRoute } from 'astro';
-import { supabase } from '@lib/supabase';
+import { supabase, supabaseAdmin } from '@lib/supabase';
 import { SESSION_COOKIE_KEY } from '@lib/constants';
 import { isPeticionRespondida } from '@lib/subcarpetas';
 import { logSystemActivity } from '@lib/audit';
 import { resolveSessionActor } from '@lib/request-actor';
+import { addApprovedAnexoMarker } from '@lib/revision-meta';
+import { isGoogleDriveConfigured, sincronizarAporteAprobadoEnDrive } from '@lib/google-drive';
 
 export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
   try {
+    const db = (supabaseAdmin || supabase) as any;
     const isStaffSession = Boolean(cookies.get(SESSION_COOKIE_KEY)?.value);
     const contentType = request.headers.get('content-type') || '';
     let peticionId = '';
@@ -93,14 +96,14 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
     // Resolver petición si solo se suministró radicado o completar número radicado
     let peticionRow: any = null;
     if (peticionId) {
-      const { data: pById } = await (supabase
+      const { data: pById } = await (db
         .from('peticiones' as any)
         .select('id, numero_radicado, storage_folder_path, estado, instrucciones_anexos, updated_at')
         .eq('id', peticionId)
         .maybeSingle() as any);
       peticionRow = pById;
     } else if (numeroRadicado) {
-      const { data: pByRad } = await (supabase
+      const { data: pByRad } = await (db
         .from('peticiones' as any)
         .select('id, numero_radicado, storage_folder_path, estado, instrucciones_anexos, updated_at')
         .eq('numero_radicado', numeroRadicado)
@@ -123,7 +126,7 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
     // Resolver responsableId automáticamente si viene por asignación, subcarpeta, dependencia o código
     let respCheck: any = null;
     if (responsableId && !String(responsableId).startsWith('sub-')) {
-      const { data: foundResp } = await (supabase
+      const { data: foundResp } = await (db
         .from('peticion_responsables' as any)
         .select('id, fecha_expiracion_codigo, estado_entrega, storage_subfolder_path, codigo_acceso, oficina_id')
         .eq('id', responsableId)
@@ -132,7 +135,7 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
     }
 
     if (!respCheck) {
-      const { data: petResps } = await (supabase
+      const { data: petResps } = await (db
         .from('peticion_responsables' as any)
         .select('id, fecha_expiracion_codigo, estado_entrega, storage_subfolder_path, codigo_acceso, oficina_id, subcarpeta_id, oficinas(nombre)')
         .eq('peticion_id', peticionId) as any);
@@ -194,7 +197,7 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
       const relativeStoragePath = `${baseFolder}/${Date.now()}_${cleanFileName}`;
       fullStoragePath = `peticiones/${relativeStoragePath}`;
 
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError } = await db.storage
         .from('peticiones')
         .upload(relativeStoragePath, fileBuffer, {
           contentType: fileMime,
@@ -232,7 +235,7 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
     let anexoData: any = null;
     let anexoError: any = null;
 
-    const resAnexo = await (supabase
+    const resAnexo = await (db
       .from('peticion_anexos' as any)
       .insert(anexoPayload as any)
       .select()
@@ -247,7 +250,7 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
     ) {
       // Reintentar sin subcarpeta_id si la columna física aún no existe
       delete anexoPayload.subcarpeta_id;
-      const retryRes = await (supabase
+      const retryRes = await (db
         .from('peticion_anexos' as any)
         .insert(anexoPayload as any)
         .select()
@@ -265,7 +268,7 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
 
     // 4. Actualizar estado de entrega en peticion_responsables preservando el PIN y observaciones por subcarpeta
     if (responsableId && !String(responsableId).startsWith('sub-')) {
-      const { data: currentResp } = await (supabase
+      const { data: currentResp } = await (db
         .from('peticion_responsables' as any)
         .select('observaciones_entrega')
         .eq('id', responsableId)
@@ -296,6 +299,11 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
         finalObservaciones = pinHeader ? (cleanUserObs ? `${pinHeader} | ${cleanUserObs}` : pinHeader) : cleanUserObs;
       }
 
+      // Si fue carga manual realizada por funcionario/administrador, aprobar automáticamente el soporte
+      if (cargaManual && anexoData?.id) {
+        finalObservaciones = addApprovedAnexoMarker(finalObservaciones, anexoData.id, cleanSubName || subcarpetaNombre);
+      }
+
       // Actualizar de forma segura sin columnas inexistentes
       const updatePayload: any = {
         estado_entrega: 'Entregado',
@@ -303,7 +311,7 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
         observaciones_entrega: finalObservaciones || null,
       };
 
-      const updResult = await (supabase
+      const updResult = await (db
         .from('peticion_responsables' as any)
         .update(updatePayload)
         .eq('id', responsableId) as any);
@@ -311,12 +319,26 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
       if (updResult.error) {
         console.warn('Advertencia actualizando peticion_responsables:', updResult.error.message);
       }
+
+      // Si fue carga manual, sincronizar de inmediato el soporte aprobado hacia su subcarpeta en Google Drive
+      if (cargaManual && anexoData?.id && isGoogleDriveConfigured()) {
+        try {
+          await sincronizarAporteAprobadoEnDrive(
+            peticionId,
+            anexoData.id,
+            cleanSubName || subcarpetaNombre,
+            responsableId
+          );
+        } catch (driveErr: any) {
+          console.warn('[SUBIR ANEXO MANUAL] Aviso sincronizando en Drive (no fatal):', driveErr?.message);
+        }
+      }
     }
 
     // 5. Mantener petición en trámite sin marcar prematuramente como Respondida al solicitante
     try {
       if (peticionRow && !isPeticionRespondida(peticionRow)) {
-        await (supabase
+        await (db
           .from('peticiones' as any)
           .update({ estado: 'en_tramite', updated_at: new Date().toISOString() } as any)
           .eq('id', peticionId) as any);

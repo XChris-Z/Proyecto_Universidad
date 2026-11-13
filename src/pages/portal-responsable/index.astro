@@ -346,6 +346,26 @@ import Layout from '@layouts/Layout.astro';
                 <input type="file" id="portal-file-input" multiple style="display: none;" />
               </div>
 
+              <!-- Bandeja de Pre-Carga / Cola de Archivos Listos para Enviar -->
+              <div id="portal-preupload-container" style="display: none; margin-top: 14px; background: #FFFFFF; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 14px 16px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #F1F5F9; padding-bottom: 8px;">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; background: #E6EFEF; color: #00594E;">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    </span>
+                    <span style="font-weight: 800; font-size: 0.82rem; color: #00594E; text-transform: uppercase; letter-spacing: 0.03em;">
+                      Archivos Listos para Enviar (<span id="portal-staged-count">0</span>)
+                    </span>
+                  </div>
+                  <button type="button" id="btn-clear-staged-files" style="background: none; border: none; font-size: 0.72rem; font-weight: 700; color: #DC2626; cursor: pointer; text-decoration: underline;">
+                    Vaciar cola
+                  </button>
+                </div>
+                <div id="portal-staged-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow-y: auto;">
+                  <!-- Elementos inyectados dinámicamente -->
+                </div>
+              </div>
+
               <!-- Observaciones -->
               <div class="portal-form-group" style="margin-top: 12px;">
                 <label for="portal-observaciones" class="portal-label" style="font-size: 0.74rem;">Observaciones o Aclaraciones de la Entrega (Opcional)</label>
@@ -358,11 +378,11 @@ import Layout from '@layouts/Layout.astro';
                 ></textarea>
               </div>
 
-              <!-- Botón de Carga -->
-              <div class="upload-actions-row" style="margin-top: 12px;">
-                <button type="button" id="btn-upload-files" class="btn-confirm-upload" style="padding: 10px 18px; font-size: 0.88rem;">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                  <span>Confirmar y Subir Archivos a Subcarpeta</span>
+              <!-- Botón de Envío Oficial -->
+              <div class="upload-actions-row" style="margin-top: 14px;">
+                <button type="button" id="btn-upload-files" class="btn-confirm-upload" style="padding: 11px 22px; font-size: 0.90rem; background: #00594E; color: #FFFFFF; border: 1.5px solid #003830; border-radius: 10px; font-weight: 800; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 14px rgba(0, 89, 78, 0.25); transition: all 0.2s;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  <span id="btn-upload-text">Enviar Aportes (0 archivos) &rarr;</span>
                 </button>
               </div>
             </div>
@@ -1814,6 +1834,14 @@ import Layout from '@layouts/Layout.astro';
     renderAnexosList(activeAnexos);
   }
 
+  function formatFileSize(bytes: number): string {
+    if (!bytes || bytes <= 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
   function renderAnexosList(anexos: any[]) {
     const container = document.getElementById('portal-anexos-list');
     const noMsg = document.getElementById('no-anexos-msg');
@@ -1821,28 +1849,166 @@ import Layout from '@layouts/Layout.astro';
 
     if (!anexos || anexos.length === 0) {
       if (noMsg) noMsg.style.display = 'flex';
+      container.innerHTML = '';
+      if (noMsg) container.appendChild(noMsg);
       return;
     }
 
     if (noMsg) noMsg.style.display = 'none';
-    container.innerHTML = anexos.map((a: any) => `
-      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
-        <div style="display: flex; align-items: center; gap: 12px;">
+    container.innerHTML = anexos.map((a: any) => {
+      const isApproved = a.es_aprobado === true || a.aprobado === true;
+      return `
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; box-shadow: 0 1px 3px rgba(0,0,0,0.02); gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
           <div style="width: 32px; height: 32px; border-radius: 8px; background: var(--uni-green-05); color: #00594E; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           </div>
-          <div>
-            <strong style="color: #0f172a; font-size: 0.88rem;">${a.nombre_archivo}</strong>
-            <div style="color: #64748b; font-size: 0.70rem; margin-top: 1px;">Entregado: ${new Date(a.created_at).toLocaleString('es-CO')}</div>
+          <div style="min-width: 0;">
+            <strong style="color: #0f172a; font-size: 0.88rem; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${a.nombre_archivo}</strong>
+            <div style="color: #64748b; font-size: 0.70rem; margin-top: 1px;">Entregado: ${new Date(a.created_at || Date.now()).toLocaleString('es-CO')}</div>
           </div>
         </div>
-        <span style="font-size: 0.72rem; font-weight: 750; color: #00594E; background: var(--uni-green-05); padding: 3px 10px; border-radius: 6px; border: 1px solid var(--uni-green-25); display: inline-flex; align-items: center; gap: 4px;">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-          <span>Radicado en Repositorio</span>
-        </span>
+        <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+          <span style="font-size: 0.72rem; font-weight: 750; color: ${isApproved ? '#166534' : '#00594E'}; background: ${isApproved ? '#dcfce7' : 'var(--uni-green-05)'}; padding: 3px 10px; border-radius: 6px; border: 1px solid ${isApproved ? '#bbf7d0' : 'var(--uni-green-25)'}; display: inline-flex; align-items: center; gap: 4px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>${isApproved ? 'Aporte Aprobado ✓' : 'Radicado en Repositorio'}</span>
+          </span>
+          ${!isApproved ? `
+          <button type="button" class="btn-eliminar-anexo-portal" data-anexo-id="${a.id}" data-filename="${String(a.nombre_archivo || '').replace(/"/g, '&quot;')}" style="background: #FEF2F2; color: #DC2626; border: 1px solid #FCA5A5; padding: 4px 10px; border-radius: 6px; font-size: 0.72rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: all 0.15s;" title="Eliminar y retirar este archivo">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            <span>Retirar</span>
+          </button>
+          ` : ''}
+        </div>
+      </div>
+    `;
+    }).join('');
+  }
+
+  // Delegación de eventos para retirar archivos ya subidos que no han sido aprobados
+  document.getElementById('portal-anexos-list')?.addEventListener('click', async (e) => {
+    const btn = (e.target as HTMLElement).closest('.btn-eliminar-anexo-portal') as HTMLButtonElement | null;
+    if (!btn) return;
+
+    const anexoId = btn.getAttribute('data-anexo-id');
+    const filename = btn.getAttribute('data-filename') || 'el archivo';
+
+    if (!anexoId) return;
+    if (!confirm(`¿Está seguro de retirar y eliminar el soporte "${filename}" de esta entrega?`)) {
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Retirando...';
+
+    try {
+      const res = await fetch('/api/portal/eliminar-anexo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ anexo_id: anexoId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        showPortalToast('Soporte retirado exitosamente.', 'success');
+        if (activeSessionData?.anexos) {
+          activeSessionData.anexos = activeSessionData.anexos.filter((x: any) => String(x.id) !== String(anexoId));
+        }
+        const subs = activeSessionData?.subcarpetas || [];
+        const currentSub = subs[activeSubIndex] || subs[0];
+        if (currentSub?.anexos) {
+          currentSub.anexos = currentSub.anexos.filter((x: any) => String(x.id) !== String(anexoId));
+          if (currentSub.anexos.length === 0) {
+            currentSub.estado_entrega = 'Pendiente';
+          }
+        }
+        renderSubcarpetasTabs();
+      } else {
+        showPortalToast(data.error || 'No se pudo retirar el archivo.', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Retirar';
+      }
+    } catch {
+      showPortalToast('Error de comunicación retirando archivo.', 'error');
+      btn.disabled = false;
+      btn.textContent = 'Retirar';
+    }
+  });
+
+  // Renderizar cola de pre-carga
+  function renderStagedQueue() {
+    const queueContainer = document.getElementById('portal-preupload-container');
+    const queueList = document.getElementById('portal-staged-list');
+    const queueCount = document.getElementById('portal-staged-count');
+    const uploadText = document.getElementById('btn-upload-text');
+
+    if (!queueContainer || !queueList || !uploadBtn) return;
+
+    if (selectedFilesToUpload.length === 0) {
+      queueContainer.style.display = 'none';
+      queueList.innerHTML = '';
+      if (queueCount) queueCount.textContent = '0';
+      if (uploadText) uploadText.textContent = 'Enviar Aportes (0 archivos) →';
+      uploadBtn.disabled = true;
+      uploadBtn.style.opacity = '0.6';
+      uploadBtn.style.cursor = 'not-allowed';
+      return;
+    }
+
+    queueContainer.style.display = 'block';
+    if (queueCount) queueCount.textContent = String(selectedFilesToUpload.length);
+    if (uploadText) {
+      uploadText.textContent = `Enviar Aportes (${selectedFilesToUpload.length} archivo${selectedFilesToUpload.length === 1 ? '' : 's'}) →`;
+    }
+    uploadBtn.disabled = false;
+    uploadBtn.style.opacity = '1';
+    uploadBtn.style.cursor = 'pointer';
+
+    queueList.innerHTML = selectedFilesToUpload.map((file, idx) => `
+      <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 10px; overflow: hidden;">
+          <div style="width: 28px; height: 28px; border-radius: 6px; background: #E6EFEF; color: #00594E; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+          <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            <div style="font-size: 0.82rem; font-weight: 700; color: #0F172A; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+              ${file.name}
+            </div>
+            <div style="font-size: 0.68rem; color: #64748B; display: flex; align-items: center; gap: 6px;">
+              <span>${formatFileSize(file.size)}</span>
+              <span>&bull;</span>
+              <span style="color: #B45309; font-weight: 700;">Listo para enviar</span>
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+          <span style="font-size: 0.68rem; font-weight: 800; background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; padding: 2px 7px; border-radius: 5px;">
+            Pendiente de envío
+          </span>
+          <button type="button" class="btn-remove-staged-file" data-index="${idx}" style="background: #FEF2F2; color: #DC2626; border: 1px solid #FCA5A5; border-radius: 6px; width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s;" title="Quitar archivo de la cola">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
       </div>
     `).join('');
   }
+
+  // Quitar archivo individual de la cola de pre-carga
+  document.getElementById('portal-preupload-container')?.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('.btn-remove-staged-file') as HTMLButtonElement | null;
+    if (btn) {
+      const idx = Number(btn.getAttribute('data-index'));
+      if (!isNaN(idx) && idx >= 0 && idx < selectedFilesToUpload.length) {
+        selectedFilesToUpload.splice(idx, 1);
+        renderStagedQueue();
+      }
+    }
+  });
+
+  // Vaciar toda la cola de pre-carga
+  document.getElementById('btn-clear-staged-files')?.addEventListener('click', () => {
+    selectedFilesToUpload = [];
+    renderStagedQueue();
+  });
 
   // 3. Drag and Drop de Archivos
   if (dropZone && fileInput) {
@@ -1879,20 +2045,14 @@ import Layout from '@layouts/Layout.astro';
     const validFiles = files.filter((f) => f && f.size >= 0);
     if (validFiles.length === 0) return;
 
-    selectedFilesToUpload = validFiles;
-    if (dropZone) {
-      dropZone.innerHTML = `
-        <div style="font-weight: 800; font-size: 0.95rem; color: #00594E;">
-          ${validFiles.length} archivo(s) preparado(s) para entrega:
-        </div>
-        <div style="font-size: 0.78rem; color: #475569; margin-top: 4px; font-weight: 600;">
-          ${validFiles.map(f => f.name).join(', ')}
-        </div>
-        <div style="font-size: 0.72rem; color: var(--uni-gold-primary); font-weight: 750; margin-top: 8px;">
-          Haga clic abajo en 'Confirmar y Subir Archivos a Subcarpeta'.
-        </div>
-      `;
-    }
+    validFiles.forEach((vf) => {
+      if (!selectedFilesToUpload.some((existing) => existing.name === vf.name && existing.size === vf.size)) {
+        selectedFilesToUpload.push(vf);
+      }
+    });
+
+    renderStagedQueue();
+    if (fileInput) fileInput.value = '';
   }
 
   // Notificaciones Toast del Portal
@@ -2071,27 +2231,19 @@ import Layout from '@layouts/Layout.astro';
 
         showPortalToast('Todos los anexos se subieron y radicaron correctamente.', 'success');
         selectedFilesToUpload = [];
+        renderStagedQueue();
         if (fileInput) fileInput.value = '';
         const obsEl = document.getElementById('portal-observaciones') as HTMLTextAreaElement | null;
         if (obsEl) obsEl.value = '';
-        if (dropZone) {
-          dropZone.innerHTML = `
-            <div class="drop-icon-box">
-              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            </div>
-            <div class="drop-title">Arrastre más archivos aquí o haga clic para examinar</div>
-            <div class="drop-formats">Formatos permitidos: PDF, DOCX, XLSX, JPG, PNG, ZIP</div>
-          `;
-        }
         renderSubcarpetasTabs();
       } catch (err) {
         console.error(err);
         showPortalToast('Error de red al subir archivos.', 'error');
       } finally {
-        uploadBtn.disabled = false;
+        uploadBtn.disabled = selectedFilesToUpload.length === 0;
         uploadBtn.innerHTML = `
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          <span>Confirmar y Subir Archivos a Subcarpeta</span>
+          <span id="btn-upload-text">Enviar Aportes (${selectedFilesToUpload.length} archivo${selectedFilesToUpload.length === 1 ? '' : 's'}) &rarr;</span>
         `;
       }
     });

@@ -6,7 +6,7 @@ export const prerender = false;
 Astro.response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
 
 import AppLayout from '@layouts/AppLayout.astro';
-import { supabase } from '@lib/supabase';
+import { supabase, supabaseAdmin } from '@lib/supabase';
 import { calculateDeadlineProgress } from '@lib/utils';
 import { Buffer } from 'node:buffer';
 import { getDeterministicPin } from '@lib/security';
@@ -126,9 +126,19 @@ if (anexosRes?.error || !anexosRes?.data) {
 
 let allSubcarpetaRows: any[] = Array.isArray(subcarpetasRes?.data) ? subcarpetasRes.data : [];
 if (subcarpetasRes?.error || !subcarpetasRes?.data) {
-  const fallbackSubs = await (supabase.from('peticion_subcarpetas' as any).select('*') as any);
+  const fallbackSubs = await ((supabaseAdmin || supabase).from('peticion_subcarpetas' as any).select('*') as any);
   allSubcarpetaRows = Array.isArray(fallbackSubs?.data) ? fallbackSubs.data : [];
 }
+
+// Limpieza y descarte de registros huérfanos o nombres corruptos
+try {
+  await (supabaseAdmin || supabase)
+    .from('peticion_subcarpetas' as any)
+    .delete()
+    .or('nombre.ilike.%RECHAZADO%,nombre.ilike.%REV_APROBADO%,nombre.ilike.%RESPUESTA_META%');
+} catch {}
+
+allSubcarpetaRows = filtrarSubcarpetasValidas(allSubcarpetaRows);
 
 const allOficinasRows: any[] = Array.isArray(oficinasRes?.data) ? oficinasRes.data : [];
 const oficinasById: Record<string, any> = {};
@@ -202,8 +212,10 @@ function combineSubcarpetas(p: any, dbSubs: any[] = []): any[] {
     for (const m of matches) {
       const name = String(m?.[1] || '').trim();
       const desc = String(m?.[2] || '').trim() || null;
+      const upperName = name.toUpperCase();
+      if (upperName.includes('RECHAZADO') || upperName.includes('REV_APROBADO')) continue;
       if (name && esSubcarpetaValida({ nombre: name, descripcion: desc })) {
-        const key = name.toUpperCase();
+        const key = upperName;
         const existing = foundSubs[key];
         if (!existing) {
           foundSubs[key] = {
@@ -224,8 +236,10 @@ function combineSubcarpetas(p: any, dbSubs: any[] = []): any[] {
     const m = fileName.match(/\[([^\]\r\n]+)\]/i);
     if (m && m[1]) {
       const name = String(m[1] || '').trim();
+      const upperName = name.toUpperCase();
+      if (upperName.includes('RECHAZADO') || upperName.includes('REV_APROBADO')) return;
       if (name && esSubcarpetaValida({ nombre: name })) {
-        const key = name.toUpperCase();
+        const key = upperName;
         if (!foundSubs[key]) {
           foundSubs[key] = {
             id: `sub-inf-${p.id}-${key.replace(/[^A-Z0-9_-]/g, '_')}`,
@@ -244,8 +258,10 @@ function combineSubcarpetas(p: any, dbSubs: any[] = []): any[] {
     for (const m of matches) {
       const name = String(m?.[1] || '').trim();
       const desc = String(m?.[2] || '').trim() || null;
+      const upperName = name.toUpperCase();
+      if (upperName.includes('RECHAZADO') || upperName.includes('REV_APROBADO')) continue;
       if (name && esSubcarpetaValida({ nombre: name, descripcion: desc })) {
-        const key = name.toUpperCase();
+        const key = upperName;
         const existing = foundSubs[key];
         if (!existing) {
           foundSubs[key] = {
@@ -2513,8 +2529,10 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         for (const m of matches) {
           const name = String(m?.[1] || '').trim();
           const desc = String(m?.[2] || '').trim() || null;
+          const upperName = name.toUpperCase();
+          if (upperName.includes('RECHAZADO') || upperName.includes('REV_APROBADO')) continue;
           if (name && esSubcarpetaValida({ nombre: name, descripcion: desc })) {
-            const key = name.toUpperCase();
+            const key = upperName;
             const existing = foundSubs[key];
             if (!existing) {
               foundSubs[key] = {
@@ -2535,8 +2553,10 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         const m = fileName.match(/\[([^\]\r\n]+)\]/i);
         if (m && m[1]) {
           const name = String(m[1] || '').trim();
+          const upperName = name.toUpperCase();
+          if (upperName.includes('RECHAZADO') || upperName.includes('REV_APROBADO')) return;
           if (name && esSubcarpetaValida({ nombre: name })) {
-            const key = name.toUpperCase();
+            const key = upperName;
             if (!foundSubs[key]) {
               foundSubs[key] = {
                 id: `sub-inf-${p.id}-${key.replace(/[^A-Z0-9_-]/g, '_')}`,
@@ -2555,8 +2575,10 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         for (const m of matches) {
           const name = String(m?.[1] || '').trim();
           const desc = String(m?.[2] || '').trim() || null;
+          const upperName = name.toUpperCase();
+          if (upperName.includes('RECHAZADO') || upperName.includes('REV_APROBADO')) continue;
           if (name && esSubcarpetaValida({ nombre: name, descripcion: desc })) {
-            const key = name.toUpperCase();
+            const key = upperName;
             const existing = foundSubs[key];
             if (!existing) {
               foundSubs[key] = {
@@ -2874,6 +2896,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
             const origKeyMatches = Array.from(rawInstrucciones.matchAll(/\[(.*?)\]:/g));
             const origKey = origKeyMatches
               .map((m: any) => String(m?.[1] ?? '').trim())
+              .filter((name: string) => esSubcarpetaValida(name))
               .find((name: string) => name.toLowerCase() === k) || k;
             return {
               nombre: origKey,
@@ -3765,7 +3788,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                       observaciones: obsText,
                     }),
                   });
-                } else if (file.size <= 4 * 1024 * 1024) {
+                } else {
                   const fd = new FormData();
                   fd.append('archivo', file);
                   fd.append('peticion_id', peticion.id);
@@ -3784,8 +3807,6 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                   fd.append('carga_manual', 'true');
                   fd.append('observaciones', obsText);
                   res = await fetch('/api/portal/subir-anexo', { method: 'POST', body: fd });
-                } else {
-                  throw new Error('No se pudo subir el archivo de gran tamaño al almacenamiento directo. Verifique la conexión e intente de nuevo.');
                 }
 
                 const data = await res.json().catch(() => ({}));
@@ -3965,14 +3986,14 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       }
 
       // D. Botón Respaldar Expediente en Google Drive
-      const driveBtn = target.closest('.btn-export-drive') as HTMLElement | null;
-      if (driveBtn) {
+      const driveBtn = (target ? target.closest('button[data-id], button[data-radicado], .btn-export-drive, .btn-respaldar-drive') : null) as HTMLElement | null;
+      if (driveBtn && (driveBtn.classList.contains('btn-export-drive') || driveBtn.classList.contains('btn-respaldar-drive') || (driveBtn.getAttribute('title') || '').toLowerCase().includes('drive'))) {
         e.preventDefault();
         e.stopPropagation();
-        const petId = driveBtn.getAttribute('data-id') || '';
-        const radicado = driveBtn.getAttribute('data-radicado') || 'RAD';
-        if (petId) {
-          handleExportToGoogleDrive(petId, radicado, driveBtn);
+        const petId = driveBtn.getAttribute('data-id') || driveBtn.dataset.id || '';
+        const radicado = driveBtn.getAttribute('data-radicado') || driveBtn.dataset.radicado || 'RAD';
+        if (petId || radicado) {
+          handleExportToGoogleDrive(petId || radicado, radicado, driveBtn);
         }
         return;
       }
@@ -4767,7 +4788,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
               storage_path: uploadedPath,
             }),
           });
-        } else if (file.size <= 4 * 1024 * 1024) {
+        } else {
           const formData = new FormData();
           formData.append('peticion_id', currentUploadPetId);
           formData.append('archivo', file);
@@ -4776,8 +4797,6 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
             method: 'POST',
             body: formData,
           });
-        } else {
-          throw new Error('No se pudo subir el archivo de gran tamaño al almacenamiento directo. Verifique su conexión e intente nuevamente.');
         }
 
         const data = await res.json().catch(() => ({}));
@@ -4840,7 +4859,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
           method: 'POST',
           credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ peticionId: petId }),
+          body: JSON.stringify({ id: petId, peticionId: petId, radicado }),
         });
 
         const data = await res.json().catch(() => ({}));

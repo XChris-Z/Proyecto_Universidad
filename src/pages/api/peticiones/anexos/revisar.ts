@@ -2,7 +2,7 @@
 export const prerender = false;
 
 import type { APIRoute } from 'astro';
-import { supabase } from '@lib/supabase';
+import { supabase, supabaseAdmin } from '@lib/supabase';
 import { logSystemActivity } from '@lib/audit';
 import { enviarCorreoRechazoAporteDependencia, resolvePublicBaseUrl } from '@lib/email';
 import { getDeterministicPin } from '@lib/security';
@@ -26,6 +26,7 @@ function extractPinFromObs(obs?: string | null): string | null {
 
 export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) => {
   try {
+    const db = (supabaseAdmin || supabase) as any;
     const body = await request.json().catch(() => ({}));
     const accion = String(body.accion || '').trim().toLowerCase();
     const anexoId = String(body.anexo_id || '').trim();
@@ -47,7 +48,7 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
       );
     }
 
-    const { data: anexo, error: anexoErr } = await (supabase
+    const { data: anexo, error: anexoErr } = await (db
       .from('peticion_anexos' as any)
       .select('*')
       .eq('id', anexoId)
@@ -61,7 +62,7 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
     }
 
     const peticionId = String(body.peticion_id || anexo.peticion_id || '').trim();
-    const { data: pet, error: petErr } = await (supabase
+    const { data: pet, error: petErr } = await (db
       .from('peticiones' as any)
       .select('id, numero_radicado, asunto, fecha_limite_entrega, fecha_limite_responsable')
       .eq('id', peticionId)
@@ -77,7 +78,7 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
     const actor = await resolveSessionActor(cookies, body.actor);
 
     // Buscar la asignación de dependencia asociada al aporte
-    const { data: allResps } = await (supabase
+    const { data: allResps } = await (db
       .from('peticion_responsables' as any)
       .select('*, oficinas(id, codigo, nombre, email_institucional)')
       .eq('peticion_id', peticionId) as any);
@@ -118,7 +119,7 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
     if (accion === 'aprobar') {
       if (targetResp) {
         const nextObs = addApprovedAnexoMarker(targetResp.observaciones_entrega, anexoId, effectiveSubName);
-        await (supabase
+        await (db
           .from('peticion_responsables' as any)
           .update({
             estado_entrega: 'Entregado',
@@ -189,7 +190,7 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
 
     // --- ACCIÓN: RECHAZAR / DEVOLVER APORTE ---
     let removedOrMarked = false;
-    const { error: delErr } = await (supabase
+    const { error: delErr } = await (db
       .from('peticion_anexos' as any)
       .delete()
       .eq('id', anexoId) as any);
@@ -198,13 +199,13 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
       removedOrMarked = true;
       if (anexo.storage_path) {
         const cleanPath = anexo.storage_path.replace(/^peticiones\//, '').replace(/^\/+/, '');
-        await supabase.storage.from('peticiones').remove([cleanPath]).catch(() => {});
+        await db.storage.from('peticiones').remove([cleanPath]).catch(() => {});
       }
     } else {
       const markedName = String(anexo.nombre_archivo || '').toUpperCase().includes('[RECHAZADO]')
         ? anexo.nombre_archivo
         : `[RECHAZADO] ${anexo.nombre_archivo}`;
-      const { error: markErr } = await (supabase
+      const { error: markErr } = await (db
         .from('peticion_anexos' as any)
         .update({ nombre_archivo: markedName })
         .eq('id', anexoId) as any);
@@ -221,7 +222,7 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
     // Comprobar si aún quedan anexos válidos para esa asignación/subcarpeta
     let remainingValidForResp = 0;
     if (targetResp) {
-      const { data: remAnexos } = await (supabase
+      const { data: remAnexos } = await (db
         .from('peticion_anexos' as any)
         .select('id, nombre_archivo, peticion_responsable_id')
         .eq('peticion_id', peticionId) as any);
@@ -241,7 +242,7 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
       const nextObs = setRejectedMarker(withoutApproved, effectiveSubName, motivo);
       const nextEstado = remainingValidForResp > 0 ? targetResp.estado_entrega || 'Entregado' : 'Pendiente';
 
-      await (supabase
+      await (db
         .from('peticion_responsables' as any)
         .update({
           estado_entrega: nextEstado,

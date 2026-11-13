@@ -150,27 +150,21 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
           </div>
         </a>
 
-        <!-- Botón de Exportación Ejecutiva .XLSX -->
+        <!-- Botón Compacto de Exportación Ejecutiva "Reporte General" -->
         <a
           href="/api/dashboard/exportar-excel"
           download
-          class="btn-export-dashboard-excel"
-          id="btn-export-dashboard-excel"
+          id="btn-export-excel"
+          class="btn-reporte-general"
           title="Descargar informe general completo en Microsoft Excel (.xlsx)"
         >
-          <span class="export-excel-icon-box">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
-              <line x1="12" y1="18" x2="12" y2="12"/>
-              <polyline points="9 15 12 18 15 15"/>
-            </svg>
-          </span>
-          <span class="export-excel-text-col">
-            <span class="export-excel-title">Exportar Informe General</span>
-            <span class="export-excel-sub">Reporte Excel (.XLSX) &middot; Datos en vivo</span>
-          </span>
-          <span class="export-excel-badge">XLSX</span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="12" y1="18" x2="12" y2="12"/>
+            <polyline points="9 15 12 18 15 15"/>
+          </svg>
+          <span>Reporte General</span>
         </a>
 
         <!-- Preservación segura de IDs DOM sin impacto visual -->
@@ -861,74 +855,30 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
     text-align: center;
   }
 
-  .btn-export-dashboard-excel {
+  .btn-reporte-general {
     display: inline-flex;
     align-items: center;
-    gap: 14px;
-    padding: 12px 20px;
-    border-radius: 14px;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.14) 0%, rgba(181, 161, 96, 0.24) 100%);
+    gap: 8px;
+    padding: 8px 14px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.12);
     border: 1.5px solid #B5A160;
     color: #FFFFFF;
     cursor: pointer;
     text-decoration: none;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.25);
-    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-    text-align: left;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    white-space: nowrap;
   }
 
-  .btn-export-dashboard-excel:hover {
-    background: linear-gradient(135deg, #B5A160 0%, #968242 100%);
+  .btn-reporte-general:hover {
+    background: #003830;
     border-color: #F7F5EE;
-    transform: translateY(-2px);
-    box-shadow: 0 14px 28px -6px rgba(181, 161, 96, 0.45);
-  }
-
-  .export-excel-icon-box {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    background: #B5A160;
-    color: #003830;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-  }
-
-  .export-excel-text-col {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    line-height: 1.25;
-  }
-
-  .export-excel-title {
-    font-size: 0.9rem;
-    font-weight: 800;
     color: #FFFFFF;
-    white-space: nowrap;
-    letter-spacing: -0.01em;
-  }
-
-  .export-excel-sub {
-    font-size: 0.73rem;
-    color: #E2E8F0;
-    margin-top: 2px;
-    white-space: nowrap;
-  }
-
-  .export-excel-badge {
-    font-size: 0.7rem;
-    font-weight: 850;
-    color: #003830;
-    background: #F7F5EE;
-    padding: 3px 8px;
-    border-radius: 6px;
-    letter-spacing: 0.04em;
-    flex-shrink: 0;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0, 56, 48, 0.35);
   }
 
   .hero-cta-buttons {
