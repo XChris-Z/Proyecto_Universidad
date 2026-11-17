@@ -217,11 +217,19 @@ h1, h2, h3, h4, .brand-font {
 
 .sidebar-brand-full {
   max-height: 48px;
-  max-width: 175px;
+  max-width: 195px;
   width: auto;
-  height: auto;
+  height: 44px;
   object-fit: contain;
   display: block;
+}
+
+.sidebar-brand-mini-img {
+  display: none;
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .sidebar-brand-mini {
@@ -6754,7 +6762,15 @@ p, h1, h2, h3, h4, h5, h6, span, label, td, th {
   }
 
   body.sidebar-collapsed .sidebar-brand-mini {
-    display: flex;
+    display: none !important;
+  }
+
+  body.sidebar-collapsed .sidebar-brand-mini-img {
+    display: block !important;
+    width: 34px !important;
+    height: 34px !important;
+    object-fit: contain !important;
+    margin: 0 auto !important;
   }
 
   body.sidebar-collapsed .btn-sidebar-collapse {

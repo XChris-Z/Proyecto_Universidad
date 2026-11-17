@@ -18,7 +18,7 @@ import AuthLayout from "@layouts/AuthLayout.astro";
           <!-- 1. Logo Institucional con Presencia Pro Max -->
           <div class="login-brand-logo-wrap">
             <img
-              src="/logo.png"
+              src="/simbolo-fondo-oscuro.png"
               alt="Logo Oficial Unitrópico"
               class="brand-logo-img"
               loading="eager"
@@ -55,7 +55,7 @@ import AuthLayout from "@layouts/AuthLayout.astro";
         <div class="login-mobile-header">
           <div class="login-brand-logo-wrap mobile">
             <img
-              src="/logo.png"
+              src="/simbolo-color.png"
               alt="Logo Oficial Unitrópico"
               class="login-mobile-logo"
               loading="eager"
@@ -352,16 +352,21 @@ import AuthLayout from "@layouts/AuthLayout.astro";
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: #FFFFFF;
-    padding: 18px 32px;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(181, 161, 96, 0.45);
+    padding: 16px 28px;
     border-radius: 18px;
-    box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.25), 0 0 0 1.5px rgba(181, 161, 96, 0.45);
+    box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.35);
     margin-bottom: 30px;
     width: fit-content;
     animation: proMaxCrossfade 0.45s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .login-brand-logo-wrap.mobile {
+    background: #FFFFFF;
+    border: 1px solid #DCE4E3;
+    box-shadow: 0 8px 24px -4px rgba(0, 89, 78, 0.12);
     margin-bottom: 14px;
     padding: 10px 22px;
     border-radius: 14px;
@@ -369,16 +374,17 @@ import AuthLayout from "@layouts/AuthLayout.astro";
 
   .login-brand-logo-wrap img {
     max-width: 260px;
-    max-height: 92px;
+    max-height: 72px;
     width: auto;
-    height: auto;
+    height: 52px;
     object-fit: contain;
     display: block;
   }
 
   .login-brand-logo-wrap.mobile img {
-    max-width: 180px;
-    max-height: 54px;
+    max-width: 190px;
+    max-height: 48px;
+    height: 40px;
   }
 
   /* 2. Título Principal */

@@ -17,11 +17,13 @@ const { title: _title = 'Dashboard — Panel de Control' } = Astro.props;
     <!-- Contexto Institucional Transversal (Sin título duplicado por módulo) -->
     <div class="topbar-context-bar">
       <span class="topbar-brand-pill">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-          <polyline points="9 12 11 14 15 10"/>
-        </svg>
-        <span>SGD UNITRÓPICO</span>
+        <img 
+          src="/escudo-color.png" 
+          alt="Escudo Unitrópico" 
+          class="topbar-brand-icon" 
+          style="width: 18px; height: 18px; object-fit: contain; flex-shrink: 0;" 
+        />
+        <span style="color: #00594E; font-weight: 800; letter-spacing: 0.05em;">UNITRÓPICO</span>
       </span>
 
       <span class="topbar-context-sep" aria-hidden="true">/</span>

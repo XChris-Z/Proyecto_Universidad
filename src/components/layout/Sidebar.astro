@@ -75,29 +75,56 @@ const visibleGroups = navGroupsRaw
 <aside class="sidebar" id="app-sidebar">
   <div class="brand-section">
     <a href={isAdmin ? '/dashboard' : visibleGroups[0]?.[0]?.href || '/perfil'} class="sidebar-brand-link" title="SGD Unitrópico">
+      <!-- Logo Oficial Expandido -->
       <img 
-        src="/logo.png" 
+        id="sidebar-brand-expanded"
+        src="/simbolo-color.png" 
         alt="Universidad Internacional del Trópico Americano" 
         class="sidebar-brand-full"
       />
-      <span class="sidebar-brand-mini" aria-hidden="true">U</span>
+      <!-- Logo Oficial Colapsado (Escudo) -->
+      <img 
+        id="sidebar-brand-collapsed"
+        src="/escudo-color.png" 
+        alt="Escudo Unitrópico" 
+        class="sidebar-brand-mini-img"
+      />
+      <span class="sidebar-brand-mini" aria-hidden="true" style="display: none;">U</span>
     </a>
 
-    <!-- Botón de plegar / desplegar en la esquina superior derecha del Sidebar -->
-    <button
-      type="button"
-      class="btn-sidebar-collapse"
-      id="btn-collapse-sidebar"
-      aria-label="Plegar o desplegar barra lateral"
-      aria-expanded="true"
-      data-tooltip="Plegar / Desplegar Menú (Ctrl+B)"
-    >
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-        <path d="M9 3v18"/>
-        <path class="sidebar-collapse-chevron" d="M14 9l-3 3 3 3"/>
-      </svg>
-    </button>
+    <div class="brand-actions-wrap">
+      <!-- Selector discreto de variante institucional (Símbolo / Color / Bandera) -->
+      <button
+        type="button"
+        class="btn-logo-variant-toggle"
+        id="btn-toggle-logo-variant"
+        aria-label="Probar variante de logo institucional"
+        data-tooltip="Probar variante de logo institucional"
+        title="Probar variante de logo institucional"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+          <polyline points="2 17 12 22 22 17"/>
+          <polyline points="2 12 12 17 22 12"/>
+        </svg>
+      </button>
+
+      <!-- Botón de plegar / desplegar en la esquina superior derecha del Sidebar -->
+      <button
+        type="button"
+        class="btn-sidebar-collapse"
+        id="btn-collapse-sidebar"
+        aria-label="Plegar o desplegar barra lateral"
+        aria-expanded="true"
+        data-tooltip="Plegar / Desplegar Menú (Ctrl+B)"
+      >
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+          <path d="M9 3v18"/>
+          <path class="sidebar-collapse-chevron" d="M14 9l-3 3 3 3"/>
+        </svg>
+      </button>
+    </div>
 
     <button class="mobile-sidebar-close" id="btn-mobile-sidebar-close" aria-label="Cerrar menú" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-surface-elevated); color: var(--text-main); display: none; align-items: center; justify-content: center; cursor: pointer;">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -242,12 +269,118 @@ const visibleGroups = navGroupsRaw
 
       window.addEventListener('unitropico:profile-updated', handleProfileUpdate);
       window.addEventListener('sgd-user-updated', handleProfileUpdate);
+
+      // Gestión y alternancia en vivo de variante de logo institucional
+      var LOGO_VARIANTS = [
+        { id: 'simbolo', src: '/simbolo-color.png', label: 'Escudo + Tipografía Horizontal' },
+        { id: 'color', src: '/color.png', label: 'Palma Institucional + Tipografía' },
+        { id: 'bandera', src: '/bandera-color.png', label: 'Escudo Institucional + Bandera' }
+      ];
+
+      function applyLogoVariant(variantId) {
+        var found = LOGO_VARIANTS.find(function(v) { return v.id === variantId; }) || LOGO_VARIANTS[0];
+        var imgEl = document.getElementById('sidebar-brand-expanded');
+        if (imgEl) {
+          imgEl.src = found.src;
+        }
+        try {
+          localStorage.setItem('unitropico_logo_variant', found.id);
+        } catch (e) {}
+      }
+
+      try {
+        var currentVariant = localStorage.getItem('unitropico_logo_variant') || 'simbolo';
+        applyLogoVariant(currentVariant);
+      } catch (e) {}
+
+      var btnVariant = document.getElementById('btn-toggle-logo-variant');
+      if (btnVariant) {
+        btnVariant.addEventListener('click', function(ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          var cur = localStorage.getItem('unitropico_logo_variant') || 'simbolo';
+          var curIdx = LOGO_VARIANTS.findIndex(function(v) { return v.id === cur; });
+          var nextIdx = (curIdx + 1) % LOGO_VARIANTS.length;
+          var nextVar = LOGO_VARIANTS[nextIdx];
+          applyLogoVariant(nextVar.id);
+          btnVariant.setAttribute('title', 'Variante activa: ' + nextVar.label + ' (Clic para cambiar)');
+        });
+      }
     })();
   </script>
 
   <style>
     :global(.sidebar) {
       --sidebar-width: 286px;
+    }
+
+    .brand-actions-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .btn-logo-variant-toggle {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      border: 1px solid #DCE4E3;
+      background: #F8FAF9;
+      color: #00594E;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+      padding: 0;
+    }
+
+    .btn-logo-variant-toggle:hover {
+      background: #E6F0EE;
+      border-color: #B2CFCB;
+      color: #00594E;
+      transform: scale(1.06);
+    }
+
+    :global(.sidebar-brand-full) {
+      height: 44px !important;
+      max-width: 195px !important;
+      width: auto !important;
+      object-fit: contain !important;
+      display: block !important;
+      transition: opacity 0.2s ease;
+    }
+
+    :global(.sidebar-brand-mini-img) {
+      width: 34px !important;
+      height: 34px !important;
+      object-fit: contain !important;
+      display: none !important;
+      transition: transform 0.2s ease;
+    }
+
+    :global(html.sidebar-is-collapsed .sidebar-brand-full),
+    :global(body.sidebar-collapsed .sidebar-brand-full) {
+      display: none !important;
+    }
+
+    :global(html.sidebar-is-collapsed .sidebar-brand-mini-img),
+    :global(body.sidebar-collapsed .sidebar-brand-mini-img) {
+      display: block !important;
+      margin: 0 auto !important;
+    }
+
+    :global(html.sidebar-is-collapsed .btn-logo-variant-toggle),
+    :global(body.sidebar-collapsed .btn-logo-variant-toggle) {
+      display: none !important;
+    }
+
+    :global(html.sidebar-is-collapsed .brand-actions-wrap),
+    :global(body.sidebar-collapsed .brand-actions-wrap) {
+      width: 100%;
+      justify-content: center;
     }
 
     :global(html.sidebar-is-collapsed .sidebar),
