@@ -22,6 +22,9 @@ export interface PeticionAnexo {
   es_anexo_oficina?: boolean | null;
   peticion_responsable_id?: string | null;
   subcarpeta_id?: string | null;
+  subcarpeta?: string | null;
+  nombre_subcarpeta?: string | null;
+  [key: string]: any;
   created_at: string;
 }
 
@@ -2326,6 +2329,10 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       mime_type?: string | null;
       es_anexo_oficina?: boolean | null;
       peticion_responsable_id?: string | null;
+      subcarpeta_id?: string | null;
+      subcarpeta?: string | null;
+      nombre_subcarpeta?: string | null;
+      [key: string]: any;
       created_at: string;
     }
 
@@ -3387,7 +3394,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                     const matchesAnySub = subcarpetas.some((s: any) => {
                       const sName = (s.nombre || '').toLowerCase().trim();
                       return (r.subcarpeta_id && String(r.subcarpeta_id) === String(s.id)) || 
-                             (sName && (rawObs.includes(`[${sName}]`) || rawObs.includes(`[subcarpeta ${sName}]`)));
+                            (sName && (rawObs.includes(`[${sName}]`) || rawObs.includes(`[subcarpeta ${sName}]`)));
                     });
                     if (!matchesAnySub && index === 0) return true;
                     return false;
