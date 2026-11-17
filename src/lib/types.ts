@@ -552,6 +552,9 @@ export interface PeticionAnexo {
   id: string;
   peticion_id: string;
   peticion_responsable_id?: string | null;
+  subcarpeta_id?: string | null;
+  subcarpeta?: string | null;
+  nombre_subcarpeta?: string | null;
   nombre_archivo: string;
   storage_path: string;
   tamano_bytes?: number | null;
@@ -559,6 +562,7 @@ export interface PeticionAnexo {
   subido_por_email: string;
   es_anexo_oficina: boolean;
   created_at: string;
+  [key: string]: any;
 }
 
 export interface PortalValidationResult {

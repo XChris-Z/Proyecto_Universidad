@@ -3404,7 +3404,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                     const subResps = responsables.filter((r) => isRespForSub(r, sub, subIdx));
 
                     // Filtrar anexos estrictamente correspondientes a esta subcarpeta (excluyendo rechazados)
-                    const subAnexos = anexosOficinas.filter((a) => {
+                    const subAnexos = anexosOficinas.filter((a: any) => {
                       if (!a || String(a.nombre_archivo || '').toUpperCase().includes('[RECHAZADO]')) return false;
                       if (!isFileForSub(a, sub.nombre, sub.id)) return false;
                       if (subcarpetas.length > 1) {
