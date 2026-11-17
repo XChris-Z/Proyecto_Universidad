@@ -59,11 +59,12 @@ export function stripRejectionMarker(
   const raw = String(observaciones || '').trim();
   if (!raw) return '';
   if (subcarpetaNombre) {
-    const escaped = escapeRegExp(subcarpetaNombre.trim());
+    const cleanSub = subcarpetaNombre.trim().replace(/^subcarpeta\s+/i, '');
+    const escaped = escapeRegExp(cleanSub);
     return raw
-      .replace(new RegExp(`\\s*\\|\\s*\\[RECHAZADO:${escaped}\\][^|]*`, 'gi'), '')
-      .replace(new RegExp(`\\[RECHAZADO:${escaped}\\][^|]*\\s*\\|\\s*`, 'gi'), '')
-      .replace(new RegExp(`\\[RECHAZADO:${escaped}\\][^|]*`, 'gi'), '')
+      .replace(new RegExp(`\\s*\\|\\s*\\[RECHAZADO:(?:\\s*subcarpeta\\s+)?${escaped}\\][^|]*`, 'gi'), '')
+      .replace(new RegExp(`\\[RECHAZADO:(?:\\s*subcarpeta\\s+)?${escaped}\\][^|]*\\s*\\|\\s*`, 'gi'), '')
+      .replace(new RegExp(`\\[RECHAZADO:(?:\\s*subcarpeta\\s+)?${escaped}\\][^|]*`, 'gi'), '')
       .trim();
   }
   return raw
@@ -90,6 +91,7 @@ export function setRejectedMarker(
 
 /**
  * Extrae información de rechazo si existe para esa observación/subcarpeta.
+ * Si se especifica subcarpetaNombre, retorna ÚNICAMENTE si existe un rechazo explícito para esa subcarpeta.
  */
 export function extractRejectionInfo(
   observaciones?: string | null,
@@ -99,8 +101,9 @@ export function extractRejectionInfo(
   if (!/\[RECHAZADO/i.test(raw)) return null;
 
   if (subcarpetaNombre) {
-    const escaped = escapeRegExp(subcarpetaNombre.trim());
-    const specificMatch = raw.match(new RegExp(`\\[RECHAZADO:${escaped}\\]:?\\s*([^|\\r\\n]+)`, 'i'));
+    const cleanSub = subcarpetaNombre.trim().replace(/^subcarpeta\s+/i, '');
+    const escaped = escapeRegExp(cleanSub);
+    const specificMatch = raw.match(new RegExp(`\\[RECHAZADO:(?:\\s*subcarpeta\\s+)?${escaped}\\]:?\\s*([^|\\r\\n]+)`, 'i'));
     if (specificMatch) {
       return {
         rejected: true,
@@ -108,6 +111,8 @@ export function extractRejectionInfo(
         motivo: String(specificMatch[1] || 'Requiere subsanación documental').trim(),
       };
     }
+    // Aislamiento estricto: Si se consulta una subcarpeta específica y no coincide, NO es un rechazo de esta subcarpeta
+    return null;
   }
 
   const anyMatch = raw.match(/\[RECHAZADO(?::([^\]]+))?\]:?\s*([^|\r\n]+)/i);

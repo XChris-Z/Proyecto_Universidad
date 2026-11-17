@@ -3399,14 +3399,18 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                     // Filtrar anexos estrictamente correspondientes a esta subcarpeta (excluyendo rechazados)
                     const subAnexos = anexosOficinas.filter((a) => {
                       if (!a || String(a.nombre_archivo || '').toUpperCase().includes('[RECHAZADO]')) return false;
-                      if (isFileForSub(a, sub.nombre, sub.id)) return true;
-                      if (a.peticion_responsable_id && subResps.some((sr: any) => sr.id === a.peticion_responsable_id)) {
-                        const otherSubNames = subcarpetas.filter((s: any) => s.id !== sub.id).map((s: any) => (s.nombre || '').toLowerCase().trim());
-                        const fileName = (a.nombre_archivo || '').toLowerCase();
-                        const hasOtherSub = otherSubNames.some((os: string) => os && fileName.includes(`[${os}]`));
-                        if (!hasOtherSub) return true;
+                      if (!isFileForSub(a, sub.nombre, sub.id)) return false;
+                      if (subcarpetas.length > 1) {
+                        const otherSubs = subcarpetas.filter((s: any) => String(s.id) !== String(sub.id));
+                        const belongsToOther = otherSubs.some((s: any) => {
+                          if (a.subcarpeta_id && String(a.subcarpeta_id) === String(s.id)) return true;
+                          const otherClean = (s.nombre || '').toLowerCase().trim().replace(/^subcarpeta\s+/i, '');
+                          const fName = (a.nombre_archivo || '').toLowerCase();
+                          return fName.includes(`[${otherClean}]`) || fName.includes(`[subcarpeta ${otherClean}]`);
+                        });
+                        if (belongsToOther) return false;
                       }
-                      return false;
+                      return true;
                     });
 
                     // Contar dependencias que ya entregaron archivos válidos en esta subcarpeta
@@ -3490,15 +3494,33 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                           <div class="subcarpeta-body-content" style="overflow: hidden;">
                             <div style="padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; background: #ffffff; border-top: 1px solid rgba(15, 23, 42, 0.06);">
                               ${subResps.length > 0 ? subResps.map((r) => {
-                                const ofiAnexos = subAnexos.filter((a) => a && a.peticion_responsable_id === r.id);
+                                const ofiNombre = Array.isArray(r.oficinas) ? (r.oficinas[0]?.nombre || 'Oficina Responsable') : (r.oficinas?.nombre || 'Oficina Responsable');
+                                const ofiCodigo = Array.isArray(r.oficinas) ? (r.oficinas[0]?.codigo || '') : (r.oficinas?.codigo || '');
+                                const ofiId = Array.isArray(r.oficinas) ? (r.oficinas[0]?.id || '') : (r.oficinas?.id || (r as any).oficina_id || (r as any).dependencia_id || '');
+
+                                // Filtrar para que solo se muestren los archivos que pertenecen explícitamente a esta subcarpeta o a este ID de responsable
+                                const anexosDeEstaSubcarpeta = subAnexos.filter((anexo: any) => {
+                                  if (!anexo) return false;
+                                  const matchesResp =
+                                    anexo.peticion_responsable_id === r.id ||
+                                    anexo.responsable_id === r.id ||
+                                    ((anexo as any).dependencia_id && (anexo as any).dependencia_id === ofiId);
+
+                                  const matchesSub =
+                                    (anexo.subcarpeta_id && (String(anexo.subcarpeta_id) === String(sub.id))) ||
+                                    anexo.subcarpeta === sub.nombre ||
+                                    anexo.nombre_subcarpeta === sub.nombre ||
+                                    isFileForSub(anexo, sub.nombre, sub.id);
+
+                                  return (matchesResp || subResps.length === 1) && matchesSub;
+                                });
+
+                                const ofiAnexos = anexosDeEstaSubcarpeta;
                                 const rawObs = (r as any).observaciones_entrega || '';
                                 const approvedIds = extractApprovedAnexoIds(rawObs);
                                 const rejectionInfo = extractRejectionInfo(rawObs, sub.nombre);
                                 const isStateEntregado = !rejectionInfo && String(r.estado_entrega || '').toLowerCase() === 'entregado';
                                 const isDelivered = ofiAnexos.length > 0 || (subcarpetas.length === 1 && isStateEntregado);
-                                const ofiNombre = Array.isArray(r.oficinas) ? (r.oficinas[0]?.nombre || 'Oficina Responsable') : (r.oficinas?.nombre || 'Oficina Responsable');
-                                const ofiCodigo = Array.isArray(r.oficinas) ? (r.oficinas[0]?.codigo || '') : (r.oficinas?.codigo || '');
-                                const ofiId = Array.isArray(r.oficinas) ? (r.oficinas[0]?.id || '') : (r.oficinas?.id || (r as any).oficina_id || (r as any).dependencia_id || '');
                                 const obsSinRevision = sanitizeRevisionTokens(rawObs).replace(/\[RECHAZADO[^\]]*\]:?[^|]*/gi, '').trim();
                                 const cleanObs = extractSubObs(obsSinRevision, sub.nombre);
                                 const subReqText = (sub.descripcion || '').trim().toLowerCase();

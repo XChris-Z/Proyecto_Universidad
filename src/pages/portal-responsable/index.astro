@@ -1099,6 +1099,99 @@ import Layout from '@layouts/Layout.astro';
     color: #b91c1c;
   }
 
+  /* ==========================================================================
+     BANDEJA DE PRE-ENVÍO (COLA FLEXBOX PRO MAX SIN DESBORDAMIENTO)
+     ========================================================================== */
+  .pre-envio-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%; /* Asegura que no se expanda más allá de su contenedor padre */
+    overflow: hidden; /* Clave para evitar desbordamientos generales */
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    padding: 8px 12px;
+    box-sizing: border-box;
+  }
+
+  .pre-envio-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0; /* CRÍTICO: Permite que los hijos trunquen el texto en Flexbox en lugar de estirar la caja */
+  }
+
+  .pre-envio-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0; /* CRÍTICO para que text-overflow funcione dentro de este flex item */
+    flex: 1;
+  }
+
+  .pre-envio-filename {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #003830;
+    white-space: nowrap; /* Evita que el texto baje a una segunda línea */
+    overflow: hidden; /* Oculta el sobrante */
+    text-overflow: ellipsis; /* Agrega los 3 puntos (...) al final del texto largo */
+    display: block;
+    width: 100%;
+  }
+
+  .pre-envio-size {
+    font-size: 0.68rem;
+    color: #64748B;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 1px;
+  }
+
+  .pre-envio-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0; /* CRÍTICO: Evita que el badge y el botón X se aplasten o reduzcan su tamaño por culpa del nombre largo */
+  }
+
+  .badge-pendiente {
+    font-size: 0.68rem;
+    font-weight: 800;
+    background: #FEF3C7;
+    color: #92400E;
+    border: 1px solid #FDE68A;
+    padding: 2px 7px;
+    border-radius: 5px;
+    white-space: nowrap;
+  }
+
+  .btn-eliminar-pre-envio {
+    background: #FEF2F2;
+    color: #DC2626;
+    border: 1px solid #FCA5A5;
+    border-radius: 6px;
+    width: 26px;
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-size: 0.76rem;
+    font-weight: 700;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .btn-eliminar-pre-envio:hover {
+    background: #FEE2E2;
+    border-color: #EF4444;
+  }
+
   /* Banner SLA */
   .portal-sla-banner {
     background: #fafaf9;
@@ -1964,38 +2057,37 @@ import Layout from '@layouts/Layout.astro';
     uploadBtn.style.opacity = '1';
     uploadBtn.style.cursor = 'pointer';
 
-    queueList.innerHTML = selectedFilesToUpload.map((file, idx) => `
-      <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
-        <div style="display: flex; align-items: center; gap: 10px; overflow: hidden;">
-          <div style="width: 28px; height: 28px; border-radius: 6px; background: #E6EFEF; color: #00594E; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    queueList.innerHTML = selectedFilesToUpload.map((file, idx) => {
+      const safeName = String(file.name || 'documento.pdf')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+      const sizeText = formatFileSize(file.size);
+      return `
+        <div class="pre-envio-item">
+          <div class="pre-envio-info">
+            <div style="width: 28px; height: 28px; border-radius: 6px; background: #E6EFEF; color: #00594E; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <svg class="icon-file" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            <div class="pre-envio-text">
+              <span class="pre-envio-filename" title="${safeName}">${safeName}</span>
+              <span class="pre-envio-size">${sizeText} &bull; Listo para enviar</span>
+            </div>
           </div>
-          <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-            <div style="font-size: 0.82rem; font-weight: 700; color: #0F172A; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
-              ${file.name}
-            </div>
-            <div style="font-size: 0.68rem; color: #64748B; display: flex; align-items: center; gap: 6px;">
-              <span>${formatFileSize(file.size)}</span>
-              <span>&bull;</span>
-              <span style="color: #B45309; font-weight: 700;">Listo para enviar</span>
-            </div>
+          <div class="pre-envio-actions">
+            <span class="badge-pendiente">Pendiente de envío</span>
+            <button type="button" class="btn-eliminar-pre-envio btn-remove-staged-file" data-index="${idx}" title="Quitar archivo de la cola">✕</button>
           </div>
         </div>
-        <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
-          <span style="font-size: 0.68rem; font-weight: 800; background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; padding: 2px 7px; border-radius: 5px;">
-            Pendiente de envío
-          </span>
-          <button type="button" class="btn-remove-staged-file" data-index="${idx}" style="background: #FEF2F2; color: #DC2626; border: 1px solid #FCA5A5; border-radius: 6px; width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s;" title="Quitar archivo de la cola">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
-        </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
   }
 
   // Quitar archivo individual de la cola de pre-carga
   document.getElementById('portal-preupload-container')?.addEventListener('click', (e) => {
-    const btn = (e.target as HTMLElement).closest('.btn-remove-staged-file') as HTMLButtonElement | null;
+    const btn = (e.target as HTMLElement).closest('.btn-remove-staged-file, .btn-eliminar-pre-envio') as HTMLButtonElement | null;
     if (btn) {
       const idx = Number(btn.getAttribute('data-index'));
       if (!isNaN(idx) && idx >= 0 && idx < selectedFilesToUpload.length) {
