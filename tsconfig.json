@@ -14,6 +14,6 @@
     "noUncheckedIndexedAccess": true
   },
   "include": [".astro/types.d.ts", "**/*"],
-  "exclude": ["dist"]
+  "exclude": ["dist", "_backup_src_pre_modularizacion"]
 }
 

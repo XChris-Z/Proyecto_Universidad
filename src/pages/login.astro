@@ -15,26 +15,24 @@ import AuthLayout from "@layouts/AuthLayout.astro";
     >
       <div class="brand-panel-inner">
         <div class="brand-header">
-          <!-- 1. Logo Institucional con Presencia Pro Max -->
-          <div class="login-brand-logo-wrap">
-            <img
-              src="/simbolo-fondo-oscuro.png"
-              alt="Logo Oficial Unitrópico"
-              class="brand-logo-img"
-              loading="eager"
-            />
-          </div>
+          <!-- 1. Logo Institucional Centrado Pro Max -->
+          <img
+            src="/simbolo-fondo-oscuro.png"
+            alt="Logo Oficial Unitrópico"
+            class="brand-logo-img"
+            loading="eager"
+          />
 
-          <!-- 2. Título Principal -->
+          <!-- 2. Título Principal Centrado -->
           <h1 class="brand-main-title">
             Sistema de Gestión Documental
           </h1>
 
-          <!-- 3. Subtítulo Institucional + Línea de Acento Dorado -->
+          <!-- 3. Subtítulo Institucional + Línea de Acento Dorado Centrada -->
           <p class="brand-subtitle">
             PLATAFORMA INSTITUCIONAL PARA LA RADICACIÓN, SEGUIMIENTO Y GESTIÓN DE EXPEDIENTES OFICIALES.
           </p>
-          <div class="brand-gold-accent"></div>
+          <div class="w-16 h-[3px] bg-[#B5A160] rounded-full mx-auto opacity-90 mb-12 brand-gold-accent"></div>
         </div>
       </div>
 
@@ -49,7 +47,7 @@ import AuthLayout from "@layouts/AuthLayout.astro";
     <!-- =====================================================================
          PANEL DERECHO: FORMULARIO EJECUTIVO PRO MAX
          ===================================================================== -->
-    <main class="login-form-panel">
+    <main class="login-form-panel login-panel-derecho">
       <div class="login-form-wrapper">
         <!-- Logo en Móvil (Visible solo en pantallas pequeñas) -->
         <div class="login-mobile-header">
@@ -238,26 +236,9 @@ import AuthLayout from "@layouts/AuthLayout.astro";
             <span>Accesos Complementarios</span>
           </div>
 
-          <!-- Accesos Complementarios: Ciudadanos y Dependencias -->
+          <!-- Accesos Complementarios: Solo Dependencias -->
           <div class="login-secondary-portals">
-            <!-- 1. Consulta Ciudadana / Solicitantes -->
-            <a href="/consulta-respuesta" class="sec-portal-item citizen" title="Consultar Estado o Respuesta de Radicado">
-              <div class="sec-portal-icon citizen">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                  <polyline points="14 2 14 8 20 8"></polyline>
-                  <line x1="16" y1="13" x2="8" y2="13"></line>
-                  <line x1="16" y1="17" x2="8" y2="17"></line>
-                </svg>
-              </div>
-              <div class="sec-portal-info">
-                <span class="sec-portal-badge citizen">Atención al Ciudadano</span>
-                <strong class="sec-portal-title">Consultar Respuesta con PIN</strong>
-              </div>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="sec-arrow"><polyline points="9 18 15 12 9 6"/></svg>
-            </a>
-
-            <!-- 2. Portal Externo de Dependencias -->
+            <!-- Portal Externo de Dependencias -->
             <a href="/portal-responsable" class="sec-portal-item office" title="Portal de Entrega de Anexos">
               <div class="sec-portal-icon office">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -317,12 +298,13 @@ import AuthLayout from "@layouts/AuthLayout.astro";
   .login-brand-panel {
     width: 50%;
     min-width: 480px;
-    background: radial-gradient(circle at 20% 20%, #006B5E 0%, #00594E 55%, #003E36 100%);
+    background: radial-gradient(circle at 50% 50%, #006B5E 0%, #00594E 55%, #003E36 100%);
     color: #FFFFFF;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    text-align: center;
     padding: clamp(2.5rem, 5vw, 4.5rem);
     position: relative;
     box-sizing: border-box;
@@ -337,6 +319,8 @@ import AuthLayout from "@layouts/AuthLayout.astro";
     display: flex;
     flex-direction: column;
     justify-content: center;
+    align-items: center;
+    text-align: center;
     min-height: 100%;
     animation: proMaxCrossfade 0.45s cubic-bezier(0.16, 1, 0.3, 1);
   }
@@ -344,60 +328,36 @@ import AuthLayout from "@layouts/AuthLayout.astro";
   .brand-header {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-  }
-
-  /* 1. Logo Institucional con Presencia Pro Max */
-  .login-brand-logo-wrap {
-    display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(181, 161, 96, 0.45);
-    padding: 16px 28px;
-    border-radius: 18px;
-    box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.35);
-    margin-bottom: 30px;
-    width: fit-content;
-    animation: proMaxCrossfade 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+    text-align: center;
+    width: 100%;
   }
 
-  .login-brand-logo-wrap.mobile {
-    background: #FFFFFF;
-    border: 1px solid #DCE4E3;
-    box-shadow: 0 8px 24px -4px rgba(0, 89, 78, 0.12);
-    margin-bottom: 14px;
-    padding: 10px 22px;
-    border-radius: 14px;
-  }
-
-  .login-brand-logo-wrap img {
-    max-width: 260px;
-    max-height: 72px;
+  /* 1. Logo Institucional Centrado Pro Max */
+  .brand-logo-img {
+    height: 110px;
     width: auto;
-    height: 52px;
+    max-width: 90%;
     object-fit: contain;
+    margin-bottom: 32px;
     display: block;
+    margin-left: auto;
+    margin-right: auto;
   }
 
-  .login-brand-logo-wrap.mobile img {
-    max-width: 190px;
-    max-height: 48px;
-    height: 40px;
-  }
-
-  /* 2. Título Principal */
+  /* 2. Título Principal Centrado */
   .brand-main-title {
     font-size: 2.45rem;
     font-weight: 800;
     color: #FFFFFF;
-    line-height: 1.12;
+    line-height: 1.15;
     letter-spacing: -0.025em;
     margin: 0 0 16px 0;
+    text-align: center;
   }
 
-  /* 3. Subtítulo Institucional y Acento Dorado */
+  /* 3. Subtítulo Institucional y Acento Dorado Centrado */
   .brand-subtitle {
     font-size: 0.86rem;
     font-weight: 600;
@@ -405,27 +365,30 @@ import AuthLayout from "@layouts/AuthLayout.astro";
     color: rgba(255, 255, 255, 0.86);
     line-height: 1.65;
     max-width: 450px;
-    margin: 0;
+    margin: 0 auto;
+    text-align: center;
   }
 
   .brand-gold-accent {
-    height: 2px;
-    width: 90px;
-    background: linear-gradient(90deg, #B5A160 0%, rgba(181, 161, 96, 0) 100%);
-    margin-top: 20px;
-    border-radius: 2px;
+    width: 64px;
+    height: 3px;
+    background: #B5A160;
+    border-radius: 9999px;
+    margin: 24px auto 48px auto;
+    opacity: 0.9;
   }
 
   .brand-gold-accent.mobile {
     margin: 0 auto 12px auto;
   }
 
-  /* Pie Sutil Fijo en la Parte Inferior */
+  /* Pie Sutil Fijo en la Parte Inferior Centrado */
   .brand-panel-footer {
     position: absolute;
     bottom: 24px;
-    left: clamp(2.5rem, 5vw, 4.5rem);
-    right: clamp(2.5rem, 5vw, 4.5rem);
+    left: 0;
+    right: 0;
+    text-align: center;
     padding-top: 12px;
     border-top: 1px solid rgba(255, 255, 255, 0.12);
     max-width: 460px;
@@ -436,10 +399,11 @@ import AuthLayout from "@layouts/AuthLayout.astro";
     font-size: 0.74rem;
     color: rgba(255, 255, 255, 0.62);
     margin: 0;
+    text-align: center;
   }
 
   /* ==========================================================================
-     PANEL DERECHO: FORMULARIO EJECUTIVO PRO MAX
+     PANEL DERECHO: FORMULARIO EJECUTIVO PRO MAX (TEXTURA HALFTONE)
      ========================================================================== */
   .login-form-panel {
     flex: 1;
@@ -447,8 +411,27 @@ import AuthLayout from "@layouts/AuthLayout.astro";
     align-items: center;
     justify-content: center;
     padding: clamp(1.5rem, 4vw, 3rem);
-    background: #F8FAFC;
+    background-color: #F8FAF9;
     box-sizing: border-box;
+    position: relative;
+  }
+
+  .login-panel-derecho {
+    background-color: #F8FAF9;
+    background-image: 
+      radial-gradient(rgba(0, 89, 78, 0.045) 1.5px, transparent 1.5px), 
+      radial-gradient(rgba(0, 89, 78, 0.025) 1.5px, transparent 1.5px);
+    background-size: 16px 16px;
+    background-position: 0 0, 8px 8px;
+    position: relative;
+  }
+
+  .login-panel-derecho::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, transparent 30%, rgba(248, 250, 249, 0.6) 100%);
+    pointer-events: none;
   }
 
   .login-form-wrapper {
@@ -457,6 +440,8 @@ import AuthLayout from "@layouts/AuthLayout.astro";
     display: flex;
     flex-direction: column;
     align-items: center;
+    position: relative;
+    z-index: 1;
   }
 
   .login-mobile-header {
@@ -465,16 +450,18 @@ import AuthLayout from "@layouts/AuthLayout.astro";
     margin-bottom: 16px;
   }
 
-  /* Tarjeta Ejecutiva con Elevación Multicapa y Crossfade */
+  /* Tarjeta Ejecutiva con Elevación Multicapa y Sombra Halftone Fuerte */
   .login-card-promax {
     width: 100%;
     background: #FFFFFF;
     border-radius: 20px;
-    border: 1px solid #DCE4E3;
-    box-shadow: 0 10px 30px -10px rgba(0, 89, 78, 0.08), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
+    border: 1px solid rgba(0, 89, 78, 0.05);
+    box-shadow: 0 25px 50px -12px rgba(0, 89, 78, 0.15);
     padding: clamp(28px, 4vw, 40px);
     box-sizing: border-box;
     animation: proMaxCrossfade 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    position: relative;
+    z-index: 1;
   }
 
   /* Encabezado */
@@ -743,7 +730,9 @@ import AuthLayout from "@layouts/AuthLayout.astro";
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 11px 14px;
+    padding: 12px 16px;
+    width: 100%;
+    box-sizing: border-box;
     background: #F8FAFC;
     border: 1px solid #DCE4E3;
     border-radius: 12px;
@@ -850,12 +839,6 @@ import AuthLayout from "@layouts/AuthLayout.astro";
 </style>
 
 <script>
-  // Detección y redirección inmediata ante parámetros de consulta de radicado o pin
-  const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.has('radicado') || urlParams.has('pin') || urlParams.has('modo') || urlParams.has('consulta')) {
-    window.location.replace('/consulta-respuesta' + window.location.search);
-  }
-
   import { supabase } from "@lib/supabase";
   import { SESSION_STORAGE_KEY, SESSION_COOKIE_KEY } from "@lib/constants";
   import { logSystemActivity } from "@lib/audit";

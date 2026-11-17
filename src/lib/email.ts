@@ -15,21 +15,6 @@ export interface EmailSubcarpetaItem {
   descripcion?: string | null;
 }
 
-export interface EmailRadicacionSolicitanteParams {
-  toEmail: string;
-  solicitanteNombre: string;
-  numeroRadicado: string;
-  asunto: string;
-  categoria?: string | null;
-  prioridad?: string | null;
-  fechaRadicacion?: string | null;
-  fechaLimiteEntrega: string;
-  pinAcceso: string;
-  nombreDocumento?: string | null;
-  totalDependencias?: number;
-  consultaUrl: string;
-}
-
 export interface EmailPeticionNotificationParams {
   toEmail: string;
   oficinaNombre: string;
@@ -46,35 +31,6 @@ export interface EmailPeticionNotificationParams {
   pinAcceso?: string | null;
   portalUrl: string;
   attachments?: EmailAttachment[];
-}
-
-export interface EmailRespuestaSolicitanteParams {
-  toEmail: string;
-  solicitanteNombre: string;
-  numeroRadicado: string;
-  asunto: string;
-  mensajeRespuesta: string;
-  funcionarioNombre: string;
-  pinSolicitante: string;
-  fechaRadicacion?: string | null;
-  fechaExpiracion: string;
-  consultaUrl: string;
-  driveUrl?: string | null;
-  totalArchivos?: number;
-  archivoAdjunto?: {
-    filename: string;
-    content: Buffer;
-    contentType?: string;
-  } | null;
-  anexosAdicionales?: Array<{
-    filename: string;
-    content: Buffer;
-    contentType?: string;
-  }>;
-  anexosResumen?: Array<{
-    nombre: string;
-    origen?: string;
-  }>;
 }
 
 export interface EmailRecordatorioDependenciaParams {
@@ -593,91 +549,7 @@ function buildEmailLayout(options: {
 }
 
 /**
- * 1. Correo de Confirmación de Radicación al Solicitante
- */
-export async function sendRadicacionSolicitanteEmail(
-  params: EmailRadicacionSolicitanteParams
-): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const subject = `[Radicado ${params.numeroRadicado}] Confirmación de Radicación Oficial - Unitrópico`;
-  const fechaRadicadoTxt = formatDateCompactEs(params.fechaRadicacion);
-  const fechaLimiteSlash = formatDateShortSlashEs(params.fechaLimiteEntrega);
-  const prioridadTxt = params.prioridad || 'Media';
-  const categoriaTxt = params.categoria || 'Petición General';
-
-  const bentoCard = buildHorizontalBentoGrid([
-    { label: 'Asunto', valueHtml: escapeEmailHtml(params.asunto) },
-    { label: 'Fecha de Radicación', valueHtml: escapeEmailHtml(fechaRadicadoTxt) },
-    { label: 'Solicitante', valueHtml: `<strong style="color:#00594E;">${escapeEmailHtml(params.solicitanteNombre)}</strong>` },
-    { label: 'Clasificación y Prioridad', valueHtml: `${escapeEmailHtml(categoriaTxt)} &middot; <strong style="color:#786832;">Prioridad ${escapeEmailHtml(prioridadTxt)}</strong>` },
-  ]);
-
-  const docBox = params.nombreDocumento
-    ? `
-      <div style="background-color: #F2F7F6; border: 1px solid #B2CFCB; border-left: 4px solid #00594E; border-radius: 10px; padding: 12px 16px; margin: 14px 0;">
-        <div style="font-size: 10.5px; font-weight: 800; color: #00594E; text-transform: uppercase; letter-spacing: 0.6px;">
-          Documento Base Custodiado
-        </div>
-        <div style="font-size: 13.5px; font-weight: 700; color: #111827; margin-top: 3px;">
-          ${escapeEmailHtml(params.nombreDocumento)}
-        </div>
-      </div>`
-    : '';
-
-  const credentialsAndCtaCard = buildGoldCredentialsAndCtaCard({
-    heading: 'Credenciales de Seguimiento Ciudadano',
-    email: params.toEmail,
-    boxes: [
-      {
-        widthPct: '34%',
-        label: 'Número de Radicado',
-        valueHtml: `<div style="font-family: 'JetBrains Mono', Consolas, ui-monospace, monospace; font-size: 14.5px; font-weight: 800; color: #00594E; letter-spacing: 0.4px; white-space: nowrap;">${escapeEmailHtml(params.numeroRadicado)}</div>`,
-      },
-      {
-        widthPct: '30%',
-        label: 'PIN de Consulta',
-        valueHtml: `<div style="font-family: 'JetBrains Mono', Consolas, ui-monospace, monospace; font-size: 17px; font-weight: 800; color: #00594E; letter-spacing: 2.5px; white-space: nowrap;">${escapeEmailHtml(params.pinAcceso)}</div>`,
-      },
-      {
-        widthPct: '32%',
-        label: 'Límite de Respuesta',
-        valueHtml: `<div style="font-size: 11px; font-weight: 600; color: #64748B; line-height: 1.25;">${params.totalDependencias || 1} dependencia(s)</div><div style="font-size: 13px; font-weight: 800; color: #786832; margin-top: 2px; white-space: nowrap;">Hasta el ${escapeEmailHtml(fechaLimiteSlash)}</div>`,
-      },
-    ],
-    ctaUrl: params.consultaUrl,
-    ctaLabel: 'Consultar Estado del Radicado',
-    helperText: 'Conserve este PIN de 6 dígitos o acceda desde el botón superior para verificar el estado de su trámite.',
-  });
-
-  const bodyHtml = `
-    <p style="margin: 0 0 6px 0; font-size: 16px; font-weight: 800; color: #00594E;">
-      Estimado(a) ${escapeEmailHtml(params.solicitanteNombre)},
-    </p>
-    <p style="margin: 0 0 14px 0; font-size: 14px; line-height: 1.6; color: #475569;">
-      Le confirmamos que su solicitud ha sido radicada oficialmente en el Sistema Institucional de Gestión Documental de la Universidad Internacional del Trópico Americano — Unitrópico y ya se encuentra en trámite ante las dependencias competentes.
-    </p>
-    ${bentoCard}
-    ${docBox}
-    ${credentialsAndCtaCard}
-  `;
-
-  const html = buildEmailLayout({
-    title: subject,
-    headerTitle: 'Confirmación de Radicación Oficial',
-    numeroRadicado: params.numeroRadicado,
-    bodyHtml,
-  });
-
-  return dispatchSmtpMail({
-    fromLabel: 'Radicación Oficial Unitrópico',
-    toEmail: params.toEmail,
-    subject,
-    html,
-    logTag: 'RADICACION SOLICITANTE',
-  });
-}
-
-/**
- * 2. Correo de Asignación de Subcarpeta y Requerimiento a Dependencias
+ * 1. Correo de Asignación de Subcarpeta y Requerimiento a Dependencias
  */
 export async function sendPeticionAssignmentEmail(
   params: EmailPeticionNotificationParams
@@ -895,129 +767,7 @@ export async function enviarCorreoRecordatorioDependencia(
 }
 
 /**
- * 4. Correo de Respuesta Oficial Final al Solicitante (diseño horizontal 720px sin adjuntos físicos)
- */
-export async function sendRespuestaSolicitanteEmail(
-  params: EmailRespuestaSolicitanteParams
-): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const formattedExpiracionSlash = formatDateShortSlashEs(params.fechaExpiracion);
-  const formattedRadicacion = formatDateCompactEs(params.fechaRadicacion);
-  const cleanPronunciamiento = String(params.mensajeRespuesta || '')
-    .replace(/\[RESPUESTA_META\]:\s*\{[\s\S]*?\}(?=\n|$)/gi, '')
-    .replace(/\[RESPUESTA_META\]:[\s\S]*$/gi, '')
-    .replace(/\[META_[A-Z_]+\]:[\s\S]*$/gi, '')
-    .trim();
-  const subject = `[Radicado N° ${params.numeroRadicado}] Notificación oficial de respuesta a su petición - Unitrópico`;
-
-  const bentoCard = buildHorizontalBentoGrid([
-    { label: 'Asunto', valueHtml: escapeEmailHtml(params.asunto) },
-    { label: 'Fecha de Radicación', valueHtml: escapeEmailHtml(formattedRadicacion) },
-    { label: 'Emitido Por', valueHtml: `<strong style="color:#00594E;">${escapeEmailHtml(params.funcionarioNombre)}</strong>` },
-    { label: 'Solicitante', valueHtml: escapeEmailHtml(params.solicitanteNombre) },
-  ]);
-
-  const respuestaMessageBox = `
-    <div style="background-color: #FFFFFF; border: 1px solid #DCE4E3; border-left: 4px solid #00594E; border-radius: 12px; padding: 16px 20px; margin: 14px 0;">
-      <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: #00594E; margin-bottom: 8px;">
-        Pronunciamiento Oficial de la Institución
-      </div>
-      <div style="font-size: 14px; color: #111827; line-height: 1.65; white-space: pre-wrap;">${escapeEmailHtml(cleanPronunciamiento)}</div>
-    </div>
-  `;
-
-  const buildSafeConsultaUrl = () => {
-    const rawUrl = String(params.consultaUrl || '').trim();
-    if (!rawUrl) return rawUrl;
-    try {
-      const parsed = new URL(rawUrl);
-      if (!parsed.searchParams.get('radicado') && params.numeroRadicado) {
-        parsed.searchParams.set('radicado', params.numeroRadicado);
-      }
-      if (!parsed.searchParams.get('email') && !parsed.searchParams.get('correo') && params.toEmail) {
-        parsed.searchParams.set('email', String(params.toEmail).trim().toLowerCase());
-      }
-      if (!parsed.searchParams.get('pin') && params.pinSolicitante) {
-        parsed.searchParams.set('pin', params.pinSolicitante);
-      }
-      return parsed.toString();
-    } catch {
-      const hasEmail = /[?&](email|correo)=/i.test(rawUrl);
-      if (hasEmail || !params.toEmail) return rawUrl;
-      const sep = rawUrl.includes('?') ? '&' : '?';
-      return `${rawUrl}${sep}email=${encodeURIComponent(String(params.toEmail).trim().toLowerCase())}`;
-    }
-  };
-  const safeConsultaUrl = buildSafeConsultaUrl();
-
-  const credentialsAndCtaCard = buildGoldCredentialsAndCtaCard({
-    heading: 'Credenciales y Enlace de Consulta del Expediente',
-    email: params.toEmail,
-    boxes: [
-      {
-        widthPct: '34%',
-        label: 'Número de Radicado',
-        valueHtml: `<div style="font-family: 'JetBrains Mono', Consolas, ui-monospace, monospace; font-size: 14.5px; font-weight: 800; color: #00594E; letter-spacing: 0.4px; white-space: nowrap;">${escapeEmailHtml(params.numeroRadicado)}</div>`,
-      },
-      {
-        widthPct: '30%',
-        label: 'PIN de Consulta',
-        valueHtml: `<div style="font-family: 'JetBrains Mono', Consolas, ui-monospace, monospace; font-size: 17px; font-weight: 800; color: #00594E; letter-spacing: 2.5px; white-space: nowrap;">${escapeEmailHtml(params.pinSolicitante)}</div>`,
-      },
-      {
-        widthPct: '32%',
-        label: 'Expiración del Enlace',
-        valueHtml: `<div style="font-size: 11px; font-weight: 600; color: #64748B; line-height: 1.25;">Vigencia: 10 días</div><div style="font-size: 13px; font-weight: 800; color: #786832; margin-top: 2px; white-space: nowrap;">Hasta el ${escapeEmailHtml(formattedExpiracionSlash)}</div>`,
-      },
-    ],
-    ctaUrl: safeConsultaUrl,
-    ctaLabel: 'Abrir Portal de Respuestas y Descargar Documentos',
-    helperText: 'Ingrese desde el botón superior o digite su Número de Radicado y PIN antes de la fecha de expiración indicada.',
-  });
-
-  const driveHtml = params.driveUrl
-    ? `
-      <div style="background-color: #F2F7F6; border: 1px solid #B2CFCB; border-radius: 10px; padding: 12px 16px; margin: 14px 0 6px 0; text-align: center;">
-        <div style="font-size: 11px; font-weight: 800; color: #00594E; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">
-          Repositorio Documental Complementario
-        </div>
-        <a href="${escapeEmailHtml(params.driveUrl)}" target="_blank" rel="noopener noreferrer" style="color: #00594E; font-size: 13px; font-weight: 700; text-decoration: underline;">
-          Abrir carpeta complementaria compartida &rarr;
-        </a>
-      </div>`
-    : '';
-
-  const bodyHtml = `
-    <p style="margin: 0 0 6px 0; font-size: 16px; font-weight: 800; color: #00594E;">
-      Estimado(a) ${escapeEmailHtml(params.solicitanteNombre)},
-    </p>
-    <p style="margin: 0 0 14px 0; font-size: 14px; line-height: 1.6; color: #475569;">
-      La Universidad Internacional del Trópico Americano — Unitrópico le notifica formalmente la respuesta oficial emitida frente a su solicitud radicada en nuestro sistema documental.
-    </p>
-    ${bentoCard}
-    ${respuestaMessageBox}
-    ${credentialsAndCtaCard}
-    ${driveHtml}
-  `;
-
-  const html = buildEmailLayout({
-    title: subject,
-    headerTitle: 'Respuesta Oficial a su Solicitud',
-    numeroRadicado: params.numeroRadicado,
-    bodyHtml,
-  });
-
-  // Política de cero adjuntos físicos por correo: los documentos oficiales se descargan únicamente desde el Portal Institucional.
-  return dispatchSmtpMail({
-    fromLabel: 'Correspondencia Oficial Unitrópico',
-    toEmail: params.toEmail,
-    subject,
-    html,
-    logTag: 'RESPUESTA SOLICITANTE',
-  });
-}
-
-/**
- * 5. Correo de Devolución / Rechazo de Aporte Documental a Dependencia Responsable
+ * 3. Correo de Devolución / Rechazo de Aporte Documental a Dependencia Responsable
  */
 export async function enviarCorreoRechazoAporteDependencia(
   params: EmailRechazoAporteParams

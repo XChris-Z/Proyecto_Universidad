@@ -21,10 +21,8 @@ export const PUBLIC_ROUTES = [
   '/login',
   '/404',
   '/portal-responsable',
-  '/consulta-respuesta',
   '/api/portal',
   '/api/auth',
-  '/api/consultar-respuesta',
   '/api/storage/signed-upload',
 ];
 

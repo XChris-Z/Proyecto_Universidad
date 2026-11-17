@@ -39,12 +39,6 @@ export const onRequest = defineMiddleware(async ({ url, cookies, redirect }, nex
 
   // Redirección de la raíz /
   if (pathname === '/' || pathname === '') {
-    const hasConsultaParams =
-      url.searchParams.has('radicado') || url.searchParams.has('pin') || url.searchParams.has('modo');
-    if (hasConsultaParams) {
-      return applySecurityHeaders(redirect(`/consulta-respuesta${url.search}`), false);
-    }
-
     const session = cookies.get(SESSION_COOKIE_KEY);
     if (session?.value) {
       const rbac = await resolveUserRbacServer(session.value);
@@ -56,13 +50,8 @@ export const onRequest = defineMiddleware(async ({ url, cookies, redirect }, nex
     return applySecurityHeaders(redirect(`/login${url.search}`), false);
   }
 
-  // Si intenta acceder a /login pero ya posee sesión o trae parámetros de consulta de solicitante
+  // Si intenta acceder a /login pero ya posee sesión
   if (pathname === '/login') {
-    const hasConsultaParams = url.searchParams.has('radicado') || url.searchParams.has('pin');
-    if (hasConsultaParams) {
-      return applySecurityHeaders(redirect(`/consulta-respuesta${url.search}`), false);
-    }
-
     const session = cookies.get(SESSION_COOKIE_KEY);
     if (session?.value) {
       const rbac = await resolveUserRbacServer(session.value);
