@@ -3326,7 +3326,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                 // Helper robusto para asociar archivos a una subcarpeta específica
                 const isFileForSub = (a: any, subName: string, subId: string): boolean => {
                   if (!a) return false;
-                  if (a.subcarpeta_id && a.subcarpeta_id === subId) return true;
+                  if ((a as any).subcarpeta_id && String((a as any).subcarpeta_id) === String(subId)) return true;
                   const cleanName = (a.nombre_archivo || '').toLowerCase();
                   const cleanSub = subName.toLowerCase().trim();
                   if (cleanName.includes(`[${cleanSub}]`) || cleanName.includes(`[subcarpeta ${cleanSub}]`)) return true;
@@ -3340,7 +3340,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                   // Helper para asociar responsables a la subcarpeta correcta
                   const isRespForSub = (r: any, sub: any, index: number): boolean => {
                     if (!r) return false;
-                    if (r.subcarpeta_id && (r.subcarpeta_id === sub.id || String(r.subcarpeta_id) === String(sub.id))) return true;
+                    if ((r as any).subcarpeta_id && ((r as any).subcarpeta_id === sub.id || String((r as any).subcarpeta_id) === String(sub.id))) return true;
                     const cleanSubName = (sub.nombre || '').toLowerCase().trim();
                     const rawObs = (r.observaciones_entrega || '').toLowerCase();
                     if (cleanSubName && (rawObs.includes(`[${cleanSubName}]`) || rawObs.includes(`[subcarpeta ${cleanSubName}]`))) return true;
@@ -3348,7 +3348,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                     // Si no tiene coincidencia explícita con ninguna subcarpeta, asignar a la primera subcarpeta
                     const matchesAnySub = subcarpetas.some((s: any) => {
                       const sName = (s.nombre || '').toLowerCase().trim();
-                      return (r.subcarpeta_id && String(r.subcarpeta_id) === String(s.id)) || 
+                      return ((r as any).subcarpeta_id && String((r as any).subcarpeta_id) === String(s.id)) || 
                             (sName && (rawObs.includes(`[${sName}]`) || rawObs.includes(`[subcarpeta ${sName}]`)));
                     });
                     if (!matchesAnySub && index === 0) return true;
@@ -3365,7 +3365,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                       if (subcarpetas.length > 1) {
                         const otherSubs = subcarpetas.filter((s: any) => String(s.id) !== String(sub.id));
                         const belongsToOther = otherSubs.some((s: any) => {
-                          if (a.subcarpeta_id && String(a.subcarpeta_id) === String(s.id)) return true;
+                          if ((a as any).subcarpeta_id && String((a as any).subcarpeta_id) === String(s.id)) return true;
                           const otherClean = (s.nombre || '').toLowerCase().trim().replace(/^subcarpeta\s+/i, '');
                           const fName = (a.nombre_archivo || '').toLowerCase();
                           return fName.includes(`[${otherClean}]`) || fName.includes(`[subcarpeta ${otherClean}]`);
@@ -3469,7 +3469,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                                     ((anexo as any).dependencia_id && (anexo as any).dependencia_id === ofiId);
 
                                   const matchesSub =
-                                    (anexo.subcarpeta_id && (String(anexo.subcarpeta_id) === String(sub.id))) ||
+                                    ((anexo as any).subcarpeta_id && (String((anexo as any).subcarpeta_id) === String(sub.id))) ||
                                     anexo.subcarpeta === sub.nombre ||
                                     anexo.nombre_subcarpeta === sub.nombre ||
                                     isFileForSub(anexo, sub.nombre, sub.id);
@@ -4389,8 +4389,8 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                   if (r.observaciones_entrega) {
                     existing.observaciones_entrega = r.observaciones_entrega;
                   }
-                  if (r.subcarpeta_id) {
-                    existing.subcarpeta_id = r.subcarpeta_id;
+                  if ((r as any)?.subcarpeta_id) {
+                    (existing as any).subcarpeta_id = (r as any).subcarpeta_id;
                   }
                 }
               } else {

@@ -426,6 +426,9 @@ export type Database = {
           nombre_archivo: string
           peticion_id: string
           peticion_responsable_id: string | null
+          subcarpeta_id: string | null
+          subcarpeta?: string | null
+          nombre_subcarpeta?: string | null
           storage_path: string
           subido_por_email: string
           tamano_bytes: number | null
@@ -438,6 +441,9 @@ export type Database = {
           nombre_archivo: string
           peticion_id: string
           peticion_responsable_id?: string | null
+          subcarpeta_id?: string | null
+          subcarpeta?: string | null
+          nombre_subcarpeta?: string | null
           storage_path: string
           subido_por_email: string
           tamano_bytes?: number | null
@@ -450,6 +456,9 @@ export type Database = {
           nombre_archivo?: string
           peticion_id?: string
           peticion_responsable_id?: string | null
+          subcarpeta_id?: string | null
+          subcarpeta?: string | null
+          nombre_subcarpeta?: string | null
           storage_path?: string
           subido_por_email?: string
           tamano_bytes?: number | null
@@ -483,6 +492,7 @@ export type Database = {
           observaciones_entrega: string | null
           oficina_id: string
           peticion_id: string
+          subcarpeta_id?: string | null
           storage_subfolder_path: string
         }
         Insert: {
@@ -496,6 +506,7 @@ export type Database = {
           observaciones_entrega?: string | null
           oficina_id: string
           peticion_id: string
+          subcarpeta_id?: string | null
           storage_subfolder_path: string
         }
         Update: {
@@ -509,6 +520,7 @@ export type Database = {
           observaciones_entrega?: string | null
           oficina_id?: string
           peticion_id?: string
+          subcarpeta_id?: string | null
           storage_subfolder_path?: string
         }
         Relationships: [
