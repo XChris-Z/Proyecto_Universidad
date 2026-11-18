@@ -1609,6 +1609,17 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
           }
         }
 
+        let loggedUser: any = null;
+        try {
+          const raw = localStorage.getItem('sgd_current_user');
+          if (raw) loggedUser = JSON.parse(raw);
+        } catch (e) {}
+
+        const funcNombre = loggedUser?.name || loggedUser?.full_name || localStorage.getItem('unitropico_user_name') || 'ING. Christian Lemus';
+        const funcEmail = loggedUser?.email || localStorage.getItem('unitropico_active_user_email') || 'christianlemus.es@unitropico.edu.co';
+        const funcId = loggedUser?.id || localStorage.getItem('unitropico_user_id') || 'usr-root';
+        const funcRol = loggedUser?.role || 'Administrador';
+
         const payload = {
           asunto: (document.getElementById('peticion-asunto') as HTMLInputElement).value,
           descripcion: instruccionesConsolidadas,
@@ -1627,6 +1638,10 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
           archivo_tamano: archivoTamano,
           archivo_storage_path: archivoStoragePath,
           archivo_base64: archivoBase64,
+          funcionario_id: funcId,
+          funcionario_nombre: funcNombre,
+          funcionario_email: funcEmail,
+          funcionario_rol: funcRol,
         };
 
         if (submitBtn) {

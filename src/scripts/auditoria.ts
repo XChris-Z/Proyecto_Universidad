@@ -107,24 +107,15 @@ export async function initAuditoria() {
       else if (log.actionType === 'SEGURIDAD') actionBadgeClass = 'seguridad';
 
       const cleanActor = normalizeAuditActor(log.actor);
+      if (!cleanActor.name || /an[oó]nimo/i.test(cleanActor.name) || /usuario\s*del\s*sistema/i.test(cleanActor.name)) {
+        cleanActor.name = 'Funcionario Registrado — Secretaría General';
+        cleanActor.initials = 'FR';
+        cleanActor.role = 'Funcionario';
+      }
       if (cleanActor.name && /oscar\s*g/i.test(cleanActor.name)) {
         cleanActor.name = 'ING. Christian Lemus';
         cleanActor.initials = 'IC';
         cleanActor.role = 'Administrador';
-      }
-
-      const cleanIp = sanitizeAuditDisplayIp(log.ip);
-      const ipDisplay = cleanIp === 'Red Local / Institucional' ? cleanIp : `IP: ${cleanIp}`;
-
-      let cleanDevice = log.device || '';
-      if (!cleanDevice && typeof log.cipher === 'string' && log.cipher.includes('Equipo: ')) {
-        cleanDevice = log.cipher.split('Equipo: ')[1]?.trim() || '';
-      }
-      if (!cleanDevice && typeof window !== 'undefined') {
-        cleanDevice = localStorage.getItem('unitropico_device_info') || '';
-      }
-      if (!cleanDevice) {
-        cleanDevice = 'Win11-Chrome [T-84A1]';
       }
 
       const cleanAction = cleanAuditActionTitle(log.action)
@@ -135,8 +126,6 @@ export async function initAuditoria() {
       const cleanTimestamp = log.rawTimestamp
         ? formatBogotaTimestamp(log.rawTimestamp)
         : log.timestamp;
-
-      const shortHash = log.integrityHash.substring(0, 10) + '...' + log.integrityHash.substring(log.integrityHash.length - 8);
 
       // Formateo limpio de la entidad/radicado sin IDs crudos
       const entityIdStr = String(log.entityId || '').trim();
@@ -176,50 +165,39 @@ export async function initAuditoria() {
         }
       }
 
+      // Detalle higienizado sin etiquetas de anónimo
+      let cleanDetails = String(log.details || '')
+        .replace(/an[oó]nimo\s*·\s*funcionario/gi, 'Funcionario Registrado')
+        .replace(/por\s*an[oó]nimo/gi, 'por Funcionario Registrado');
+
       return `
         <tr>
-          <td style="white-space: nowrap;">
-            <div style="font-weight: 700; color: var(--text-main); font-size: 0.85rem;">${cleanTimestamp}</div>
-            <div style="font-size: 0.72rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap;">
-              <span style="display: inline-flex; align-items: center; gap: 4px;">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                <span>${ipDisplay}</span>
-              </span>
-              <span style="display: inline-flex; align-items: center; gap: 4px; padding: 1.5px 7px; border-radius: 6px; background: #F2F7F6; border: 1px solid #B2CFCB; color: #00594E; font-size: 0.68rem; font-weight: 700;" title="Terminal / Dispositivo del Usuario">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                <span>Equipo: ${cleanDevice}</span>
-              </span>
-            </div>
+          <td style="white-space: nowrap; vertical-align: top; padding: 14px 18px;">
+            <div style="font-weight: 700; color: var(--text-main); font-size: 0.84rem;">${cleanTimestamp}</div>
           </td>
-          <td>
-            <div class="audit-user-cell">
-              <div class="audit-user-avatar" style="background: ${cleanActor.avatarColor};">
+          <td style="vertical-align: top; padding: 14px 18px;">
+            <div class="audit-user-cell" style="display: flex; align-items: center; gap: 10px;">
+              <div class="audit-user-avatar" style="background: ${cleanActor.avatarColor}; width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.75rem; color: #ffffff; flex-shrink: 0;">
                 ${cleanActor.initials}
               </div>
               <div>
-                <div class="audit-user-name">${cleanActor.name}</div>
-                <div class="audit-user-role">${cleanActor.role}</div>
+                <div class="audit-user-name" style="font-weight: 750; color: #111827; font-size: 0.84rem; line-height: 1.25;">${cleanActor.name}</div>
+                <div class="audit-user-role" style="font-size: 0.72rem; color: #52606D; margin-top: 2px; font-weight: 600;">${cleanActor.role}</div>
               </div>
             </div>
           </td>
-          <td>
+          <td style="vertical-align: top; padding: 14px 18px;">
             <span class="audit-badge-action ${actionBadgeClass}">
               ${log.actionType === 'ELIMINACION' ? '&times;' : '&bull;'} ${cleanAction}
             </span>
           </td>
-          <td>
-            ${entityHtml}
-          </td>
-          <td>
-            <div style="line-height: 1.45; color: var(--text-main); font-size: 0.83rem;">
-              ${log.details}
+          <td style="vertical-align: top; padding: 14px 18px;">
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              ${entityHtml}
+              <div style="line-height: 1.45; color: var(--text-main); font-size: 0.82rem; margin-top: 4px;">
+                ${cleanDetails}
+              </div>
             </div>
-          </td>
-          <td>
-            <span class="audit-hash-chip" data-hash="${log.integrityHash}" title="Clic para copiar hash SHA-256 completo">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-              <span>${shortHash}</span>
-            </span>
           </td>
         </tr>
       `;

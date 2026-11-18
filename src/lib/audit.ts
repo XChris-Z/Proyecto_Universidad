@@ -149,12 +149,19 @@ export function normalizeAuditActor(actor: {
   initials: string;
   avatarColor: string;
 } {
-  let cleanName = String(actor?.name || 'Sistema SGD')
+  let cleanName = String(actor?.name || '').trim();
+
+  // PROHIBICIÓN ESTRICTA: NUNCA "Anónimo", "Anonimo" ni fallbacks genéricos de ciudadano
+  if (!cleanName || /^(anónimo|anonimo|anónima|anonima|usuario|desconocido|solicitante|ciudadano)$/i.test(cleanName)) {
+    cleanName = 'Funcionario Registrado — Secretaría General';
+  }
+
+  cleanName = cleanName
     .replace(/\s*-\s*(Oficina|Dependencia|Superadministrador|Administrador General)\s*$/i, '')
     .trim();
 
   if (!cleanName || /^administrador general$/i.test(cleanName)) {
-    cleanName = 'Administrador del Sistema';
+    cleanName = 'ING. Christian Lemus';
   }
 
   // Reasignar cualquier registro atribuido a Oscar G hacia ING. Christian Lemus

@@ -99,61 +99,64 @@ const initialRbacBootstrap = JSON.stringify({
 ---
 
 <AppLayout title="Usuarios" activeNav="usuarios">
-  <div class="users-admin-container" style="display: flex; flex-direction: column; gap: 22px; max-width: 1320px; margin: 0 auto; width: 100%;">
+  <div class="users-admin-container" style="max-width: 1320px; margin: 0 auto; width: 100%;">
     
-    <!-- Encabezado Limpio Institucional -->
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
-      <div>
-        <h1 style="font-size: 1.65rem; font-weight: 800; color: #111827; margin: 0; letter-spacing: -0.02em;">Usuarios</h1>
-        <p style="font-size: 0.86rem; color: #52606D; margin: 4px 0 0 0;">
-          Administración de cuentas, asignación de roles y permisos de acceso por módulo
-        </p>
-      </div>
-    </div>
+    <!-- Contenedor Maestro Blanco Anti-Saturación de Fondo Halftone -->
+    <div class="module-board-card">
 
-    <!-- 3 Tarjetas Bento KPIs (Paleta Oficial #F2F7F6 / #B2CFCB / #00594E / #F7F5EE / #B5A160) -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;">
-      
-      <!-- KPI 1: Total Usuarios Registrados -->
-      <div style="background: #F2F7F6; border: 1.5px solid #B2CFCB; border-radius: 14px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0, 89, 78, 0.04);">
+      <!-- Encabezado Limpio Institucional -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
         <div>
-          <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #52606D; letter-spacing: 0.5px; display: block;">TOTAL USUARIOS REGISTRADOS</span>
-          <div style="font-size: 1.85rem; font-weight: 800; color: #00594E; margin-top: 4px; line-height: 1;" id="kpi-total-users">{totalUsers}</div>
-          <span style="font-size: 0.72rem; color: #52606D; margin-top: 4px; display: block;">{totalFuncionarios} funcionario(s) operativo(s)</span>
-        </div>
-        <div style="width: 44px; height: 44px; border-radius: 12px; background: #FFFFFF; border: 1.5px solid #B2CFCB; display: flex; align-items: center; justify-content: center; color: #00594E; flex-shrink: 0;">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <h1 style="font-size: 1.65rem; font-weight: 800; color: #111827; margin: 0; letter-spacing: -0.02em;">Usuarios</h1>
+          <p style="font-size: 0.86rem; color: #52606D; margin: 4px 0 0 0;">
+            Administración de cuentas, asignación de roles y permisos de acceso por módulo
+          </p>
         </div>
       </div>
 
-      <!-- KPI 2: Administradores -->
-      <div style="background: #F2F7F6; border: 1.5px solid #B2CFCB; border-radius: 14px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0, 89, 78, 0.04);">
-        <div>
-          <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #52606D; letter-spacing: 0.5px; display: block;">ADMINISTRADORES</span>
-          <div style="font-size: 1.85rem; font-weight: 800; color: #00594E; margin-top: 4px; line-height: 1;" id="kpi-total-funcionarios">{totalAdmins}</div>
-          <span style="font-size: 0.72rem; color: #52606D; margin-top: 4px; display: block;">Control total y gobierno RBAC</span>
+      <!-- 3 Tarjetas Bento KPIs Integradas (Fondo Suave #F8FAFB / Borde #E2E8F0) -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;">
+        
+        <!-- KPI 1: Total Usuarios Registrados -->
+        <div style="background: #F8FAFB; border: 1px solid #E2E8F0; border-radius: 14px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.02);">
+          <div>
+            <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #52606D; letter-spacing: 0.5px; display: block;">TOTAL USUARIOS REGISTRADOS</span>
+            <div style="font-size: 1.85rem; font-weight: 800; color: #00594E; margin-top: 4px; line-height: 1;" id="kpi-total-users">{totalUsers}</div>
+            <span style="font-size: 0.72rem; color: #52606D; margin-top: 4px; display: block;">{totalFuncionarios} funcionario(s) operativo(s)</span>
+          </div>
+          <div style="width: 44px; height: 44px; border-radius: 12px; background: #FFFFFF; border: 1.5px solid #B2CFCB; display: flex; align-items: center; justify-content: center; color: #00594E; flex-shrink: 0;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
         </div>
-        <div style="width: 44px; height: 44px; border-radius: 12px; background: #FFFFFF; border: 1.5px solid #B2CFCB; display: flex; align-items: center; justify-content: center; color: #00594E; flex-shrink: 0;">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+
+        <!-- KPI 2: Administradores -->
+        <div style="background: #F8FAFB; border: 1px solid #E2E8F0; border-radius: 14px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.02);">
+          <div>
+            <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #52606D; letter-spacing: 0.5px; display: block;">ADMINISTRADORES</span>
+            <div style="font-size: 1.85rem; font-weight: 800; color: #00594E; margin-top: 4px; line-height: 1;" id="kpi-total-funcionarios">{totalAdmins}</div>
+            <span style="font-size: 0.72rem; color: #52606D; margin-top: 4px; display: block;">Control total y gobierno RBAC</span>
+          </div>
+          <div style="width: 44px; height: 44px; border-radius: 12px; background: #FFFFFF; border: 1.5px solid #B2CFCB; display: flex; align-items: center; justify-content: center; color: #00594E; flex-shrink: 0;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
         </div>
+
+        <!-- KPI 3: Roles del Sistema -->
+        <div style="background: #F8FAFB; border: 1px solid #E2E8F0; border-radius: 14px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.02);">
+          <div>
+            <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #786832; letter-spacing: 0.5px; display: block;">ROLES DEL SISTEMA</span>
+            <div style="font-size: 1.85rem; font-weight: 800; color: #786832; margin-top: 4px; line-height: 1;" id="kpi-total-roles">{totalRoles}</div>
+            <span style="font-size: 0.72rem; color: #786832; margin-top: 4px; display: block;" id="kpi-custom-roles-sub">{customRolesCount} rol(es) personalizado(s)</span>
+          </div>
+          <div style="width: 44px; height: 44px; border-radius: 12px; background: #FFFFFF; border: 1.5px solid #DBD2B0; display: flex; align-items: center; justify-content: center; color: #786832; flex-shrink: 0;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+        </div>
+
       </div>
 
-      <!-- KPI 3: Roles del Sistema -->
-      <div style="background: #F7F5EE; border: 1.5px solid #DBD2B0; border-radius: 14px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(181, 161, 96, 0.06);">
-        <div>
-          <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #786832; letter-spacing: 0.5px; display: block;">ROLES DEL SISTEMA</span>
-          <div style="font-size: 1.85rem; font-weight: 800; color: #786832; margin-top: 4px; line-height: 1;" id="kpi-total-roles">{totalRoles}</div>
-          <span style="font-size: 0.72rem; color: #786832; margin-top: 4px; display: block;" id="kpi-custom-roles-sub">{customRolesCount} rol(es) personalizado(s)</span>
-        </div>
-        <div style="width: 44px; height: 44px; border-radius: 12px; background: #FFFFFF; border: 1.5px solid #DBD2B0; display: flex; align-items: center; justify-content: center; color: #786832; flex-shrink: 0;">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Barra de Búsqueda, Filtros y Botones de Gestión RBAC -->
-    <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-radius: 14px; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+      <!-- Barra de Búsqueda, Filtros y Botones de Gestión RBAC -->
+      <div style="background: #F8FAFB; border: 1px solid #E2E8F0; border-radius: 14px; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
       
       <!-- Buscador Instantáneo -->
       <div style="position: relative; flex: 1; max-width: 380px; min-width: 230px;">
@@ -326,6 +329,8 @@ const initialRbacBootstrap = JSON.stringify({
         </table>
       </div>
     </div>
+
+    </div> <!-- Fin .module-board-card -->
 
     <!-- MODAL 1: MATRIZ RBAC DE PERMISOS POR MÓDULO (12 MÓDULOS: VER / INTERACTUAR) -->
     <div class="modal-backdrop" id="modal-permissions" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">

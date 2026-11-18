@@ -901,6 +901,93 @@ body.sidebar-collapsed .hero-banner {
   box-shadow: 0 10px 26px -6px rgba(15, 23, 42, 0.07), 0 4px 10px -3px rgba(0, 89, 78, 0.04) !important;
 }
 
+/* ==========================================================================
+   PANEL MAESTRO BLANCO ANTI-SATURACIÓN DE FONDO HALFTONE (.module-board-card)
+   ========================================================================== */
+.module-board-card {
+  background-color: #FFFFFF !important;
+  border: 1px solid rgba(0, 89, 78, 0.12) !important;
+  border-radius: 20px !important;
+  padding: 24px 28px !important;
+  box-shadow: 0 14px 32px -8px rgba(15, 23, 42, 0.07) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 18px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* ==========================================================================
+   BARRAS DE PESTAÑAS (TABS) PRO MAX - FONDO SÓLIDO ANTI-TRANSPARENCIA
+   ========================================================================== */
+.module-tabs-container,
+.module-tabs,
+.normas-tabs-bar,
+.tabs-header,
+.nav-tabs-wrapper,
+.filter-tabs,
+[role="tablist"] {
+  display: inline-flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 8px !important;
+  background-color: #FFFFFF !important;
+  padding: 6px 8px !important;
+  border-radius: 14px !important;
+  border: 1px solid rgba(0, 89, 78, 0.14) !important;
+  box-shadow: 0 4px 14px -2px rgba(15, 23, 42, 0.06) !important;
+  margin-bottom: 16px !important;
+}
+
+/* Botón de pestaña INACTIVO: visible, limpio y con fondo suave */
+.tab-btn,
+.module-tab-btn,
+.module-tab-button,
+.filter-tab,
+.btn-sub-filter-tab,
+[role="tab"]:not(.active):not([aria-selected="true"]) {
+  background-color: #F8FAFC !important;
+  color: #334155 !important;
+  border: 1px solid #E2E8F0 !important;
+  border-radius: 10px !important;
+  padding: 8px 14px !important;
+  font-weight: 600 !important;
+  font-size: 0.84rem !important;
+  transition: all 0.18s ease !important;
+}
+
+.tab-btn:hover,
+.module-tab-btn:hover,
+.module-tab-button:hover,
+.filter-tab:hover,
+.btn-sub-filter-tab:hover {
+  background-color: #EDF4F2 !important;
+  color: #00594E !important;
+  border-color: rgba(0, 89, 78, 0.25) !important;
+}
+
+/* Botón de pestaña ACTIVO: Verde Institucional sólido */
+.tab-btn.active,
+.module-tab-btn.active,
+.module-tab-button.active,
+.filter-tab.active,
+.btn-sub-filter-tab.active,
+[role="tab"].active,
+[role="tab"][aria-selected="true"] {
+  background-color: #00594E !important;
+  color: #FFFFFF !important;
+  border-color: #00594E !important;
+  box-shadow: 0 4px 10px rgba(0, 89, 78, 0.22) !important;
+}
+
+.tab-btn.active .tab-count,
+.module-tab-btn.active .tab-count,
+.module-tab-button.active .tab-count,
+.filter-tab.active .filter-count {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: #FFFFFF !important;
+}
+
 .card > *,
 .bento-card > *,
 .user-card > *,

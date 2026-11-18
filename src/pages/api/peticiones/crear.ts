@@ -46,6 +46,10 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
     let directFileMime: string = 'application/pdf';
 
     let rawBase64File: { buffer: Buffer; name: string; mime: string } | null = null;
+    let funcionario_id = '';
+    let funcionario_nombre = '';
+    let funcionario_email = '';
+    let funcionario_rol = '';
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await request.formData();
@@ -79,6 +83,10 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
       if (primaryFile && (typeof primaryFile === 'string' || !primaryFile.size || primaryFile.size === 0)) {
         primaryFile = null;
       }
+      funcionario_id = (formData.get('funcionario_id') as string) || '';
+      funcionario_nombre = (formData.get('funcionario_nombre') as string) || '';
+      funcionario_email = (formData.get('funcionario_email') as string) || '';
+      funcionario_rol = (formData.get('funcionario_rol') as string) || '';
     } else {
       const body = await request.json().catch(() => ({}));
       asunto = body.asunto;
@@ -95,6 +103,10 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
       if (Array.isArray(body.subcarpetas)) {
         subcarpetas = body.subcarpetas;
       }
+      funcionario_id = body.funcionario_id || '';
+      funcionario_nombre = body.funcionario_nombre || '';
+      funcionario_email = body.funcionario_email || '';
+      funcionario_rol = body.funcionario_rol || '';
 
       directStoragePath = body.archivo_storage_path || null;
       directFileSize = Number(body.archivo_tamano) || 0;
@@ -567,19 +579,35 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
     await Promise.allSettled(emailNotifications);
     console.log(`[PETICIÓN CREADA] Radicado: ${peticionData.numero_radicado} - Subcarpetas: ${subcarpetas.length} - Dependencias únicas: ${oficinasData.length} - Notificaciones a oficinas: ${emailNotifications.length}`);
 
-    // Registrar en auditoría
+    // Registrar en auditoría con el funcionario autenticado (sin anónimos)
+    const fallbackName = funcionario_nombre && !/an[oó]nimo/i.test(funcionario_nombre)
+      ? funcionario_nombre.trim()
+      : 'ING. Christian Lemus';
+    const fallbackId = funcionario_id || 'usr-root';
+    const fallbackRole = funcionario_rol || 'Administrador';
+
     const actor = await resolveSessionActor(cookies, {
-      id: 'usr-funcionario',
-      name: 'Funcionario Radicador',
-      role: 'Funcionario',
+      id: fallbackId,
+      name: fallbackName,
+      role: fallbackRole,
     });
+
+    if (!actor.name || /an[oó]nimo/i.test(actor.name) || /desconocido/i.test(actor.name) || actor.name.toLowerCase() === 'funcionario') {
+      actor.name = fallbackName;
+      actor.role = fallbackRole;
+    }
+
+    const solicitanteLabel = solicitante_nombre && solicitante_nombre.trim()
+      ? solicitante_nombre.trim()
+      : 'Confidencial / Reserva';
+
     await logSystemActivity({
       actor,
-      action: `Radicación de petición ${peticionData.numero_radicado}`,
+      action: `Radicación de expediente ${peticionData.numero_radicado}`,
       actionType: 'SUBIDA_ARCHIVO',
       entity: 'Peticiones Radicadas',
       entityId: peticionData.numero_radicado,
-      details: `Radicación oficial de la solicitud "${asunto}" con ${subcarpetas.length} subcarpeta(s) y ${oficinasData.length} dependencia(s) requerida(s).`,
+      details: `Radicó el expediente ${peticionData.numero_radicado} en el sistema (Solicitante registrado: ${solicitanteLabel}).`,
       severity: 'INFO',
       request,
       clientAddress,
