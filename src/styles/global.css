@@ -33,8 +33,12 @@
   --secondary-subtle: var(--dorado-suave-bg);
   --secondary-border: var(--dorado-borde);
 
+  /* Fondo Halftone Institucional (Escala 10px · Opacidad 18% · Base Gris #EEF2F5) */
+  --bg-halftone-base: #EEF2F5; /* Base gris pizarra clara para alto contraste con tarjetas #FFFFFF */
+  --bg-halftone-svg: url("data:image/svg+xml,%3Csvg width='10' height='10' viewBox='0 0 10 10' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%2300594E' fill-opacity='0.18' fill-rule='evenodd'%3E%3Ccircle cx='2.5' cy='2.5' r='1.15'/%3E%3Ccircle cx='7.5' cy='7.5' r='1.15'/%3E%3C/g%3E%3C/svg%3E");
+
   /* Soporte Neutro Sobrio */
-  --bg-body: #F8FAFC;
+  --bg-body: var(--bg-halftone-base);
   --bg-surface: #FFFFFF;
   --bg-surface-elevated: #F1F5F9;
   --bg-surface-card: #FFFFFF;
@@ -147,9 +151,18 @@
   padding: 0;
 }
 
-body {
+body,
+.app-content-area,
+main.main-content,
+.portal-background {
   font-family: var(--font-family-base);
-  background-color: var(--bg-body);
+  background-color: var(--bg-halftone-base) !important;
+  background-image:
+    radial-gradient(circle at 50% 25%, rgba(255, 255, 255, 0.55) 0%, rgba(238, 242, 245, 0.15) 55%, transparent 100%),
+    var(--bg-halftone-svg) !important;
+  background-size: 100% 100%, 10px 10px !important;
+  background-position: center center, 0 0 !important;
+  background-attachment: fixed;
   color: var(--text-main);
   min-height: 100vh;
   display: flex;
@@ -157,6 +170,12 @@ body {
   width: 100%;
   overflow-x: hidden;
   line-height: 1.5;
+}
+
+.main-wrapper,
+.content-body,
+.app-container {
+  background-color: transparent !important;
 }
 
 h1, h2, h3, h4, .brand-font {
@@ -854,6 +873,32 @@ body.sidebar-collapsed .hero-banner {
 .responder-file-card {
   min-width: 0;
   max-width: 100%;
+}
+
+/* Realce de Contraste en Tarjetas y Módulos Blancos (#FFFFFF) sobre Fondo Halftone #EEF2F5 */
+.card,
+.card-promax,
+.bento-card,
+.stat-card,
+.kpi-card:not(.hero-sla-card),
+.bento-kpi-card,
+.user-card,
+.oficina-card,
+.peticion-card,
+.modal-card,
+.folder-card,
+.drive-folder-card,
+.table-responsive,
+.table-users,
+.subfolder-group-card,
+.subfolder-bento-card,
+.responder-file-card,
+.portal-card-login,
+.portal-info-card,
+.agenda-bento-column {
+  background-color: #FFFFFF !important;
+  border: 1px solid rgba(0, 89, 78, 0.10) !important;
+  box-shadow: 0 10px 26px -6px rgba(15, 23, 42, 0.07), 0 4px 10px -3px rgba(0, 89, 78, 0.04) !important;
 }
 
 .card > *,
