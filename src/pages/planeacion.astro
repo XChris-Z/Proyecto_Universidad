@@ -15,10 +15,10 @@ const countRec = informesList.filter((i: any) => i.tipo === 'rectoral').length;
 ---
 
 <AppLayout title="Planeación y Gestión CSU" activeNav="planeacion">
-  <div style="display: flex; flex-direction: column; gap: 22px; max-width: 1280px; margin: 0 auto; width: 100%;">
+  <section class="module-board-card" style="max-width: 1280px; margin: 0 auto;">
     
     <!-- Cabecera Sobria y Ejecutiva (Bento Pro Max) -->
-    <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-top: 4px solid #00594E; border-radius: 16px; padding: 24px 28px; box-shadow: 0 2px 10px rgba(0, 89, 78, 0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 18px;">
+    <div class="module-board-header">
       <div style="min-width: 0; flex: 1;">
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
           <h1 style="font-size: 1.55rem; font-weight: 800; color: #111827; margin: 0; letter-spacing: -0.01em;">Planeación Estratégica y Financiera CSU</h1>
@@ -41,47 +41,47 @@ const countRec = informesList.filter((i: any) => i.tipo === 'rectoral').length;
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
       
       <!-- KPI 1: Informes Financieros Mensuales -->
-      <div style="background: #F2F7F6; border: 1.5px solid #B2CFCB; border-radius: 14px; padding: 20px 22px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0, 89, 78, 0.04);">
+      <div class="kpi-card stat-card" style="padding: 18px 20px; display: flex; justify-content: space-between; align-items: center;">
         <div>
           <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #52606D; letter-spacing: 0.5px; display: block;">Informes Financieros Mensuales</span>
           <div style="font-size: 1.9rem; font-weight: 800; color: #00594E; margin-top: 4px; line-height: 1;" id="plan-kpi-count-fin">{countFin}</div>
           <span style="font-size: 0.74rem; font-weight: 600; color: #00594E; margin-top: 6px; display: inline-block;">Radicados y verificados ante el CSU</span>
         </div>
-        <div style="width: 48px; height: 48px; border-radius: 12px; background: #FFFFFF; border: 1.5px solid #B2CFCB; display: flex; align-items: center; justify-content: center; color: #00594E; flex-shrink: 0;">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        <div style="width: 44px; height: 44px; border-radius: 12px; background: #FFFFFF; border: 1.5px solid #B2CFCB; display: flex; align-items: center; justify-content: center; color: #00594E; flex-shrink: 0;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         </div>
       </div>
 
       <!-- KPI 2: Informes de Gestión Rectoral -->
-      <div style="background: #F7F5EE; border: 1.5px solid #DBD2B0; border-radius: 14px; padding: 20px 22px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(181, 161, 96, 0.06);">
+      <div class="kpi-card stat-card" style="padding: 18px 20px; display: flex; justify-content: space-between; align-items: center;">
         <div>
           <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #786832; letter-spacing: 0.5px; display: block;">Informes de Gestión Rectoral</span>
           <div style="font-size: 1.9rem; font-weight: 800; color: #786832; margin-top: 4px; line-height: 1;" id="plan-kpi-count-rec">{countRec}</div>
           <span style="font-size: 0.74rem; font-weight: 600; color: #786832; margin-top: 6px; display: inline-block;">Rendición periódica oficial del PDI</span>
         </div>
-        <div style="width: 48px; height: 48px; border-radius: 12px; background: #FFFFFF; border: 1.5px solid #DBD2B0; display: flex; align-items: center; justify-content: center; color: #786832; flex-shrink: 0;">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        <div style="width: 44px; height: 44px; border-radius: 12px; background: #FFFFFF; border: 1.5px solid #DBD2B0; display: flex; align-items: center; justify-content: center; color: #786832; flex-shrink: 0;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
         </div>
       </div>
 
     </div>
 
     <!-- Pestañas de Navegación Estilizadas con Contadores -->
-    <div class="module-tabs" id="planeacion-module-tabs" style="display: flex; gap: 8px; flex-wrap: wrap; border-bottom: 2px solid #DCE4E3; padding-bottom: 12px;">
-      <button class="module-tab-btn active" data-ptab="financieros" style="padding: 10px 18px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid transparent; transition: all 0.2s ease;">
+    <div class="module-tabs-container module-tabs" id="planeacion-module-tabs" role="tablist">
+      <button class="module-tab-btn active" data-ptab="financieros" style="padding: 10px 18px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s ease;">
         <span>Informes Financieros Mensuales CSU</span>
         <span class="tab-count" id="plan-count-fin" style="background: #00594E; color: #ffffff; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;">{countFin}</span>
       </button>
-      <button class="module-tab-btn" data-ptab="rectorales" style="padding: 10px 18px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid transparent; transition: all 0.2s ease;">
+      <button class="module-tab-btn" data-ptab="rectorales" style="padding: 10px 18px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s ease;">
         <span>Informes de Gestión Rectoral CSU</span>
         <span class="tab-count" id="plan-count-rec" style="background: #DBD2B0; color: #786832; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;">{countRec}</span>
       </button>
     </div>
 
     <!-- Buscador en tiempo real de Informes CSU -->
-    <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-radius: 14px; padding: 14px 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+    <div class="search-bar-wrapper filter-bar" style="padding: 12px 18px;">
       <div style="position: relative; width: 100%;">
-        <input type="text" id="planeacion-search-input" placeholder="Buscar informe por período (Ej: 2026), radicado CSU, responsable o tema..." class="form-input" style="padding-left: 38px; border-radius: 10px; border: 1.5px solid #DCE4E3; font-size: 0.85rem; height: 42px; width: 100%; box-sizing: border-box;" />
+        <input type="text" id="planeacion-search-input" placeholder="Buscar informe por período (Ej: 2026), radicado CSU, responsable o tema..." class="form-input" style="padding-left: 38px; border-radius: 10px; border: 1.5px solid #DCE4E3; font-size: 0.85rem; height: 42px; width: 100%; box-sizing: border-box; background: #FFFFFF;" />
         <div style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #64748B; display: flex; align-items: center; pointer-events: none;">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
         </div>
@@ -89,12 +89,12 @@ const countRec = informesList.filter((i: any) => i.tipo === 'rectoral').length;
     </div>
 
     <!-- Tarjeta Contenedora Principal con Scrollbar Interna Propia -->
-    <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-radius: 14px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+    <div class="table-wrapper" style="padding: 16px;">
       <div id="planeacion-tab-content" class="pro-scroll-container table-scroll-wrapper records-card-body" style="max-height: 540px; overflow-y: auto; overflow-x: auto; width: 100%;">
         <!-- Dinámico desde JS con datos de Supabase -->
       </div>
     </div>
-  </div>
+  </section>
 
   <!-- Modal: Radicar Informe de Planeación ante CSU -->
   <div class="modal-backdrop" id="new-planeacion-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(2px);">

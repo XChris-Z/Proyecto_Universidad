@@ -18,10 +18,10 @@ const countDirectivas = casosList.filter((c: any) => c.categoria === 'directivas
 ---
 
 <AppLayout title="Asuntos Jurídicos" activeNav="juridicos">
-  <div style="display: flex; flex-direction: column; gap: 22px; max-width: 1280px; margin: 0 auto; width: 100%;">
+  <section class="module-board-card" style="max-width: 1280px; margin: 0 auto;">
     
     <!-- Cabecera Sobria y Ejecutiva (Bento Pro Max) -->
-    <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-top: 4px solid #00594E; border-radius: 16px; padding: 24px 28px; box-shadow: 0 2px 10px rgba(0, 89, 78, 0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 18px;">
+    <div class="module-board-header">
       <div style="min-width: 0; flex: 1;">
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
           <h1 style="font-size: 1.55rem; font-weight: 800; color: #111827; margin: 0; letter-spacing: -0.01em;">Asuntos Jurídicos</h1>
@@ -41,33 +41,33 @@ const countDirectivas = casosList.filter((c: any) => c.categoria === 'directivas
     </div>
 
     <!-- Pestañas de Navegación Estilizadas con Contadores -->
-    <div class="module-tabs" id="juridicos-module-tabs" style="display: flex; gap: 8px; flex-wrap: wrap; border-bottom: 2px solid #DCE4E3; padding-bottom: 12px;">
-      <button class="module-tab-btn active" data-jtab="brechas" style="padding: 10px 16px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid transparent; transition: all 0.2s ease;">
+    <div class="module-tabs-container module-tabs" id="juridicos-module-tabs" role="tablist">
+      <button class="module-tab-btn active" data-jtab="brechas" style="padding: 10px 16px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s ease;">
         <span>Revisiones Reglamentarias</span>
         <span class="tab-count" id="jcount-brechas" style="background: #00594E; color: #ffffff; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;">{countBrechas}</span>
       </button>
-      <button class="module-tab-btn" data-jtab="conceptos" style="padding: 10px 16px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid transparent; transition: all 0.2s ease;">
+      <button class="module-tab-btn" data-jtab="conceptos" style="padding: 10px 16px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s ease;">
         <span>Conceptos (Internos / Externos)</span>
         <span class="tab-count" id="jcount-conceptos" style="background: #B2CFCB; color: #00594E; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;">{countConceptos}</span>
       </button>
-      <button class="module-tab-btn" data-jtab="litigios" style="padding: 10px 16px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid transparent; transition: all 0.2s ease;">
+      <button class="module-tab-btn" data-jtab="litigios" style="padding: 10px 16px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s ease;">
         <span>Litigios y Asuntos Judiciales</span>
         <span class="tab-count" id="jcount-litigios" style="background: #DBD2B0; color: #786832; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;">{countLitigios}</span>
       </button>
-      <button class="module-tab-btn" data-jtab="auditorias" style="padding: 10px 16px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid transparent; transition: all 0.2s ease;">
+      <button class="module-tab-btn" data-jtab="auditorias" style="padding: 10px 16px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s ease;">
         <span>Auditorías de Entes de Control</span>
         <span class="tab-count" id="jcount-auditorias" style="background: #E2E8F0; color: #475569; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;">{countAuditorias}</span>
       </button>
-      <button class="module-tab-btn" data-jtab="directivas" style="padding: 10px 16px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid transparent; transition: all 0.2s ease;">
+      <button class="module-tab-btn" data-jtab="directivas" style="padding: 10px 16px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s ease;">
         <span>Directivas y Circulares</span>
         <span class="tab-count" id="jcount-directivas" style="background: #E2E8F0; color: #475569; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;">{countDirectivas}</span>
       </button>
     </div>
 
     <!-- Buscador en tiempo real de Asuntos Jurídicos -->
-    <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-radius: 14px; padding: 14px 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+    <div class="search-bar-wrapper filter-bar" style="padding: 12px 18px;">
       <div style="position: relative; width: 100%;">
-        <input type="text" id="juridicos-search-input" placeholder="Buscar asunto jurídico por título, expediente, despacho o responsable..." class="form-input" style="padding-left: 38px; border-radius: 10px; border: 1.5px solid #DCE4E3; font-size: 0.85rem; height: 42px; width: 100%; box-sizing: border-box;" />
+        <input type="text" id="juridicos-search-input" placeholder="Buscar asunto jurídico por título, expediente, despacho o responsable..." class="form-input" style="padding-left: 38px; border-radius: 10px; border: 1.5px solid #DCE4E3; font-size: 0.85rem; height: 42px; width: 100%; box-sizing: border-box; background: #FFFFFF;" />
         <div style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #64748B; display: flex; align-items: center; pointer-events: none;">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
         </div>
@@ -75,12 +75,12 @@ const countDirectivas = casosList.filter((c: any) => c.categoria === 'directivas
     </div>
 
     <!-- Tarjeta Contenedora Principal con Scrollbar Interna Propia -->
-    <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-radius: 14px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+    <div class="table-wrapper" style="padding: 16px;">
       <div id="juridicos-tab-content" class="pro-scroll-container records-card-body" style="max-height: 580px; overflow-y: auto; overflow-x: auto; width: 100%; padding: 4px;">
         <!-- Dinámico desde JS según pestaña activa con datos reales de Supabase -->
       </div>
     </div>
-  </div>
+  </section>
 
   <!-- Modal: Registrar Asunto Jurídico -->
   <div class="modal-backdrop" id="new-gap-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(2px);">

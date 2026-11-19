@@ -16,10 +16,10 @@ const countAcred = programasList.filter((p: any) => p.categoria === 'acreditacio
 ---
 
 <AppLayout title="Gestión Académica y Acreditación" activeNav="programas">
-  <div style="display: flex; flex-direction: column; gap: 22px; max-width: 1280px; margin: 0 auto; width: 100%;">
+  <section class="module-board-card" style="max-width: 1280px; margin: 0 auto;">
     
     <!-- Cabecera Sobria y Ejecutiva (Bento Pro Max) -->
-    <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-top: 4px solid #00594E; border-radius: 16px; padding: 24px 28px; box-shadow: 0 2px 10px rgba(0, 89, 78, 0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 18px;">
+    <div class="module-board-header">
       <div style="min-width: 0; flex: 1;">
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
           <h1 style="font-size: 1.55rem; font-weight: 800; color: #111827; margin: 0; letter-spacing: -0.01em;">Gestión Académica y Acreditación Institucional</h1>
@@ -39,38 +39,38 @@ const countAcred = programasList.filter((p: any) => p.categoria === 'acreditacio
     </div>
 
     <!-- Pestañas de Navegación Estilizadas con Contadores -->
-    <div class="module-tabs" id="programas-module-tabs" style="display: flex; gap: 8px; flex-wrap: wrap; border-bottom: 2px solid #DCE4E3; padding-bottom: 12px;">
-      <button class="module-tab-btn active" data-ptab="historial" style="padding: 10px 18px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid transparent; transition: all 0.2s ease;">
+    <div class="module-tabs-container module-tabs" id="programas-module-tabs" role="tablist">
+      <button class="module-tab-btn active" data-ptab="historial" style="padding: 10px 18px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s ease;">
         <span>Historial de Programas (Actos Aprobación y Negación)</span>
         <span class="tab-count" id="prog-count-total" style="background: #00594E; color: #ffffff; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;">{countHistorial}</span>
       </button>
-      <button class="module-tab-btn" data-ptab="saces" style="padding: 10px 18px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid transparent; transition: all 0.2s ease;">
+      <button class="module-tab-btn" data-ptab="saces" style="padding: 10px 18px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s ease;">
         <span>Procesos Radicados SACES / MEN</span>
         <span class="tab-count" id="prog-count-saces" style="background: #B2CFCB; color: #00594E; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;">{countSaces}</span>
       </button>
-      <button class="module-tab-btn" data-ptab="acreditacion" style="padding: 10px 18px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid transparent; transition: all 0.2s ease;">
+      <button class="module-tab-btn" data-ptab="acreditacion" style="padding: 10px 18px; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s ease;">
         <span>Acreditación de Alta Calidad (CNA)</span>
         <span class="tab-count" id="prog-count-cna" style="background: #DBD2B0; color: #786832; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;">{countAcred}</span>
       </button>
     </div>
 
     <!-- Barra de Búsqueda Institucional -->
-    <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-radius: 14px; padding: 14px 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+    <div class="search-bar-wrapper filter-bar" style="padding: 12px 18px;">
       <div style="position: relative; width: 100%;">
-        <input type="text" id="programas-search-input" placeholder="Buscar programa por nombre (Ej: Derecho, Medicina), código SNIES o número de acto..." class="form-input" style="padding-left: 38px; border-radius: 10px; border: 1.5px solid #DCE4E3; font-size: 0.85rem; height: 42px; width: 100%; box-sizing: border-box;" />
+        <input type="text" id="programas-search-input" placeholder="Buscar programa por nombre (Ej: Derecho, Medicina), código SNIES o número de acto..." class="form-input" style="padding-left: 38px; border-radius: 10px; border: 1.5px solid #DCE4E3; font-size: 0.85rem; height: 42px; width: 100%; box-sizing: border-box; background: #FFFFFF;" />
         <div style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #64748B; display: flex; align-items: center; pointer-events: none;">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
         </div>
       </div>
     </div>
 
-    <!-- Contenedor con Scroll Propio para Tarjetas de Programas (Conserva estructura intacta interna) -->
-    <div style="background: #ffffff; border: 1.5px solid #DCE4E3; border-radius: 14px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+    <!-- Contenedor con Scroll Propio para Tarjetas de Programas -->
+    <div class="table-wrapper" style="padding: 16px;">
       <div id="programas-tab-content" class="pro-scroll-container records-card-body" style="max-height: 600px; overflow-y: auto; overflow-x: auto; padding: 4px;">
         <!-- Dinámico desde JS con datos de Supabase (Tarjetas individuales 100% conservadas) -->
       </div>
     </div>
-  </div>
+  </section>
 
   <!-- Modal: Registrar Programa / Trámite MEN -->
   <div class="modal-backdrop" id="new-programa-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(2px);">

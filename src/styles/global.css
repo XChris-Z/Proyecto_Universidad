@@ -909,12 +909,59 @@ body.sidebar-collapsed .hero-banner {
   border: 1px solid rgba(0, 89, 78, 0.12) !important;
   border-radius: 20px !important;
   padding: 24px 28px !important;
-  box-shadow: 0 14px 32px -8px rgba(15, 23, 42, 0.07) !important;
+  box-shadow: 0 14px 32px -8px rgba(15, 23, 42, 0.07), 0 4px 12px -4px rgba(0, 89, 78, 0.04) !important;
   display: flex !important;
   flex-direction: column !important;
-  gap: 18px !important;
+  gap: 20px !important;
   width: 100% !important;
   box-sizing: border-box !important;
+}
+
+/* Cabecera interna del módulo (Título + Subtítulo + Botón de acción principal) */
+.module-board-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-wrap: wrap !important;
+  gap: 16px !important;
+  padding-bottom: 16px !important;
+  border-bottom: 1px solid #EEF2F5 !important;
+}
+
+/* Sub-tarjetas internas (KPIs, filtros, barras de búsqueda, tarjetas de programas/expedientes)
+   Evita el efecto "doble sombra pesada" dentro del contenedor blanco */
+.module-board-card .kpi-card,
+.module-board-card .stat-card,
+.module-board-card .filter-bar,
+.module-board-card .search-bar-wrapper,
+.module-board-card .search-filter-card,
+.module-board-card .search-row,
+.module-board-card .filter-row {
+  background-color: #F8FAFB !important;
+  border: 1px solid #E2E8F0 !important;
+  border-radius: 14px !important;
+  box-shadow: none !important;
+}
+
+/* Las tablas y cuadrículas de contenido interno se integran limpiamente con borde sutil */
+.module-board-card .table-wrapper,
+.module-board-card .data-table-container,
+.module-board-card .item-card {
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.02);
+}
+
+/* Ajuste de la barra de pestañas (Tabs) cuando vive DENTRO de .module-board-card */
+.module-board-card .module-tabs-container,
+.module-board-card .module-tabs,
+.module-board-card .normas-tabs-bar,
+.module-board-card [role="tablist"] {
+  background-color: #F4F7F6 !important;
+  border: 1px solid rgba(0, 89, 78, 0.10) !important;
+  box-shadow: none !important;
+  margin-bottom: 0 !important;
 }
 
 /* ==========================================================================

@@ -43,7 +43,8 @@ export interface PeticionResponsable {
   fecha_entrega?: string | null;
   observaciones_entrega?: string | null;
   storage_subfolder_path?: string | null;
-  oficinas?: OficinaInfo | null;
+  oficinas?: OficinaInfo | OficinaInfo[] | null;
+  [key: string]: any;
 }
 
 export interface PeticionSubcarpeta {
@@ -52,6 +53,7 @@ export interface PeticionSubcarpeta {
   nombre: string;
   descripcion?: string | null;
   created_at?: string;
+  [key: string]: any;
 }
 
 export interface PeticionExpediente {
@@ -401,7 +403,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
 ---
 
 <AppLayout title="Carpetas de Radicados" activeNav="archivos">
-  <div class="archivos-wrapper" style="display: flex; flex-direction: column; gap: 20px;">
+  <div class="module-board-card archivos-wrapper">
 
     <!-- =========================================================================
          1. VISTA GENERAL DE EXPLORADOR DE CARPETAS (RAÍZ)
@@ -1427,12 +1429,12 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
        BENTO GRID PRO MAX: VISTA PRINCIPAL DEL MÓDULO DE ARCHIVOS Y CARPETAS
        ========================================================================== */
     .archivos-bento-header {
-      padding: 18px 22px;
-      background: #FFFFFF;
-      border: 1px solid #DCE4E3;
-      border-top: 3px solid #00594E;
-      border-radius: 16px;
-      box-shadow: 0 4px 16px -4px rgba(0, 89, 78, 0.06);
+      padding: 0 0 16px 0;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid #EEF2F5;
+      border-radius: 0;
+      box-shadow: none;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -2352,6 +2354,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       fecha_entrega?: string | null;
       storage_subfolder_path?: string | null;
       oficinas?: OficinaInfo | OficinaInfo[] | null;
+      [key: string]: any;
     }
 
     interface PeticionExpediente {

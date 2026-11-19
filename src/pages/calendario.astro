@@ -46,7 +46,7 @@ const {
   activeNav="calendario"
 >
   <script id="calendario-ssr-events" type="application/json" is:inline set:html={ssrDeadlinesJson}></script>
-  <div class="calendario-promax-workspace">
+  <section class="module-board-card calendario-promax-workspace">
     <!-- Notificaciones visuales de estado -->
     {
       isJustConnected && (
@@ -687,7 +687,7 @@ const {
         </div>
       </section>
     </div>
-  </div>
+  </section>
 
   <!-- ================================================================= -->
   <!-- MODAL 1: AGENDAR COMPROMISO / EVENTO EN CALENDARIO Y PLATAFORMA   -->
@@ -975,12 +975,12 @@ const {
     justify-content: space-between;
     gap: 18px;
     flex-wrap: wrap;
-    background: #FFFFFF;
-    border: 1px solid #DCE4E3;
-    border-top: 3.5px solid #00594E;
-    border-radius: 16px;
-    padding: 18px 24px;
-    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid #EEF2F5;
+    border-radius: 0;
+    padding: 0 0 16px 0;
+    box-shadow: none;
   }
   .header-pretitle {
     display: flex;
