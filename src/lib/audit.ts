@@ -116,7 +116,7 @@ export function cleanAuditActionTitle(rawAction?: string | null): string {
   if (!action) return 'Operación Institucional';
 
   if (action.includes('[EXPEDIENTE_COMPLETO]')) {
-    const rad = action.match(/RAD-\d{4}-\d+/i)?.[0];
+    const rad = action.match(/(?:RAD-\d{4}-\d+|[A-Z0-9]+(?:[-_][A-Z0-9]+)+|\d{4}-\d{4,})/i)?.[0];
     return rad ? `Cierre Interno de Expediente (${rad.toUpperCase()})` : 'Cierre Interno de Expediente';
   }
 

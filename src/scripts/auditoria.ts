@@ -135,11 +135,12 @@ export async function initAuditoria() {
         .replace(/\bRBAC\b/g, 'del Sistema')
         .trim();
       
+      const radPattern = /(?:RAD-\d{4}-\d+|[A-Z0-9]+(?:[-_][A-Z0-9]+)+|\d{4}-\d{4,})/i;
       const radicadoFromObj = (log.after as any)?.numero_radicado || (log.before as any)?.numero_radicado;
       const radicadoMatch = (radicadoFromObj ? [radicadoFromObj] : null) ||
-                            entityIdStr.match(/RAD-\d{4}-\d+/i) || 
-                            String(log.action || '').match(/RAD-\d{4}-\d+/i) || 
-                            String(log.details || '').match(/RAD-\d{4}-\d+/i);
+                            entityIdStr.match(radPattern) || 
+                            String(log.action || '').match(radPattern) || 
+                            String(log.details || '').match(radPattern);
 
       let entityHtml = '';
       if (radicadoMatch) {

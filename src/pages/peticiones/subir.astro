@@ -170,6 +170,45 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
               <div class="subir-file-verify-fill"></div>
             </div>
           </div>
+
+          <!-- CAMPO DE RADICADO EXTERNO CON AUTODETECCIÓN INTELIGENTE -->
+          <div class="subir-radicado-field-container">
+            <div class="subir-radicado-label-row">
+              <label for="numero-radicado" class="form-label" style="margin-bottom: 0; font-weight: 750; color: #1E293B; font-size: 0.80rem; letter-spacing: 0.02em;">
+                NÚMERO DE RADICADO / NOMBRE DE CARPETA RAÍZ
+              </label>
+              <span id="badge-radicado-status" class="radicado-status-badge is-auto">
+                Automático de respaldo (RAD-2026-XXXXX)
+              </span>
+            </div>
+
+            <div class="subir-radicado-input-wrap">
+              <input
+                type="text"
+                id="numero-radicado"
+                name="numero_radicado"
+                class="form-input subir-radicado-input"
+                placeholder="Se detectará del archivo, escríbalo manualmente o déjelo vacío para consecutivo automático (RAD-2026-XXXXX)"
+                autocomplete="off"
+              />
+              <button
+                type="button"
+                id="btn-clear-radicado"
+                class="subir-btn-clear-radicado"
+                title="Vaciar campo y usar consecutivo automático"
+                style="display: none;"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <span>Usar consecutivo automático</span>
+              </button>
+            </div>
+
+            <!-- Nota sutil para nombres genéricos o prompt de actualización -->
+            <div id="radicado-notice-msg" class="radicado-notice-msg" style="display: none;"></div>
+
+            <!-- Contenedor de Error Anti-Duplicados (HTTP 409) -->
+            <div id="radicado-feedback-msg" class="radicado-feedback-error" style="display: none;"></div>
+          </div>
         </div>
 
         <!-- SECCIÓN 2: CONTROL MANUAL DE FECHAS Y PLAZOS -->
@@ -331,7 +370,7 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
           </div>
 
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-            <span class="subir-root-chip">Carpeta Raíz: RAD-2026-XXXXX</span>
+            <span class="subir-root-chip" id="subir-root-chip">Carpeta Raíz: Automático (RAD-2026-XXXXX)</span>
             <span class="subir-count-chip" id="subcarpetas-count-badge">1 Subcarpeta</span>
           </div>
         </div>
@@ -1232,6 +1271,118 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
       border-radius: 999px;
     }
 
+    /* Estilos del Campo de Radicado Externo con Autodetección */
+    .subir-radicado-field-container {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px dashed rgba(0, 89, 78, 0.18);
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .subir-radicado-label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .radicado-status-badge {
+      font-size: 0.72rem;
+      font-weight: 750;
+      padding: 3px 10px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      letter-spacing: 0.01em;
+      transition: all 0.2s ease;
+    }
+
+    .radicado-status-badge.is-auto {
+      background: #F1F5F9;
+      color: #64748B;
+      border: 1px solid #CBD5E1;
+    }
+
+    .radicado-status-badge.is-detected {
+      background: #E4F0EE;
+      color: #00594E;
+      border: 1px solid rgba(0, 89, 78, 0.3);
+    }
+
+    .radicado-status-badge.is-manual {
+      background: #FEF9C3;
+      color: #854D0E;
+      border: 1px solid rgba(181, 161, 96, 0.45);
+    }
+
+    .subir-radicado-input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+
+    .subir-radicado-input {
+      width: 100%;
+      padding-right: 215px;
+      font-family: monospace;
+      font-weight: 600;
+      color: #0F172A;
+    }
+
+    .subir-btn-clear-radicado {
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: #F8FAFC;
+      border: 1px solid #CBD5E1;
+      color: #475569;
+      border-radius: 6px;
+      padding: 4px 9px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .subir-btn-clear-radicado:hover {
+      background: #E2E8F0;
+      color: #0F172A;
+      border-color: #94A3B8;
+    }
+
+    .radicado-notice-msg {
+      font-size: 0.75rem;
+      color: #64748B;
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 6px;
+      padding: 6px 10px;
+      line-height: 1.4;
+      animation: subirCrossfade 0.2s ease;
+    }
+
+    .radicado-feedback-error {
+      font-size: 0.76rem;
+      font-weight: 650;
+      color: #DC2626;
+      background: #FEF2F2;
+      border: 1px solid #FCA5A5;
+      border-radius: 8px;
+      padding: 7px 12px;
+      line-height: 1.4;
+      animation: subirCrossfade 0.2s ease;
+    }
+
     .subir-field-label {
       display: block;
       font-size: 0.74rem;
@@ -1407,6 +1558,114 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
   <script>
     import { supabase } from '@lib/supabase';
 
+    // Elementos del Campo de Radicado Externo y Autodetección
+    const inputRadicado = document.getElementById('numero-radicado') as HTMLInputElement | null;
+    const badgeRadicado = document.getElementById('badge-radicado-status') as HTMLElement | null;
+    const btnClearRadicado = document.getElementById('btn-clear-radicado') as HTMLElement | null;
+    const noticeRadicado = document.getElementById('radicado-notice-msg') as HTMLElement | null;
+    const feedbackRadicado = document.getElementById('radicado-feedback-msg') as HTMLElement | null;
+    const rootChip = document.getElementById('subir-root-chip') as HTMLElement | null;
+
+    let radicadoEditadoManualmente = false;
+
+    function escapeHtml(str: string): string {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function updateRadicadoUiState() {
+      const val = inputRadicado ? inputRadicado.value.trim() : '';
+
+      if (val) {
+        if (btnClearRadicado) btnClearRadicado.style.display = 'inline-flex';
+        if (rootChip) rootChip.textContent = `Carpeta Raíz: ${val}`;
+
+        if (badgeRadicado) {
+          if (radicadoEditadoManualmente) {
+            badgeRadicado.textContent = 'Radicado externo manual';
+            badgeRadicado.className = 'radicado-status-badge is-manual';
+          } else {
+            badgeRadicado.textContent = 'Detectado del archivo';
+            badgeRadicado.className = 'radicado-status-badge is-detected';
+          }
+        }
+      } else {
+        if (btnClearRadicado) btnClearRadicado.style.display = 'none';
+        if (rootChip) rootChip.textContent = 'Carpeta Raíz: Automático (RAD-2026-XXXXX)';
+
+        if (badgeRadicado) {
+          badgeRadicado.textContent = 'Automático de respaldo (RAD-2026-XXXXX)';
+          badgeRadicado.className = 'radicado-status-badge is-auto';
+        }
+      }
+    }
+
+    interface ExtraccionRadicadoResult {
+      radicado: string;
+      isGeneric: boolean;
+      cleanBase: string;
+    }
+
+    function extraerRadicadoDesdeArchivo(filename: string): ExtraccionRadicadoResult {
+      // 1. Quitar extensión y recortar espacios
+      const baseSinExt = filename.replace(/\.[a-zA-Z0-9]+$/i, '').trim();
+
+      // 2. Detección de nombres genéricos típicos de escáner o descarga
+      const genericRegex = /^(scan|escaneo|img|documento|doc|archivo|sin[_\s-]?titulo|whatsapp|captura)[\s_-]*\d*$/i;
+      if (genericRegex.test(baseSinExt)) {
+        return { radicado: '', isGeneric: true, cleanBase: baseSinExt };
+      }
+
+      // 3. Extracción de radicado al inicio estructurado (ej. 2026-004512_Oficio.pdf, EXT-8941 Solicitud.pdf, RAD-2026-00123_Anexo.pdf, E-2026-1045, 202604512)
+      const prefixRegex = /^([A-Z]{0,5}[-_]?\d{2,4}[-_]?\d{3,10}|\d{5,14})(?=[\s_.-]|$)/i;
+      const prefixMatch = baseSinExt.match(prefixRegex);
+      if (prefixMatch && prefixMatch[1] && prefixMatch[1].trim()) {
+        const detected = prefixMatch[1].trim().replace(/[\/\\:*?"<>|]/g, '');
+        return { radicado: detected, isGeneric: false, cleanBase: baseSinExt };
+      }
+
+      // Otras variantes estructuradas con prefijo de letras y números (ej. EXP-2026-01, ACTA-04-2026)
+      const codeRegex = /^([A-Z0-9]{2,10}(?:[-_][A-Z0-9]{2,10})+)/i;
+      const codeMatch = baseSinExt.match(codeRegex);
+      if (codeMatch && codeMatch[1] && codeMatch[1].trim()) {
+        const detected = codeMatch[1].trim().replace(/[\/\\:*?"<>|]/g, '');
+        return { radicado: detected, isGeneric: false, cleanBase: baseSinExt };
+      }
+
+      // 4. Fallback a nombre limpio descriptivo (sanitizado quitando caracteres prohibidos y limitado a 60 chars)
+      const sanitizedName = baseSinExt
+        .replace(/[\/\\:*?"<>|]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 60);
+
+      return { radicado: sanitizedName, isGeneric: false, cleanBase: baseSinExt };
+    }
+
+    if (inputRadicado) {
+      inputRadicado.addEventListener('input', () => {
+        if (feedbackRadicado) feedbackRadicado.style.display = 'none';
+        if (noticeRadicado) noticeRadicado.style.display = 'none';
+        radicadoEditadoManualmente = Boolean(inputRadicado.value.trim());
+        updateRadicadoUiState();
+      });
+    }
+
+    if (btnClearRadicado && inputRadicado) {
+      btnClearRadicado.addEventListener('click', () => {
+        inputRadicado.value = '';
+        radicadoEditadoManualmente = false;
+        if (noticeRadicado) noticeRadicado.style.display = 'none';
+        if (feedbackRadicado) feedbackRadicado.style.display = 'none';
+        updateRadicadoUiState();
+        inputRadicado.focus();
+      });
+    }
+
     // 0. Archivo Principal de la Petición & Auto-rellenado inteligente
     let primaryFile: File | null = null;
     const dropZone = document.getElementById('drop-zone-peticion');
@@ -1431,6 +1690,48 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
       if (fileIndicator) fileIndicator.style.display = 'flex';
       if (dropZone) dropZone.style.display = 'none';
 
+      // Autodetección de radicado desde el documento base
+      if (inputRadicado) {
+        if (feedbackRadicado) feedbackRadicado.style.display = 'none';
+
+        const extraction = extraerRadicadoDesdeArchivo(file.name);
+
+        if (extraction.isGeneric) {
+          if (noticeRadicado) {
+            noticeRadicado.textContent = 'El archivo tiene un nombre genérico. Escriba el número de radicado externo o déjelo vacío para generar uno automático.';
+            noticeRadicado.style.display = 'block';
+          }
+          if (!radicadoEditadoManualmente) {
+            inputRadicado.value = '';
+            updateRadicadoUiState();
+          }
+        } else if (radicadoEditadoManualmente && inputRadicado.value.trim()) {
+          // El usuario ya había editado a mano: no sobrescribir, ofrecer enlace sutil
+          if (noticeRadicado && extraction.radicado && extraction.radicado !== inputRadicado.value.trim()) {
+            noticeRadicado.innerHTML = `
+              El archivo adjunto sugiere el radicado <strong>${escapeHtml(extraction.radicado)}</strong>.
+              <a href="#" id="link-apply-detected-rad" style="color: #00594E; font-weight: 750; text-decoration: underline; margin-left: 6px;">¿Usar nombre del nuevo archivo?</a>
+            `;
+            noticeRadicado.style.display = 'block';
+
+            const linkApply = document.getElementById('link-apply-detected-rad');
+            linkApply?.addEventListener('click', (ev) => {
+              ev.preventDefault();
+              inputRadicado.value = extraction.radicado;
+              radicadoEditadoManualmente = false;
+              noticeRadicado.style.display = 'none';
+              updateRadicadoUiState();
+            });
+          }
+        } else {
+          // Asignar el radicado detectado directamente
+          if (noticeRadicado) noticeRadicado.style.display = 'none';
+          inputRadicado.value = extraction.radicado;
+          radicadoEditadoManualmente = false;
+          updateRadicadoUiState();
+        }
+      }
+
       // Auto-rellenar Asunto si está vacío a partir del nombre del archivo
       if (asuntoInput && !asuntoInput.value.trim()) {
         const cleanName = file.name
@@ -1447,6 +1748,12 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
       if (fileInput) fileInput.value = '';
       if (fileIndicator) fileIndicator.style.display = 'none';
       if (dropZone) dropZone.style.display = 'flex';
+      if (noticeRadicado) noticeRadicado.style.display = 'none';
+      if (feedbackRadicado) feedbackRadicado.style.display = 'none';
+      if (!radicadoEditadoManualmente && inputRadicado) {
+        inputRadicado.value = '';
+        updateRadicadoUiState();
+      }
     }
 
     btnChangeFile?.addEventListener('click', () => {
@@ -2156,6 +2463,7 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
         const funcRol = loggedUser?.role || 'Administrador';
 
         const payload = {
+          numero_radicado: inputRadicado?.value.trim() || '',
           asunto: (document.getElementById('peticion-asunto') as HTMLInputElement).value,
           descripcion: instruccionesConsolidadas,
           instrucciones_anexos: instruccionesConsolidadas,
@@ -2203,15 +2511,56 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
             } else if ((window as any).showAlert) {
               (window as any).showAlert(errMsg, 'Error del Servidor');
             }
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.innerHTML = `
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                <span>Radicar Petición y Notificar Oficinas</span>
+              `;
+            }
             return;
           }
 
           if (!res.ok || !data.success) {
+            // Manejo específico del error 409 (Radicado duplicado)
+            if (res.status === 409) {
+              const dupMsg = data?.error || 'Ya existe un expediente registrado con este radicado.';
+              if (feedbackRadicado) {
+                feedbackRadicado.innerHTML = `
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <span>${escapeHtml(dupMsg)}</span>
+                `;
+                feedbackRadicado.style.display = 'flex';
+              }
+              if (inputRadicado) {
+                inputRadicado.focus();
+                inputRadicado.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+              if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                  <span>Radicar Petición y Notificar Oficinas</span>
+                `;
+              }
+              if ((window as any).showToast) {
+                (window as any).showToast(dupMsg, 'error');
+              }
+              return;
+            }
+
             const errMsg = 'Error al radicar petición: ' + (data.error || 'Ocurrió un error en el servidor.');
             if ((window as any).showToast) {
               (window as any).showToast(errMsg, 'error');
             } else if ((window as any).showAlert) {
               (window as any).showAlert(errMsg, 'Error en Radicación');
+            }
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.innerHTML = `
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                <span>Radicar Petición y Notificar Oficinas</span>
+              `;
             }
             return;
           }

@@ -31,9 +31,10 @@ async function procesarEliminacion(request: Request, clientAddress: string | und
 
     // 1. Búsqueda Dual Infalible con db (supabaseAdmin || supabase)
     let peticionEncontrada: any = null;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(valorId);
 
-    // A. Búsqueda por UUID id si no es código RAD-
-    if (valorId && !valorId.toUpperCase().startsWith('RAD-')) {
+    // A. Búsqueda por UUID id si cumple formato UUID
+    if (valorId && isUuid) {
       const { data } = await (db
         .from('peticiones' as any)
         .select('*')
@@ -42,23 +43,25 @@ async function procesarEliminacion(request: Request, clientAddress: string | und
       if (data) peticionEncontrada = data;
     }
 
-    // B. Búsqueda por radicado (o si valorId contiene el código RAD-)
-    if (!peticionEncontrada && (valorRadicado || valorId.toUpperCase().startsWith('RAD-'))) {
+    // B. Búsqueda por radicado (o si valorId contiene el código o radicado)
+    if (!peticionEncontrada) {
       const codigo = valorRadicado || valorId;
-      const { data } = await (db
-        .from('peticiones' as any)
-        .select('*')
-        .eq('numero_radicado', codigo)
-        .maybeSingle() as any);
-      if (data) {
-        peticionEncontrada = data;
-      } else {
-        const { data: dFallback } = await (db
+      if (codigo) {
+        const { data } = await (db
           .from('peticiones' as any)
           .select('*')
-          .eq('radicado' as any, codigo)
+          .ilike('numero_radicado', codigo)
           .maybeSingle() as any);
-        if (dFallback) peticionEncontrada = dFallback;
+        if (data) {
+          peticionEncontrada = data;
+        } else {
+          const { data: dFallback } = await (db
+            .from('peticiones' as any)
+            .select('*')
+            .eq('radicado' as any, codigo)
+            .maybeSingle() as any);
+          if (dFallback) peticionEncontrada = dFallback;
+        }
       }
     }
 

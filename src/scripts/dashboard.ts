@@ -59,8 +59,23 @@ function groupEventsByExpediente(events: CalendarioEvent[]): GroupedAgendaCard[]
   const map = new Map<string, GroupedAgendaCard>();
 
   for (const ev of events) {
-    const radMatch = `${ev.titulo || ''} ${ev.link || ''}`.match(/RAD-\d{4}-\d+/i);
-    const radicado = radMatch ? radMatch[0].toUpperCase() : null;
+    let radicado: string | null = null;
+    if (ev.link) {
+      try {
+        const url = new URL(ev.link, 'https://dummy.co');
+        const pRad = url.searchParams.get('radicado');
+        if (pRad) radicado = pRad.toUpperCase();
+      } catch (e) {}
+    }
+    if (!radicado) {
+      const titleMatch = ev.titulo.match(/(?:Vence Radicado|L\u00EDmite Dependencias|Completado|Radicado)\s+([^:]+):/i);
+      if (titleMatch && titleMatch[1]) {
+        radicado = titleMatch[1].trim().toUpperCase();
+      } else {
+        const radMatch = `${ev.titulo || ''} ${ev.link || ''}`.match(/(?:RAD-\d{4}-\d+|[A-Z0-9]+(?:[-_][A-Z0-9]+)+|\d{4}-\d{4,})/i);
+        radicado = radMatch ? radMatch[0].toUpperCase() : null;
+      }
+    }
     const basePetId = String(ev.id || '').startsWith('pet-dep-')
       ? String(ev.id).replace(/^pet-dep-/, 'pet-')
       : String(ev.id || '');

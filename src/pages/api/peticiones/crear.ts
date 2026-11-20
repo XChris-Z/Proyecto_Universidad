@@ -50,9 +50,11 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
     let funcionario_nombre = '';
     let funcionario_email = '';
     let funcionario_rol = '';
+    let numero_radicado = '';
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await request.formData();
+      numero_radicado = (formData.get('numero_radicado') as string) || '';
       asunto = (formData.get('asunto') as string) || '';
       descripcion = (formData.get('descripcion') as string) || '';
       instrucciones_anexos = (formData.get('instrucciones_anexos') as string) || '';
@@ -89,6 +91,7 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
       funcionario_rol = (formData.get('funcionario_rol') as string) || '';
     } else {
       const body = await request.json().catch(() => ({}));
+      numero_radicado = body.numero_radicado || '';
       asunto = body.asunto;
       descripcion = body.descripcion || '';
       instrucciones_anexos = body.instrucciones_anexos || body.descripcion || '';
@@ -188,14 +191,39 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
       fileMime = directFileMime;
     }
 
-    // 1. Insertar Petición en Base de Datos con su PIN de 6 dígitos oficial
+    // 1. Sanitización de radicado y validación anti-duplicados obligatoria
+    const cleanRadicado = String(numero_radicado || '')
+      .replace(/[\/\\:*?"<>|]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (cleanRadicado) {
+      const { data: existingRad } = await (supabase
+        .from('peticiones' as any)
+        .select('id, numero_radicado')
+        .ilike('numero_radicado', cleanRadicado)
+        .maybeSingle() as any);
+
+      if (existingRad) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            code: 'DUPLICATE_RADICADO',
+            error: `Ya existe un expediente registrado con el radicado '${cleanRadicado}'. Verifique el número o agregue un sufijo diferenciador (ej. -B).`,
+          }),
+          { status: 409, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // 1.1 Insertar Petición en Base de Datos con su PIN de 6 dígitos oficial
     const finalInstrucciones = instrucciones_anexos || descripcion || null;
     const pinAcceso = generatePin6();
     const cleanFechaResp = /^\d{4}-\d{2}-\d{2}$/.test(String(fecha_limite_responsable || '').trim())
       ? String(fecha_limite_responsable).trim()
       : '';
 
-    // Intentar insertar primero con la columna pin_acceso y fecha_limite_responsable manual si fue suministrada
+    // Intentar insertar primero con la columna pin_acceso, radicado manual y fecha_limite_responsable si fueron suministrados
     const payloadWithPin: any = {
       asunto,
       descripcion: finalInstrucciones,
@@ -207,6 +235,7 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
       prioridad,
       fecha_limite_entrega,
       ...(cleanFechaResp ? { fecha_limite_responsable: cleanFechaResp } : {}),
+      ...(cleanRadicado ? { numero_radicado: cleanRadicado } : {}),
       pin_acceso: pinAcceso,
     };
 
@@ -247,6 +276,19 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
       );
     }
 
+    // Si se suministró un radicado personalizado y la base de datos no lo reflejó por trigger o default, sincronizarlo
+    if (cleanRadicado && peticionData.numero_radicado !== cleanRadicado) {
+      try {
+        await (supabase
+          .from('peticiones' as any)
+          .update({ numero_radicado: cleanRadicado } as any)
+          .eq('id', peticionData.id) as any);
+        peticionData.numero_radicado = cleanRadicado;
+      } catch (radUpdateErr) {
+        console.warn('Aviso sincronizando numero_radicado manual:', radUpdateErr);
+      }
+    }
+
     // Si PostgreSQL ya generó un PIN válido mediante trigger o columna, sincronizar con él; de lo contrario usar el generado
     const finalPinAcceso = (peticionData.pin_acceso && /^\d{6}$/.test(String(peticionData.pin_acceso).trim()))
       ? String(peticionData.pin_acceso).trim()
@@ -273,9 +315,27 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
     let savedPrimaryFile = null;
     if (fileName && (directStoragePath || fileBuffer)) {
       const cleanFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const storageRelativePath = `${peticionData.numero_radicado}/${cleanFileName}`;
+      // Versión URL-safe (slug) del radicado para la ruta interna del bucket de Supabase Storage
+      const cleanRadicadoSlug = String(peticionData.numero_radicado || 'radicado')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9._-]/g, '_')
+        .replace(/_+/g, '_')
+        .trim();
+
+      const storageRelativePath = `${cleanRadicadoSlug}/${cleanFileName}`;
       let finalStoragePath = storageRelativePath;
       let finalBytes = directFileSize || (fileBuffer ? fileBuffer.length : 0);
+
+      peticionData.storage_folder_path = cleanRadicadoSlug;
+      try {
+        await (supabase
+          .from('peticiones' as any)
+          .update({ storage_folder_path: cleanRadicadoSlug } as any)
+          .eq('id', peticionData.id) as any);
+      } catch (pathUpdateErr) {
+        // Silencioso si la columna física aún no existe en el schema cache
+      }
 
       try {
         if (directStoragePath) {

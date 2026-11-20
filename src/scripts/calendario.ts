@@ -503,7 +503,18 @@ function renderCurrentView() {
  * Extrae o formatea un identificador de radicado limpio para presentación monoespaciada
  */
 function getRadicadoCode(ev: CalendarioEvent): string {
-  const match = ev.titulo.match(/RAD-\d{4}-\d+/i) || ev.descripcion.match(/RAD-\d{4}-\d+/i);
+  if (ev.link) {
+    try {
+      const url = new URL(ev.link, 'https://dummy.co');
+      const radParam = url.searchParams.get('radicado');
+      if (radParam) return radParam;
+    } catch (e) {}
+  }
+  const titlePrefixMatch = ev.titulo.match(/(?:Vence Radicado|L\u00EDmite Dependencias|Completado|Radicado)\s+([^:]+):/i);
+  if (titlePrefixMatch && titlePrefixMatch[1]) return titlePrefixMatch[1].trim();
+
+  const match = ev.titulo.match(/(?:RAD-\d{4}-\d+|[A-Z0-9]+(?:[-_][A-Z0-9]+)+|\d{4}-\d{4,})/i) || 
+                ev.descripcion.match(/(?:RAD-\d{4}-\d+|[A-Z0-9]+(?:[-_][A-Z0-9]+)+|\d{4}-\d{4,})/i);
   if (match) return match[0];
   if (ev.tipo === 'peticion') return `PQRS-${ev.id.slice(0, 6)}`;
   if (ev.tipo === 'reporte') return `REP-${ev.id.slice(0, 6)}`;
