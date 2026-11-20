@@ -63,7 +63,10 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
         <div class="subir-sla-metrics-row">
           <div class="subir-sla-metric">
             <span class="subir-sla-metric-label">Prioridad Seleccionada</span>
-            <span class="subir-sla-priority-chip" id="sla-chart-priority-pill">Alta</span>
+            <span class="subir-sla-priority-badge prio-badge-alta" id="sla-chart-priority-pill">
+              <span class="prio-pulse-dot"></span>
+              <span class="prio-label-text">Alta</span>
+            </span>
           </div>
           <div class="subir-sla-metric">
             <span class="subir-sla-metric-label">Plazo Oficinas Responsables</span>
@@ -80,19 +83,25 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
         </div>
 
         <div class="subir-sla-bar-wrap">
-          <div class="subir-sla-bar-track" aria-hidden="true">
-            <div class="subir-sla-bar-oficinas" id="sla-chart-bar-oficinas" style="width: 70%;"></div>
-            <div class="subir-sla-bar-margen" id="sla-chart-bar-margen" style="width: 30%;"></div>
+          <div class="subir-sla-bar-track is-empty" id="sla-chart-bar-track" aria-hidden="true">
+            <div class="subir-sla-bar-oficinas" id="sla-chart-bar-oficinas" style="width: 0%;"></div>
+            <div class="subir-sla-bar-margen" id="sla-chart-bar-margen" style="width: 0%;"></div>
           </div>
-          <div class="subir-sla-legend">
-            <span class="subir-legend-item">
-              <span class="subir-legend-dot verde"></span>
-              <span>Gestión y carga de soportes (<strong id="sla-legend-oficinas-days">--</strong>)</span>
+          <div class="subir-sla-legend" id="sla-chart-legend">
+            <span class="subir-legend-placeholder" id="sla-legend-placeholder">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span>Defina las fechas en el paso 2 para calcular la línea de tiempo</span>
             </span>
-            <span class="subir-legend-item">
-              <span class="subir-legend-dot dorado"></span>
-              <span>Margen de revisión y cierre final (<strong id="sla-legend-margen-days">--</strong>)</span>
-            </span>
+            <div class="subir-legend-real" id="sla-legend-real" style="display: none; width: 100%; justify-content: space-between; align-items: center;">
+              <span class="subir-legend-item">
+                <span class="subir-legend-dot verde"></span>
+                <span>Gestión y carga de soportes (<strong id="sla-legend-oficinas-days">--</strong>)</span>
+              </span>
+              <span class="subir-legend-item">
+                <span class="subir-legend-dot dorado"></span>
+                <span>Margen de revisión y cierre final (<strong id="sla-legend-margen-days">--</strong>)</span>
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -165,7 +174,7 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
 
         <!-- SECCIÓN 2: CONTROL MANUAL DE FECHAS Y PLAZOS -->
         <div class="subir-bento-card">
-          <div class="subir-card-header">
+          <div class="subir-card-header" style="margin-bottom: 10px;">
             <div class="subir-card-icon verde">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             </div>
@@ -175,20 +184,57 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
             </div>
           </div>
 
-          <div style="display: flex; flex-direction: column; gap: 14px; flex: 1; justify-content: space-between;">
-            <div class="form-group" style="margin: 0;">
-              <label for="fecha-limite-entrega" class="subir-field-label">Fecha Límite de Cierre General *</label>
-              <input type="date" id="fecha-limite-entrega" required class="form-input" style="font-weight: 700; font-size: 0.94rem;" />
-              <small style="font-size: 0.72rem; color: #64748B; margin-top: 5px; display: block;">
-                Fecha límite institucional de cierre general del expediente.
+          <!-- Atajos Rápidos de Plazo (Chips de cálculo rápido) -->
+          <div class="quick-deadline-wrapper">
+            <span class="quick-deadline-label">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              <span>Atajos Rápidos:</span>
+            </span>
+            <div class="quick-deadline-chips">
+              <button type="button" class="quick-chip" data-days-general="2" data-days-resp="1" title="Cierre en 2 días, oficinas en 1 día">
+                Tutela (48h)
+              </button>
+              <button type="button" class="quick-chip" data-days-general="5" data-days-resp="3" title="Cierre en 5 días, oficinas en 3 días">
+                5 días
+              </button>
+              <button type="button" class="quick-chip" data-days-general="10" data-days-resp="7" title="Cierre en 10 días, oficinas en 7 días">
+                10 días
+              </button>
+              <button type="button" class="quick-chip" data-days-general="15" data-days-resp="11" title="Cierre en 15 días, oficinas en 11 días">
+                15 días (Ley 1755)
+              </button>
+            </div>
+          </div>
+
+          <!-- Alerta de validación en vivo si Plazo a Oficinas > Cierre General -->
+          <div id="fechas-error-alert" class="fechas-error-alert" style="display: none;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span>El plazo a oficinas no puede ser posterior a la fecha de cierre general.</span>
+          </div>
+
+          <!-- Tarjetas de Fecha Diferenciadas -->
+          <div class="fechas-cards-stack">
+            <!-- 1. Plazo Máximo a Oficinas Responsables -->
+            <div class="fecha-date-box fecha-box-oficinas">
+              <div class="fecha-card-label-row">
+                <label for="fecha-limite-responsable" class="fecha-field-label">Plazo Máximo a Oficinas Responsables *</label>
+                <span id="badge-dias-oficinas" class="fecha-badge-dias verde" style="display: none;">--</span>
+              </div>
+              <input type="date" id="fecha-limite-responsable" required class="fecha-date-input" />
+              <small id="preview-fecha-responsable" class="fecha-hint-text verde">
+                Defina la fecha límite para que las dependencias aporten soportes en el portal.
               </small>
             </div>
 
-            <div class="form-group" style="margin: 0;">
-              <label for="fecha-limite-responsable" class="subir-field-label">Plazo Máximo a Oficinas Responsables *</label>
-              <input type="date" id="fecha-limite-responsable" required class="form-input" style="font-weight: 700; font-size: 0.94rem; border-color: #B2CFCB; background: #F2F7F6;" />
-              <small id="preview-fecha-responsable" style="font-size: 0.72rem; color: #00594E; font-weight: 600; margin-top: 5px; display: block;">
-                Defina libremente la fecha de cierre para entrega de soportes en el portal externo.
+            <!-- 2. Fecha Límite de Cierre General -->
+            <div class="fecha-date-box fecha-box-general">
+              <div class="fecha-card-label-row">
+                <label for="fecha-limite-entrega" class="fecha-field-label">Fecha Límite de Cierre General *</label>
+                <span id="badge-dias-general" class="fecha-badge-dias dorado" style="display: none;">--</span>
+              </div>
+              <input type="date" id="fecha-limite-entrega" required class="fecha-date-input" />
+              <small class="fecha-hint-text dorado">
+                Fecha límite institucional de radicación de respuesta al peticionario.
               </small>
             </div>
           </div>
@@ -225,7 +271,7 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
             </div>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;" class="grid-three-cols">
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: 16px;" class="grid-three-cols">
             <div class="form-group" style="margin: 0;">
               <label for="solicitante-tipo" class="subir-field-label">Tipo de Solicitante</label>
               <select id="solicitante-tipo" class="form-input">
@@ -246,12 +292,26 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
               </select>
             </div>
             <div class="form-group" style="margin: 0;">
-              <label for="peticion-prioridad" class="subir-field-label">Prioridad</label>
-              <select id="peticion-prioridad" class="form-input">
-                <option value="Alta" selected>Alta</option>
-                <option value="Media">Media</option>
-                <option value="Baja">Baja</option>
-              </select>
+              <label class="subir-field-label">Prioridad Institucional *</label>
+              <input type="hidden" id="peticion-prioridad" name="prioridad" value="Alta" />
+              <div class="prio-segmented-group" id="prio-segmented-group" role="radiogroup" aria-label="Prioridad institucional">
+                <button type="button" class="prio-btn prio-btn-baja" data-prio="Baja" role="radio" aria-checked="false">
+                  <span class="prio-dot baja"></span>
+                  <span>Baja</span>
+                </button>
+                <button type="button" class="prio-btn prio-btn-media" data-prio="Media" role="radio" aria-checked="false">
+                  <span class="prio-dot media"></span>
+                  <span>Media</span>
+                </button>
+                <button type="button" class="prio-btn prio-btn-alta active" data-prio="Alta" role="radio" aria-checked="true">
+                  <span class="prio-dot alta"></span>
+                  <span>Alta</span>
+                </button>
+                <button type="button" class="prio-btn prio-btn-urgente" data-prio="Urgente" role="radio" aria-checked="false">
+                  <span class="prio-dot urgente"></span>
+                  <span>Urgente</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -443,15 +503,18 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
       border-color: #00594E;
     }
 
-    /* Chart Element SLA */
+    /* ==========================================================================
+       BLOQUE 1: REDISEÑO DE PRIORIDAD Y BARRA DE RESUMEN SLA
+       ========================================================================== */
     .subir-sla-chart-card {
-      background: #F8FAFC;
-      border: 1px solid #DCE4E3;
-      border-radius: 12px;
-      padding: 14px 16px;
+      background-color: #F8FAFB !important;
+      border: 1px solid rgba(0, 89, 78, 0.12) !important;
+      border-radius: 16px !important;
+      padding: 14px 18px !important;
       display: flex;
       flex-direction: column;
       gap: 12px;
+      box-shadow: 0 2px 8px rgba(0, 89, 78, 0.03);
     }
 
     .subir-sla-metrics-row {
@@ -463,12 +526,18 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
     .subir-sla-metric {
       display: flex;
       flex-direction: column;
-      gap: 3px;
+      gap: 4px;
+      padding-right: 8px;
+      border-right: 1px solid rgba(0, 89, 78, 0.08);
+    }
+    .subir-sla-metric:last-child {
+      border-right: none;
+      padding-right: 0;
     }
 
     .subir-sla-metric-label {
-      font-size: 0.7rem;
-      font-weight: 700;
+      font-size: 0.69rem;
+      font-weight: 750;
       text-transform: uppercase;
       letter-spacing: 0.04em;
       color: #64748B;
@@ -484,19 +553,66 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
     .subir-sla-metric-value.verde { color: #00594E; }
     .subir-sla-metric-value.dorado { color: #786832; }
 
-    .subir-sla-priority-chip {
+    /* Badge Semántico de Alto Contraste con punto indicador e ícono */
+    .subir-sla-priority-badge {
       display: inline-flex;
       align-items: center;
+      gap: 6px;
       width: fit-content;
-      padding: 2px 9px;
+      padding: 3px 11px;
       border-radius: 999px;
-      font-size: 0.75rem;
+      font-size: 0.76rem;
       font-weight: 800;
-      background: #F2F7F6;
-      color: #00594E;
-      border: 1px solid #B2CFCB;
+      letter-spacing: -0.01em;
+      border: 1px solid transparent;
+      transition: all 0.2s ease;
     }
 
+    .subir-sla-priority-badge .prio-pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+
+    .prio-badge-baja {
+      background: #F1F5F9 !important;
+      color: #475569 !important;
+      border-color: #CBD5E1 !important;
+    }
+    .prio-badge-baja .prio-pulse-dot { background: #64748B; }
+
+    .prio-badge-media {
+      background: #ECFDF5 !important;
+      color: #00594E !important;
+      border-color: #A7F3D0 !important;
+    }
+    .prio-badge-media .prio-pulse-dot { background: #00594E; }
+
+    .prio-badge-alta {
+      background: #FEF3C7 !important;
+      color: #B45309 !important;
+      border-color: #FCD34D !important;
+    }
+    .prio-badge-alta .prio-pulse-dot { background: #D97706; }
+
+    .prio-badge-urgente {
+      background: #FEF2F2 !important;
+      color: #B91C1C !important;
+      border-color: #FECACA !important;
+    }
+    .prio-badge-urgente .prio-pulse-dot {
+      background: #DC2626;
+      animation: prioPulse 1.8s infinite ease-in-out;
+    }
+
+    @keyframes prioPulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.4); opacity: 0.55; }
+    }
+
+    /* Barra de Progreso SLA con estado neutro y animado */
     .subir-sla-bar-wrap {
       display: flex;
       flex-direction: column;
@@ -510,18 +626,29 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
       background: #E2E8F0;
       overflow: hidden;
       display: flex;
+      transition: background 0.25s ease;
+    }
+
+    .subir-sla-bar-track.is-empty {
+      background: repeating-linear-gradient(
+        45deg,
+        #E2E8F0,
+        #E2E8F0 8px,
+        #EDF2F7 8px,
+        #EDF2F7 16px
+      );
     }
 
     .subir-sla-bar-oficinas {
       height: 100%;
       background: #00594E;
-      transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .subir-sla-bar-margen {
       height: 100%;
       background: #B5A160;
-      transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .subir-sla-legend {
@@ -531,12 +658,296 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
       gap: 10px;
       font-size: 0.73rem;
       color: #475569;
+      min-height: 20px;
+      align-items: center;
+    }
+
+    .subir-legend-placeholder {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #64748B;
+      font-size: 0.73rem;
+      font-weight: 500;
+      font-style: italic;
     }
 
     .subir-legend-item {
       display: inline-flex;
       align-items: center;
       gap: 6px;
+    }
+
+    /* Selector de Prioridad tipo Botones Segmentados en Sección 3 */
+    .prio-segmented-group {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      background: #F1F5F9;
+      padding: 4px;
+      border-radius: 12px;
+      border: 1px solid #CBD5E1;
+    }
+
+    .prio-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      background: transparent;
+      font-size: 0.80rem;
+      font-weight: 700;
+      color: #64748B;
+      cursor: pointer;
+      transition: all 0.16s ease;
+      user-select: none;
+    }
+    .prio-btn:hover:not(.active) {
+      background: #FFFFFF;
+      color: #1E293B;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .prio-btn .prio-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .prio-dot.baja { background: #94A3B8; }
+    .prio-dot.media { background: #10B981; }
+    .prio-dot.alta { background: #F59E0B; }
+    .prio-dot.urgente { background: #EF4444; }
+
+    .prio-btn.active.prio-btn-baja {
+      background: #FFFFFF;
+      color: #334155;
+      border-color: #94A3B8;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+    .prio-btn.active.prio-btn-media {
+      background: #ECFDF5;
+      color: #00594E;
+      border-color: #00594E;
+      box-shadow: 0 2px 6px rgba(0, 89, 78, 0.12);
+    }
+    .prio-btn.active.prio-btn-alta {
+      background: #FEF3C7;
+      color: #B45309;
+      border-color: #D97706;
+      box-shadow: 0 2px 6px rgba(217, 119, 6, 0.15);
+    }
+    .prio-btn.active.prio-btn-urgente {
+      background: #FEF2F2;
+      color: #B91C1C;
+      border-color: #DC2626;
+      box-shadow: 0 2px 6px rgba(220, 38, 38, 0.15);
+    }
+    .prio-btn.active.prio-btn-urgente .prio-dot.urgente {
+      animation: prioPulse 1.8s infinite ease-in-out;
+    }
+
+    /* ==========================================================================
+       BLOQUE 2: CONTROL DE FECHAS, ATAJOS Y TARJETAS DIFERENCIADAS
+       ========================================================================== */
+    .quick-deadline-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      background: #F8FAFB;
+      border: 1px dashed #CBD5E1;
+      padding: 7px 12px;
+      border-radius: 10px;
+      margin-bottom: 12px;
+    }
+    .quick-deadline-label {
+      font-size: 0.70rem;
+      font-weight: 800;
+      color: #00594E;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .quick-deadline-chips {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .quick-chip {
+      background: #FFFFFF;
+      border: 1px solid #CBD5E1;
+      border-radius: 999px;
+      padding: 3px 10px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #334155;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    .quick-chip:hover {
+      background: #00594E;
+      color: #FFFFFF;
+      border-color: #00594E;
+      box-shadow: 0 2px 6px rgba(0, 89, 78, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .fechas-error-alert {
+      background: #FEF2F2;
+      border: 1px solid #FECACA;
+      border-left: 4px solid #DC2626;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #991B1B;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      animation: subirCrossfade 0.2s ease;
+    }
+
+    .fechas-cards-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .fecha-date-box {
+      border-radius: 10px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .fecha-box-oficinas {
+      background: #F4F9F8;
+      border: 1px solid #B2CFCB;
+      border-left: 4px solid #00594E;
+    }
+
+    .fecha-box-general {
+      background: #FBF9F2;
+      border: 1px solid #DBD2B0;
+      border-left: 4px solid #B5A160;
+    }
+
+    .fecha-card-label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .fecha-field-label {
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #0F172A;
+      margin: 0;
+    }
+
+    .fecha-badge-dias {
+      font-size: 0.68rem;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .fecha-badge-dias.verde {
+      background: #E6EFEF;
+      color: #00594E;
+      border-color: #B2CFCB;
+    }
+    .fecha-badge-dias.dorado {
+      background: #F7F5EE;
+      color: #786832;
+      border-color: #DBD2B0;
+    }
+
+    .fecha-date-input {
+      height: 42px;
+      border-radius: 10px;
+      font-weight: 600;
+      color: #0F172A;
+      background: #FFFFFF;
+      border: 1px solid #CBD5E1;
+      padding: 0 12px;
+      font-size: 0.88rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      width: 100%;
+    }
+    .fecha-date-input:focus {
+      border-color: #00594E;
+      box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.15);
+    }
+    .fecha-date-input.has-error {
+      border-color: #EF4444 !important;
+      background: #FFF5F5 !important;
+    }
+
+    .fecha-hint-text {
+      font-size: 0.70rem;
+      margin: 0;
+      display: block;
+      line-height: 1.35;
+    }
+    .fecha-hint-text.verde { color: #00594E; }
+    .fecha-hint-text.dorado { color: #786832; }
+
+    /* ==========================================================================
+       BLOQUE 3: SUGERENCIAS RÁPIDAS EN NOMBRE DE SUBCARPETA
+       ========================================================================== */
+    .sub-sugerencias-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+    .sub-sug-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: #64748B;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .sub-sugerencias-chips {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+    .sub-sug-chip {
+      background: #FFFFFF;
+      border: 1px solid #DCE4E3;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 0.69rem;
+      font-weight: 600;
+      color: #334155;
+      cursor: pointer;
+      transition: all 0.14s ease;
+    }
+    .sub-sug-chip:hover {
+      background: #F2F7F6;
+      border-color: #00594E;
+      color: #00594E;
     }
 
     .subir-legend-dot {
@@ -955,6 +1366,12 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
       .grid-two-cols, .grid-three-cols {
         grid-template-columns: 1fr !important;
       }
+      .prio-segmented-group {
+        grid-template-columns: repeat(2, 1fr) !important;
+      }
+      .subir-sla-metric {
+        border-right: none !important;
+      }
     }
     .form-input {
       width: 100%;
@@ -1072,36 +1489,107 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
     // 1. Visualización de Plazos Manuales y Chart Element SLA (Prioridad NO altera fechas)
     const inputFechaEntrega = document.getElementById('fecha-limite-entrega') as HTMLInputElement;
     const inputFechaResponsable = document.getElementById('fecha-limite-responsable') as HTMLInputElement;
-    const selectPrioridad = document.getElementById('peticion-prioridad') as HTMLSelectElement | null;
+    const inputPrioridad = document.getElementById('peticion-prioridad') as HTMLInputElement | null;
+    const prioSegmentedGroup = document.getElementById('prio-segmented-group');
     const previewFechaResp = document.getElementById('preview-fecha-responsable');
     const chartPriorityPill = document.getElementById('sla-chart-priority-pill');
     const chartOficinasDate = document.getElementById('sla-chart-oficinas-date');
     const chartGeneralDate = document.getElementById('sla-chart-general-date');
     const chartTotalDays = document.getElementById('sla-chart-total-days');
+    const chartBarTrack = document.getElementById('sla-chart-bar-track');
     const chartBarOficinas = document.getElementById('sla-chart-bar-oficinas');
     const chartBarMargen = document.getElementById('sla-chart-bar-margen');
+    const slaLegendPlaceholder = document.getElementById('sla-legend-placeholder');
+    const slaLegendReal = document.getElementById('sla-legend-real');
     const legendOficinasDays = document.getElementById('sla-legend-oficinas-days');
     const legendMargenDays = document.getElementById('sla-legend-margen-days');
+    const badgeDiasOficinas = document.getElementById('badge-dias-oficinas');
+    const badgeDiasGeneral = document.getElementById('badge-dias-general');
+    const fechasErrorAlert = document.getElementById('fechas-error-alert');
 
     function updatePriorityChartAppearance() {
-      const prioVal = selectPrioridad?.value || 'Alta';
+      const prioVal = inputPrioridad?.value || 'Alta';
       if (!chartPriorityPill) return;
-      chartPriorityPill.textContent = prioVal;
-      if (prioVal === 'Alta') {
-        chartPriorityPill.style.background = '#F7F5EE';
-        chartPriorityPill.style.color = '#786832';
-        chartPriorityPill.style.borderColor = '#DBD2B0';
+
+      const labelText = chartPriorityPill.querySelector('.prio-label-text');
+      const displayLabel = prioVal === 'Urgente' ? 'Urgente / Tutela' : prioVal;
+      if (labelText) {
+        labelText.textContent = displayLabel;
       } else {
-        chartPriorityPill.style.background = '#F2F7F6';
-        chartPriorityPill.style.color = '#00594E';
-        chartPriorityPill.style.borderColor = '#B2CFCB';
+        chartPriorityPill.textContent = displayLabel;
+      }
+
+      chartPriorityPill.className = 'subir-sla-priority-badge';
+      if (prioVal === 'Baja') {
+        chartPriorityPill.classList.add('prio-badge-baja');
+      } else if (prioVal === 'Media') {
+        chartPriorityPill.classList.add('prio-badge-media');
+      } else if (prioVal === 'Urgente') {
+        chartPriorityPill.classList.add('prio-badge-urgente');
+      } else {
+        chartPriorityPill.classList.add('prio-badge-alta');
       }
     }
+
+    // Manejar selección de prioridad tipo botones segmentados
+    prioSegmentedGroup?.querySelectorAll('.prio-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const chosenPrio = btn.getAttribute('data-prio') || 'Alta';
+        if (inputPrioridad) inputPrioridad.value = chosenPrio;
+        prioSegmentedGroup.querySelectorAll('.prio-btn').forEach((b) => {
+          b.classList.remove('active');
+          b.setAttribute('aria-checked', 'false');
+        });
+        btn.classList.add('active');
+        btn.setAttribute('aria-checked', 'true');
+        updatePriorityChartAppearance();
+      });
+    });
+
+    // Helper para formatear fechas a YYYY-MM-DD
+    function formatYMD(d: Date): string {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
+    function addCalendarDays(base: Date, days: number): Date {
+      const res = new Date(base.getTime());
+      res.setDate(res.getDate() + days);
+      return res;
+    }
+
+    // Configurar chips de atajos rápidos de plazos
+    document.querySelectorAll('.quick-chip').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const daysGen = Number(chip.getAttribute('data-days-general') || '15');
+        const daysResp = Number(chip.getAttribute('data-days-resp') || '11');
+        const now = new Date();
+        const targetGen = addCalendarDays(now, daysGen);
+        const targetResp = addCalendarDays(now, daysResp);
+        if (inputFechaEntrega) inputFechaEntrega.value = formatYMD(targetGen);
+        if (inputFechaResponsable) inputFechaResponsable.value = formatYMD(targetResp);
+        updateDeadlineChart();
+      });
+    });
 
     function updateDeadlineChart() {
       updatePriorityChartAppearance();
       const valEntrega = inputFechaEntrega?.value || '';
       const valResp = inputFechaResponsable?.value || '';
+
+      // Validación de coherencia de fechas en vivo
+      const hasBoth = Boolean(valEntrega && valResp);
+      const isInvalid = hasBoth && valResp > valEntrega;
+
+      if (fechasErrorAlert) {
+        fechasErrorAlert.style.display = isInvalid ? 'flex' : 'none';
+      }
+      if (inputFechaResponsable) {
+        if (isInvalid) inputFechaResponsable.classList.add('has-error');
+        else inputFechaResponsable.classList.remove('has-error');
+      }
 
       if (chartGeneralDate) {
         if (valEntrega) {
@@ -1128,21 +1616,35 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
       const nowMid = new Date();
       nowMid.setHours(12, 0, 0, 0);
 
-      if (valEntrega && valResp) {
+      if (valEntrega && valResp && !isInvalid) {
         const dGen = new Date(valEntrega + 'T12:00:00');
         const dResp = new Date(valResp + 'T12:00:00');
         if (!isNaN(dGen.getTime()) && !isNaN(dResp.getTime())) {
           const totalDays = Math.max(1, Math.round((dGen.getTime() - nowMid.getTime()) / 86400000));
           const margenDays = Math.max(0, Math.round((dGen.getTime() - dResp.getTime()) / 86400000));
-          const oficinasDays = Math.max(0, totalDays - margenDays);
+          const oficinasDays = Math.max(1, Math.round((dResp.getTime() - nowMid.getTime()) / 86400000));
           const oficinasPct = totalDays > 0 ? Math.min(100, Math.max(0, Math.round((oficinasDays / totalDays) * 100))) : 50;
           const margenPct = 100 - oficinasPct;
 
           if (chartTotalDays) chartTotalDays.textContent = `${totalDays} días calendario`;
+          if (chartBarTrack) chartBarTrack.classList.remove('is-empty');
           if (chartBarOficinas) chartBarOficinas.style.width = `${oficinasPct}%`;
           if (chartBarMargen) chartBarMargen.style.width = `${margenPct}%`;
           if (legendOficinasDays) legendOficinasDays.textContent = `${oficinasDays} días`;
           if (legendMargenDays) legendMargenDays.textContent = `${margenDays} días`;
+          if (slaLegendPlaceholder) slaLegendPlaceholder.style.display = 'none';
+          if (slaLegendReal) slaLegendReal.style.display = 'flex';
+
+          // Badges en las tarjetas diferenciadas de fecha
+          if (badgeDiasOficinas) {
+            badgeDiasOficinas.textContent = `${oficinasDays} día${oficinasDays === 1 ? '' : 's'} para entrega`;
+            badgeDiasOficinas.style.display = 'inline-block';
+          }
+          if (badgeDiasGeneral) {
+            badgeDiasGeneral.textContent = `+${margenDays} día${margenDays === 1 ? '' : 's'} de margen de revisión`;
+            badgeDiasGeneral.style.display = 'inline-block';
+          }
+
           if (previewFechaResp) {
             previewFechaResp.textContent = `Cierre para oficinas definido manualmente: ${dResp.toLocaleDateString('es-CO', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}.`;
           }
@@ -1150,11 +1652,17 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
         }
       }
 
-      if (chartTotalDays) chartTotalDays.textContent = 'Por definir';
-      if (chartBarOficinas) chartBarOficinas.style.width = '70%';
-      if (chartBarMargen) chartBarMargen.style.width = '30%';
+      // Estado cuando las fechas aún no están completas o son inválidas
+      if (chartTotalDays) chartTotalDays.textContent = isInvalid ? 'Fechas incoherentes' : 'Por definir';
+      if (chartBarTrack) chartBarTrack.classList.add('is-empty');
+      if (chartBarOficinas) chartBarOficinas.style.width = '0%';
+      if (chartBarMargen) chartBarMargen.style.width = '0%';
       if (legendOficinasDays) legendOficinasDays.textContent = '--';
       if (legendMargenDays) legendMargenDays.textContent = '--';
+      if (slaLegendPlaceholder) slaLegendPlaceholder.style.display = 'inline-flex';
+      if (slaLegendReal) slaLegendReal.style.display = 'none';
+      if (badgeDiasOficinas) badgeDiasOficinas.style.display = 'none';
+      if (badgeDiasGeneral) badgeDiasGeneral.style.display = 'none';
       if (previewFechaResp) {
         previewFechaResp.textContent = 'Defina libremente la fecha de cierre para entrega de soportes en el portal externo.';
       }
@@ -1164,7 +1672,6 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
     inputFechaEntrega?.addEventListener('input', updateDeadlineChart);
     inputFechaResponsable?.addEventListener('change', updateDeadlineChart);
     inputFechaResponsable?.addEventListener('input', updateDeadlineChart);
-    selectPrioridad?.addEventListener('change', updatePriorityChartAppearance);
     updateDeadlineChart();
 
     // 2. Constructor Dinámico de Subcarpetas y Asignación de Dependencias
@@ -1181,7 +1688,7 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
     let subcarpetasState = [
       {
         uid: Date.now(),
-        nombre: 'Soportes Técnicos y Concepto',
+        nombre: '',
         descripcion: '',
         selectedOffices: [] as string[],
       },
@@ -1283,10 +1790,21 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
                   class="form-input sub-input-nombre" 
                   data-sub-uid="${sub.uid}" 
                   value="${escapeHtmlAttr(sub.nombre)}" 
-                  placeholder="Ej. Soportes Financieros, Concepto Jurídico..." 
+                  placeholder="Ej: Concepto Jurídico, Soportes Técnicos, Certificación Académica..." 
                   required 
                   style="font-size: 0.84rem; font-weight: 700; background: #ffffff;"
                 />
+
+                <!-- Sugerencias rápidas opcionales -->
+                <div class="sub-sugerencias-wrapper">
+                  <span class="sub-sug-label">Sugerencias:</span>
+                  <div class="sub-sugerencias-chips">
+                    <button type="button" class="sub-sug-chip" data-sub-uid="${sub.uid}" data-sug="Concepto Jurídico">Concepto Jurídico</button>
+                    <button type="button" class="sub-sug-chip" data-sub-uid="${sub.uid}" data-sug="Soportes Técnicos">Soportes Técnicos</button>
+                    <button type="button" class="sub-sug-chip" data-sub-uid="${sub.uid}" data-sug="Respuesta Financiera">Respuesta Financiera</button>
+                    <button type="button" class="sub-sug-chip" data-sub-uid="${sub.uid}" data-sug="Certificación">Certificación</button>
+                  </div>
+                </div>
               </div>
 
               <div>
@@ -1344,6 +1862,24 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
         });
       });
 
+      // Chips de sugerencias rápidas para el nombre de subcarpeta
+      subcarpetasContainer?.querySelectorAll('.sub-sug-chip').forEach((sugBtn) => {
+        sugBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const uid = Number(sugBtn.getAttribute('data-sub-uid'));
+          const sugText = sugBtn.getAttribute('data-sug') || '';
+          const sub = subcarpetasState.find((s) => s.uid === uid);
+          if (!sub) return;
+          sub.nombre = sugText;
+          const card = sugBtn.closest('.subcarpeta-card');
+          const nameInput = card?.querySelector('.sub-input-nombre') as HTMLInputElement | null;
+          if (nameInput) {
+            nameInput.value = sugText;
+            nameInput.focus();
+          }
+        });
+      });
+
       // Textareas de descripción
       subcarpetasContainer?.querySelectorAll('.sub-input-desc').forEach((textarea) => {
         textarea.addEventListener('input', (e) => {
@@ -1390,7 +1926,7 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
       syncCurrentInputsToState();
       subcarpetasState.push({
         uid: Date.now(),
-        nombre: `Subcarpeta ${subcarpetasState.length + 1}`,
+        nombre: '',
         descripcion: '',
         selectedOffices: [],
       });
@@ -1402,7 +1938,7 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
       }
     });
 
-    // Render inicial de subcarpetas
+    // Render inicial de subcarpetas (campo nombre 100% limpio y vacío)
     renderSubcarpetas();
 
     // 3. Envío del Formulario vía FormData a /api/peticiones/crear
@@ -1627,7 +2163,7 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
           solicitante_email: (document.getElementById('solicitante-email') as HTMLInputElement).value,
           solicitante_tipo: (document.getElementById('solicitante-tipo') as HTMLSelectElement).value,
           categoria: (document.getElementById('peticion-categoria') as HTMLSelectElement).value,
-          prioridad: (document.getElementById('peticion-prioridad') as HTMLSelectElement).value,
+          prioridad: (document.getElementById('peticion-prioridad') as HTMLInputElement)?.value || 'Alta',
           fecha_limite_entrega: inputFechaEntrega.value,
           fecha_limite_responsable: inputFechaResponsable?.value || '',
           oficina_ids: allUniqueOfficeIds,
@@ -1725,13 +2261,18 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
 
           if (modalSuccess) modalSuccess.style.display = 'flex';
           (form as HTMLFormElement).reset();
-          if (selectPrioridad) selectPrioridad.value = 'Alta';
+          if (inputPrioridad) inputPrioridad.value = 'Alta';
+          prioSegmentedGroup?.querySelectorAll('.prio-btn').forEach((b) => {
+            const isAlta = b.getAttribute('data-prio') === 'Alta';
+            b.classList.toggle('active', isAlta);
+            b.setAttribute('aria-checked', isAlta ? 'true' : 'false');
+          });
           updateDeadlineChart();
           removePrimaryFile();
           subcarpetasState = [
             {
               uid: Date.now(),
-              nombre: 'Soportes Técnicos y Concepto',
+              nombre: '',
               descripcion: '',
               selectedOffices: [],
             },
