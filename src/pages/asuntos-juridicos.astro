@@ -1,0 +1,1363 @@
+---
+// src/pages/asuntos-juridicos.astro
+// Explorador Inteligente de Asuntos Jurídicos — Carpetas, Temas, Años y Búsqueda Universal Profunda
+import AppLayout from '@layouts/AppLayout.astro';
+import { supabase } from '@lib/supabase';
+
+// Consultar datos de carpetas y documentos en Supabase
+const { data: dbCarpetas } = await (supabase
+  .from('juridico_carpetas' as any)
+  .select('*')
+  .order('created_at', { ascending: true }) as any);
+
+const { data: dbDocumentos } = await (supabase
+  .from('juridico_documentos' as any)
+  .select('*')
+  .order('created_at', { ascending: false }) as any);
+
+const carpetas = Array.isArray(dbCarpetas) ? dbCarpetas : [];
+const documentos = Array.isArray(dbDocumentos) ? dbDocumentos : [];
+
+// Contadores por categoría raíz
+const countConceptosDocs = documentos.filter((d) => d.categoria_raiz === 'conceptos_internos').length;
+const countConceptosCarpetas = carpetas.filter((c) => c.categoria_raiz === 'conceptos_internos').length;
+
+const countLitigiosDocs = documentos.filter((d) => d.categoria_raiz === 'litigios_judiciales').length;
+const countLitigiosCarpetas = carpetas.filter((c) => c.categoria_raiz === 'litigios_judiciales').length;
+
+const countAuditoriasDocs = documentos.filter((d) => d.categoria_raiz === 'auditoria_entes_control').length;
+const countAuditoriasCarpetas = carpetas.filter((c) => c.categoria_raiz === 'auditoria_entes_control').length;
+
+// Lista de temas únicos para los chips
+const allTemas = Array.from(
+  new Set([
+    ...carpetas.map((c) => c.tema).filter(Boolean),
+    ...documentos.map((d) => d.tema).filter(Boolean),
+  ])
+).sort();
+
+// Años disponibles desde 2021
+const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
+---
+
+<AppLayout title="Asuntos Jurídicos — Explorador Inteligente" activeNav="juridicos">
+  <section class="module-board-card juridicos-shell">
+    
+    <!-- Cabecera Institucional Bento -->
+    <header class="juridicos-hero-header">
+      <div style="min-width: 0; flex: 1;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <h1 style="font-size: 1.55rem; font-weight: 800; color: #111827; margin: 0; letter-spacing: -0.01em;">
+            Asuntos Jurídicos
+          </h1>
+          <span style="font-size: 0.72rem; font-weight: 800; background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; padding: 3px 10px; border-radius: 999px;">
+            Oficina Asesora Jurídica
+          </span>
+          <span style="font-size: 0.72rem; font-weight: 700; background: #F7F5EE; color: #786832; border: 1px solid #DBD2B0; padding: 3px 10px; border-radius: 999px;">
+            Búsqueda Profunda Indexada
+          </span>
+        </div>
+        <p style="font-size: 0.86rem; color: #52606D; margin: 6px 0 0 0;">
+          Explorador documental jerárquico de conceptos jurídicos internos, litigios judiciales y auditorías de entes de control con indexación de contenido plano.
+        </p>
+      </div>
+    </header>
+
+    <!-- FILA 1: Selector de las 3 Carpetas Raíz (Tarjetas Ejecutivas Bento) -->
+    <section class="root-categories-grid" aria-label="Carpetas Raíz Principales">
+      <div class="root-cat-card active" data-cat="conceptos_internos" id="cat-card-conceptos">
+        <div class="root-cat-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        </div>
+        <div style="flex: 1; min-width: 0;">
+          <h3 class="root-cat-title">Conceptos Internos</h3>
+          <div class="root-cat-meta">
+            <span>{countConceptosCarpetas} subcarpetas</span>
+            <span>&middot;</span>
+            <strong>{countConceptosDocs} documentos</strong>
+          </div>
+        </div>
+        <div class="root-cat-arrow">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+
+      <div class="root-cat-card" data-cat="litigios_judiciales" id="cat-card-litigios">
+        <div class="root-cat-icon dorado">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+        </div>
+        <div style="flex: 1; min-width: 0;">
+          <h3 class="root-cat-title">Litigios y Asuntos Judiciales</h3>
+          <div class="root-cat-meta">
+            <span>{countLitigiosCarpetas} subcarpetas</span>
+            <span>&middot;</span>
+            <strong>{countLitigiosDocs} expedientes</strong>
+          </div>
+        </div>
+        <div class="root-cat-arrow">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+
+      <div class="root-cat-card" data-cat="auditoria_entes_control" id="cat-card-auditorias">
+        <div class="root-cat-icon slate">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+        </div>
+        <div style="flex: 1; min-width: 0;">
+          <h3 class="root-cat-title">Auditoría de Entes de Control</h3>
+          <div class="root-cat-meta">
+            <span>{countAuditoriasCarpetas} subcarpetas</span>
+            <span>&middot;</span>
+            <strong>{countAuditoriasDocs} actuaciones</strong>
+          </div>
+        </div>
+        <div class="root-cat-arrow">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- FILA 2: Barra de Búsqueda Profunda, Filtros de Año/Tema y Modos de Vista -->
+    <section class="juridicos-toolbar-panel">
+      <!-- Input de búsqueda universal profunda -->
+      <div class="deep-search-bar-wrap">
+        <div style="position: relative; flex: 1;">
+          <input
+            type="text"
+            id="juridico-deep-search-input"
+            class="form-input"
+            placeholder="Buscar por cualquier palabra dentro del archivo, tema, año, número de proceso o carpeta..."
+            style="width: 100%; height: 44px; padding-left: 42px; padding-right: 12px; border-radius: 10px; border: 1.5px solid #00594E; font-size: 0.86rem; background: #FFFFFF;"
+          />
+          <div style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #00594E; display: flex; align-items: center; pointer-events: none;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          </div>
+        </div>
+
+        <!-- Scope switch: En esta carpeta / Todo el módulo -->
+        <div class="search-scope-toggle">
+          <button type="button" class="scope-btn active" data-scope="section">Esta categoría</button>
+          <button type="button" class="scope-btn" data-scope="all">Todo Jurídico</button>
+        </div>
+      </div>
+
+      <!-- Filtros de Año, Tema y Modo de Vista -->
+      <div class="filters-and-modes-bar">
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <!-- Selector de Año -->
+          <span style="font-size: 0.72rem; font-weight: 700; color: #64748B; text-transform: uppercase;">Año:</span>
+          <div class="year-chips-wrap" id="year-filter-chips">
+            <button type="button" class="year-chip active" data-year="todos">Todos</button>
+            {yearsList.map((y) => (
+              <button type="button" class="year-chip" data-year={y}>{y}</button>
+            ))}
+          </div>
+
+          <!-- Selector de Tema -->
+          <div style="display: flex; align-items: center; gap: 6px; margin-left: 8px;">
+            <span style="font-size: 0.72rem; font-weight: 700; color: #64748B; text-transform: uppercase;">Tema:</span>
+            <select id="select-filter-tema" class="form-input" style="height: 32px; border-radius: 8px; font-size: 0.76rem; font-weight: 600; padding: 2px 10px; border: 1px solid #DCE4E3; background: #FFFFFF;">
+              <option value="todos">Todos los Temas</option>
+              {allTemas.map((t) => (
+                <option value={t}>{t}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <!-- Selector de Modo de Visualización -->
+        <div class="view-mode-toggle" id="view-mode-selector">
+          <button type="button" class="mode-btn active" data-mode="carpetas" title="Explorador jerárquico de carpetas">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            <span>Carpetas</span>
+          </button>
+          <button type="button" class="mode-btn" data-mode="anio" title="Agrupar por Año">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span>Por Año</span>
+          </button>
+          <button type="button" class="mode-btn" data-mode="tema" title="Agrupar por Tema">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+            <span>Por Tema</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- FILA 3: Barra de Ruta (Breadcrumbs) y Botones de Acción del Nivel Actual -->
+    <section class="breadcrumbs-actions-bar">
+      <!-- Breadcrumbs dinámicos -->
+      <nav class="juridico-breadcrumbs" id="juridico-breadcrumbs" aria-label="Ruta de carpetas">
+        <button type="button" class="breadcrumb-item root-link" data-folder-id="">
+          Asuntos Jurídicos
+        </button>
+        <span class="breadcrumb-sep">&rsaquo;</span>
+        <button type="button" class="breadcrumb-item active" id="breadcrumb-current-cat" data-folder-id="">
+          Conceptos Internos
+        </button>
+      </nav>
+
+      <!-- Botones de Acción del nivel actual -->
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <button type="button" id="btn-open-new-folder-modal" class="btn btn-secondary btn-sm" style="height: 34px; padding: 6px 14px; font-size: 0.78rem; font-weight: 700; border-radius: 8px; background: #FFFFFF; border: 1.5px solid #00594E; color: #00594E; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+          <span>+ Nueva Subcarpeta</span>
+        </button>
+
+        <button type="button" id="btn-open-upload-modal" class="btn btn-primary btn-sm" style="height: 34px; padding: 6px 16px; font-size: 0.78rem; font-weight: 800; border-radius: 8px; background: #00594E; border: 1.5px solid #00594E; color: #FFFFFF; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(0, 89, 78, 0.2);">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span>+ Subir Archivo Aquí</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ÁREA DE CONTENIDO: 2 Estados (Resultados de Búsqueda Profunda vs Explorador Normal) -->
+    <div class="content-viewport" id="juridico-content-viewport">
+      
+      <!-- ESTADO A: Resultados de Búsqueda Profunda (cuando hay query o filtro de año/tema activo) -->
+      <section id="search-results-panel" style="display: none;">
+        <div class="results-header-bar">
+          <div>
+            <strong id="results-count-label" style="font-size: 0.95rem; color: #111827;">0 resultados encontrados</strong>
+            <span id="results-query-label" style="font-size: 0.80rem; color: #64748B; margin-left: 6px;"></span>
+          </div>
+          <button type="button" id="btn-clear-search" class="btn btn-ghost btn-sm" style="font-size: 0.74rem; color: #00594E; font-weight: 700;">
+            Limpiar búsqueda &times;
+          </button>
+        </div>
+
+        <div id="results-cards-container" class="results-grid" style="margin-top: 14px; display: flex; flex-direction: column; gap: 12px;">
+          <!-- Inyectado dinámicamente desde JS -->
+        </div>
+      </section>
+
+      <!-- ESTADO B: Explorador Normal de Carpetas y Documentos -->
+      <section id="normal-explorer-panel">
+        <!-- Subsección 1: Subcarpetas del nivel actual -->
+        <div class="subfolders-section">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <div style="font-size: 0.84rem; font-weight: 800; color: #111827; text-transform: uppercase; letter-spacing: 0.03em;">
+              Subcarpetas en este nivel
+            </div>
+            <span id="subfolders-count-pill" style="font-size: 0.72rem; font-weight: 700; color: #00594E; background: #F0F7F5; border: 1px solid #B2CFCB; padding: 2px 8px; border-radius: 999px;">
+              0 carpetas
+            </span>
+          </div>
+
+          <div id="subfolders-grid" class="subfolders-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 12px;">
+            <!-- Inyectado dinámicamente desde JS -->
+          </div>
+        </div>
+
+        <!-- Subsección 2: Documentos en esta carpeta -->
+        <div class="documents-section" style="margin-top: 26px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <div style="font-size: 0.84rem; font-weight: 800; color: #111827; text-transform: uppercase; letter-spacing: 0.03em;">
+              Documentos en esta carpeta
+            </div>
+            <span id="documents-count-pill" style="font-size: 0.72rem; font-weight: 700; color: #786832; background: #F7F5EE; border: 1px solid #DBD2B0; padding: 2px 8px; border-radius: 999px;">
+              0 documentos
+            </span>
+          </div>
+
+          <div id="documents-list-container" class="documents-list" style="display: flex; flex-direction: column; gap: 10px;">
+            <!-- Inyectado dinámicamente desde JS -->
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </section>
+
+  <!-- MODAL 1: Nueva Subcarpeta -->
+  <div class="modal-backdrop" id="modal-new-folder" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(2px);">
+    <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 520px; border-radius: 16px; box-shadow: 0 20px 45px rgba(0,0,0,0.2); overflow: hidden; border-top: 4px solid #00594E;">
+      <div class="modal-header" style="background: #F2F7F6; border-bottom: 1.5px solid #DCE4E3; padding: 16px 22px; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-size: 1.05rem; font-weight: 800; color: #00594E; margin: 0; display: flex; align-items: center; gap: 8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <span>Nueva Subcarpeta</span>
+        </h3>
+        <button type="button" class="btn-close-modal" id="btn-close-new-folder" style="background: none; border: none; cursor: pointer; color: #64748B;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 22px;">
+        <form id="form-new-folder">
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" style="font-size: 0.76rem; font-weight: 700; color: #0F172A; text-transform: uppercase; margin-bottom: 4px; display: block;">Nombre de la Subcarpeta *</label>
+            <input type="text" id="folder-input-nombre" class="form-input" placeholder="Ej: Contratación 2025, Tutelas en Trámite, Auditoría Contraloría..." required style="width: 100%; height: 38px; border-radius: 8px; border: 1.5px solid #DCE4E3; font-size: 0.85rem;" />
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+            <div>
+              <label class="form-label" style="font-size: 0.76rem; font-weight: 700; color: #0F172A; text-transform: uppercase; margin-bottom: 4px; display: block;">Tema Jurídico (Opcional)</label>
+              <input type="text" id="folder-input-tema" class="form-input" placeholder="Ej: Contratación, Laboral..." style="width: 100%; height: 38px; border-radius: 8px; border: 1.5px solid #DCE4E3; font-size: 0.85rem;" />
+            </div>
+            <div>
+              <label class="form-label" style="font-size: 0.76rem; font-weight: 700; color: #0F172A; text-transform: uppercase; margin-bottom: 4px; display: block;">Año (Opcional)</label>
+              <select id="folder-input-anio" class="form-input" style="width: 100%; height: 38px; border-radius: 8px; border: 1.5px solid #DCE4E3; font-size: 0.85rem;">
+                <option value="">Sin año específico</option>
+                {yearsList.map((y) => (
+                  <option value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label" style="font-size: 0.76rem; font-weight: 700; color: #0F172A; text-transform: uppercase; margin-bottom: 4px; display: block;">Descripción o Notas</label>
+            <textarea id="folder-input-desc" class="form-input" rows="2" placeholder="Detalles de los expedientes o asuntos alojados aquí..." style="width: 100%; border-radius: 8px; border: 1.5px solid #DCE4E3; font-size: 0.82rem; padding: 6px;"></textarea>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 10px; padding-top: 14px; border-top: 1px solid #DCE4E3;">
+            <button type="button" class="btn btn-ghost" id="btn-cancel-new-folder">Cancelar</button>
+            <button type="submit" class="btn btn-primary" id="btn-submit-new-folder" style="background: #00594E; border-color: #00594E; color: #FFFFFF; font-weight: 700;">Crear Subcarpeta</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: Subir Archivo con Extracción Automática -->
+  <div class="modal-backdrop" id="modal-upload-doc" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(2px);">
+    <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 620px; border-radius: 16px; box-shadow: 0 20px 45px rgba(0,0,0,0.2); overflow: hidden; border-top: 4px solid #00594E;">
+      <div class="modal-header" style="background: #F2F7F6; border-bottom: 1.5px solid #DCE4E3; padding: 16px 22px; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-size: 1.05rem; font-weight: 800; color: #00594E; margin: 0; display: flex; align-items: center; gap: 8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span>Subir Archivo e Indexar Contenido</span>
+        </h3>
+        <button type="button" class="btn-close-modal" id="btn-close-upload-doc" style="background: none; border: none; cursor: pointer; color: #64748B;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 22px; max-height: calc(85vh - 120px); overflow-y: auto;">
+        <form id="form-upload-doc">
+          
+          <!-- Dropzone para Archivo -->
+          <div style="border: 2px dashed #00594E; border-radius: 10px; padding: 18px; text-align: center; background: #F0F7F5; margin-bottom: 16px;">
+            <input type="file" id="doc-file-input" accept=".pdf,.docx,.txt,.csv" required style="display: none;" />
+            <button type="button" id="btn-browse-doc-file" class="btn btn-secondary btn-sm" style="background: #FFFFFF; border: 1.5px solid #00594E; color: #00594E; font-weight: 700; padding: 6px 14px; border-radius: 8px; cursor: pointer;">
+              Seleccionar Documento (PDF, DOCX, TXT)
+            </button>
+            <div id="doc-file-label" style="font-size: 0.78rem; font-weight: 700; color: #00594E; margin-top: 8px;">
+              Ningún archivo seleccionado *
+            </div>
+            <div style="font-size: 0.70rem; color: #64748B; margin-top: 4px;">
+              El texto plano será extraído e indexado automáticamente para búsqueda profunda.
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label" style="font-size: 0.76rem; font-weight: 700; color: #0F172A; text-transform: uppercase; margin-bottom: 4px; display: block;">Título del Documento *</label>
+            <input type="text" id="doc-input-titulo" class="form-input" placeholder="Se autollenará con el nombre del archivo o edítelo aquí..." required style="width: 100%; height: 38px; border-radius: 8px; border: 1.5px solid #DCE4E3; font-size: 0.85rem;" />
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+            <div>
+              <label class="form-label" style="font-size: 0.76rem; font-weight: 700; color: #0F172A; text-transform: uppercase; margin-bottom: 4px; display: block;">Año del Documento *</label>
+              <select id="doc-input-anio" class="form-input" required style="width: 100%; height: 38px; border-radius: 8px; border: 1.5px solid #DCE4E3; font-size: 0.85rem;">
+                {yearsList.map((y) => (
+                  <option value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label class="form-label" style="font-size: 0.76rem; font-weight: 700; color: #0F172A; text-transform: uppercase; margin-bottom: 4px; display: block;">Tema Jurídico</label>
+              <input type="text" id="doc-input-tema" class="form-input" placeholder="Ej: Contratación, Tutelas..." style="width: 100%; height: 38px; border-radius: 8px; border: 1.5px solid #DCE4E3; font-size: 0.85rem;" />
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label" style="font-size: 0.76rem; font-weight: 700; color: #0F172A; text-transform: uppercase; margin-bottom: 4px; display: block;">Palabras Clave / Radicado / Número de Proceso</label>
+            <input type="text" id="doc-input-palabras" class="form-input" placeholder="Ej: EXP-2025-084, Tribunal Administrativo de Casanare, Juzgado 1..." style="width: 100%; height: 38px; border-radius: 8px; border: 1.5px solid #DCE4E3; font-size: 0.85rem;" />
+          </div>
+
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label" style="font-size: 0.76rem; font-weight: 700; color: #0F172A; text-transform: uppercase; margin-bottom: 4px; display: block;">Descripción o Resumen</label>
+            <textarea id="doc-input-desc" class="form-input" rows="2" placeholder="Resumen del pronunciamiento, sentencia o informe..." style="width: 100%; border-radius: 8px; border: 1.5px solid #DCE4E3; font-size: 0.82rem; padding: 6px;"></textarea>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 10px; padding-top: 14px; border-top: 1px solid #DCE4E3;">
+            <button type="button" class="btn btn-ghost" id="btn-cancel-upload-doc">Cancelar</button>
+            <button type="submit" class="btn btn-primary" id="btn-submit-upload-doc" style="background: #00594E; border-color: #00594E; color: #FFFFFF; font-weight: 700;">Subir e Indexar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .juridicos-shell {
+      padding: 24px;
+    }
+
+    .juridicos-hero-header {
+      padding-bottom: 18px;
+      border-bottom: 1px solid #EEF2F5;
+    }
+
+    /* FILA 1: 3 Carpetas Raíz */
+    .root-categories-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 18px;
+    }
+
+    @media (max-width: 900px) {
+      .root-categories-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .root-cat-card {
+      background: #FFFFFF;
+      border: 1.5px solid #E2E8F0;
+      border-radius: 14px;
+      padding: 16px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      user-select: none;
+    }
+
+    .root-cat-card:hover {
+      border-color: #00594E;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 89, 78, 0.08);
+    }
+
+    .root-cat-card.active {
+      border-color: #00594E;
+      background: #F0F7F5;
+      box-shadow: 0 4px 14px rgba(0, 89, 78, 0.12);
+    }
+
+    .root-cat-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: #E6EFEF;
+      color: #00594E;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .root-cat-icon.dorado {
+      background: #F7F5EE;
+      color: #786832;
+    }
+
+    .root-cat-icon.slate {
+      background: #F1F5F9;
+      color: #334155;
+    }
+
+    .root-cat-title {
+      margin: 0;
+      font-size: 0.96rem;
+      font-weight: 800;
+      color: #111827;
+      line-height: 1.25;
+    }
+
+    .root-cat-meta {
+      font-size: 0.73rem;
+      color: #64748B;
+      margin-top: 3px;
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+
+    .root-cat-arrow {
+      color: #94A3B8;
+      display: flex;
+      align-items: center;
+    }
+    .root-cat-card.active .root-cat-arrow {
+      color: #00594E;
+    }
+
+    /* FILA 2: Toolbar de Búsqueda y Filtros */
+    .juridicos-toolbar-panel {
+      margin-top: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background: #F8FAFB;
+      border: 1px solid #DCE4E3;
+      border-radius: 14px;
+      padding: 14px 16px;
+    }
+
+    .deep-search-bar-wrap {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .search-scope-toggle {
+      display: inline-flex;
+      border-radius: 8px;
+      border: 1px solid #DCE4E3;
+      background: #FFFFFF;
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .scope-btn {
+      all: unset;
+      box-sizing: border-box;
+      padding: 6px 12px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: #64748B;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.14s ease;
+    }
+
+    .scope-btn.active {
+      background: #00594E;
+      color: #FFFFFF;
+    }
+
+    .filters-and-modes-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .year-chips-wrap {
+      display: inline-flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .year-chip {
+      all: unset;
+      box-sizing: border-box;
+      padding: 3px 9px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #64748B;
+      background: #FFFFFF;
+      border: 1px solid #DCE4E3;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.14s ease;
+    }
+
+    .year-chip.active {
+      background: #00594E;
+      color: #FFFFFF;
+      border-color: #00594E;
+    }
+
+    .view-mode-toggle {
+      display: inline-flex;
+      border-radius: 8px;
+      border: 1px solid #DCE4E3;
+      background: #FFFFFF;
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .mode-btn {
+      all: unset;
+      box-sizing: border-box;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 11px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: #64748B;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.14s ease;
+    }
+
+    .mode-btn.active {
+      background: #00594E;
+      color: #FFFFFF;
+    }
+
+    /* FILA 3: Breadcrumbs y Acciones */
+    .breadcrumbs-actions-bar {
+      margin-top: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #EEF2F5;
+    }
+
+    .juridico-breadcrumbs {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .breadcrumb-item {
+      all: unset;
+      box-sizing: border-box;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #00594E;
+      cursor: pointer;
+      padding: 2px 4px;
+      border-radius: 4px;
+      transition: background 0.14s ease;
+    }
+
+    .breadcrumb-item:hover {
+      background: #F0F7F5;
+    }
+
+    .breadcrumb-item.active {
+      color: #111827;
+      font-weight: 800;
+      cursor: default;
+    }
+
+    .breadcrumb-sep {
+      color: #94A3B8;
+      font-size: 0.9rem;
+    }
+
+    /* Tarjetas de Subcarpeta */
+    .folder-card {
+      background: #FFFFFF;
+      border: 1px solid #DCE4E3;
+      border-left: 4px solid #00594E;
+      border-radius: 10px;
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+
+    .folder-card:hover {
+      border-color: #00594E;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 89, 78, 0.08);
+    }
+
+    /* Tarjetas de Documento */
+    .document-row-card {
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 10px;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      transition: all 0.18s ease;
+    }
+
+    .document-row-card:hover {
+      border-color: #00594E;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+    }
+
+    /* Resaltado de Búsqueda */
+    :global(mark.juridico-mark) {
+      background-color: #FEF08A !important;
+      color: #854D0E !important;
+      font-weight: 800 !important;
+      padding: 1px 3px !important;
+      border-radius: 3px !important;
+    }
+
+    .result-search-card {
+      background: #FFFFFF;
+      border: 1.5px solid #E2E8F0;
+      border-radius: 12px;
+      padding: 14px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: all 0.18s ease;
+    }
+
+    .result-search-card:hover {
+      border-color: #00594E;
+      box-shadow: 0 4px 14px rgba(0, 89, 78, 0.08);
+    }
+  </style>
+
+  <script define:vars={{ carpetas, documentos }}>
+    // Estado reactivo en memoria
+    let currentCategoria = 'conceptos_internos';
+    let currentFolderId = null;
+    let currentSearchScope = 'section';
+    let currentYearFilter = 'todos';
+    let currentTemaFilter = 'todos';
+    let currentViewMode = 'carpetas';
+    let isSearchActive = false;
+
+    const catLabels = {
+      conceptos_internos: 'Conceptos Internos',
+      litigios_judiciales: 'Litigios y Asuntos Judiciales',
+      auditoria_entes_control: 'Auditoría de Entes de Control',
+    };
+
+    // Referencias al DOM
+    const catCards = document.querySelectorAll('.root-cat-card');
+    const searchInput = document.getElementById('juridico-deep-search-input');
+    const scopeBtns = document.querySelectorAll('.scope-btn');
+    const yearChips = document.querySelectorAll('#year-filter-chips .year-chip');
+    const temaSelect = document.getElementById('select-filter-tema');
+    const modeBtns = document.querySelectorAll('#view-mode-selector .mode-btn');
+
+    const breadcrumbsNav = document.getElementById('juridico-breadcrumbs');
+    const normalPanel = document.getElementById('normal-explorer-panel');
+    const searchPanel = document.getElementById('search-results-panel');
+    const resultsContainer = document.getElementById('results-cards-container');
+    const resultsCountLabel = document.getElementById('results-count-label');
+    const resultsQueryLabel = document.getElementById('results-query-label');
+    const clearSearchBtn = document.getElementById('btn-clear-search');
+
+    const subfoldersGrid = document.getElementById('subfolders-grid');
+    const subfoldersCountPill = document.getElementById('subfolders-count-pill');
+    const documentsList = document.getElementById('documents-list-container');
+    const documentsCountPill = document.getElementById('documents-count-pill');
+
+    // Cambiar Categoría Raíz
+    catCards.forEach((card) => {
+      card.addEventListener('click', () => {
+        catCards.forEach((c) => c.classList.remove('active'));
+        card.classList.add('active');
+        currentCategoria = card.getAttribute('data-cat') || 'conceptos_internos';
+        currentFolderId = null; // Volver a raíz de la categoría
+        renderExplorer();
+      });
+    });
+
+    // Cambiar Ámbito de Búsqueda
+    scopeBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        scopeBtns.forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentSearchScope = btn.getAttribute('data-scope') || 'section';
+        triggerDeepSearch();
+      });
+    });
+
+    // Filtro por Año
+    yearChips.forEach((chip) => {
+      chip.addEventListener('click', () => {
+        yearChips.forEach((c) => c.classList.remove('active'));
+        chip.classList.add('active');
+        currentYearFilter = chip.getAttribute('data-year') || 'todos';
+        if (searchInput && searchInput.value.trim().length > 0) {
+          triggerDeepSearch();
+        } else {
+          renderExplorer();
+        }
+      });
+    });
+
+    // Filtro por Tema
+    temaSelect?.addEventListener('change', () => {
+      currentTemaFilter = temaSelect.value;
+      if (searchInput && searchInput.value.trim().length > 0) {
+        triggerDeepSearch();
+      } else {
+        renderExplorer();
+      }
+    });
+
+    // Modos de Visualización
+    modeBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        modeBtns.forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentViewMode = btn.getAttribute('data-mode') || 'carpetas';
+        renderExplorer();
+      });
+    });
+
+    // Búsqueda en tiempo real con debounce
+    let searchDebounceTimer = null;
+    searchInput?.addEventListener('input', () => {
+      clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = setTimeout(() => {
+        triggerDeepSearch();
+      }, 250);
+    });
+
+    clearSearchBtn?.addEventListener('click', () => {
+      if (searchInput) searchInput.value = '';
+      currentYearFilter = 'todos';
+      currentTemaFilter = 'todos';
+      yearChips.forEach((c) => c.classList.toggle('active', c.getAttribute('data-year') === 'todos'));
+      if (temaSelect) temaSelect.value = 'todos';
+      isSearchActive = false;
+      if (searchPanel) searchPanel.style.display = 'none';
+      if (normalPanel) normalPanel.style.display = 'block';
+      renderExplorer();
+    });
+
+    // Disparar Búsqueda Profunda Universal
+    async function triggerDeepSearch() {
+      const q = (searchInput?.value || '').trim();
+      const hasFilters = currentYearFilter !== 'todos' || currentTemaFilter !== 'todos';
+
+      if (!q && !hasFilters) {
+        isSearchActive = false;
+        if (searchPanel) searchPanel.style.display = 'none';
+        if (normalPanel) normalPanel.style.display = 'block';
+        renderExplorer();
+        return;
+      }
+
+      isSearchActive = true;
+      if (normalPanel) normalPanel.style.display = 'none';
+      if (searchPanel) searchPanel.style.display = 'block';
+
+      if (resultsContainer) {
+        resultsContainer.innerHTML = '<div style="text-align: center; padding: 24px; color: #64748B;">Buscando profundamente en metadatos y contenido de archivos...</div>';
+      }
+
+      try {
+        const catParam = currentSearchScope === 'all' ? 'todas' : currentCategoria;
+        const url = `/api/juridico/buscar?q=${encodeURIComponent(q)}&categoria=${catParam}&anio=${currentYearFilter}&tema=${encodeURIComponent(currentTemaFilter)}`;
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (!data.success) {
+          if (resultsContainer) resultsContainer.innerHTML = `<div style="color: #DC2626; padding: 18px;">Error: ${data.error || 'No se pudo realizar la búsqueda.'}</div>`;
+          return;
+        }
+
+        renderSearchResults(data);
+      } catch (err) {
+        console.error('Error buscando:', err);
+        if (resultsContainer) resultsContainer.innerHTML = '<div style="color: #DC2626; padding: 18px;">Error de red en la búsqueda profunda.</div>';
+      }
+    }
+
+    // Renderizar Resultados de Búsqueda
+    function renderSearchResults(data) {
+      const docs = data.documentos || [];
+      const carps = data.carpetas || [];
+      const totalCount = docs.length + carps.length;
+
+      if (resultsCountLabel) resultsCountLabel.textContent = `${totalCount} resultado${totalCount === 1 ? '' : 's'} encontrado${totalCount === 1 ? '' : 's'}`;
+      if (resultsQueryLabel) resultsQueryLabel.textContent = data.query ? `para "${data.query}"` : '';
+
+      if (totalCount === 0) {
+        if (resultsContainer) {
+          resultsContainer.innerHTML = `
+            <div style="text-align: center; padding: 40px 20px; background: #F8FAFC; border: 1px dashed #CBD5E1; border-radius: 12px;">
+              <div style="font-weight: 700; font-size: 1rem; color: #111827;">No se encontraron coincidencias</div>
+              <p style="font-size: 0.80rem; color: #64748B; margin-top: 4px;">Intente con otras palabras clave, amplíe el ámbito de búsqueda o verifique la ortografía.</p>
+            </div>
+          `;
+        }
+        return;
+      }
+
+      let html = '';
+
+      // Carpetas encontradas
+      carps.forEach((c) => {
+        html += `
+          <div class="result-search-card" style="border-left: 4px solid #00594E;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="color: #00594E;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                </span>
+                <strong style="font-size: 0.95rem; color: #111827;">${c.nombre}</strong>
+                <span style="font-size: 0.68rem; background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; padding: 1px 7px; border-radius: 999px;">Subcarpeta</span>
+              </div>
+              <button type="button" class="btn-jump-folder" data-cat="${c.categoria_raiz}" data-id="${c.id}" style="font-size: 0.74rem; font-weight: 700; color: #00594E; background: none; border: none; cursor: pointer;">
+                Ir a la carpeta &rarr;
+              </button>
+            </div>
+            <div style="font-size: 0.74rem; color: #64748B;">Ruta: ${c.breadcrumb}</div>
+            ${c.descripcion ? `<div style="font-size: 0.76rem; color: #334155;">${c.descripcion}</div>` : ''}
+          </div>
+        `;
+      });
+
+      // Documentos encontrados con snippets
+      docs.forEach((d) => {
+        const ext = (d.archivo_nombre || '').split('.').pop()?.toUpperCase() || 'DOC';
+        html += `
+          <div class="result-search-card">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px;">
+              <div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1;">
+                <span style="width: 32px; height: 32px; border-radius: 8px; background: #F0F7F5; border: 1px solid #B2CFCB; color: #00594E; display: inline-flex; align-items: center; justify-content: center; font-size: 0.70rem; font-weight: 800; flex-shrink: 0;">
+                  ${ext}
+                </span>
+                <div style="min-width: 0;">
+                  <h4 style="margin: 0; font-size: 0.94rem; font-weight: 800; color: #111827; line-height: 1.25;">
+                    ${d.titulo}
+                  </h4>
+                  <div style="display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: #64748B; margin-top: 2px; flex-wrap: wrap;">
+                    <span style="background: #F7F5EE; color: #786832; border: 1px solid #DBD2B0; padding: 1px 6px; border-radius: 4px; font-weight: 700;">Año ${d.anio}</span>
+                    ${d.tema ? `<span style="background: #F1F5F9; color: #475569; border: 1px solid #CBD5E1; padding: 1px 6px; border-radius: 4px; font-weight: 600;">${d.tema}</span>` : ''}
+                    ${d.isContentMatch ? `<span style="background: #FEF9C3; color: #854D0E; border: 1px solid #FDE047; padding: 1px 6px; border-radius: 4px; font-weight: 700;">Coincidencia en texto del archivo</span>` : ''}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Botones de Acción de Documento -->
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <a href="${d.archivo_url}" target="_blank" rel="noopener noreferrer" style="all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 4px 10px; font-size: 0.72rem; font-weight: 700; border-radius: 6px; background: #F0F7F5; border: 1px solid #00594E; color: #00594E; cursor: pointer;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <span>Ver</span>
+                </a>
+                <a href="${d.archivo_url}" download="${d.archivo_nombre || 'documento'}" style="all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 4px 10px; font-size: 0.72rem; font-weight: 700; border-radius: 6px; background: #FFFFFF; border: 1px solid #DCE4E3; color: #334155; cursor: pointer;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  <span>Descargar</span>
+                </a>
+              </div>
+            </div>
+
+            <!-- Snippet con <mark> -->
+            ${d.snippet ? `
+              <div style="background: #F8FAFB; border-radius: 6px; padding: 8px 12px; font-size: 0.76rem; color: #334155; line-height: 1.4; border-left: 3px solid #B5A160;">
+                <span style="font-weight: 700; color: #64748B; font-size: 0.70rem;">Fragmento:</span> ${d.snippet}
+              </div>
+            ` : ''}
+
+            <!-- Breadcrumb clickeable -->
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.71rem; color: #64748B; margin-top: 2px;">
+              <span>Ruta: <strong>${d.breadcrumb}</strong></span>
+              <button type="button" class="btn-jump-folder" data-cat="${d.categoria_raiz}" data-id="${d.carpeta_id || ''}" style="all: unset; font-weight: 700; color: #00594E; cursor: pointer;">
+                Abrir en carpeta &rarr;
+              </button>
+            </div>
+          </div>
+        `;
+      });
+
+      if (resultsContainer) {
+        resultsContainer.innerHTML = html;
+        attachJumpEvents();
+      }
+    }
+
+    function attachJumpEvents() {
+      document.querySelectorAll('.btn-jump-folder').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const cat = btn.getAttribute('data-cat');
+          const folderId = btn.getAttribute('data-id') || null;
+          if (cat) {
+            currentCategoria = cat;
+            catCards.forEach((c) => c.classList.toggle('active', c.getAttribute('data-cat') === cat));
+          }
+          currentFolderId = folderId;
+          if (searchInput) searchInput.value = '';
+          isSearchActive = false;
+          if (searchPanel) searchPanel.style.display = 'none';
+          if (normalPanel) normalPanel.style.display = 'block';
+          renderExplorer();
+        });
+      });
+    }
+
+    // Renderizar Explorador Normal
+    function renderExplorer() {
+      renderBreadcrumbs();
+
+      // Filtrar subcarpetas del nivel actual
+      const currentSubfolders = carpetas.filter((c) => {
+        if (c.categoria_raiz !== currentCategoria) return false;
+        if (currentFolderId === null) {
+          return !c.parent_id;
+        }
+        return c.parent_id === currentFolderId;
+      });
+
+      // Filtrar documentos del nivel actual
+      const currentDocs = documentos.filter((d) => {
+        if (d.categoria_raiz !== currentCategoria) return false;
+        if (currentFolderId === null) {
+          return !d.carpeta_id;
+        }
+        return d.carpeta_id === currentFolderId;
+      });
+
+      // Renderizar Subcarpetas
+      if (subfoldersCountPill) subfoldersCountPill.textContent = `${currentSubfolders.length} subcarpeta${currentSubfolders.length === 1 ? '' : 's'}`;
+      if (subfoldersGrid) {
+        if (currentSubfolders.length === 0) {
+          subfoldersGrid.innerHTML = `
+            <div style="grid-column: 1 / -1; font-size: 0.78rem; color: #94A3B8; font-style: italic; padding: 12px 0;">
+              No hay subcarpetas creadas en este nivel.
+            </div>
+          `;
+        } else {
+          subfoldersGrid.innerHTML = currentSubfolders.map((c) => {
+            const childFoldersCount = carpetas.filter((sub) => sub.parent_id === c.id).length;
+            const childDocsCount = documentos.filter((d) => d.carpeta_id === c.id).length;
+
+            return `
+              <div class="folder-card" data-folder-id="${c.id}">
+                <div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1;">
+                  <span style="color: #00594E; display: flex; align-items: center; flex-shrink: 0;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg>
+                  </span>
+                  <div style="min-width: 0;">
+                    <strong style="font-size: 0.86rem; color: #111827; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                      ${c.nombre}
+                    </strong>
+                    <div style="font-size: 0.70rem; color: #64748B; margin-top: 1px;">
+                      ${c.anio ? `<span style="background: #F7F5EE; color: #786832; border: 1px solid #DBD2B0; padding: 1px 4px; border-radius: 3px; font-weight: 700; margin-right: 4px;">${c.anio}</span>` : ''}
+                      ${c.tema ? `<span style="margin-right: 4px; color: #475569;">${c.tema} &middot;</span>` : ''}
+                      <span>${childFoldersCount} carpetas &middot; ${childDocsCount} docs</span>
+                    </div>
+                  </div>
+                </div>
+                <button type="button" class="btn-delete-folder" data-id="${c.id}" data-name="${c.nombre}" title="Eliminar subcarpeta" style="all: unset; color: #94A3B8; cursor: pointer; padding: 4px; border-radius: 4px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+                </button>
+              </div>
+            `;
+          }).join('');
+
+          // Listeners para abrir subcarpeta al hacer clic
+          subfoldersGrid.querySelectorAll('.folder-card').forEach((card) => {
+            card.addEventListener('click', (e) => {
+              const target = e.target;
+              if (target.closest('.btn-delete-folder')) return;
+              const fId = card.getAttribute('data-folder-id');
+              if (fId) {
+                currentFolderId = fId;
+                renderExplorer();
+              }
+            });
+          });
+
+          // Eliminar subcarpeta
+          subfoldersGrid.querySelectorAll('.btn-delete-folder').forEach((btn) => {
+            btn.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              const id = btn.getAttribute('data-id');
+              const name = btn.getAttribute('data-name');
+              if (!id) return;
+              if (!confirm(`¿Eliminar la subcarpeta "${name}" y todos sus documentos contenidos?`)) return;
+
+              const res = await fetch('/api/juridico/eliminar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tipo: 'carpeta', id }),
+              });
+              const data = await res.json();
+              if (data.success) {
+                window.location.reload();
+              } else {
+                alert('Error al eliminar: ' + (data.error || 'Error'));
+              }
+            });
+          });
+        }
+      }
+
+      // Renderizar Documentos
+      if (documentsCountPill) documentsCountPill.textContent = `${currentDocs.length} documento${currentDocs.length === 1 ? '' : 's'}`;
+      if (documentsList) {
+        if (currentDocs.length === 0) {
+          documentsList.innerHTML = `
+            <div style="font-size: 0.78rem; color: #94A3B8; font-style: italic; padding: 12px 0;">
+              No hay documentos alojados directamente en esta carpeta. Utilice el botón "+ Subir Archivo Aquí" para anexar pronunciamientos o expedientes.
+            </div>
+          `;
+        } else {
+          documentsList.innerHTML = currentDocs.map((d) => {
+            const ext = (d.archivo_nombre || '').split('.').pop()?.toUpperCase() || 'DOC';
+            const sizeKb = d.archivo_tamano ? (d.archivo_tamano / 1024).toFixed(1) : '0';
+            const hasText = Boolean(d.contenido_extraido && d.contenido_extraido.length > 0);
+
+            return `
+              <div class="document-row-card">
+                <div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1;">
+                  <span style="width: 36px; height: 36px; border-radius: 8px; background: #F0F7F5; border: 1px solid #B2CFCB; color: #00594E; display: inline-flex; align-items: center; justify-content: center; font-size: 0.74rem; font-weight: 800; flex-shrink: 0;">
+                    ${ext}
+                  </span>
+                  <div style="min-width: 0;">
+                    <h4 style="margin: 0; font-size: 0.90rem; font-weight: 800; color: #111827; line-height: 1.25;">
+                      ${d.titulo}
+                    </h4>
+                    <div style="display: flex; align-items: center; gap: 6px; font-size: 0.70rem; color: #64748B; margin-top: 2px; flex-wrap: wrap;">
+                      <span style="background: #F7F5EE; color: #786832; border: 1px solid #DBD2B0; padding: 1px 5px; border-radius: 3px; font-weight: 700;">Año ${d.anio}</span>
+                      ${d.tema ? `<span style="background: #F1F5F9; color: #475569; border: 1px solid #CBD5E1; padding: 1px 5px; border-radius: 3px; font-weight: 600;">${d.tema}</span>` : ''}
+                      <span>${sizeKb} KB</span>
+                      ${hasText ? `<span style="color: #047857; font-weight: 700; background: #ECFDF5; border: 1px solid #A7F3D0; padding: 1px 5px; border-radius: 3px;">Texto indexado &check;</span>` : `<span style="color: #64748B; font-style: italic;">Sin texto extraíble</span>`}
+                    </div>
+                  </div>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <a href="${d.archivo_url}" target="_blank" rel="noopener noreferrer" style="all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 4px 10px; font-size: 0.74rem; font-weight: 700; border-radius: 6px; background: #F0F7F5; border: 1px solid #00594E; color: #00594E; cursor: pointer;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <span>Ver</span>
+                  </a>
+                  <a href="${d.archivo_url}" download="${d.archivo_nombre || 'documento'}" style="all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 4px 10px; font-size: 0.74rem; font-weight: 700; border-radius: 6px; background: #FFFFFF; border: 1px solid #DCE4E3; color: #334155; cursor: pointer;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <span>Descargar</span>
+                  </a>
+                  <button type="button" class="btn-delete-doc" data-id="${d.id}" data-name="${d.titulo}" title="Eliminar documento" style="all: unset; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 6px; background: #FFFFFF; border: 1px solid #FECACA; color: #DC2626; cursor: pointer;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join('');
+
+          // Eliminar documento
+          documentsList.querySelectorAll('.btn-delete-doc').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+              const id = btn.getAttribute('data-id');
+              const name = btn.getAttribute('data-name');
+              if (!id) return;
+              if (!confirm(`¿Eliminar el documento "${name}"?`)) return;
+
+              const res = await fetch('/api/juridico/eliminar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tipo: 'documento', id }),
+              });
+              const data = await res.json();
+              if (data.success) {
+                window.location.reload();
+              } else {
+                alert('Error al eliminar: ' + (data.error || 'Error'));
+              }
+            });
+          });
+        }
+      }
+    }
+
+    // Renderizar Breadcrumbs
+    function renderBreadcrumbs() {
+      if (!breadcrumbsNav) return;
+
+      const segments = [
+        `<button type="button" class="breadcrumb-item root-link" data-level="root">Asuntos Jurídicos</button>`,
+        `<span class="breadcrumb-sep">&rsaquo;</span>`,
+        `<button type="button" class="breadcrumb-item ${currentFolderId === null ? 'active' : ''}" data-level="cat">${catLabels[currentCategoria] || currentCategoria}</button>`,
+      ];
+
+      if (currentFolderId) {
+        const folderChain = [];
+        let curr = carpetas.find((c) => c.id === currentFolderId);
+        let depth = 0;
+
+        while (curr && depth < 8) {
+          folderChain.unshift(curr);
+          curr = carpetas.find((c) => c.id === curr.parent_id);
+          depth++;
+        }
+
+        folderChain.forEach((f, idx) => {
+          segments.push(`<span class="breadcrumb-sep">&rsaquo;</span>`);
+          const isLast = idx === folderChain.length - 1;
+          segments.push(`
+            <button type="button" class="breadcrumb-item ${isLast ? 'active' : ''}" data-level="folder" data-folder-id="${f.id}">
+              ${f.nombre}
+            </button>
+          `);
+        });
+      }
+
+      breadcrumbsNav.innerHTML = segments.join('');
+
+      breadcrumbsNav.querySelectorAll('.breadcrumb-item').forEach((item) => {
+        item.addEventListener('click', () => {
+          const level = item.getAttribute('data-level');
+          if (level === 'root' || level === 'cat') {
+            currentFolderId = null;
+            renderExplorer();
+          } else if (level === 'folder') {
+            const fId = item.getAttribute('data-folder-id');
+            if (fId) {
+              currentFolderId = fId;
+              renderExplorer();
+            }
+          }
+        });
+      });
+    }
+
+    // Modal: Nueva Subcarpeta
+    const folderModal = document.getElementById('modal-new-folder');
+    const openFolderModalBtn = document.getElementById('btn-open-new-folder-modal');
+    const closeFolderModalBtn = document.getElementById('btn-close-new-folder');
+    const cancelFolderModalBtn = document.getElementById('btn-cancel-new-folder');
+    const folderForm = document.getElementById('form-new-folder');
+    const folderNombreInput = document.getElementById('folder-input-nombre');
+    const folderTemaInput = document.getElementById('folder-input-tema');
+    const folderAnioInput = document.getElementById('folder-input-anio');
+    const folderDescInput = document.getElementById('folder-input-desc');
+    const submitFolderBtn = document.getElementById('btn-submit-new-folder');
+
+    openFolderModalBtn?.addEventListener('click', () => {
+      if (folderForm) folderForm.reset();
+      if (folderModal) folderModal.style.display = 'flex';
+    });
+
+    const closeFolderModal = () => {
+      if (folderModal) folderModal.style.display = 'none';
+    };
+    closeFolderModalBtn?.addEventListener('click', closeFolderModal);
+    cancelFolderModalBtn?.addEventListener('click', closeFolderModal);
+    folderModal?.addEventListener('click', (e) => {
+      if (e.target === folderModal) closeFolderModal();
+    });
+
+    folderForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!folderNombreInput?.value.trim()) return;
+      if (submitFolderBtn) {
+        submitFolderBtn.disabled = true;
+        submitFolderBtn.textContent = 'Creando...';
+      }
+
+      try {
+        const payload = {
+          categoria_raiz: currentCategoria,
+          parent_id: currentFolderId,
+          nombre: folderNombreInput.value.trim(),
+          tema: folderTemaInput?.value.trim() || null,
+          anio: folderAnioInput?.value ? parseInt(folderAnioInput.value, 10) : null,
+          descripcion: folderDescInput?.value.trim() || null,
+        };
+
+        const res = await fetch('/api/juridico/carpetas/crear', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          window.location.reload();
+        } else {
+          alert('Error creando carpeta: ' + (data.error || 'Error'));
+        }
+      } catch (err) {
+        console.error('Error:', err);
+      } finally {
+        if (submitFolderBtn) {
+          submitFolderBtn.disabled = false;
+          submitFolderBtn.textContent = 'Crear Subcarpeta';
+        }
+      }
+    });
+
+    // Modal: Subir Documento
+    const docModal = document.getElementById('modal-upload-doc');
+    const openDocModalBtn = document.getElementById('btn-open-upload-modal');
+    const closeDocModalBtn = document.getElementById('btn-close-upload-doc');
+    const cancelDocModalBtn = document.getElementById('btn-cancel-upload-doc');
+    const docForm = document.getElementById('form-upload-doc');
+    const docFileInput = document.getElementById('doc-file-input');
+    const browseDocFileBtn = document.getElementById('btn-browse-doc-file');
+    const docFileLabel = document.getElementById('doc-file-label');
+    const docTituloInput = document.getElementById('doc-input-titulo');
+    const docAnioInput = document.getElementById('doc-input-anio');
+    const docTemaInput = document.getElementById('doc-input-tema');
+    const docPalabrasInput = document.getElementById('doc-input-palabras');
+    const docDescInput = document.getElementById('doc-input-desc');
+    const submitDocBtn = document.getElementById('btn-submit-upload-doc');
+
+    browseDocFileBtn?.addEventListener('click', () => docFileInput?.click());
+    docFileInput?.addEventListener('change', () => {
+      if (docFileInput.files && docFileInput.files[0] && docFileLabel) {
+        const f = docFileInput.files[0];
+        docFileLabel.textContent = `${f.name} (${(f.size / 1024).toFixed(1)} KB)`;
+        if (docTituloInput && !docTituloInput.value.trim()) {
+          // Autollenar título con el nombre limpio sin extensión
+          const cleanName = f.name.replace(/\.[^/.]+$/, '');
+          docTituloInput.value = cleanName;
+        }
+      }
+    });
+
+    openDocModalBtn?.addEventListener('click', () => {
+      if (docForm) docForm.reset();
+      if (docFileLabel) docFileLabel.textContent = 'Ningún archivo seleccionado *';
+      if (docModal) docModal.style.display = 'flex';
+    });
+
+    const closeDocModal = () => {
+      if (docModal) docModal.style.display = 'none';
+    };
+    closeDocModalBtn?.addEventListener('click', closeDocModal);
+    cancelDocModalBtn?.addEventListener('click', closeDocModal);
+    docModal?.addEventListener('click', (e) => {
+      if (e.target === docModal) closeDocModal();
+    });
+
+    docForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!docFileInput?.files || !docFileInput.files[0]) {
+        alert('Por favor seleccione un archivo para subir.');
+        return;
+      }
+      if (submitDocBtn) {
+        submitDocBtn.disabled = true;
+        submitDocBtn.textContent = 'Subiendo e indexando...';
+      }
+
+      try {
+        const formData = new FormData();
+        formData.append('file', docFileInput.files[0]);
+        formData.append('categoria_raiz', currentCategoria);
+        if (currentFolderId) {
+          formData.append('carpeta_id', currentFolderId);
+        }
+        formData.append('titulo', docTituloInput?.value.trim() || docFileInput.files[0].name);
+        formData.append('anio', docAnioInput?.value || '2026');
+        if (docTemaInput?.value.trim()) formData.append('tema', docTemaInput.value.trim());
+        if (docPalabrasInput?.value.trim()) formData.append('palabras_clave', docPalabrasInput.value.trim());
+        if (docDescInput?.value.trim()) formData.append('descripcion', docDescInput.value.trim());
+
+        const res = await fetch('/api/juridico/documentos/subir', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          window.location.reload();
+        } else {
+          alert('Error al subir: ' + (data.error || 'Error'));
+        }
+      } catch (err) {
+        console.error('Error:', err);
+      } finally {
+        if (submitDocBtn) {
+          submitDocBtn.disabled = false;
+          submitDocBtn.textContent = 'Subir e Indexar';
+        }
+      }
+    });
+
+    // Inicializar vista
+    renderExplorer();
+  </script>
+</AppLayout>

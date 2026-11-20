@@ -96,11 +96,20 @@ function getVigenciaStyle(vig: string) {
   };
 }
 
-const normasView = rawNormas.map((norma: any) => ({
-  ...norma,
-  organStyle: getOrganStyle(norma.organo_code),
-  vigStyle: getVigenciaStyle(norma.vigencia),
-}));
+const normasView = rawNormas.map((norma: any) => {
+  const anioCalculado = norma.anio || norma.year || (norma.fecha ? String(norma.fecha).split('-')[0] : '2026');
+  return {
+    ...norma,
+    year: String(anioCalculado),
+    organo: norma.cuerpo_colegiado || norma.organo,
+    tipo: norma.tipo_acto || norma.tipo,
+    numero: norma.numero_acto || norma.numero,
+    titulo: norma.asunto || norma.titulo,
+    fecha: norma.fecha_expedicion || norma.fecha,
+    organStyle: getOrganStyle(norma.organo_code),
+    vigStyle: getVigenciaStyle(norma.vigencia),
+  };
+});
 ---
 
 <AppLayout title="Cuerpos Colegiados y Normativa" activeNav="normas">
@@ -114,11 +123,15 @@ const normasView = rawNormas.map((norma: any) => ({
         </div>
         <h2 class="normas-hero-title">Sistematización de Actos y Cuerpos Colegiados</h2>
         <p class="normas-hero-subtitle">
-          Repositorio oficial de acuerdos y resoluciones expedidos por el Consejo Superior Universitario, Consejo Académico, Rectoría y Consejo Electoral.
+          Repositorio oficial de acuerdos y resoluciones expedidos por el Consejo Superior Universitario, Consejo Académico y Rectoría.
         </p>
       </div>
 
-      <div class="normas-hero-actions">
+      <div class="normas-hero-actions" style="display: flex; align-items: center; gap: 10px;">
+        <button class="btn-normas-secondary" id="btn-open-excel-modal" type="button" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 10px; background: #F7F5EE; border: 1.5px solid #B5A160; color: #786832; font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: all 0.2s ease;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <span>Importar Excel (.xlsx)</span>
+        </button>
         <button class="btn-normas-primary" id="btn-open-new-norma-modal" type="button">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M12 5v14M5 12h14"/></svg>
           <span>Radicar Nuevo Acto / Norma</span>
@@ -187,20 +200,19 @@ const normasView = rawNormas.map((norma: any) => ({
 
       <article class="normas-kpi-card accent-dorado">
         <div class="normas-kpi-top">
-          <span class="normas-kpi-label">Rectoría y Electoral</span>
+          <span class="normas-kpi-label">Rectoría</span>
           <span class="normas-kpi-icon dorado">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
           </span>
         </div>
-        <div class="normas-kpi-value">{otrosCount}</div>
+        <div class="normas-kpi-value">{recCount}</div>
         <div class="normas-chart-block">
           <div class="normas-chart-meta">
-            <span>Rectoría {recCount} &middot; Electoral {eleCount}</span>
-            <strong style="color: #786832;">{recPct + elePct}%</strong>
+            <span>Resoluciones y Actos Rectorales</span>
+            <strong style="color: #786832;">{recPct}% del compendio</strong>
           </div>
-          <div class="normas-chart-track" style="display: flex;">
-            <div class="normas-chart-fill" style={`width: ${recPct}%; background: #00594E; border-radius: 999px 0 0 999px;`}></div>
-            <div class="normas-chart-fill" style={`width: ${elePct}%; background: #B5A160; border-radius: 0 999px 999px 0;`}></div>
+          <div class="normas-chart-track">
+            <div class="normas-chart-fill" style={`width: ${recPct}%; background: #B5A160;`}></div>
           </div>
         </div>
       </article>
@@ -226,10 +238,18 @@ const normasView = rawNormas.map((norma: any) => ({
           <span>Rectoría</span>
           <span class="tab-count" id="normas-count-rectoria">{recCount}</span>
         </button>
-        <button type="button" class="module-tab-btn" data-org="electoral">
-          <span>Consejo Electoral</span>
-          <span class="tab-count" id="normas-count-electoral">{eleCount}</span>
-        </button>
+      </div>
+
+      <!-- Filtro Histórico por Año (desde 2021 en adelante) -->
+      <div class="normas-year-pills" id="normas-year-tabs" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 14px; margin-bottom: 8px; padding: 4px 2px;">
+        <span style="font-size: 0.74rem; font-weight: 700; color: #64748B; text-transform: uppercase; margin-right: 2px;">Año:</span>
+        <button type="button" class="normas-year-pill active" data-year="all">Todos</button>
+        <button type="button" class="normas-year-pill" data-year="2026">2026</button>
+        <button type="button" class="normas-year-pill" data-year="2025">2025</button>
+        <button type="button" class="normas-year-pill" data-year="2024">2024</button>
+        <button type="button" class="normas-year-pill" data-year="2023">2023</button>
+        <button type="button" class="normas-year-pill" data-year="2022">2022</button>
+        <button type="button" class="normas-year-pill" data-year="2021">2021</button>
       </div>
 
       <!-- Barra de Búsqueda y Vigencia -->
@@ -279,6 +299,7 @@ const normasView = rawNormas.map((norma: any) => ({
                   class="norma-row colegiado-card"
                   data-org={norma.organo_code}
                   data-vigencia={norma.vigStyle.key}
+                  data-year={norma.year}
                 >
                   <td>
                     <span
@@ -325,14 +346,40 @@ const normasView = rawNormas.map((norma: any) => ({
                     </span>
                   </td>
                   <td style="text-align: right;">
-                    <button
-                      type="button"
-                      class="btn-norma-download"
-                      data-norma-label={`${norma.tipo} ${norma.numero}`}
-                    >
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                      <span>PDF</span>
-                    </button>
+                    {norma.archivo_url ? (
+                      <div style="display: inline-flex; align-items: center; justify-content: flex-end; gap: 5px;">
+                        <a
+                          href={norma.archivo_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="btn-norma-download"
+                          title={`Ver documento: ${norma.archivo_nombre || 'PDF'}`}
+                          style="text-decoration: none;"
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                          <span>Ver</span>
+                        </a>
+                        <a
+                          href={norma.archivo_url}
+                          download={norma.archivo_nombre || `${norma.tipo}_${norma.numero}.pdf`}
+                          class="btn-norma-download"
+                          title="Descargar documento"
+                          style="text-decoration: none;"
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                          <span>Descargar</span>
+                        </a>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        class="btn-norma-download"
+                        data-norma-label={`${norma.tipo} ${norma.numero}`}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        <span>PDF</span>
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -375,14 +422,26 @@ const normasView = rawNormas.map((norma: any) => ({
       </div>
       <div class="modal-body">
         <form id="form-new-norma">
-          <div class="form-group">
-            <label class="form-label">Cuerpo Colegiado *</label>
-            <select class="form-select normas-input" id="new-norma-organo" required>
-              <option value="csu">Consejo Superior Universitario (CSU)</option>
-              <option value="ca">Consejo Académico (CA)</option>
-              <option value="rectoria">Rectoría (Resolución Rectoral)</option>
-              <option value="electoral">Consejo Electoral</option>
-            </select>
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Cuerpo Colegiado *</label>
+              <select class="form-select normas-input" id="new-norma-organo" required>
+                <option value="csu">Consejo Superior Universitario (CSU)</option>
+                <option value="ca">Consejo Académico (CA)</option>
+                <option value="rectoria">Rectoría (Resolución Rectoral)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Año del Acto *</label>
+              <select class="form-select normas-input" id="new-norma-year" required>
+                <option value="2026">2026</option>
+                <option value="2025">2025</option>
+                <option value="2024">2024</option>
+                <option value="2023">2023</option>
+                <option value="2022">2022</option>
+                <option value="2021">2021</option>
+              </select>
+            </div>
           </div>
           <div class="form-row-2">
             <div class="form-group">
@@ -395,7 +454,7 @@ const normasView = rawNormas.map((norma: any) => ({
             </div>
           </div>
           <div class="form-group">
-            <label class="form-label">Título Oficial *</label>
+            <label class="form-label">Título Oficial / Asunto *</label>
             <textarea class="form-textarea normas-input" id="new-norma-titulo" rows="2" placeholder="Por el cual se adopta..." required></textarea>
           </div>
           <div class="form-row-2">
@@ -408,6 +467,18 @@ const normasView = rawNormas.map((norma: any) => ({
               <input type="text" class="form-input normas-input" id="new-norma-descriptor" placeholder="Ej: Régimen Profesoral" />
             </div>
           </div>
+          <div class="form-group">
+            <label class="form-label">Documento Soporte Oficial (PDF o DOCX)</label>
+            <div style="border: 1.5px dashed #B2CFCB; border-radius: 10px; padding: 14px; background: #F8FAFB; text-align: center;">
+              <input type="file" id="new-norma-archivo" accept=".pdf,.docx" style="display: none;" />
+              <button type="button" id="btn-browse-norma-archivo" class="btn btn-secondary btn-sm" style="background: #FFFFFF; border: 1.5px solid #00594E; color: #00594E; font-weight: 700; padding: 6px 14px; border-radius: 8px; cursor: pointer;">
+                Seleccionar Documento (PDF / DOCX)
+              </button>
+              <div id="norma-archivo-label" style="font-size: 0.74rem; color: #64748B; margin-top: 6px;">
+                Ningún documento adjunto (opcional)
+              </div>
+            </div>
+          </div>
           <div class="modal-footer" style="padding: 14px 0 0 0; border-top: 1px solid #DCE4E3; margin-top: 6px;">
             <button type="button" class="btn btn-ghost" id="btn-cancel-norma">Cancelar</button>
             <button type="submit" class="btn-normas-primary" id="btn-submit-norma">Guardar Acto</button>
@@ -417,7 +488,71 @@ const normasView = rawNormas.map((norma: any) => ({
     </div>
   </div>
 
+  <!-- Modal para Importar Excel (.XLSX) -->
+  <div class="modal-backdrop" id="excel-import-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(2px);">
+    <div class="modal-card normas-modal-card" style="max-width: 580px; background: #ffffff; border-radius: 16px; overflow: hidden; border-top: 4px solid #B5A160;">
+      <div class="modal-header" style="border-bottom: 1px solid #DCE4E3; background: #F7F5EE; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 34px; height: 34px; border-radius: 9px; background: #B5A160; color: #003830; display: flex; align-items: center; justify-content: center;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+          </div>
+          <h3 style="margin: 0; font-size: 1.02rem; font-weight: 800; color: #111827;">Importar Normativa desde Excel (.XLSX)</h3>
+        </div>
+        <button type="button" class="btn-close-modal" id="btn-close-excel-modal" aria-label="Cerrar modal" style="background: none; border: none; cursor: pointer; color: #64748B;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 22px;">
+        <div id="excel-dropzone" style="border: 2px dashed #B5A160; border-radius: 12px; padding: 30px 20px; text-align: center; background: #FDFCF9; transition: all 0.2s ease;">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#786832" stroke-width="1.8" style="margin: 0 auto 10px auto;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+          <div style="font-weight: 700; font-size: 0.92rem; color: #111827;">Arrastre su archivo de Excel o CSV aquí</div>
+          <div style="font-size: 0.76rem; color: #64748B; margin-top: 4px;">Soporta archivos .xlsx y .csv (CSU, CA y Rectoría)</div>
+          <input type="file" id="excel-file-input" accept=".xlsx,.xls,.csv" style="display: none;" />
+          <button type="button" id="btn-browse-excel" class="btn btn-secondary btn-sm" style="margin-top: 14px; background: #FFFFFF; border: 1.5px solid #B5A160; color: #786832; font-weight: 700; border-radius: 8px; padding: 7px 16px; cursor: pointer;">
+            Examinar Hoja de Cálculo
+          </button>
+          <div id="excel-file-name" style="font-size: 0.78rem; font-weight: 700; color: #00594E; margin-top: 10px; display: none;"></div>
+        </div>
+        <div style="margin-top: 16px; background: #F2F7F6; border: 1px solid #B2CFCB; border-radius: 8px; padding: 12px 14px; font-size: 0.74rem; color: #00443B;">
+          <strong>Estructura esperada:</strong> Columnas de <em>Año, Cuerpo Colegiado, Tipo de Acto, Número, Fecha de Expedición, Asunto / Título, Descriptor Temático</em>.
+        </div>
+        <div class="modal-footer" style="padding: 16px 0 0 0; border-top: 1px solid #DCE4E3; margin-top: 16px; display: flex; justify-content: flex-end; gap: 10px;">
+          <button type="button" class="btn btn-ghost" id="btn-cancel-excel">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btn-submit-excel" style="background: #00594E; border-color: #00594E; color: #FFFFFF; font-weight: 700; border-radius: 8px; padding: 8px 18px; cursor: pointer;">Preparar Mapeo de Columnas</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <style>
+    .normas-year-pill {
+      all: unset;
+      box-sizing: border-box;
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 13px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: #64748B;
+      background: #FFFFFF;
+      border: 1px solid #DCE4E3;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.16s ease;
+      user-select: none;
+    }
+    .normas-year-pill:hover {
+      background: #F2F7F6;
+      color: #00594E;
+      border-color: #00594E;
+    }
+    .normas-year-pill.active {
+      background: #00594E;
+      color: #FFFFFF;
+      border-color: #00594E;
+      box-shadow: 0 2px 6px rgba(0, 89, 78, 0.25);
+    }
+
     .normas-bento-shell {
       display: flex;
       flex-direction: column;

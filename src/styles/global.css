@@ -7372,6 +7372,57 @@ select.pro-select:focus,
   box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.14) !important;
 }
 
+/* ==========================================================================
+   SUGERENCIAS RÁPIDAS EN NOMBRE DE SUBCARPETA (SUBIR PETICIÓN / EXPEDIENTES)
+   ========================================================================== */
+.subcarpeta-sugerencias {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin-top: 8px !important;
+}
+
+.sugerencias-label {
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  color: #64748B !important;
+  margin-right: 4px !important;
+}
+
+button.sugerencia-chip {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 11px;
+  font-family: inherit;
+  font-size: 0.73rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: #00594E;
+  background-color: #F0F7F5;
+  border: 1px solid rgba(0, 89, 78, 0.25);
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+button.sugerencia-chip:hover {
+  background-color: #00594E;
+  color: #FFFFFF;
+  border-color: #00594E;
+}
+
+button.sugerencia-chip.is-selected {
+  background-color: #00594E;
+  color: #FFFFFF;
+  border-color: #00594E;
+  box-shadow: 0 2px 6px rgba(0, 89, 78, 0.25);
+}
+
+
 
 
 

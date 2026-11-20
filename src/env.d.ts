@@ -10,3 +10,8 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+declare module 'mammoth' {
+  const mammoth: any;
+  export default mammoth;
+}

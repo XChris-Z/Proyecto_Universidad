@@ -804,23 +804,36 @@ async function ensureFolderShareAndGetUrl(drive: drive_v3.Drive, folderId: strin
   return webViewLink;
 }
 
-async function persistDriveUrlInDb(peticionId: string, webViewLink: string): Promise<void> {
+async function persistDriveUrlInDb(
+  peticionId: string,
+  webViewLink: string,
+  folderId?: string | null
+): Promise<void> {
   try {
     const client = (supabaseAdmin || supabase) as any;
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(peticionId);
+    const driveFolderUrl = webViewLink || (folderId ? `https://drive.google.com/drive/folders/${folderId}` : null);
+    const updatePayload: Record<string, any> = {
+      respuesta_drive_url: webViewLink,
+      drive_folder_url: driveFolderUrl,
+    };
+    if (folderId) {
+      updatePayload.drive_folder_id = folderId;
+    }
+
     if (isUuid) {
       await client
         .from('peticiones')
-        .update({ respuesta_drive_url: webViewLink })
+        .update(updatePayload)
         .eq('id', peticionId);
     } else {
       await client
         .from('peticiones')
-        .update({ respuesta_drive_url: webViewLink })
+        .update(updatePayload)
         .eq('numero_radicado', peticionId);
     }
   } catch (err: any) {
-    console.warn('[Google Drive] Aviso guardando respuesta_drive_url en BD:', err?.message);
+    console.warn('[Google Drive] Aviso guardando drive_folder_url / drive_folder_id en BD:', err?.message);
   }
 }
 
@@ -890,7 +903,7 @@ export async function inicializarEstructuraExpedienteDrive(peticionId: string): 
   await obtenerOCrearCarpetaDrive(drive, DRIVE_RESPUESTA_FINAL_FOLDER, mainFolder.id).catch(() => null);
 
   const webViewLink = await ensureFolderShareAndGetUrl(drive, mainFolder.id);
-  await persistDriveUrlInDb(peticionId, webViewLink);
+  await persistDriveUrlInDb(peticionId, webViewLink, mainFolder.id);
 
   return { synced: true, folderId: mainFolder.id, webViewLink };
 }
@@ -983,7 +996,7 @@ export async function sincronizarAporteAprobadoEnDrive(
   );
 
   const driveUrl = await ensureFolderShareAndGetUrl(drive, mainFolder.id);
-  await persistDriveUrlInDb(peticionId, driveUrl);
+  await persistDriveUrlInDb(peticionId, driveUrl, mainFolder.id);
 
   return { synced: true, driveUrl, fileName: driveFileName };
 }
@@ -1346,7 +1359,7 @@ export async function sincronizarRespuestaFinalEnDrive(
   );
 
   const driveUrl = await ensureFolderShareAndGetUrl(drive, mainFolder.id);
-  await persistDriveUrlInDb(peticionId, driveUrl);
+  await persistDriveUrlInDb(peticionId, driveUrl, mainFolder.id);
 
   return { synced: true, driveUrl };
 }
@@ -1518,7 +1531,7 @@ export async function respaldarExpedienteLimpioEnDrive(peticionId: string): Prom
   }
 
   const webViewLink = await ensureFolderShareAndGetUrl(drive, mainFolder.id);
-  await persistDriveUrlInDb(peticionId, webViewLink);
+  await persistDriveUrlInDb(peticionId, webViewLink, mainFolder.id);
 
   return {
     folderId: mainFolder.id,

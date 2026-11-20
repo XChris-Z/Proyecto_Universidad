@@ -1,0 +1,967 @@
+---
+// src/pages/miembros-consejo.astro
+// Módulo de Gestión de Miembros de Consejo (CSU, CA, Rectoría)
+import AppLayout from '@layouts/AppLayout.astro';
+import { supabase } from '@lib/supabase';
+
+// Consultar miembros reales registrados en Supabase
+const { data: dbMiembros, error: miembrosErr } = await (supabase
+  .from('miembros_consejo' as any)
+  .select('*')
+  .order('created_at', { ascending: false }) as any);
+
+const rawMiembros = Array.isArray(dbMiembros) ? dbMiembros : [];
+const now = new Date();
+const todayMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+function calculateStatus(m: any) {
+  const isInactive = String(m.estado || '').toLowerCase() === 'inactivo';
+  if (isInactive) {
+    return {
+      type: 'inactivo',
+      diasRestantes: 0,
+      badgeText: 'Inactivo / Reemplazado',
+      cardClass: 'card-inactivo',
+      badgeClass: 'badge-inactivo',
+    };
+  }
+
+  if (!m.fecha_fin) {
+    return {
+      type: 'activo',
+      diasRestantes: 999,
+      badgeText: 'Activo · Vigente',
+      cardClass: 'card-activo',
+      badgeClass: 'badge-activo',
+    };
+  }
+
+  const [y, mth, d] = m.fecha_fin.split('-').map(Number);
+  const finMs = new Date(y, (mth || 1) - 1, d || 1).getTime();
+  const diasRestantes = Math.ceil((finMs - todayMs) / (1000 * 60 * 60 * 24));
+
+  if (diasRestantes <= 0) {
+    const diasVencido = Math.abs(diasRestantes);
+    return {
+      type: 'vencido',
+      diasRestantes,
+      badgeText: diasVencido === 0 ? 'VENCE HOY' : `VENCIDO (hace ${diasVencido} día${diasVencido === 1 ? '' : 's'})`,
+      cardClass: 'card-vencido',
+      badgeClass: 'badge-vencido',
+    };
+  }
+
+  if (diasRestantes <= 30) {
+    return {
+      type: 'proximo',
+      diasRestantes,
+      badgeText: `PRÓXIMO A VENCER (faltan ${diasRestantes} día${diasRestantes === 1 ? '' : 's'})`,
+      cardClass: 'card-proximo',
+      badgeClass: 'badge-proximo',
+    };
+  }
+
+  return {
+    type: 'activo',
+    diasRestantes,
+    badgeText: 'Activo · Vigente',
+    cardClass: 'card-activo',
+    badgeClass: 'badge-activo',
+  };
+}
+
+function formatDate(dateStr?: string | null) {
+  if (!dateStr) return 'No definida';
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return dateStr;
+}
+
+function getInitials(name: string) {
+  if (!name) return 'MC';
+  const chunks = name.trim().split(/\s+/);
+  if (chunks.length === 1) return chunks[0].slice(0, 2).toUpperCase();
+  return (chunks[0][0] + chunks[1][0]).toUpperCase();
+}
+
+function getColegiadoCode(nombre: string) {
+  const lower = (nombre || '').toLowerCase();
+  if (lower.includes('superior') || lower.includes('csu')) return 'csu';
+  if (lower.includes('académico') || lower.includes('academico') || lower.includes('ca')) return 'ca';
+  if (lower.includes('rector')) return 'rectoria';
+  return 'otro';
+}
+
+const miembrosView = rawMiembros.map((m: any) => {
+  const statusInfo = calculateStatus(m);
+  return {
+    ...m,
+    statusInfo,
+    colegiadoCode: getColegiadoCode(m.cuerpo_colegiado),
+    initials: getInitials(m.nombre_completo),
+    fechaInicioFmt: formatDate(m.fecha_inicio),
+    fechaFinFmt: formatDate(m.fecha_fin),
+  };
+});
+
+const total = miembrosView.length;
+const activosCount = miembrosView.filter((m) => m.statusInfo.type === 'activo').length;
+const proximosCount = miembrosView.filter((m) => m.statusInfo.type === 'proximo').length;
+const vencidosCount = miembrosView.filter((m) => m.statusInfo.type === 'vencido').length;
+const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactivo').length;
+---
+
+<AppLayout title="Miembros de Consejo — Cuerpos Colegiados" activeNav="miembros-consejo">
+  <section class="module-board-card miembros-main-card">
+    
+    <!-- Cabecera Institucional Bento -->
+    <header class="miembros-header">
+      <div style="min-width: 0; flex: 1;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <h1 style="font-size: 1.55rem; font-weight: 800; color: #111827; margin: 0; letter-spacing: -0.01em;">
+            Miembros de Cuerpos Colegiados
+          </h1>
+          <span style="font-size: 0.72rem; font-weight: 800; background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; padding: 3px 10px; border-radius: 999px;">
+            Vigencia y Actas Oficiales
+          </span>
+        </div>
+        <p style="font-size: 0.86rem; color: #52606D; margin: 6px 0 0 0;">
+          Gestión de integrantes del Consejo Superior Universitario (CSU), Consejo Académico y Rectoría, control de periodos estatutarios y alertas automáticas de caducidad.
+        </p>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <button class="btn btn-primary" id="btn-open-member-modal" type="button" style="background: #00594E; border: 1.5px solid #00594E; color: #ffffff; font-weight: 800; font-size: 0.84rem; border-radius: 10px; padding: 10px 18px; box-shadow: 0 2px 8px rgba(0, 89, 78, 0.25); cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M12 5v14M5 12h14"/></svg>
+          <span>+ Registrar Miembro</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Fila de KPIs de Semáforo de Miembros -->
+    <div class="miembros-kpi-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-top: 18px;">
+      <div class="kpi-mini-card" style="background: #FFFFFF; border: 1px solid #DCE4E3; border-radius: 12px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;">
+        <div>
+          <span style="font-size: 0.72rem; font-weight: 700; color: #64748B; text-transform: uppercase;">Total Registrados</span>
+          <div style="font-size: 1.45rem; font-weight: 800; color: #111827;">{total}</div>
+        </div>
+        <div style="width: 38px; height: 38px; border-radius: 10px; background: #F8FAFC; color: #00594E; display: flex; align-items: center; justify-content: center;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+        </div>
+      </div>
+
+      <div class="kpi-mini-card" style="background: #FFFFFF; border: 1px solid #B2CFCB; border-radius: 12px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;">
+        <div>
+          <span style="font-size: 0.72rem; font-weight: 700; color: #00594E; text-transform: uppercase;">Activos · Vigentes</span>
+          <div style="font-size: 1.45rem; font-weight: 800; color: #00594E;">{activosCount}</div>
+        </div>
+        <div style="width: 38px; height: 38px; border-radius: 10px; background: #F0F7F5; color: #00594E; display: flex; align-items: center; justify-content: center;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </div>
+      </div>
+
+      <div class="kpi-mini-card" style="background: #FFFFFF; border: 1px solid #FCA5A5; border-radius: 12px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;">
+        <div>
+          <span style="font-size: 0.72rem; font-weight: 700; color: #EF4444; text-transform: uppercase;">Próximos a Vencer (&le; 30d)</span>
+          <div style="font-size: 1.45rem; font-weight: 800; color: #DC2626;">{proximosCount}</div>
+        </div>
+        <div style="width: 38px; height: 38px; border-radius: 10px; background: #FFF5F5; color: #EF4444; display: flex; align-items: center; justify-content: center;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+      </div>
+
+      <div class="kpi-mini-card" style="background: #FFFFFF; border: 1px solid #DC2626; border-radius: 12px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;">
+        <div>
+          <span style="font-size: 0.72rem; font-weight: 700; color: #DC2626; text-transform: uppercase;">Periodo Vencido</span>
+          <div style="font-size: 1.45rem; font-weight: 800; color: #DC2626;">{vencidosCount}</div>
+        </div>
+        <div style="width: 38px; height: 38px; border-radius: 10px; background: #FEF2F2; color: #DC2626; display: flex; align-items: center; justify-content: center;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pestañas y Filtros -->
+    <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 12px;">
+      <!-- Pestañas por Cuerpo Colegiado -->
+      <div class="module-tabs-container module-tabs" id="colegiado-filter-tabs" role="tablist">
+        <button type="button" class="module-tab-btn active" data-col="all">
+          <span>Todos los Consejos</span>
+          <span class="tab-count">{total}</span>
+        </button>
+        <button type="button" class="module-tab-btn" data-col="csu">
+          <span>Consejo Superior (CSU)</span>
+        </button>
+        <button type="button" class="module-tab-btn" data-col="ca">
+          <span>Consejo Académico (CA)</span>
+        </button>
+        <button type="button" class="module-tab-btn" data-col="rectoria">
+          <span>Rectoría</span>
+        </button>
+      </div>
+
+      <!-- Barra de Filtros secundarios y Búsqueda -->
+      <div class="filter-bar" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+        <div style="position: relative; flex: 1; min-width: 260px;">
+          <input
+            type="text"
+            id="member-search-input"
+            class="form-input"
+            placeholder="Buscar por nombre, cargo, representación o correo..."
+            style="padding-left: 38px; border-radius: 10px; border: 1.5px solid #DCE4E3; font-size: 0.85rem; height: 40px; width: 100%; box-sizing: border-box; background: #FFFFFF;"
+          />
+          <div style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #64748B; display: flex; align-items: center; pointer-events: none;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <label style="font-size: 0.74rem; font-weight: 700; color: #64748B; text-transform: uppercase;">Estado:</label>
+          <select id="member-status-select" class="form-input" style="height: 40px; border-radius: 10px; font-size: 0.82rem; font-weight: 600; padding: 4px 12px; border: 1.5px solid #DCE4E3; background: #FFFFFF;">
+            <option value="all">Todos los Estados</option>
+            <option value="activo">Solo Activos (Vigentes)</option>
+            <option value="proximo">Próximos a Vencer (&le; 30d)</option>
+            <option value="vencido">Periodo Vencido</option>
+            <option value="inactivo">Inactivos / Reemplazados</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grid de Tarjetas de Miembros -->
+    <div id="members-grid-container" class="members-grid" style="margin-top: 18px; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); gap: 16px;">
+      {miembrosView.length > 0 ? (
+        miembrosView.map((m: any) => (
+          <article
+            class={`member-card ${m.statusInfo.cardClass}`}
+            data-col={m.colegiadoCode}
+            data-status={m.statusInfo.type}
+            data-id={m.id}
+          >
+            <!-- Cabecera de la tarjeta con Foto/Avatar y Badge de Estado -->
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                {m.foto_url ? (
+                  <img
+                    src={m.foto_url}
+                    alt={m.nombre_completo}
+                    style="width: 56px; height: 56px; border-radius: 999px; object-fit: cover; border: 2px solid #00594E; flex-shrink: 0;"
+                  />
+                ) : (
+                  <div style="width: 56px; height: 56px; border-radius: 999px; background: #F0F7F5; border: 2px solid #00594E; color: #00594E; font-size: 1.15rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    {m.initials}
+                  </div>
+                )}
+                <div style="min-width: 0;">
+                  <h3 style="margin: 0; font-size: 0.98rem; font-weight: 800; color: #111827; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    {m.nombre_completo}
+                  </h3>
+                  <div style="font-size: 0.78rem; font-weight: 700; color: #786832; margin-top: 2px;">
+                    {m.cargo_calidad}
+                  </div>
+                  <div style="font-size: 0.71rem; color: #64748B; margin-top: 1px;">
+                    {m.cuerpo_colegiado}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Badge Dinámico con Semáforo Estricto -->
+              <span class={`status-badge ${m.statusInfo.badgeClass}`}>
+                {m.statusInfo.type === 'proximo' && <span class="pulsing-dot"></span>}
+                <span>{m.statusInfo.badgeText}</span>
+              </span>
+            </div>
+
+            <!-- Período de Vigencia -->
+            <div style="margin-top: 14px; background: rgba(0, 89, 78, 0.04); border: 1px solid rgba(0, 89, 78, 0.12); border-radius: 8px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; font-size: 0.76rem;">
+              <div style="display: flex; align-items: center; gap: 6px; color: #00443B;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <span><strong>Periodo:</strong> {m.fechaInicioFmt} &mdash; {m.fechaFinFmt}</span>
+              </div>
+            </div>
+
+            {m.correo && (
+              <div style="margin-top: 6px; font-size: 0.74rem; color: #64748B; display: flex; align-items: center; gap: 5px;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                <span>{m.correo}</span>
+              </div>
+            )}
+
+            <!-- Soportes / Actas de Designación y Cambio -->
+            <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 6px;">
+              {m.acta_inicio_url && (
+                <div style="display: flex; align-items: center; justify-content: space-between; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 5px 10px; font-size: 0.72rem;">
+                  <span style="color: #00594E; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    Acta de Designación / Inicio
+                  </span>
+                  <a href={m.acta_inicio_url} target="_blank" rel="noopener noreferrer" style="color: #00594E; font-weight: 800; text-decoration: none;">Ver Documento &nearr;</a>
+                </div>
+              )}
+
+              {m.acta_cambio_url && (
+                <div style="display: flex; flex-direction: column; gap: 4px; background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 6px; padding: 6px 10px; font-size: 0.72rem;">
+                  <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <span style="color: #92400E; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                      Soporte de Reemplazo / Retiro
+                    </span>
+                    <a href={m.acta_cambio_url} target="_blank" rel="noopener noreferrer" style="color: #92400E; font-weight: 800; text-decoration: none;">Ver Soporte &nearr;</a>
+                  </div>
+                  {m.razon_cambio && (
+                    <div style="font-size: 0.70rem; color: #78350F; font-style: italic;">
+                      Motivo: {m.razon_cambio}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <!-- Acciones de la Tarjeta -->
+            <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(0, 0, 0, 0.08); display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
+              <button
+                type="button"
+                class="btn-edit-member"
+                data-member={JSON.stringify(m)}
+                style="all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 4px 10px; font-size: 0.74rem; font-weight: 600; border-radius: 6px; background: #FFFFFF; border: 1px solid #DCE4E3; color: #334155; cursor: pointer; transition: all 0.16s ease;"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                <span>Editar</span>
+              </button>
+
+              <button
+                type="button"
+                class="btn-change-member"
+                data-id={m.id}
+                data-name={m.nombre_completo}
+                style="all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 4px 10px; font-size: 0.74rem; font-weight: 600; border-radius: 6px; background: #F7F5EE; border: 1px solid #B5A160; color: #786832; cursor: pointer; transition: all 0.16s ease;"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                <span>Reemplazo / Cambio</span>
+              </button>
+
+              <button
+                type="button"
+                class="btn-delete-member"
+                data-id={m.id}
+                data-name={m.nombre_completo}
+                title="Eliminar registro de miembro"
+                style="all: unset; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 6px; background: #FFFFFF; border: 1px solid #FECACA; color: #DC2626; cursor: pointer; transition: all 0.16s ease;"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </button>
+            </div>
+          </article>
+        ))
+      ) : (
+        <div class="members-empty-state" style="grid-column: 1 / -1; padding: 40px 20px; text-align: center; background: #F8FAFC; border: 1px dashed #CBD5E1; border-radius: 14px;">
+          <div style="font-weight: 700; font-size: 1.05rem; color: #111827;">No hay miembros registrados todavía</div>
+          <p style="font-size: 0.82rem; color: #64748B; margin-top: 4px;">Utilice el botón superior para registrar el primer integrante oficial de un cuerpo colegiado.</p>
+        </div>
+      )}
+    </div>
+
+    <!-- Mensaje de sin resultados por filtro -->
+    <div id="members-filter-empty" style="display: none; padding: 40px 20px; text-align: center; background: #F8FAFC; border: 1px dashed #CBD5E1; border-radius: 14px; margin-top: 18px;">
+      <div style="font-weight: 700; font-size: 1.02rem; color: #111827;">Sin coincidencias para los filtros seleccionados</div>
+      <p style="font-size: 0.82rem; color: #64748B; margin-top: 4px;">Ajuste el consejo colegiado, el estado o la búsqueda de texto.</p>
+    </div>
+  </section>
+
+  <!-- MODAL: Registrar / Editar Miembro -->
+  <div class="modal-backdrop" id="member-crud-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(2px);">
+    <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 620px; border-radius: 16px; box-shadow: 0 20px 45px rgba(0,0,0,0.2); overflow: hidden; border-top: 4px solid #00594E;">
+      <div class="modal-header" style="background: #F2F7F6; border-bottom: 1.5px solid #DCE4E3; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
+        <h3 id="member-modal-title" style="font-size: 1.12rem; font-weight: 800; color: #00594E; margin: 0;">Registrar Miembro de Consejo</h3>
+        <button type="button" class="btn-close-modal" id="btn-close-member-modal" style="background: none; border: none; cursor: pointer; color: #64748B;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 22px 24px; max-height: calc(85vh - 120px); overflow-y: auto;">
+        <form id="form-member-crud">
+          <input type="hidden" id="member-form-id" />
+
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" style="font-size: 0.76rem; font-weight: 700; color: #0F172A; text-transform: uppercase; margin-bottom: 5px; display: block;">Cuerpo Colegiado *</label>
+            <select id="member-form-colegiado" class="form-input" required style="width: 100%; height: 38px; border-radius: 8px; border: 1.5px solid #DCE4E3; font-size: 0.85rem; font-weight: 600;">
+              <option value="Consejo Superior Universitario (CSU)">Consejo Superior Universitario (CSU)</option>
+              <option value="Consejo Académico (CA)">Consejo Académico (CA)</option>
+              <option value="Rectoría">Rectoría</option>
+            </select>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+            <div>
+              <label class="form-label" style="font-size: 0.76rem; font-weight: 700; color: #0F172A; text-transform: uppercase; margin-bottom: 5px; display: block;">Nombre Completo *</label>
+              <input type="text" id="member-form-nombre" class="form-input" placeholder="Ej: Dr. Juan Carlos Pérez" required style="width: 100%; height: 38px; border-radius: 8px; border: 1.5px solid #DCE4E3; font-size: 0.85rem;" />
+            </div>
+            <div>
+              <label class="form-label" style="font-size: 0.76rem; font-weight: 700; color: #0F172A; text-transform: uppercase; margin-bottom: 5px; display: block;">Cargo / Calidad de Representación *</label>
+              <input type="text" id="member-form-cargo" class="form-input" placeholder="Ej: Representante de los Docentes" required style="width: 100%; height: 38px; border-radius: 8px; border: 1.5px solid #DCE4E3; font-size: 0.85rem;" />
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" style="font-size: 0.76rem; font-weight: 700; color: #0F172A; text-transform: uppercase; margin-bottom: 5px; display: block;">Correo Electrónico Institucional</label>
+            <input type="email" id="member-form-correo" class="form-input" placeholder="ejemplo@unitropico.edu.co" style="width: 100%; height: 38px; border-radius: 8px; border: 1.5px solid #DCE4E3; font-size: 0.85rem;" />
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+            <div>
+              <label class="form-label" style="font-size: 0.76rem; font-weight: 700; color: #0F172A; text-transform: uppercase; margin-bottom: 5px; display: block;">Fecha de Inicio de Periodo *</label>
+              <input type="date" id="member-form-inicio" class="form-input" required style="width: 100%; height: 38px; border-radius: 8px; border: 1.5px solid #DCE4E3; font-size: 0.85rem;" />
+            </div>
+            <div>
+              <label class="form-label" style="font-size: 0.76rem; font-weight: 700; color: #0F172A; text-transform: uppercase; margin-bottom: 5px; display: block;">Fecha de Caducidad / Fin *</label>
+              <input type="date" id="member-form-fin" class="form-input" required style="width: 100%; height: 38px; border-radius: 8px; border: 1.5px solid #DCE4E3; font-size: 0.85rem;" />
+            </div>
+          </div>
+
+          <!-- Carga de Archivos a Supabase Storage -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+            <div style="background: #F8FAFC; border: 1.5px dashed #CBD5E1; border-radius: 8px; padding: 12px; text-align: center;">
+              <label style="font-size: 0.72rem; font-weight: 700; color: #475569; display: block; margin-bottom: 6px;">Foto del Miembro (Opcional)</label>
+              <input type="file" id="member-form-foto" accept="image/*" style="display: none;" />
+              <button type="button" id="btn-browse-photo" class="btn btn-secondary btn-sm" style="font-size: 0.72rem; padding: 4px 10px; border-radius: 6px; cursor: pointer;">Seleccionar Foto</button>
+              <div id="member-photo-label" style="font-size: 0.68rem; color: #64748B; margin-top: 4px;">Ninguna imagen</div>
+            </div>
+
+            <div style="background: #F8FAFC; border: 1.5px dashed #CBD5E1; border-radius: 8px; padding: 12px; text-align: center;">
+              <label style="font-size: 0.72rem; font-weight: 700; color: #475569; display: block; margin-bottom: 6px;">Acta de Designación / Posesión</label>
+              <input type="file" id="member-form-acta" accept=".pdf,.docx" style="display: none;" />
+              <button type="button" id="btn-browse-acta" class="btn btn-secondary btn-sm" style="font-size: 0.72rem; padding: 4px 10px; border-radius: 6px; cursor: pointer;">Seleccionar Acta</button>
+              <div id="member-acta-label" style="font-size: 0.68rem; color: #64748B; margin-top: 4px;">Ningún documento</div>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 10px; padding-top: 14px; border-top: 1px solid #DCE4E3;">
+            <button type="button" class="btn btn-ghost" id="btn-cancel-member-modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary" id="btn-save-member" style="background: #00594E; border-color: #00594E; color: #ffffff; font-weight: 700;">Guardar Miembro</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Registrar Cambio / Reemplazo -->
+  <div class="modal-backdrop" id="member-change-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(2px);">
+    <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 540px; border-radius: 16px; box-shadow: 0 20px 45px rgba(0,0,0,0.2); overflow: hidden; border-top: 4px solid #B5A160;">
+      <div class="modal-header" style="background: #F7F5EE; border-bottom: 1.5px solid #DBD2B0; padding: 16px 22px; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-size: 1.08rem; font-weight: 800; color: #786832; margin: 0;">Registrar Cambio o Reemplazo</h3>
+        <button type="button" class="btn-close-modal" id="btn-close-change-modal" style="background: none; border: none; cursor: pointer; color: #64748B;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 22px;">
+        <form id="form-member-change">
+          <input type="hidden" id="change-member-id" />
+          <div style="font-size: 0.84rem; color: #1E293B; margin-bottom: 14px;">
+            Miembro a reemplazar/retirar: <strong id="change-member-name"></strong>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" style="font-size: 0.76rem; font-weight: 700; color: #0F172A; text-transform: uppercase; margin-bottom: 5px; display: block;">Motivo o Razón del Cambio *</label>
+            <textarea id="change-form-razon" class="form-input" rows="3" placeholder="Ej: Renuncia voluntaria, culminación estatutaria, designación de nuevo titular..." required style="width: 100%; border-radius: 8px; border: 1.5px solid #DCE4E3; font-size: 0.85rem; padding: 8px;"></textarea>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label" style="font-size: 0.76rem; font-weight: 700; color: #0F172A; text-transform: uppercase; margin-bottom: 5px; display: block;">Acta Soporte de Cambio / Nombramiento (PDF o DOCX)</label>
+            <div style="border: 1.5px dashed #B5A160; border-radius: 8px; padding: 14px; text-align: center; background: #FDFCF9;">
+              <input type="file" id="change-form-acta" accept=".pdf,.docx" style="display: none;" />
+              <button type="button" id="btn-browse-change-acta" class="btn btn-secondary btn-sm" style="font-size: 0.76rem; padding: 5px 12px; cursor: pointer;">Seleccionar Documento Soporte</button>
+              <div id="change-acta-label" style="font-size: 0.72rem; color: #64748B; margin-top: 6px;">Ningún archivo seleccionado</div>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 10px; padding-top: 14px; border-top: 1px solid #DCE4E3;">
+            <button type="button" class="btn btn-ghost" id="btn-cancel-change-modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary" id="btn-save-change" style="background: #B5A160; border-color: #B5A160; color: #003830; font-weight: 700;">Confirmar Cambio</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .miembros-main-card {
+      padding: 24px;
+    }
+
+    .miembros-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid #EEF2F5;
+    }
+
+    /* Tarjetas de Miembro con Estados de Semáforo */
+    .member-card {
+      border-radius: 14px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Estado: Activo / Vigente (> 30 días) */
+    .member-card.card-activo {
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    }
+    .member-card.card-activo:hover {
+      border-color: #00594E;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(0, 89, 78, 0.08);
+    }
+
+    /* Estado: Próximo a vencer (1..30 días) */
+    .member-card.card-proximo {
+      background: #FFF5F5 !important;
+      border: 1.5px solid #EF4444 !important;
+      box-shadow: 0 6px 14px rgba(239, 68, 68, 0.10) !important;
+    }
+    .member-card.card-proximo:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(239, 68, 68, 0.16) !important;
+    }
+
+    /* Estado: Vencido (<= 0 días) */
+    .member-card.card-vencido {
+      background: #FEF2F2 !important;
+      border: 2px solid #DC2626 !important;
+      box-shadow: 0 6px 16px rgba(220, 38, 38, 0.14) !important;
+    }
+    .member-card.card-vencido:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 22px rgba(220, 38, 38, 0.22) !important;
+    }
+
+    /* Estado: Inactivo / Reemplazado */
+    .member-card.card-inactivo {
+      background: #F8FAFC !important;
+      border: 1px solid #CBD5E1 !important;
+      opacity: 0.85;
+    }
+
+    /* Badges de Estado */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .badge-activo {
+      background: #ECFDF5;
+      color: #047857;
+      border: 1px solid #A7F3D0;
+    }
+
+    .badge-proximo {
+      background: #FEE2E2;
+      color: #B91C1C;
+      border: 1px solid #FCA5A5;
+    }
+
+    .badge-vencido {
+      background: #DC2626;
+      color: #FFFFFF;
+      border: 1px solid #B91C1C;
+      font-weight: 900;
+    }
+
+    .badge-inactivo {
+      background: #F1F5F9;
+      color: #475569;
+      border: 1px solid #CBD5E1;
+    }
+
+    .pulsing-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #DC2626;
+      display: inline-block;
+      animation: pulseDot 1.4s infinite;
+    }
+
+    @keyframes pulseDot {
+      0% { transform: scale(0.9); opacity: 0.7; }
+      50% { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(0.9); opacity: 0.7; }
+    }
+  </style>
+
+  <script>
+    import { supabase } from '@lib/supabase';
+    import { logSystemActivity } from '@lib/audit';
+
+    let currentColegiado = 'all';
+    let currentStatus = 'all';
+
+    const colTabs = document.querySelectorAll('#colegiado-filter-tabs .module-tab-btn');
+    const statusSelect = document.getElementById('member-status-select') as HTMLSelectElement | null;
+    const searchInput = document.getElementById('member-search-input') as HTMLInputElement | null;
+    const cards = document.querySelectorAll('.member-card') as NodeListOf<HTMLElement>;
+    const emptyMsg = document.getElementById('members-filter-empty');
+
+    function filterMembers() {
+      const q = (searchInput?.value || '').toLowerCase().trim();
+      let visible = 0;
+
+      cards.forEach((card) => {
+        const col = card.getAttribute('data-col') || '';
+        const st = card.getAttribute('data-status') || '';
+        const text = card.textContent?.toLowerCase() || '';
+
+        const matchCol = currentColegiado === 'all' || col === currentColegiado;
+        const matchSt = currentStatus === 'all' || st === currentStatus;
+        const matchQ = !q || text.includes(q);
+
+        const show = matchCol && matchSt && matchQ;
+        card.style.display = show ? 'flex' : 'none';
+        if (show) visible++;
+      });
+
+      if (emptyMsg) {
+        emptyMsg.style.display = visible === 0 && cards.length > 0 ? 'block' : 'none';
+      }
+    }
+
+    colTabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        colTabs.forEach((t) => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentColegiado = tab.getAttribute('data-col') || 'all';
+        filterMembers();
+      });
+    });
+
+    statusSelect?.addEventListener('change', () => {
+      currentStatus = statusSelect.value;
+      filterMembers();
+    });
+
+    searchInput?.addEventListener('input', () => filterMembers());
+
+    // Modal Crear / Editar Miembro
+    const memberModal = document.getElementById('member-crud-modal');
+    const openMemberBtn = document.getElementById('btn-open-member-modal');
+    const closeMemberBtn = document.getElementById('btn-close-member-modal');
+    const cancelMemberBtn = document.getElementById('btn-cancel-member-modal');
+    const memberForm = document.getElementById('form-member-crud') as HTMLFormElement | null;
+    const memberModalTitle = document.getElementById('member-modal-title');
+    const saveMemberBtn = document.getElementById('btn-save-member') as HTMLButtonElement | null;
+
+    const idInput = document.getElementById('member-form-id') as HTMLInputElement | null;
+    const colSelect = document.getElementById('member-form-colegiado') as HTMLSelectElement | null;
+    const nombreInput = document.getElementById('member-form-nombre') as HTMLInputElement | null;
+    const cargoInput = document.getElementById('member-form-cargo') as HTMLInputElement | null;
+    const correoInput = document.getElementById('member-form-correo') as HTMLInputElement | null;
+    const inicioInput = document.getElementById('member-form-inicio') as HTMLInputElement | null;
+    const finInput = document.getElementById('member-form-fin') as HTMLInputElement | null;
+
+    const photoInput = document.getElementById('member-form-foto') as HTMLInputElement | null;
+    const browsePhotoBtn = document.getElementById('btn-browse-photo');
+    const photoLabel = document.getElementById('member-photo-label');
+
+    const actaInput = document.getElementById('member-form-acta') as HTMLInputElement | null;
+    const browseActaBtn = document.getElementById('btn-browse-acta');
+    const actaLabel = document.getElementById('member-acta-label');
+
+    browsePhotoBtn?.addEventListener('click', () => photoInput?.click());
+    photoInput?.addEventListener('change', () => {
+      if (photoInput.files && photoInput.files[0] && photoLabel) {
+        photoLabel.textContent = photoInput.files[0].name;
+        photoLabel.style.color = '#00594E';
+      }
+    });
+
+    browseActaBtn?.addEventListener('click', () => actaInput?.click());
+    actaInput?.addEventListener('change', () => {
+      if (actaInput.files && actaInput.files[0] && actaLabel) {
+        actaLabel.textContent = actaInput.files[0].name;
+        actaLabel.style.color = '#00594E';
+      }
+    });
+
+    openMemberBtn?.addEventListener('click', () => {
+      if (!memberModal) return;
+      if (memberForm) memberForm.reset();
+      if (idInput) idInput.value = '';
+      if (memberModalTitle) memberModalTitle.textContent = 'Registrar Miembro de Consejo';
+      if (photoLabel) photoLabel.textContent = 'Ninguna imagen';
+      if (actaLabel) actaLabel.textContent = 'Ningún documento';
+      memberModal.style.display = 'flex';
+    });
+
+    const closeMemberModal = () => {
+      if (memberModal) memberModal.style.display = 'none';
+    };
+    closeMemberBtn?.addEventListener('click', closeMemberModal);
+    cancelMemberBtn?.addEventListener('click', closeMemberModal);
+    memberModal?.addEventListener('click', (e) => {
+      if (e.target === memberModal) closeMemberModal();
+    });
+
+    // Delegación: Botón Editar
+    document.querySelectorAll('.btn-edit-member').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const raw = btn.getAttribute('data-member');
+        if (!raw || !memberModal) return;
+        try {
+          const m = JSON.parse(raw);
+          if (idInput) idInput.value = m.id || '';
+          if (colSelect) colSelect.value = m.cuerpo_colegiado || 'Consejo Superior Universitario (CSU)';
+          if (nombreInput) nombreInput.value = m.nombre_completo || '';
+          if (cargoInput) cargoInput.value = m.cargo_calidad || '';
+          if (correoInput) correoInput.value = m.correo || '';
+          if (inicioInput) inicioInput.value = m.fecha_inicio || '';
+          if (finInput) finInput.value = m.fecha_fin || '';
+
+          if (photoLabel) photoLabel.textContent = m.foto_url ? 'Foto actual conservada' : 'Ninguna imagen';
+          if (actaLabel) actaLabel.textContent = m.acta_inicio_nombre || (m.acta_inicio_url ? 'Acta actual conservada' : 'Ningún documento');
+          if (memberModalTitle) memberModalTitle.textContent = 'Editar Miembro de Consejo';
+
+          memberModal.style.display = 'flex';
+        } catch (err) {
+          console.error('Error parseando datos de miembro:', err);
+        }
+      });
+    });
+
+    // Guardar / Actualizar Miembro en Supabase (DB + Storage)
+    memberForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (saveMemberBtn) {
+        saveMemberBtn.disabled = true;
+        saveMemberBtn.textContent = 'Guardando...';
+      }
+
+      try {
+        const memberId = idInput?.value || null;
+        let fotoUrl: string | null = null;
+        let actaUrl: string | null = null;
+        let actaNombre: string | null = null;
+
+        // Subida de foto a Supabase Storage si se eligió
+        if (photoInput?.files && photoInput.files[0]) {
+          const file = photoInput.files[0];
+          const clean = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+          const path = `miembros/fotos/${Date.now()}_${clean}`;
+          const { error: upErr } = await supabase.storage.from('peticiones').upload(path, file, { contentType: file.type, upsert: true });
+          if (!upErr) {
+            const { data: pub } = supabase.storage.from('peticiones').getPublicUrl(path);
+            fotoUrl = pub?.publicUrl || null;
+          }
+        }
+
+        // Subida de acta de inicio si se eligió
+        if (actaInput?.files && actaInput.files[0]) {
+          const file = actaInput.files[0];
+          actaNombre = file.name;
+          const clean = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+          const path = `miembros/actas/${Date.now()}_${clean}`;
+          const { error: upErr } = await supabase.storage.from('peticiones').upload(path, file, { contentType: file.type || 'application/pdf', upsert: true });
+          if (!upErr) {
+            const { data: pub } = supabase.storage.from('peticiones').getPublicUrl(path);
+            actaUrl = pub?.publicUrl || null;
+          }
+        }
+
+        const payload: Record<string, any> = {
+          cuerpo_colegiado: colSelect?.value || 'Consejo Superior Universitario (CSU)',
+          nombre_completo: nombreInput?.value.trim() || '',
+          cargo_calidad: cargoInput?.value.trim() || '',
+          correo: correoInput?.value.trim() || null,
+          fecha_inicio: inicioInput?.value || new Date().toISOString().split('T')[0],
+          fecha_fin: finInput?.value || new Date().toISOString().split('T')[0],
+          updated_at: new Date().toISOString(),
+        };
+
+        if (fotoUrl) payload.foto_url = fotoUrl;
+        if (actaUrl) {
+          payload.acta_inicio_url = actaUrl;
+          payload.acta_inicio_nombre = actaNombre;
+        }
+
+        if (memberId) {
+          const { error } = await supabase.from('miembros_consejo' as any).update(payload).eq('id', memberId);
+          if (error) throw error;
+          (window as any).showToast?.('Miembro actualizado exitosamente.', 'success');
+        } else {
+          payload.estado = 'activo';
+          payload.created_at = new Date().toISOString();
+          const { error } = await supabase.from('miembros_consejo' as any).insert([payload]);
+          if (error) throw error;
+          (window as any).showToast?.('Miembro registrado exitosamente.', 'success');
+        }
+
+        window.location.reload();
+      } catch (err: any) {
+        console.error('Error guardando miembro:', err);
+        (window as any).showToast?.('Error al guardar: ' + (err.message || 'Error en servidor'), 'error');
+      } finally {
+        if (saveMemberBtn) {
+          saveMemberBtn.disabled = false;
+          saveMemberBtn.textContent = 'Guardar Miembro';
+        }
+      }
+    });
+
+    // Modal: Registrar Cambio / Reemplazo
+    const changeModal = document.getElementById('member-change-modal');
+    const closeChangeBtn = document.getElementById('btn-close-change-modal');
+    const cancelChangeBtn = document.getElementById('btn-cancel-change-modal');
+    const changeForm = document.getElementById('form-member-change') as HTMLFormElement | null;
+    const changeMemberIdInput = document.getElementById('change-member-id') as HTMLInputElement | null;
+    const changeMemberNameSpan = document.getElementById('change-member-name');
+    const changeRazonInput = document.getElementById('change-form-razon') as HTMLTextAreaElement | null;
+    const changeActaInput = document.getElementById('change-form-acta') as HTMLInputElement | null;
+    const browseChangeActaBtn = document.getElementById('btn-browse-change-acta');
+    const changeActaLabel = document.getElementById('change-acta-label');
+    const saveChangeBtn = document.getElementById('btn-save-change') as HTMLButtonElement | null;
+
+    browseChangeActaBtn?.addEventListener('click', () => changeActaInput?.click());
+    changeActaInput?.addEventListener('change', () => {
+      if (changeActaInput.files && changeActaInput.files[0] && changeActaLabel) {
+        changeActaLabel.textContent = changeActaInput.files[0].name;
+        changeActaLabel.style.color = '#786832';
+      }
+    });
+
+    document.querySelectorAll('.btn-change-member').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id') || '';
+        const name = btn.getAttribute('data-name') || '';
+        if (changeMemberIdInput) changeMemberIdInput.value = id;
+        if (changeMemberNameSpan) changeMemberNameSpan.textContent = name;
+        if (changeForm) changeForm.reset();
+        if (changeActaLabel) changeActaLabel.textContent = 'Ningún archivo seleccionado';
+        if (changeModal) changeModal.style.display = 'flex';
+      });
+    });
+
+    const closeChangeModal = () => {
+      if (changeModal) changeModal.style.display = 'none';
+    };
+    closeChangeBtn?.addEventListener('click', closeChangeModal);
+    cancelChangeBtn?.addEventListener('click', closeChangeModal);
+    changeModal?.addEventListener('click', (e) => {
+      if (e.target === changeModal) closeChangeModal();
+    });
+
+    changeForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = changeMemberIdInput?.value;
+      if (!id) return;
+      if (saveChangeBtn) {
+        saveChangeBtn.disabled = true;
+        saveChangeBtn.textContent = 'Registrando cambio...';
+      }
+
+      try {
+        let cambioUrl: string | null = null;
+        let cambioNombre: string | null = null;
+
+        if (changeActaInput?.files && changeActaInput.files[0]) {
+          const file = changeActaInput.files[0];
+          cambioNombre = file.name;
+          const clean = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+          const path = `miembros/cambios/${Date.now()}_${clean}`;
+          const { error: upErr } = await supabase.storage.from('peticiones').upload(path, file, { contentType: file.type || 'application/pdf', upsert: true });
+          if (!upErr) {
+            const { data: pub } = supabase.storage.from('peticiones').getPublicUrl(path);
+            cambioUrl = pub?.publicUrl || null;
+          }
+        }
+
+        const updateData: Record<string, any> = {
+          estado: 'inactivo',
+          razon_cambio: changeRazonInput?.value.trim() || 'Reemplazo o culminación de periodo',
+          updated_at: new Date().toISOString(),
+        };
+
+        if (cambioUrl) {
+          updateData.acta_cambio_url = cambioUrl;
+          updateData.acta_cambio_nombre = cambioNombre;
+        }
+
+        const { error } = await supabase.from('miembros_consejo' as any).update(updateData).eq('id', id);
+        if (error) throw error;
+
+        await logSystemActivity({
+          actor: { id: 'usr-root', name: 'ING. Christian Lemus', role: 'admin' },
+          action: 'Reemplazo / Cambio de Miembro de Consejo',
+          actionType: 'ACTUALIZACION',
+          entity: 'Cuerpos Colegiados',
+          entityId: id,
+          details: `Se registró cambio/reemplazo para miembro de consejo. Motivo: ${updateData.razon_cambio}.`,
+          severity: 'INFO',
+        });
+
+        (window as any).showToast?.('Cambio registrado exitosamente.', 'success');
+        window.location.reload();
+      } catch (err: any) {
+        console.error('Error registrando cambio:', err);
+        (window as any).showToast?.('Error al registrar cambio: ' + (err.message || 'Error en servidor'), 'error');
+      } finally {
+        if (saveChangeBtn) {
+          saveChangeBtn.disabled = false;
+          saveChangeBtn.textContent = 'Confirmar Cambio';
+        }
+      }
+    });
+
+    // Delegación: Botón Eliminar
+    document.querySelectorAll('.btn-delete-member').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        const name = btn.getAttribute('data-name') || 'este miembro';
+        if (!id) return;
+
+        const confirmed = confirm(`¿Está seguro de eliminar el registro de ${name}? Esta acción no se puede deshacer.`);
+        if (!confirmed) return;
+
+        try {
+          const { error } = await supabase.from('miembros_consejo' as any).delete().eq('id', id);
+          if (error) throw error;
+
+          await logSystemActivity({
+            actor: { id: 'usr-root', name: 'ING. Christian Lemus', role: 'admin' },
+            action: 'Eliminación de Miembro de Consejo',
+            actionType: 'ELIMINACION',
+            entity: 'Cuerpos Colegiados',
+            entityId: id,
+            details: `Se eliminó el miembro de consejo: ${name}.`,
+            severity: 'CRITICAL',
+          });
+
+          (window as any).showToast?.(`Miembro "${name}" eliminado correctamente.`, 'info');
+          const card = btn.closest('.member-card') as HTMLElement | null;
+          if (card) {
+            card.remove();
+          } else {
+            window.location.reload();
+          }
+        } catch (err: any) {
+          console.error('Error eliminando miembro:', err);
+          (window as any).showToast?.('Error al eliminar: ' + (err.message || 'Error de servidor'), 'error');
+        }
+      });
+    });
+  </script>
+</AppLayout>

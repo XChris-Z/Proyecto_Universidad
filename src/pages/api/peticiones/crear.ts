@@ -2,7 +2,7 @@
 export const prerender = false;
 
 import type { APIRoute } from 'astro';
-import { supabase } from '@lib/supabase';
+import { supabase, supabaseAdmin } from '@lib/supabase';
 import {
   sendPeticionAssignmentEmail,
   resolvePublicBaseUrl,
@@ -682,6 +682,19 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
         const driveRes = await inicializarEstructuraExpedienteDrive(peticionData.id);
         driveSynced = Boolean(driveRes.synced);
         driveUrl = driveRes.webViewLink || null;
+        if (driveRes.folderId) {
+          const client = (supabaseAdmin || supabase) as any;
+          await client
+            .from('peticiones')
+            .update({
+              drive_folder_id: driveRes.folderId,
+              drive_folder_url: driveUrl || `https://drive.google.com/drive/folders/${driveRes.folderId}`,
+              respuesta_drive_url: driveUrl,
+            })
+            .eq('id', peticionData.id)
+            .then(() => {})
+            .catch(() => {});
+        }
       } catch (driveErr: any) {
         console.warn('[CREAR PETICIÓN] Aviso sincronizando carpeta inicial en Drive (no fatal):', driveErr?.message);
       }

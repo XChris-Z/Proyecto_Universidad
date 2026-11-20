@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import type { APIRoute } from 'astro';
+import { supabase, supabaseAdmin } from '@lib/supabase';
 import { logSystemActivity } from '@lib/audit';
 import { resolveSessionActor } from '@lib/request-actor';
 import {
@@ -51,6 +52,20 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
 
     const actor = await resolveSessionActor(cookies, body?.actor || null);
     const result = await respaldarExpedienteLimpioEnDrive(peticionId);
+
+    // Garantizar persistencia de drive_folder_id y drive_folder_url en peticiones
+    const dbClient = (supabaseAdmin || supabase) as any;
+    const driveFolderUrl = result.webViewLink || (result.folderId ? `https://drive.google.com/drive/folders/${result.folderId}` : null);
+    await dbClient
+      .from('peticiones')
+      .update({
+        drive_folder_id: result.folderId,
+        drive_folder_url: driveFolderUrl,
+        respuesta_drive_url: result.webViewLink,
+      })
+      .eq('id', peticionId)
+      .then(() => {})
+      .catch((e: any) => console.warn('[RESPALDAR DRIVE] Error actualizando campos drive en DB:', e?.message));
 
     await logSystemActivity({
       actor,

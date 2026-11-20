@@ -2102,15 +2102,14 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
                   style="font-size: 0.84rem; font-weight: 700; background: #ffffff;"
                 />
 
-                <!-- Sugerencias rápidas opcionales -->
-                <div class="sub-sugerencias-wrapper">
-                  <span class="sub-sug-label">Sugerencias:</span>
-                  <div class="sub-sugerencias-chips">
-                    <button type="button" class="sub-sug-chip" data-sub-uid="${sub.uid}" data-sug="Concepto Jurídico">Concepto Jurídico</button>
-                    <button type="button" class="sub-sug-chip" data-sub-uid="${sub.uid}" data-sug="Soportes Técnicos">Soportes Técnicos</button>
-                    <button type="button" class="sub-sug-chip" data-sub-uid="${sub.uid}" data-sug="Respuesta Financiera">Respuesta Financiera</button>
-                    <button type="button" class="sub-sug-chip" data-sub-uid="${sub.uid}" data-sug="Certificación">Certificación</button>
-                  </div>
+                <!-- Sugerencias rápidas -->
+                <div class="subcarpeta-sugerencias">
+                  <span class="sugerencias-label">Sugerencias:</span>
+                  <button type="button" class="sugerencia-chip ${sub.nombre === 'Anexos y Soportes' ? 'is-selected' : ''}" data-sub-uid="${sub.uid}" data-sug="Anexos y Soportes">Anexos y Soportes</button>
+                  <button type="button" class="sugerencia-chip ${sub.nombre === 'Insumos de Respuesta' ? 'is-selected' : ''}" data-sub-uid="${sub.uid}" data-sug="Insumos de Respuesta">Insumos de Respuesta</button>
+                  <button type="button" class="sugerencia-chip ${sub.nombre === 'Certificaciones y Actas' ? 'is-selected' : ''}" data-sub-uid="${sub.uid}" data-sug="Certificaciones y Actas">Certificaciones y Actas</button>
+                  <button type="button" class="sugerencia-chip ${sub.nombre === 'Concepto Técnico / Jurídico' ? 'is-selected' : ''}" data-sub-uid="${sub.uid}" data-sug="Concepto Técnico / Jurídico">Concepto Técnico / Jurídico</button>
+                  <button type="button" class="sugerencia-chip ${sub.nombre === 'Evidencias Documentales' ? 'is-selected' : ''}" data-sub-uid="${sub.uid}" data-sug="Evidencias Documentales">Evidencias Documentales</button>
                 </div>
               </div>
 
@@ -2170,7 +2169,7 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
       });
 
       // Chips de sugerencias rápidas para el nombre de subcarpeta
-      subcarpetasContainer?.querySelectorAll('.sub-sug-chip').forEach((sugBtn) => {
+      subcarpetasContainer?.querySelectorAll('.sugerencia-chip').forEach((sugBtn) => {
         sugBtn.addEventListener('click', (e) => {
           e.preventDefault();
           const uid = Number(sugBtn.getAttribute('data-sub-uid'));
@@ -2184,6 +2183,9 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
             nameInput.value = sugText;
             nameInput.focus();
           }
+          const wrapper = sugBtn.closest('.subcarpeta-sugerencias');
+          wrapper?.querySelectorAll('.sugerencia-chip').forEach((c) => c.classList.remove('is-selected'));
+          sugBtn.classList.add('is-selected');
         });
       });
 
