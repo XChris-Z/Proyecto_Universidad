@@ -3380,7 +3380,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
 
                     // Contar dependencias que ya entregaron archivos válidos en esta subcarpeta
                     const deliveredCount = subResps.filter((r) => {
-                      const ofiHasFiles = subAnexos.some((a) => a.peticion_responsable_id === r.id);
+                      const ofiHasFiles = subAnexos.some((a: any) => a.peticion_responsable_id === r.id);
                       const rejectionInfo = extractRejectionInfo(r.observaciones_entrega, sub.nombre);
                       const isStateEntregado = !rejectionInfo && String(r.estado_entrega || '').toLowerCase() === 'entregado';
                       return ofiHasFiles || (subcarpetas.length === 1 && isStateEntregado);
@@ -3395,7 +3395,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                         ${subResps.map((r) => {
                           const ofiNombre = Array.isArray(r.oficinas) ? (r.oficinas[0]?.nombre || 'Oficina Responsable') : (r.oficinas?.nombre || 'Oficina Responsable');
                           const ofiId = Array.isArray(r.oficinas) ? r.oficinas[0]?.id : (r.oficinas?.id || (r as any).oficina_id || (r as any).dependencia_id || '');
-                          const ofiHasFiles = subAnexos.some((a) =>
+                          const ofiHasFiles = subAnexos.some((a: any) =>
                             a.peticion_responsable_id === r.id ||
                             (a as any).responsable_id === r.id ||
                             ((a as any).dependencia_id && (a as any).dependencia_id === ofiId) ||
@@ -4562,7 +4562,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         const pet = peticionesMap.get(petId) || allPeticiones.find((p) => p.id === petId);
         if (pet) {
           if (Array.isArray(pet.peticion_anexos)) {
-            pet.peticion_anexos = pet.peticion_anexos.filter((a) => String(a.id) !== String(anexoId));
+            pet.peticion_anexos = pet.peticion_anexos.filter((a: any) => String(a.id) !== String(anexoId));
           }
           if (Array.isArray(pet.peticion_responsables)) {
             const respObj = pet.peticion_responsables.find((r) => String(r.id) === String(data.responsable_id || respId));
