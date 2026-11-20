@@ -125,9 +125,9 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
           <input
             type="text"
             id="juridico-deep-search-input"
-            class="form-input"
+            class="form-input juridico-search-input"
             placeholder="Buscar por cualquier palabra dentro del archivo, tema, año, número de proceso o carpeta..."
-            style="width: 100%; height: 44px; padding-left: 42px; padding-right: 12px; border-radius: 10px; border: 1.5px solid #00594E; font-size: 0.86rem; background: #FFFFFF;"
+            style="width: 100%; height: 44px; padding-left: 42px; padding-right: 12px; border-radius: 10px; border: 1px solid #CBD5E1; font-size: 0.86rem; background: #FFFFFF;"
           />
           <div style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #00594E; display: flex; align-items: center; pointer-events: none;">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
@@ -145,7 +145,7 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
       <div class="filters-and-modes-bar">
         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
           <!-- Selector de Año -->
-          <span style="font-size: 0.72rem; font-weight: 700; color: #64748B; text-transform: uppercase;">Año:</span>
+          <span style="font-size: 0.72rem; font-weight: 700; color: #64748B; text-transform: uppercase; white-space: nowrap; flex-shrink: 0;">Año:</span>
           <div class="year-chips-wrap" id="year-filter-chips">
             <button type="button" class="year-chip active" data-year="todos">Todos</button>
             {yearsList.map((y) => (
@@ -153,10 +153,13 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
             ))}
           </div>
 
+          <!-- Divisor vertical sutil entre Año y Tema -->
+          <div style="width: 1px; height: 20px; background: #E2E8F0; margin: 0 4px; flex-shrink: 0;"></div>
+
           <!-- Selector de Tema -->
-          <div style="display: flex; align-items: center; gap: 6px; margin-left: 8px;">
-            <span style="font-size: 0.72rem; font-weight: 700; color: #64748B; text-transform: uppercase;">Tema:</span>
-            <select id="select-filter-tema" class="form-input" style="height: 32px; border-radius: 8px; font-size: 0.76rem; font-weight: 600; padding: 2px 10px; border: 1px solid #DCE4E3; background: #FFFFFF;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="font-size: 0.72rem; font-weight: 700; color: #64748B; text-transform: uppercase; white-space: nowrap; flex-shrink: 0;">Tema:</span>
+            <select id="select-filter-tema" class="form-input" style="height: 32px; min-width: 170px; border-radius: 8px; font-size: 0.76rem; font-weight: 600; padding: 2px 10px; border: 1px solid #DCE4E3; background: #FFFFFF; white-space: nowrap; flex-shrink: 0;">
               <option value="todos">Todos los Temas</option>
               {allTemas.map((t) => (
                 <option value={t}>{t}</option>
@@ -187,11 +190,11 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
     <section class="breadcrumbs-actions-bar">
       <!-- Breadcrumbs dinámicos -->
       <nav class="juridico-breadcrumbs" id="juridico-breadcrumbs" aria-label="Ruta de carpetas">
-        <button type="button" class="breadcrumb-item root-link" data-folder-id="">
+        <button type="button" class="breadcrumb-btn breadcrumb-item root-link" data-folder-id="">
           Asuntos Jurídicos
         </button>
         <span class="breadcrumb-sep">&rsaquo;</span>
-        <button type="button" class="breadcrumb-item active" id="breadcrumb-current-cat" data-folder-id="">
+        <button type="button" class="breadcrumb-btn breadcrumb-item is-current active" id="breadcrumb-current-cat" data-folder-id="">
           Conceptos Internos
         </button>
       </nav>
@@ -234,7 +237,7 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
       <section id="normal-explorer-panel">
         <!-- Subsección 1: Subcarpetas del nivel actual -->
         <div class="subfolders-section">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid #EEF2F5; margin-bottom: 12px;">
             <div style="font-size: 0.84rem; font-weight: 800; color: #111827; text-transform: uppercase; letter-spacing: 0.03em;">
               Subcarpetas en este nivel
             </div>
@@ -250,7 +253,7 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
 
         <!-- Subsección 2: Documentos en esta carpeta -->
         <div class="documents-section" style="margin-top: 26px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid #EEF2F5; margin-bottom: 12px;">
             <div style="font-size: 0.84rem; font-weight: 800; color: #111827; text-transform: uppercase; letter-spacing: 0.03em;">
               Documentos en esta carpeta
             </div>
@@ -501,44 +504,74 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
       flex-wrap: wrap;
     }
 
-    .search-scope-toggle {
-      display: inline-flex;
-      border-radius: 8px;
-      border: 1px solid #DCE4E3;
-      background: #FFFFFF;
-      padding: 2px;
-      gap: 2px;
+    .juridico-search-input {
+      border: 1px solid #CBD5E1 !important;
+      transition: all 0.16s ease !important;
     }
 
-    .scope-btn {
+    .juridico-search-input:focus,
+    .deep-search-bar-wrap:focus-within .juridico-search-input {
+      outline: none !important;
+      border-color: #00594E !important;
+      box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.10) !important;
+    }
+
+    .search-scope-toggle,
+    .view-mode-toggle {
+      background: #EEF2F5 !important;
+      padding: 3px !important;
+      border-radius: 10px !important;
+      border: 1px solid #E2E8F0 !important;
+      display: inline-flex !important;
+      gap: 2px !important;
+      align-items: center !important;
+    }
+
+    .scope-btn,
+    .mode-btn {
       all: unset;
       box-sizing: border-box;
-      padding: 6px 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 12px;
       font-size: 0.74rem;
       font-weight: 700;
-      color: #64748B;
-      border-radius: 6px;
+      color: #475569;
+      background: transparent;
+      border-radius: 7px;
       cursor: pointer;
-      transition: all 0.14s ease;
+      transition: all 0.15s ease;
+      white-space: nowrap;
     }
 
-    .scope-btn.active {
-      background: #00594E;
-      color: #FFFFFF;
+    .scope-btn:hover:not(.active),
+    .mode-btn:hover:not(.active) {
+      background: #FFFFFF;
+      color: #00594E;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+
+    .scope-btn.active,
+    .mode-btn.active {
+      background: #00594E !important;
+      color: #FFFFFF !important;
+      box-shadow: 0 1px 3px rgba(0, 89, 78, 0.2) !important;
     }
 
     .filters-and-modes-bar {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
       flex-wrap: wrap;
-      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px 16px;
     }
 
     .year-chips-wrap {
       display: inline-flex;
       gap: 4px;
       flex-wrap: wrap;
+      align-items: center;
     }
 
     .year-chip {
@@ -553,41 +586,19 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
       border-radius: 999px;
       cursor: pointer;
       transition: all 0.14s ease;
+      white-space: nowrap;
+    }
+
+    .year-chip:hover:not(.active) {
+      background: #F0F7F5;
+      color: #00594E;
+      border-color: #B2CFCB;
     }
 
     .year-chip.active {
       background: #00594E;
       color: #FFFFFF;
       border-color: #00594E;
-    }
-
-    .view-mode-toggle {
-      display: inline-flex;
-      border-radius: 8px;
-      border: 1px solid #DCE4E3;
-      background: #FFFFFF;
-      padding: 2px;
-      gap: 2px;
-    }
-
-    .mode-btn {
-      all: unset;
-      box-sizing: border-box;
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      padding: 5px 11px;
-      font-size: 0.74rem;
-      font-weight: 700;
-      color: #64748B;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.14s ease;
-    }
-
-    .mode-btn.active {
-      background: #00594E;
-      color: #FFFFFF;
     }
 
     /* FILA 3: Breadcrumbs y Acciones */
@@ -602,78 +613,127 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
       border-bottom: 1px solid #EEF2F5;
     }
 
-    .juridico-breadcrumbs {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      flex-wrap: wrap;
+    :global(.juridico-breadcrumbs),
+    :global(.breadcrumbs-bar) {
+      display: flex !important;
+      flex-wrap: wrap !important;
+      align-items: center !important;
+      gap: 6px !important;
+      background-color: #F8FAFB !important;
+      border: 1px solid #E2E8F0 !important;
+      border-radius: 10px !important;
+      padding: 5px 10px !important;
+      min-height: 36px !important;
     }
 
-    .breadcrumb-item {
+    :global(.juridico-breadcrumbs button),
+    :global(.breadcrumb-btn),
+    :global(.breadcrumb-item) {
       all: unset;
       box-sizing: border-box;
-      font-size: 0.82rem;
-      font-weight: 700;
-      color: #00594E;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 7px;
+      font-family: inherit;
+      font-size: 0.80rem;
+      font-weight: 600;
+      color: #475569;
+      background-color: transparent;
       cursor: pointer;
-      padding: 2px 4px;
-      border-radius: 4px;
-      transition: background 0.14s ease;
+      transition: all 0.15s ease;
     }
 
-    .breadcrumb-item:hover {
-      background: #F0F7F5;
+    :global(.juridico-breadcrumbs button:hover),
+    :global(.breadcrumb-btn:hover),
+    :global(.breadcrumb-item:hover:not(.is-current):not(.active)) {
+      background-color: #E6F0EE !important;
+      color: #00594E !important;
     }
 
-    .breadcrumb-item.active {
-      color: #111827;
-      font-weight: 800;
-      cursor: default;
+    :global(.juridico-breadcrumbs button:last-of-type),
+    :global(.breadcrumb-btn.is-current),
+    :global(.breadcrumb-btn.active),
+    :global(.breadcrumb-item.is-current),
+    :global(.breadcrumb-item.active) {
+      background-color: #FFFFFF !important;
+      color: #00594E !important;
+      font-weight: 700 !important;
+      border: 1px solid rgba(0, 89, 78, 0.16) !important;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+      cursor: default !important;
     }
 
-    .breadcrumb-sep {
-      color: #94A3B8;
-      font-size: 0.9rem;
+    :global(.breadcrumb-sep) {
+      color: #94A3B8 !important;
+      font-size: 0.85rem !important;
+      user-select: none !important;
+    }
+
+    :global(.juridico-empty-state) {
+      display: flex !important;
+      align-items: center !important;
+      gap: 12px !important;
+      padding: 16px 20px !important;
+      background-color: #F8FAFB !important;
+      border: 1.5px dashed #CBD5E1 !important;
+      border-radius: 12px !important;
+      color: #64748B !important;
+      font-size: 0.83rem !important;
+      font-style: normal !important;
+    }
+
+    :global(.juridico-empty-icon) {
+      width: 34px !important;
+      height: 34px !important;
+      border-radius: 9px !important;
+      background-color: #EEF2F5 !important;
+      color: #00594E !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      flex-shrink: 0 !important;
     }
 
     /* Tarjetas de Subcarpeta */
-    .folder-card {
-      background: #FFFFFF;
-      border: 1px solid #DCE4E3;
-      border-left: 4px solid #00594E;
-      border-radius: 10px;
-      padding: 12px 14px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-      cursor: pointer;
-      transition: all 0.18s ease;
+    :global(.folder-card) {
+      background: #FFFFFF !important;
+      border: 1px solid #DCE4E3 !important;
+      border-left: 4px solid #00594E !important;
+      border-radius: 10px !important;
+      padding: 12px 14px !important;
+      display: flex !important;
+      justify-content: space-between !important;
+      align-items: center !important;
+      gap: 10px !important;
+      cursor: pointer !important;
+      transition: all 0.18s ease !important;
     }
 
-    .folder-card:hover {
-      border-color: #00594E;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 89, 78, 0.08);
+    :global(.folder-card:hover) {
+      border-color: #00594E !important;
+      transform: translateY(-2px) !important;
+      box-shadow: 0 4px 12px rgba(0, 89, 78, 0.08) !important;
     }
 
     /* Tarjetas de Documento */
-    .document-row-card {
-      background: #FFFFFF;
-      border: 1px solid #E2E8F0;
-      border-radius: 10px;
-      padding: 12px 16px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
-      transition: all 0.18s ease;
+    :global(.document-row-card) {
+      background: #FFFFFF !important;
+      border: 1px solid #E2E8F0 !important;
+      border-radius: 10px !important;
+      padding: 12px 16px !important;
+      display: flex !important;
+      justify-content: space-between !important;
+      align-items: center !important;
+      flex-wrap: wrap !important;
+      gap: 12px !important;
+      transition: all 0.18s ease !important;
     }
 
-    .document-row-card:hover {
-      border-color: #00594E;
-      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+    :global(.document-row-card:hover) {
+      border-color: #00594E !important;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05) !important;
     }
 
     /* Resaltado de Búsqueda */
@@ -685,20 +745,20 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
       border-radius: 3px !important;
     }
 
-    .result-search-card {
-      background: #FFFFFF;
-      border: 1.5px solid #E2E8F0;
-      border-radius: 12px;
-      padding: 14px 18px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      transition: all 0.18s ease;
+    :global(.result-search-card) {
+      background: #FFFFFF !important;
+      border: 1.5px solid #E2E8F0 !important;
+      border-radius: 12px !important;
+      padding: 14px 18px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 8px !important;
+      transition: all 0.18s ease !important;
     }
 
-    .result-search-card:hover {
-      border-color: #00594E;
-      box-shadow: 0 4px 14px rgba(0, 89, 78, 0.08);
+    :global(.result-search-card:hover) {
+      border-color: #00594E !important;
+      box-shadow: 0 4px 14px rgba(0, 89, 78, 0.08) !important;
     }
   </style>
 
@@ -866,9 +926,14 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
       if (totalCount === 0) {
         if (resultsContainer) {
           resultsContainer.innerHTML = `
-            <div style="text-align: center; padding: 40px 20px; background: #F8FAFC; border: 1px dashed #CBD5E1; border-radius: 12px;">
-              <div style="font-weight: 700; font-size: 1rem; color: #111827;">No se encontraron coincidencias</div>
-              <p style="font-size: 0.80rem; color: #64748B; margin-top: 4px;">Intente con otras palabras clave, amplíe el ámbito de búsqueda o verifique la ortografía.</p>
+            <div class="juridico-empty-state" style="justify-content: center; text-align: center; padding: 32px 20px;">
+              <div class="juridico-empty-icon" style="width: 40px; height: 40px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              </div>
+              <div>
+                <strong style="display: block; font-weight: 700; font-size: 0.95rem; color: #111827;">No se encontraron coincidencias</strong>
+                <span style="font-size: 0.78rem; color: #64748B;">Intente con otras palabras clave, amplíe el ámbito de búsqueda o verifique la ortografía.</span>
+              </div>
             </div>
           `;
         }
@@ -1004,8 +1069,14 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
       if (subfoldersGrid) {
         if (currentSubfolders.length === 0) {
           subfoldersGrid.innerHTML = `
-            <div style="grid-column: 1 / -1; font-size: 0.78rem; color: #94A3B8; font-style: italic; padding: 12px 0;">
-              No hay subcarpetas creadas en este nivel.
+            <div class="juridico-empty-state" style="grid-column: 1 / -1;">
+              <div class="juridico-empty-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              </div>
+              <div>
+                <strong style="display: block; font-size: 0.86rem; color: #1E293B; font-weight: 700;">No hay subcarpetas creadas en este nivel.</strong>
+                <span style="font-size: 0.76rem; color: #64748B;">Haga clic en "+ Nueva Subcarpeta" para organizar expedientes o actuaciones en este nivel.</span>
+              </div>
             </div>
           `;
         } else {
@@ -1080,8 +1151,14 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
       if (documentsList) {
         if (currentDocs.length === 0) {
           documentsList.innerHTML = `
-            <div style="font-size: 0.78rem; color: #94A3B8; font-style: italic; padding: 12px 0;">
-              No hay documentos alojados directamente en esta carpeta. Utilice el botón "+ Subir Archivo Aquí" para anexar pronunciamientos o expedientes.
+            <div class="juridico-empty-state">
+              <div class="juridico-empty-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              </div>
+              <div>
+                <strong style="display: block; font-size: 0.86rem; color: #1E293B; font-weight: 700;">No hay documentos alojados directamente en esta carpeta.</strong>
+                <span style="font-size: 0.76rem; color: #64748B;">Utilice el botón "+ Subir Archivo Aquí" para anexar pronunciamientos o expedientes.</span>
+              </div>
             </div>
           `;
         } else {
@@ -1156,9 +1233,9 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
       if (!breadcrumbsNav) return;
 
       const segments = [
-        `<button type="button" class="breadcrumb-item root-link" data-level="root">Asuntos Jurídicos</button>`,
+        `<button type="button" class="breadcrumb-btn breadcrumb-item root-link" data-level="root">Asuntos Jurídicos</button>`,
         `<span class="breadcrumb-sep">&rsaquo;</span>`,
-        `<button type="button" class="breadcrumb-item ${currentFolderId === null ? 'active' : ''}" data-level="cat">${catLabels[currentCategoria] || currentCategoria}</button>`,
+        `<button type="button" class="breadcrumb-btn breadcrumb-item ${currentFolderId === null ? 'is-current active' : ''}" data-level="cat">${catLabels[currentCategoria] || currentCategoria}</button>`,
       ];
 
       if (currentFolderId) {
@@ -1176,7 +1253,7 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
           segments.push(`<span class="breadcrumb-sep">&rsaquo;</span>`);
           const isLast = idx === folderChain.length - 1;
           segments.push(`
-            <button type="button" class="breadcrumb-item ${isLast ? 'active' : ''}" data-level="folder" data-folder-id="${f.id}">
+            <button type="button" class="breadcrumb-btn breadcrumb-item ${isLast ? 'is-current active' : ''}" data-level="folder" data-folder-id="${f.id}">
               ${f.nombre}
             </button>
           `);
@@ -1185,7 +1262,7 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
 
       breadcrumbsNav.innerHTML = segments.join('');
 
-      breadcrumbsNav.querySelectorAll('.breadcrumb-item').forEach((item) => {
+      breadcrumbsNav.querySelectorAll('.breadcrumb-btn, .breadcrumb-item').forEach((item) => {
         item.addEventListener('click', () => {
           const level = item.getAttribute('data-level');
           if (level === 'root' || level === 'cat') {
