@@ -2,7 +2,7 @@
 import type { AstroCookies } from 'astro';
 import type { AuditLog, AuditActionType, AuditSeverity, InstitutionalUser } from './types';
 import { generateAuditHash } from './utils';
-import { supabase } from './supabase';
+import { supabase, supabaseAdmin } from './supabase';
 import {
   extractClientIp,
   normalizeInstitutionalRole,
@@ -161,11 +161,6 @@ export function normalizeAuditActor(actor: {
     .trim();
 
   if (!cleanName || /^administrador general$/i.test(cleanName)) {
-    cleanName = 'ING. Christian Lemus';
-  }
-
-  // Reasignar cualquier registro atribuido a Oscar G hacia ING. Christian Lemus
-  if (/oscar\s*g/i.test(cleanName)) {
     cleanName = 'ING. Christian Lemus';
   }
 
@@ -401,15 +396,19 @@ export async function logSystemActivity(params: LogSystemActivityParams): Promis
         ? normalizedActor.id
         : null;
 
-    let res = await supabase.from('audit_logs').insert([buildPayload(dbIp, initialActorId)]);
+    const dbClient = (supabaseAdmin || supabase) as any;
+    let res = await dbClient.from('audit_logs').insert([buildPayload(dbIp, initialActorId)]);
     if (res.error) {
-      res = await supabase.from('audit_logs').insert([buildPayload(null, initialActorId)]);
+      res = await dbClient.from('audit_logs').insert([buildPayload(null, initialActorId)]);
     }
     if (res.error && initialActorId) {
-      await supabase.from('audit_logs').insert([buildPayload(null, null)]);
+      res = await dbClient.from('audit_logs').insert([buildPayload(null, null)]);
+    }
+    if (res.error) {
+      console.error('[AUDITORIA ERROR] Error registrando evento en Supabase:', res.error);
     }
   } catch (err) {
-    console.warn('[Audit] No se pudo registrar en Supabase (reintento diferido):', err);
+    console.error('[AUDITORIA ERROR] Fallo inesperado al persistir en Supabase:', err);
   }
 
   return entry;
@@ -418,19 +417,21 @@ export async function logSystemActivity(params: LogSystemActivityParams): Promis
 /** Obtiene los logs de auditoría en tiempo real desde Supabase */
 export async function fetchAuditLogsFromSupabase(): Promise<AuditLog[]> {
   try {
-    const { data, error } = await supabase
+    const dbClient = (supabaseAdmin || supabase) as any;
+    const { data, error } = await dbClient
       .from('audit_logs')
       .select('*')
       .order('raw_timestamp', { ascending: false })
-      .limit(250);
+      .limit(300);
+
+    if (error) {
+      console.error('[AUDITORIA ERROR] Error consultando logs de Supabase:', error);
+    }
 
     if (!error && data) {
       const visibleRows = (data as any[]).filter(isRelevantAuditLog);
       const mapped: AuditLog[] = visibleRows.map((d: any) => {
-        let actorName = d.actor_name;
-        if (actorName && /oscar\s*g/i.test(actorName)) {
-          actorName = 'ING. Christian Lemus';
-        }
+        const actorName = d.actor_name;
 
         const normalizedActor = normalizeAuditActor({
           id: d.actor_id || 'usr-root',

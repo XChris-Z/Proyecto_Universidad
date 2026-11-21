@@ -7571,6 +7571,76 @@ mark.juridico-mark {
   box-shadow: 0 4px 14px rgba(0, 89, 78, 0.08) !important;
 }
 
+/* ==========================================================================
+   BARRA DE ACCIONES DE EXPEDIENTES / RADICADOS (.expediente-toolbar)
+   ========================================================================== */
+.expediente-toolbar {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.exp-action-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  padding: 7px 14px !important;
+  border-radius: 9999px !important;
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+  transition: all 0.2s ease !important;
+  text-decoration: none !important;
+  border: 1px solid transparent !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04) !important;
+  white-space: nowrap !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+}
+
+.exp-btn-prorroga {
+  background: #F8FAFC !important;
+  color: #475569 !important;
+  border-color: #E2E8F0 !important;
+}
+.exp-btn-prorroga:hover {
+  background: #F1F5F9 !important;
+  border-color: #CBD5E1 !important;
+  color: #0F172A !important;
+}
+
+.exp-btn-sync-drive {
+  background: #F0FDF4 !important;
+  color: #166534 !important;
+  border-color: #BBF7D0 !important;
+}
+.exp-btn-sync-drive:hover {
+  background: #DCFCE7 !important;
+  border-color: #86EFAC !important;
+}
+
+.exp-btn-open-drive {
+  background: #EFF6FF !important;
+  color: #1E40AF !important;
+  border-color: #BFDBFE !important;
+}
+.exp-btn-open-drive:hover {
+  background: #DBEAFE !important;
+  border-color: #93C5FD !important;
+}
+
+.exp-btn-expediente {
+  background: #00594E !important;
+  color: #FFFFFF !important;
+  border-color: #00594E !important;
+}
+.exp-btn-expediente:hover {
+  background: #00463D !important;
+  border-color: #00463D !important;
+}
+
+
 
 
 

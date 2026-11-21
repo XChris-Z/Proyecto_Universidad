@@ -153,7 +153,7 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
         request,
         clientAddress,
         cookies,
-      }).catch((e) => console.warn('[REVISAR ANEXO] Error auditoría aprobar:', e));
+      }).catch((e) => console.error('[AUDITORIA ERROR] Error auditoría aprobar anexo:', e));
 
       // Sincronización automática en vivo hacia Google Drive del aporte aprobado
       let driveSynced = false;
@@ -323,7 +323,7 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
       request,
       clientAddress,
       cookies,
-    }).catch((e) => console.warn('[REVISAR ANEXO] Error auditoría rechazar:', e));
+    }).catch((e) => console.error('[AUDITORIA ERROR] Error auditoría rechazar anexo:', e));
 
     // Eliminar archivo rechazado de Google Drive si existe carpeta sincronizada (no bloqueante)
     let driveRemoved = false;

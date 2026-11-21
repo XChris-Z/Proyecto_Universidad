@@ -2,9 +2,11 @@
 export const prerender = false;
 
 import type { APIRoute } from 'astro';
-import { supabase } from '@lib/supabase';
+import { supabase, supabaseAdmin } from '@lib/supabase';
 import { logSystemActivity } from '@lib/audit';
 import { resolveSessionActor } from '@lib/request-actor';
+
+const db: any = supabaseAdmin || supabase;
 
 export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
   try {
@@ -39,7 +41,7 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
     if (fechaLimiteResponsable) updatePayload.fecha_limite_responsable = fechaLimiteResponsable;
 
     // Obtener datos antes de actualizar para auditoría
-    const { data: previousData } = await (supabase
+    const { data: previousData } = await (db
       .from('peticiones' as any)
       .select('numero_radicado, asunto, estado')
       .eq('id', id)
@@ -83,7 +85,7 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
 
       if (error && isCheckConstraintError(error)) {
         const { estado: _omitted, ...safePayload } = updatePayload;
-        const retryRes = await (supabase
+        const retryRes = await (db
           .from('peticiones' as any)
           .update(safePayload)
           .eq('id', id)
@@ -93,7 +95,7 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
         error = retryRes.error;
       }
     } else {
-      const res = await (supabase
+      const res = await (db
         .from('peticiones' as any)
         .update(updatePayload)
         .eq('id', id)
@@ -127,7 +129,7 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
       request,
       clientAddress,
       cookies,
-    }).catch((err) => console.warn('Error registrando auditoría:', err));
+    }).catch((err) => console.error('[AUDITORIA ERROR] Error registrando auditoría editar:', err));
 
     return new Response(
       JSON.stringify({ success: true, peticion: updated }),

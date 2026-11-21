@@ -196,16 +196,17 @@ async function procesarEliminacion(request: Request, clientAddress: string | und
       console.warn('[Eliminar Radicado] Aviso en limpieza de huérfanos:', cleanupErr);
     }
 
-    // Paso D: Registrar en auditoría
+    // Paso D: Registrar formalmente en auditoría con acción 'Eliminación de Petición'
     try {
-      const actor = await resolveSessionActor(cookies);
+      const actor = await resolveSessionActor(cookies, body.actor);
+      const motivoEliminacion = body.motivo ? ` Motivo: ${body.motivo}.` : '';
       await logSystemActivity({
         actor,
-        action: `Eliminación de radicado ${radicadoCodigo}`,
+        action: 'Eliminación de Petición',
         actionType: 'ELIMINACION',
-        entity: 'Peticiones Radicadas',
-        entityId: radicadoCodigo,
-        details: `Se eliminó el radicado ${radicadoCodigo} en la plataforma y su carpeta de respaldo en Google Drive.`,
+        entity: 'Expediente Documental',
+        entityId: radicadoCodigo || petId,
+        details: `Se eliminó formalmente el expediente radicado ${radicadoCodigo} del solicitante "${peticionEncontrada.solicitante_nombre || 'N/A'}" (${peticionEncontrada.asunto || 'Sin asunto'}).${motivoEliminacion}${driveEliminado ? ' Carpeta Google Drive eliminada.' : ''}`,
         before: peticionEncontrada,
         severity: 'CRITICAL',
         request,
@@ -213,7 +214,7 @@ async function procesarEliminacion(request: Request, clientAddress: string | und
         cookies,
       });
     } catch (auditErr) {
-      console.warn('[Eliminar Radicado] Aviso registrando auditoría:', auditErr);
+      console.error('[AUDITORIA ERROR] Error registrando evento de eliminación de petición:', auditErr);
     }
 
     return new Response(

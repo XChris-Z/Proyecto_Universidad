@@ -2,7 +2,7 @@
 export const prerender = false;
 
 import type { APIRoute } from 'astro';
-import { supabase } from '@lib/supabase';
+import { supabase, supabaseAdmin } from '@lib/supabase';
 import { logSystemActivity } from '@lib/audit';
 import { separarRespuestaMeta } from '@lib/subcarpetas';
 import { resolveSessionActor } from '@lib/request-actor';
@@ -10,6 +10,8 @@ import {
   isGoogleDriveConfigured,
   sincronizarRespuestaFinalEnDrive,
 } from '@lib/google-drive';
+
+const db: any = supabaseAdmin || supabase;
 
 export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
   try {
@@ -198,7 +200,7 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
         cookies,
       });
     } catch (auditErr: any) {
-      console.warn('[Subir Respuesta Final] Error audit:', auditErr.message);
+      console.error('[AUDITORIA ERROR] Error registrando auditoría en subir respuesta final:', auditErr);
     }
 
     // 5.1 Sincronizar respuesta final en subcarpeta dedicada de Google Drive (no bloqueante)

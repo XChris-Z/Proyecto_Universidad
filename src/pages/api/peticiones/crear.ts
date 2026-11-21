@@ -672,28 +672,31 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
       request,
       clientAddress,
       cookies,
-    }).catch((auditErr) => console.warn('Aviso registrando auditoría de radicación:', auditErr));
+    }).catch((auditErr) => console.error('[AUDITORIA ERROR] Error registrando auditoría de radicación:', auditErr));
 
     // Sincronización automática inicial en Google Drive (no bloqueante)
     let driveUrl: string | null = null;
     let driveSynced = false;
+    let driveFolderId: string | null = null;
     if (isGoogleDriveConfigured()) {
       try {
         const driveRes = await inicializarEstructuraExpedienteDrive(peticionData.id);
         driveSynced = Boolean(driveRes.synced);
         driveUrl = driveRes.webViewLink || null;
+        driveFolderId = driveRes.folderId || null;
         if (driveRes.folderId) {
           const client = (supabaseAdmin || supabase) as any;
+          const finalFolderUrl = driveUrl || `https://drive.google.com/drive/folders/${driveRes.folderId}`;
           await client
             .from('peticiones')
             .update({
               drive_folder_id: driveRes.folderId,
-              drive_folder_url: driveUrl || `https://drive.google.com/drive/folders/${driveRes.folderId}`,
+              drive_folder_url: finalFolderUrl,
               respuesta_drive_url: driveUrl,
             })
             .eq('id', peticionData.id)
             .then(() => {})
-            .catch(() => {});
+            .catch((e: any) => console.warn('[CREAR PETICION] Aviso actualizando columnas drive en DB:', e?.message));
         }
       } catch (driveErr: any) {
         console.warn('[CREAR PETICIÓN] Aviso sincronizando carpeta inicial en Drive (no fatal):', driveErr?.message);
@@ -714,6 +717,8 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
           fecha_limite_responsable: peticionData.fecha_limite_responsable,
           storage_folder_path: peticionData.storage_folder_path,
           respuesta_drive_url: driveUrl,
+          drive_folder_id: driveFolderId,
+          drive_folder_url: driveUrl || (driveFolderId ? `https://drive.google.com/drive/folders/${driveFolderId}` : null),
           pin_acceso: finalPinAcceso,
           archivo_principal: savedPrimaryFile,
         },

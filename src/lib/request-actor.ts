@@ -1,7 +1,9 @@
 // src/lib/request-actor.ts
 import type { AstroCookies } from 'astro';
 import { SESSION_COOKIE_KEY } from './constants';
-import { supabase } from './supabase';
+import { supabase, supabaseAdmin } from './supabase';
+
+const db: any = supabaseAdmin || supabase;
 
 export interface ResolvedActor {
   id: string;
@@ -72,6 +74,7 @@ export function normalizeInstitutionalRole(rawRole?: string | null): string {
 
 /**
  * Resuelve el actor real autenticado desde la cookie de sesión institucional y tablas profiles/users.
+ * Conserva la identidad verídica de cada funcionario sin reasignaciones arbitrarias.
  */
 export async function resolveSessionActor(
   cookies?: AstroCookies | null,
@@ -92,14 +95,13 @@ export async function resolveSessionActor(
       };
     }
     try {
-      const { data: emailProf } = await (supabase
+      const { data: emailProf } = await (db
         .from('profiles' as any)
         .select('id, full_name, role')
         .eq('email', activeEmailCookie)
         .maybeSingle() as any);
       if (emailProf?.full_name) {
-        let name = String(emailProf.full_name).trim();
-        if (/oscar\s*g/i.test(name)) name = 'ING. Christian Lemus';
+        const name = String(emailProf.full_name).trim();
         return {
           id: emailProf.id || 'usr-root',
           name,
@@ -113,15 +115,14 @@ export async function resolveSessionActor(
 
   if (sessionId && sessionId !== 'usr-root' && sessionId !== 'anonymous') {
     try {
-      const { data: prof } = await (supabase
+      const { data: prof } = await (db
         .from('profiles' as any)
         .select('id, full_name, role, cargo')
         .eq('id', sessionId)
         .maybeSingle() as any);
 
       if (prof?.full_name) {
-        let name = String(prof.full_name).trim();
-        if (/oscar\s*g/i.test(name)) name = 'ING. Christian Lemus';
+        const name = String(prof.full_name).trim();
         return {
           id: prof.id,
           name,
@@ -131,15 +132,14 @@ export async function resolveSessionActor(
     } catch {}
 
     try {
-      const { data: usr } = await (supabase
+      const { data: usr } = await (db
         .from('users' as any)
         .select('id, name, role_id, role_title')
         .eq('id', sessionId)
         .maybeSingle() as any);
 
       if (usr?.name) {
-        let name = String(usr.name).trim();
-        if (/oscar\s*g/i.test(name)) name = 'ING. Christian Lemus';
+        const name = String(usr.name).trim();
         return {
           id: usr.id,
           name,
@@ -151,15 +151,14 @@ export async function resolveSessionActor(
 
   if (sessionId === 'usr-root' || !sessionId) {
     try {
-      const { data: rootProf } = await (supabase
+      const { data: rootProf } = await (db
         .from('profiles' as any)
         .select('id, full_name, role')
         .or('id.eq.usr-root,email.eq.christianlemus.es@unitropico.edu.co')
         .limit(1)
         .maybeSingle() as any);
       if (rootProf?.full_name) {
-        let name = String(rootProf.full_name).trim();
-        if (/oscar\s*g/i.test(name)) name = 'ING. Christian Lemus';
+        const name = String(rootProf.full_name).trim();
         return {
           id: rootProf.id || 'usr-root',
           name,
@@ -169,8 +168,7 @@ export async function resolveSessionActor(
     } catch {}
   }
 
-  let fbName = String(fallbackActor?.name || '').trim();
-  if (/oscar\s*g/i.test(fbName)) fbName = 'ING. Christian Lemus';
+  const fbName = String(fallbackActor?.name || '').trim();
   const fbRole = normalizeInstitutionalRole(fallbackActor?.role);
   const isGenericFb = /^(admin|admin general|administrador|administrador general|administrador del sistema|administrador documental|sistema sgd)$/i.test(fbName);
 
@@ -180,4 +178,3 @@ export async function resolveSessionActor(
     role: fbRole || 'Administrador',
   };
 }
-

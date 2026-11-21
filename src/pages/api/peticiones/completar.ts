@@ -2,8 +2,10 @@
 export const prerender = false;
 
 import type { APIRoute } from 'astro';
-import { supabase } from '@lib/supabase';
+import { supabase, supabaseAdmin } from '@lib/supabase';
 import { logSystemActivity } from '@lib/audit';
+
+const db: any = supabaseAdmin || supabase;
 import {
   COMPLETE_EXPEDIENTE_AUDIT_ACTION,
   separarRespuestaMeta,
@@ -48,7 +50,7 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
       );
     }
 
-    const { data: pet, error: fetchErr } = await (supabase
+    const { data: pet, error: fetchErr } = await (db
       .from('peticiones' as any)
       .select('id, numero_radicado, asunto, estado, instrucciones_anexos, descripcion')
       .eq('id', peticionId)
@@ -85,7 +87,7 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
       .join('\n\n');
 
     const tryUpdatePeticion = async (payload: Record<string, any>) => {
-      let res = await (supabase
+      let res = await (db
         .from('peticiones' as any)
         .update(payload)
         .eq('id', peticionId)
@@ -94,7 +96,7 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
 
       if (res.error && isMissingColumnError(res.error) && 'fecha_respuesta' in payload) {
         const { fecha_respuesta: _drop, ...withoutFecha } = payload;
-        res = await (supabase
+        res = await (db
           .from('peticiones' as any)
           .update(withoutFecha)
           .eq('id', peticionId)
@@ -156,7 +158,7 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
       request,
       clientAddress,
       cookies,
-    }).catch((err) => console.warn('[COMPLETAR EXPEDIENTE] Error registrando auditoría:', err));
+    }).catch((err) => console.error('[AUDITORIA ERROR] Error registrando auditoría completar expediente:', err));
 
     // Sincronización automática del cierre oficial en Google Drive (no bloqueante)
     let driveSynced = false;

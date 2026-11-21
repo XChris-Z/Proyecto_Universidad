@@ -1,18 +1,15 @@
 ---
 // src/pages/auditoria.astro
+export const prerender = false;
+
+// No almacenar en caché para reflejar auditoría multi-usuario al instante
+Astro.response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+
 import AppLayout from '@layouts/AppLayout.astro';
 import { supabase, supabaseAdmin } from '@lib/supabase';
 import { isRelevantAuditLog } from '@lib/audit';
 
 const db = supabaseAdmin || supabase;
-
-// Corrección en base de datos para reasignar registros atribuidos por error a Oscar G hacia ING. Christian Lemus
-try {
-  await db
-    .from('audit_logs')
-    .update({ actor_name: 'ING. Christian Lemus' })
-    .ilike('actor_name', '%Oscar%');
-} catch {}
 
 // Consultar bitácora oficial en tiempo real desde Supabase (excluyendo snapshots técnicos y eventos no esenciales como perfil)
 const { data: rawDbLogs } = await db
@@ -21,11 +18,27 @@ const { data: rawDbLogs } = await db
   .or('entity.is.null,entity.neq.rbac_state_snapshot')
   .order('raw_timestamp', { ascending: false });
 
+// Consultar funcionarios y usuarios registrados para el filtro dinámico
+const { data: rawProfiles } = await db
+  .from('profiles')
+  .select('id, full_name, role, email')
+  .order('full_name', { ascending: true });
+
+const registeredUsers = (rawProfiles || []).filter((p: any) => p.full_name && String(p.full_name).trim());
+
+// Consultar radicados activos para identificar expedientes eliminados en la pista histórica
+const { data: rawPets } = await db
+  .from('peticiones')
+  .select('id, numero_radicado');
+
+const activeRadicados = (rawPets || [])
+  .map((p: any) => String(p.numero_radicado || '').trim().toUpperCase())
+  .filter(Boolean);
+
 const dbLogs = (rawDbLogs || [])
   .filter(isRelevantAuditLog)
   .map(l => {
     let aName = l.actor_name;
-    if (aName && /oscar/i.test(aName)) aName = 'ING. Christian Lemus';
     let cleanAction = (l.action || '')
       .replace(/ACTUALIZACIÓN DE ROL RBAC/gi, 'ACTUALIZACIÓN DE ROL DEL SISTEMA')
       .replace(/Catálogo de Roles RBAC/gi, 'Configuración de Roles')
@@ -146,6 +159,16 @@ const totalCierresYValidaciones = dbLogs.filter(l => {
         </div>
 
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <label for="audit-filter-user" style="font-size: 0.76rem; font-weight: 700; color: #52606D;">Funcionario:</label>
+            <select id="audit-filter-user" style="padding: 7px 12px; border-radius: 8px; border: 1.5px solid #DCE4E3; font-size: 0.78rem; background: #FFFFFF; color: #111827; font-weight: 600; max-width: 200px;">
+              <option value="ALL">Todos los Usuarios</option>
+              {registeredUsers.map((u: any) => (
+                <option value={u.id || u.full_name}>{u.full_name} ({u.role || 'Funcionario'})</option>
+              ))}
+            </select>
+          </div>
+
           <div style="display: flex; align-items: center; gap: 6px;">
             <label for="audit-filter-action" style="font-size: 0.76rem; font-weight: 700; color: #52606D;">Acción:</label>
             <select id="audit-filter-action" style="padding: 7px 12px; border-radius: 8px; border: 1.5px solid #DCE4E3; font-size: 0.78rem; background: #FFFFFF; color: #111827; font-weight: 600;">
@@ -326,6 +349,10 @@ const totalCierresYValidaciones = dbLogs.filter(l => {
     }
   }
 </style>
+
+<script is:inline define:vars={{ activeRadicados }}>
+  window.__SGD_ACTIVE_RADICADOS__ = activeRadicados;
+</script>
 
 <script>
   import { initAuditoria } from '@scripts/auditoria';

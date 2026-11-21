@@ -81,6 +81,8 @@ export interface PeticionExpediente {
   respuesta_pin_solicitante?: string | null;
   respuesta_archivos_incluidos?: string[] | null;
   respuesta_drive_url?: string | null;
+  drive_folder_id?: string | null;
+  drive_folder_url?: string | null;
   respuesta_archivo?: any;
   tiene_respuesta_audit?: boolean;
   respondida?: boolean;
@@ -89,6 +91,8 @@ export interface PeticionExpediente {
   subcarpetas?: PeticionSubcarpeta[];
   [key: string]: any;
 }
+
+const db: any = supabaseAdmin || supabase;
 
 // Consultar todas las tablas en paralelo con select('*') de forma resiliente al esquema (sin joins fragiles)
 const [
@@ -99,12 +103,12 @@ const [
   oficinasRes,
   auditLogsRes,
 ] = await Promise.all([
-  supabase.from('peticiones' as any).select('*').order('created_at', { ascending: false }) as any,
-  supabase.from('peticion_responsables' as any).select('*').order('created_at', { ascending: true }) as any,
-  supabase.from('peticion_anexos' as any).select('*').order('created_at', { ascending: true }) as any,
-  supabase.from('peticion_subcarpetas' as any).select('*').order('created_at', { ascending: true }) as any,
-  supabase.from('oficinas' as any).select('*').order('nombre', { ascending: true }) as any,
-  supabase
+  db.from('peticiones' as any).select('*').order('created_at', { ascending: false }) as any,
+  db.from('peticion_responsables' as any).select('*').order('created_at', { ascending: true }) as any,
+  db.from('peticion_anexos' as any).select('*').order('created_at', { ascending: true }) as any,
+  db.from('peticion_subcarpetas' as any).select('*').order('created_at', { ascending: true }) as any,
+  db.from('oficinas' as any).select('*').order('nombre', { ascending: true }) as any,
+  db
     .from('audit_logs' as any)
     .select('action, entity_id, details')
     .or('action_type.eq.RESPUESTA,action.ilike.%Expediente Marcado como Completo%')
@@ -113,7 +117,7 @@ const [
 
 let basePeticiones: any[] = Array.isArray(peticionesRes?.data) ? peticionesRes.data : [];
 if (peticionesRes?.error || !peticionesRes?.data) {
-  const fallbackPets = await (supabase.from('peticiones' as any).select('*') as any);
+  const fallbackPets = await (db.from('peticiones' as any).select('*') as any);
   basePeticiones = Array.isArray(fallbackPets?.data) ? fallbackPets.data : [];
 }
 
@@ -2940,62 +2944,65 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
               </div>
             </div>
 
-            <!-- Acciones de Cabecera -->
-            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <!-- Acciones de Cabecera (Barra Ejecutiva Rediseñada .expediente-toolbar) -->
+            <div class="expediente-toolbar">
+              <!-- 1. Prórroga -->
               <button 
                 type="button" 
-                class="btn btn-secondary btn-sm btn-export-drive" 
+                class="exp-action-btn exp-btn-prorroga btn-open-prorroga-modal" 
+                data-id="${escapeHtml(peticion.id)}"
+                title="Ampliar plazo de vencimiento con trazabilidad de auditoría"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="10" y1="16" x2="14" y2="16"/></svg>
+                <span>Prórroga</span>
+              </button>
+
+              <!-- 2. Respaldar en Drive -->
+              <button 
+                type="button" 
+                class="exp-action-btn exp-btn-sync-drive btn-export-drive" 
                 data-id="${escapeHtml(peticion.id)}"
                 data-radicado="${escapeHtml(peticion.numero_radicado)}"
                 data-has-drive="${(peticion.drive_folder_url || peticion.respuesta_drive_url || peticion.drive_folder_id) ? 'true' : 'false'}"
-                title="${(peticion.drive_folder_url || peticion.respuesta_drive_url || peticion.drive_folder_id) ? 'Sincronizar con reemplazo limpio en Google Drive (solo aportes aprobados, sin duplicados)' : 'Respaldar estructura completa de carpetas y archivos aprobados en Google Drive'}"
-                style="display: inline-flex; align-items: center; justify-content: center; height: 32px; padding: 6px 11px; font-size: 0.76rem; font-weight: 600; border-radius: 8px; gap: 5px; background: #F2F7F6; border: 1.5px solid #00594E; color: #00594E; cursor: pointer; transition: all 0.16s ease;"
+                title="${(peticion.drive_folder_url || peticion.respuesta_drive_url || peticion.drive_folder_id) ? 'Sincronizar con reemplazo limpio en Google Drive' : 'Respaldar estructura completa de carpetas y archivos en Google Drive'}"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">${(peticion.drive_folder_url || peticion.respuesta_drive_url || peticion.drive_folder_id) ? '<polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>' : '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><polyline points="12 11 12 17"/><polyline points="9 14 12 11 15 14"/>'}</svg>
-                <span>${(peticion.drive_folder_url || peticion.respuesta_drive_url || peticion.drive_folder_id) ? 'Actualizar en Drive' : 'Respaldar en Drive'}</span>
+                <span>Respaldar en Drive</span>
               </button>
 
+              <!-- 3. Abrir en Drive (NUNCA deshabilitado por defecto) -->
               ${(peticion.drive_folder_url || peticion.respuesta_drive_url || peticion.drive_folder_id) ? `
                 <a
                   href="${escapeHtml(peticion.drive_folder_url || peticion.respuesta_drive_url || `https://drive.google.com/drive/folders/${peticion.drive_folder_id}`)}"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="btn btn-secondary btn-sm btn-open-drive-link"
+                  class="exp-action-btn exp-btn-open-drive btn-open-drive-link"
                   data-id="${escapeHtml(peticion.id)}"
+                  data-radicado="${escapeHtml(peticion.numero_radicado)}"
                   title="Abrir carpeta oficial del expediente en Google Drive"
-                  style="display: inline-flex; align-items: center; justify-content: center; height: 32px; padding: 6px 11px; font-size: 0.76rem; font-weight: 600; border-radius: 8px; gap: 5px; background: #F0F7F5; border: 1.5px solid #00594E; color: #00594E; text-decoration: none; cursor: pointer; transition: all 0.16s ease;"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                   <span>Abrir en Drive ↗</span>
                 </a>
               ` : `
-                <button
-                  type="button"
-                  class="btn btn-secondary btn-sm btn-open-drive-link is-disabled"
+                <a
+                  href="javascript:void(0)"
+                  class="exp-action-btn exp-btn-open-drive btn-open-drive-link"
                   data-id="${escapeHtml(peticion.id)}"
-                  disabled
-                  title="Sincronice primero en Drive para habilitar el acceso directo"
-                  style="display: inline-flex; align-items: center; justify-content: center; height: 32px; padding: 6px 11px; font-size: 0.76rem; font-weight: 600; border-radius: 8px; gap: 5px; background: #F8FAFC; border: 1.5px solid #CBD5E1; color: #94A3B8; cursor: not-allowed; opacity: 0.7; transition: all 0.16s ease;"
+                  data-radicado="${escapeHtml(peticion.numero_radicado)}"
+                  data-need-resolve="true"
+                  title="Abrir carpeta oficial en Google Drive"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                   <span>Abrir en Drive ↗</span>
-                </button>
+                </a>
               `}
 
-              <button 
-                type="button" 
-                class="btn btn-secondary btn-sm btn-open-prorroga-modal" 
-                data-id="${escapeHtml(peticion.id)}"
-                title="Ampliar plazo de vencimiento con trazabilidad de auditoría"
-                style="display: inline-flex; align-items: center; justify-content: center; height: 32px; padding: 6px 11px; font-size: 0.76rem; font-weight: 600; border-radius: 8px; gap: 5px; background: #F7F5EE; border: 1.5px solid #B5A160; color: #786832; cursor: pointer; transition: all 0.16s ease;"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="10" y1="16" x2="14" y2="16"/></svg>
-                <span>+ Prórroga</span>
-              </button>
-
+              <!-- 4. Expediente Completo -->
               ${isRespondidaFolder ? `
                 <span
-                  style="display: inline-flex; align-items: center; justify-content: center; height: 32px; padding: 6px 11px; font-size: 0.76rem; font-weight: 600; border-radius: 8px; gap: 5px; background: #E6EFEF; border: 1.5px solid #00594E; color: #00594E;"
+                  class="exp-action-btn exp-btn-expediente"
+                  style="opacity: 0.88; cursor: default;"
                   title="Expediente cerrado internamente en Secretaría General"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
@@ -3004,20 +3011,20 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
               ` : `
                 <button 
                   type="button" 
-                  class="btn btn-primary btn-sm btn-completar-expediente" 
+                  class="exp-action-btn exp-btn-expediente btn-completar-expediente" 
                   data-id="${escapeHtml(peticion.id)}"
                   data-radicado="${escapeHtml(peticion.numero_radicado)}"
                   title="Cerrar internamente el expediente sin enviar correo externo"
-                  style="display: inline-flex; align-items: center; justify-content: center; height: 32px; padding: 6px 11px; font-size: 0.76rem; font-weight: 600; border-radius: 8px; gap: 5px; background: #00594E; border: 1.5px solid #00594E; color: #ffffff; box-shadow: 0 2px 6px rgba(0, 89, 78, 0.2); cursor: pointer;"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                   <span>Expediente Completo</span>
                 </button>
               `}
 
+              <!-- 5. Editar Radicado -->
               <button 
                 type="button" 
-                class="btn btn-secondary btn-sm btn-edit-pet" 
+                class="exp-action-btn btn-edit-pet" 
                 data-id="${escapeHtml(peticion.id)}"
                 data-radicado="${escapeHtml(peticion.numero_radicado)}"
                 data-asunto="${escapeHtml(peticion.asunto)}"
@@ -3026,7 +3033,8 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                 data-prioridad="${escapeHtml(peticion.prioridad || 'Media')}"
                 data-entrega="${escapeHtml(peticion.fecha_limite_entrega || '')}"
                 data-estado="${escapeHtml(peticion.estado || 'en_tramite')}"
-                style="display: inline-flex; align-items: center; justify-content: center; height: 32px; padding: 6px 11px; font-size: 0.76rem; font-weight: 600; border-radius: 8px; gap: 5px; border-color: var(--dorado-borde); background: var(--dorado-suave-bg); color: var(--dorado-oscuro); cursor: pointer;"
+                style="background: #FDF8EE; color: #854D0E; border-color: #FDE68A;"
+                title="Editar metadatos del radicado"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                 <span>Editar</span>
@@ -3973,6 +3981,64 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         return;
       }
 
+      // D1. Botón Abrir en Drive (Resolución Dinámica si la carpeta no tiene enlace registrado aún)
+      const openDriveLink = target.closest('.btn-open-drive-link') as HTMLElement | null;
+      if (openDriveLink) {
+        const href = openDriveLink.getAttribute('href') || '';
+        const needResolve =
+          openDriveLink.getAttribute('data-need-resolve') === 'true' ||
+          !href ||
+          href.startsWith('javascript:');
+
+        if (needResolve) {
+          e.preventDefault();
+          e.stopPropagation();
+          const petId = openDriveLink.getAttribute('data-id') || '';
+          const radicado = openDriveLink.getAttribute('data-radicado') || '';
+          const spanEl = openDriveLink.querySelector('span');
+          const origText = spanEl ? spanEl.textContent : 'Abrir en Drive ↗';
+          if (spanEl) spanEl.textContent = 'Buscando en Drive...';
+          openDriveLink.style.pointerEvents = 'none';
+
+          try {
+            const res = await fetch(`/api/peticiones/abrir-drive?id=${encodeURIComponent(petId)}&radicado=${encodeURIComponent(radicado)}`);
+            const data = await res.json().catch(() => ({}));
+            if (res.ok && data?.ok && data?.url) {
+              openDriveLink.setAttribute('href', data.url);
+              openDriveLink.setAttribute('target', '_blank');
+              openDriveLink.setAttribute('rel', 'noopener noreferrer');
+              openDriveLink.removeAttribute('data-need-resolve');
+              if (spanEl) spanEl.textContent = 'Abrir en Drive ↗';
+              window.open(data.url, '_blank', 'noopener,noreferrer');
+              // Actualizar en caché local
+              const pet = peticionesMap.get(petId) || allPeticiones.find((p) => p.id === petId);
+              if (pet) {
+                pet.drive_folder_url = data.url;
+                pet.drive_folder_id = data.folderId;
+                pet.respuesta_drive_url = data.url;
+                indexPeticion(pet);
+              }
+            } else {
+              if (spanEl) spanEl.textContent = origText;
+              const errMsg = data?.error || 'Esta carpeta aún no ha sido sincronizada en Google Drive. Pulse "Respaldar en Drive" primero.';
+              if (typeof (window as any).showToast === 'function') {
+                (window as any).showToast(errMsg, 'warning', 'Sincronización Drive Requerida');
+              } else {
+                alert(errMsg);
+              }
+            }
+          } catch (err: any) {
+            if (spanEl) spanEl.textContent = origText;
+            if (typeof (window as any).showToast === 'function') {
+              (window as any).showToast('No se pudo verificar la carpeta en Google Drive.', 'error', 'Error Drive');
+            }
+          } finally {
+            openDriveLink.style.pointerEvents = '';
+          }
+          return;
+        }
+      }
+
       // D. Botón Respaldar Expediente en Google Drive
       const driveBtn = (target ? target.closest('button[data-id], button[data-radicado], .btn-export-drive, .btn-respaldar-drive') : null) as HTMLElement | null;
       if (driveBtn && (driveBtn.classList.contains('btn-export-drive') || driveBtn.classList.contains('btn-respaldar-drive') || (driveBtn.getAttribute('title') || '').toLowerCase().includes('drive'))) {
@@ -4888,20 +4954,11 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
         document.querySelectorAll<HTMLElement>(`.btn-open-drive-link[data-id="${petId}"]`).forEach((btn) => {
           btn.removeAttribute('disabled');
           btn.classList.remove('is-disabled');
-          if (btn.tagName.toLowerCase() === 'button') {
-            const a = document.createElement('a');
-            a.className = 'btn btn-secondary btn-sm btn-open-drive-link';
-            a.setAttribute('style', 'display: inline-flex; align-items: center; justify-content: center; height: 32px; padding: 6px 11px; font-size: 0.76rem; font-weight: 600; border-radius: 8px; gap: 5px; background: #F0F7F5; border: 1.5px solid #00594E; color: #00594E; text-decoration: none; cursor: pointer; transition: all 0.16s ease;');
-            a.setAttribute('href', data.webViewLink);
-            a.setAttribute('target', '_blank');
-            a.setAttribute('rel', 'noopener noreferrer');
-            a.setAttribute('title', 'Abrir carpeta oficial del expediente en Google Drive');
-            a.setAttribute('data-id', petId);
-            a.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg><span>Abrir en Drive ↗</span>`;
-            btn.parentNode?.replaceChild(a, btn);
-          } else {
-            btn.setAttribute('href', data.webViewLink);
-          }
+          btn.removeAttribute('data-need-resolve');
+          btn.setAttribute('href', data.webViewLink);
+          btn.setAttribute('target', '_blank');
+          btn.setAttribute('rel', 'noopener noreferrer');
+          btn.setAttribute('title', 'Abrir carpeta oficial del expediente en Google Drive');
         });
 
         // Mostrar única confirmación visual ejecutiva con enlace directo y copia rápida

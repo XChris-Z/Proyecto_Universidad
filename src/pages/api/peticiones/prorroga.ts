@@ -2,10 +2,12 @@
 export const prerender = false;
 
 import type { APIRoute } from 'astro';
-import { supabase } from '@lib/supabase';
+import { supabase, supabaseAdmin } from '@lib/supabase';
 import { logSystemActivity } from '@lib/audit';
 import { separarRespuestaMeta } from '@lib/subcarpetas';
 import { resolveSessionActor } from '@lib/request-actor';
+
+const db: any = supabaseAdmin || supabase;
 
 function isMissingColumnError(err: any): boolean {
   const code = String(err?.code || '').trim();
@@ -54,7 +56,7 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
       );
     }
 
-    const { data: pet, error: fetchErr } = await (supabase
+    const { data: pet, error: fetchErr } = await (db
       .from('peticiones' as any)
       .select('id, numero_radicado, asunto, fecha_limite_entrega, fecha_limite_responsable, instrucciones_anexos')
       .eq('id', peticionId)
@@ -111,7 +113,7 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
       updatePayload.fecha_limite_responsable = `${nuevaRespYmd}T23:59:59-05:00`;
     }
 
-    let res = await (supabase
+    let res = await (db
       .from('peticiones' as any)
       .update(updatePayload)
       .eq('id', peticionId)
@@ -120,7 +122,7 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
 
     if (res.error && isMissingColumnError(res.error) && 'fecha_limite_responsable' in updatePayload) {
       const { fecha_limite_responsable: _drop, ...fallbackPayload } = updatePayload;
-      res = await (supabase
+      res = await (db
         .from('peticiones' as any)
         .update(fallbackPayload)
         .eq('id', peticionId)
@@ -138,7 +140,7 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
     // Ampliar expiración del portal a dependencias si cambió el plazo de responsables
     const respExpiryYmd = nuevaRespYmd || nuevaEntregaYmd;
     if (respExpiryYmd) {
-      await (supabase
+      await (db
         .from('peticion_responsables' as any)
         .update({ fecha_expiracion_codigo: `${respExpiryYmd}T23:59:59-05:00` })
         .eq('peticion_id', peticionId) as any);
@@ -164,7 +166,7 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
       request,
       clientAddress,
       cookies,
-    }).catch((err) => console.warn('[PRORROGA] Error registrando auditoría:', err));
+    }).catch((err) => console.error('[AUDITORIA ERROR] Error registrando auditoría en prórroga:', err));
 
     return new Response(
       JSON.stringify({

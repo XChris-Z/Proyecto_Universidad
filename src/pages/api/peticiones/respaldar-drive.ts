@@ -86,7 +86,7 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
       request,
       clientAddress,
       cookies,
-    }).catch((e) => console.warn('[RESPALDAR DRIVE] Error auditoría:', e));
+    }).catch((e) => console.error('[AUDITORIA ERROR] Error en auditoría respaldar-drive:', e));
 
     return new Response(
       JSON.stringify({
@@ -96,6 +96,8 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
         webViewLink: result.webViewLink,
         folderUrl: result.webViewLink,
         folderId: result.folderId,
+        drive_folder_id: result.folderId,
+        drive_folder_url: driveFolderUrl,
         folderName: result.folderName,
         numeroRadicado: result.numeroRadicado,
         archivosSubidos: result.archivosSubidos,

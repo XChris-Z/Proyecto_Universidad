@@ -63,19 +63,26 @@ export async function initAuditoria() {
     if (kpiIntegrity) kpiIntegrity.textContent = '100%';
   }
 
-  function renderAuditLogsView(filterAction = 'ALL', filterSeverity = 'ALL', searchTerm = '') {
+  function renderAuditLogsView(filterAction = 'ALL', filterSeverity = 'ALL', searchTerm = '', filterUser = 'ALL') {
     if (!tbody) return;
     const actionSelect = document.getElementById('audit-filter-action') as HTMLSelectElement | null;
     const severitySelect = document.getElementById('audit-filter-severity') as HTMLSelectElement | null;
+    const userSelect = document.getElementById('audit-filter-user') as HTMLSelectElement | null;
     const searchInput = document.getElementById('audit-search-input') as HTMLInputElement | null;
 
     const actionFilter = filterAction !== 'ALL' ? filterAction : (actionSelect?.value || 'ALL');
     const severityFilter = filterSeverity !== 'ALL' ? filterSeverity : (severitySelect?.value || 'ALL');
+    const userFilterVal = filterUser !== 'ALL' ? filterUser : (userSelect?.value || 'ALL');
     const query = (searchTerm || searchInput?.value || '').trim().toLowerCase();
 
     const filtered = logs.filter(log => {
       if (actionFilter !== 'ALL' && log.actionType !== actionFilter) return false;
       if (severityFilter !== 'ALL' && log.severity !== severityFilter) return false;
+      if (userFilterVal !== 'ALL') {
+        const matchUserId = log.actor.id === userFilterVal;
+        const matchUserName = (log.actor.name || '').toLowerCase() === userFilterVal.toLowerCase();
+        if (!matchUserId && !matchUserName) return false;
+      }
       if (query) {
         const matchActor = (log.actor.name + ' ' + log.actor.role).toLowerCase().includes(query);
         const matchAction = log.action.toLowerCase().includes(query);
@@ -112,11 +119,6 @@ export async function initAuditoria() {
         cleanActor.initials = 'FR';
         cleanActor.role = 'Funcionario';
       }
-      if (cleanActor.name && /oscar\s*g/i.test(cleanActor.name)) {
-        cleanActor.name = 'ING. Christian Lemus';
-        cleanActor.initials = 'IC';
-        cleanActor.role = 'Administrador';
-      }
 
       const cleanAction = cleanAuditActionTitle(log.action)
         .replace(/ACTUALIZACIÓN DE ROL RBAC/gi, 'ACTUALIZACIÓN DE ROL DEL SISTEMA')
@@ -142,13 +144,37 @@ export async function initAuditoria() {
                             String(log.action || '').match(radPattern) || 
                             String(log.details || '').match(radPattern);
 
+      const activeList = Array.isArray((window as any).__SGD_ACTIVE_RADICADOS__)
+        ? ((window as any).__SGD_ACTIVE_RADICADOS__ as string[])
+        : null;
+
       let entityHtml = '';
       if (radicadoMatch) {
+        const radText = radicadoMatch[0].toUpperCase();
+        const isDeleted =
+          log.actionType === 'ELIMINACION' ||
+          (log.action && log.action.toLowerCase().includes('eliminac')) ||
+          (activeList !== null && activeList.length > 0 && !activeList.includes(radText));
+
+        const badgeEliminado = isDeleted
+          ? `<span style="display: inline-block; font-size: 0.68rem; font-weight: 750; background: #FEE2E2; color: #991B1B; border: 1px solid #FCA5A5; padding: 1px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle;">Expediente eliminado</span>`
+          : '';
+
         entityHtml = `
-          <div style="font-weight: 800; font-family: monospace; color: var(--verde-principal); font-size: 0.88rem;">${radicadoMatch[0].toUpperCase()}</div>
+          <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
+            <span style="font-weight: 800; font-family: monospace; color: var(--verde-principal); font-size: 0.88rem;">${radText}</span>
+            ${badgeEliminado}
+          </div>
           <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 2px;">${entityStr}</div>
         `;
       } else {
+        const isDeleted =
+          log.actionType === 'ELIMINACION' ||
+          (log.action && log.action.toLowerCase().includes('eliminac'));
+        const badgeEliminado = isDeleted
+          ? `<span style="display: inline-block; font-size: 0.68rem; font-weight: 750; background: #FEE2E2; color: #991B1B; border: 1px solid #FCA5A5; padding: 1px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle;">Expediente eliminado</span>`
+          : '';
+
         const isInternalId = !entityIdStr || 
           /^[0-9a-f-]{16,}$/i.test(entityIdStr) ||
           /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entityIdStr) || 
@@ -157,10 +183,18 @@ export async function initAuditoria() {
           entityIdStr.length > 20;
 
         if (isInternalId) {
-          entityHtml = `<div style="font-weight: 700; color: var(--text-main); font-size: 0.85rem;">${entityStr}</div>`;
+          entityHtml = `
+            <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
+              <span style="font-weight: 700; color: var(--text-main); font-size: 0.85rem;">${entityStr}</span>
+              ${badgeEliminado}
+            </div>
+          `;
         } else {
           entityHtml = `
-            <div style="font-weight: 700; color: var(--text-main); font-size: 0.85rem;">${entityIdStr}</div>
+            <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
+              <span style="font-weight: 700; color: var(--text-main); font-size: 0.85rem;">${entityIdStr}</span>
+              ${badgeEliminado}
+            </div>
             <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 2px;">${entityStr}</div>
           `;
         }
@@ -224,6 +258,10 @@ export async function initAuditoria() {
     renderAuditLogsView(undefined, undefined, (e.target as HTMLInputElement).value);
   });
 
+  document.getElementById('audit-filter-user')?.addEventListener('change', (e) => {
+    renderAuditLogsView(undefined, undefined, undefined, (e.target as HTMLSelectElement).value);
+  });
+
   document.getElementById('audit-filter-action')?.addEventListener('change', (e) => {
     renderAuditLogsView((e.target as HTMLSelectElement).value);
   });
@@ -236,10 +274,12 @@ export async function initAuditoria() {
     const searchInput = document.getElementById('audit-search-input') as HTMLInputElement | null;
     const actionSelect = document.getElementById('audit-filter-action') as HTMLSelectElement | null;
     const severitySelect = document.getElementById('audit-filter-severity') as HTMLSelectElement | null;
+    const userSelect = document.getElementById('audit-filter-user') as HTMLSelectElement | null;
     if (searchInput) searchInput.value = '';
     if (actionSelect) actionSelect.value = 'ALL';
     if (severitySelect) severitySelect.value = 'ALL';
-    renderAuditLogsView('ALL', 'ALL', '');
+    if (userSelect) userSelect.value = 'ALL';
+    renderAuditLogsView('ALL', 'ALL', '', 'ALL');
   });
 
   // Verify chain modal

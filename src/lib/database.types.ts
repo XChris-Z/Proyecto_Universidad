@@ -557,6 +557,8 @@ export type Database = {
           respuesta_pin_solicitante?: string | null
           respuesta_archivos_incluidos?: string[] | null
           respuesta_drive_url?: string | null
+          drive_folder_id?: string | null
+          drive_folder_url?: string | null
           fecha_respuesta?: string | null
           respuesta_oficial?: boolean | null
           respondida?: boolean | null
@@ -588,6 +590,8 @@ export type Database = {
           respuesta_pin_solicitante?: string | null
           respuesta_archivos_incluidos?: string[] | null
           respuesta_drive_url?: string | null
+          drive_folder_id?: string | null
+          drive_folder_url?: string | null
           fecha_respuesta?: string | null
           respuesta_oficial?: boolean | null
           respondida?: boolean | null
@@ -619,6 +623,8 @@ export type Database = {
           respuesta_pin_solicitante?: string | null
           respuesta_archivos_incluidos?: string[] | null
           respuesta_drive_url?: string | null
+          drive_folder_id?: string | null
+          drive_folder_url?: string | null
           fecha_respuesta?: string | null
           respuesta_oficial?: boolean | null
           respondida?: boolean | null
