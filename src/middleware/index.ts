@@ -3,7 +3,7 @@
 
 import { defineMiddleware } from 'astro:middleware';
 import { PUBLIC_ROUTES, SESSION_COOKIE_KEY } from '@lib/constants';
-import { canAccessModuleRoute, getFirstAllowedPath, isAdminOnlyPath } from '@lib/permissions';
+import { canAccessModuleRoute, getFirstAllowedPath, isAdminOnlyPath, tienePermiso } from '@lib/permissions';
 import { resolveUserRbacServer } from '@lib/rbac-server';
 
 function applySecurityHeaders(response: Response, isProtected = false): Response {
@@ -90,14 +90,17 @@ export const onRequest = defineMiddleware(async ({ url, cookies, redirect }, nex
   const rbac = await resolveUserRbacServer(session.value);
 
   if (pathname.startsWith('/api/')) {
-    if (pathname.startsWith('/api/admin/') && !rbac.isAdmin) {
-      return applySecurityHeaders(
-        new Response(JSON.stringify({ success: false, error: 'Acceso exclusivo para Administrador' }), {
-          status: 403,
-          headers: { 'Content-Type': 'application/json' },
-        }),
-        true
-      );
+    if (pathname.startsWith('/api/admin/')) {
+      const isAllowedRbacEndpoint = pathname === '/api/admin/rbac' && tienePermiso(rbac, 'usuarios', 'ver');
+      if (!rbac.isAdmin && !isAllowedRbacEndpoint) {
+        return applySecurityHeaders(
+          new Response(JSON.stringify({ success: false, error: 'Acceso exclusivo para Administrador' }), {
+            status: 403,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+          true
+        );
+      }
     }
     const response = await next();
     return applySecurityHeaders(response, true);

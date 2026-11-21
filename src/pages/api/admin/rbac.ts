@@ -6,15 +6,19 @@ import { supabase } from '@lib/supabase';
 import {
   ALL_PERMISSION_IDS,
   DEFAULT_FUNCIONARIO_PERMISSIONS,
-  RBAC_MODULES,
+  MODULOS_SISTEMA,
   SYSTEM_ROLES,
-} from '@data/roles';
-import { SESSION_COOKIE_KEY } from '@lib/constants';
-import {
+  canCreateAdminAccount,
+  canDeleteUserTarget,
+  canManageRolesAndPermissions,
+  canModifyUserTarget,
+  filterNonEscalatedPermissions,
   getRoleDisplayName,
   isAdminRoleCode,
   normalizePermissionsList,
-} from '@lib/permissions';
+  tienePermiso,
+} from '@lib/permisos';
+import { SESSION_COOKIE_KEY } from '@lib/constants';
 import {
   ensureCatalogPermissionsInDb,
   loadRbacState,
@@ -69,19 +73,20 @@ export const GET: APIRoute = async ({ url, cookies }) => {
         effectivePermissions: currentUserRbac.effectivePermissions,
       },
       roles: currentUserRbac.roles,
-      modules: RBAC_MODULES,
+      modules: MODULOS_SISTEMA,
     });
   }
 
-  if (!currentUserRbac.isAdmin) {
-    return jsonResponse({ success: false, error: 'Acceso restringido al Administrador' }, 403);
+  // Permitir lectura si es Administrador o si tiene permiso delegado de ver usuarios
+  if (!currentUserRbac.isAdmin && !tienePermiso(currentUserRbac, 'usuarios', 'ver')) {
+    return jsonResponse({ success: false, error: 'Acceso restringido al módulo de Usuarios' }, 403);
   }
 
   const fullState = await loadRbacState();
   return jsonResponse({
     success: true,
     roles: fullState.roles,
-    modules: RBAC_MODULES,
+    modules: MODULOS_SISTEMA,
     userCustomRoles: fullState.userCustomRoles,
     userPermissions: fullState.userPermissionsOverride,
   });
@@ -94,10 +99,10 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
   }
 
   const currentRbac = await resolveUserRbacServer(sessionId);
-  if (!currentRbac.authenticated || !currentRbac.isAdmin) {
+  if (!currentRbac.authenticated) {
     return jsonResponse(
-      { success: false, error: 'Solo el rol Administrador puede modificar roles, usuarios o permisos.' },
-      403
+      { success: false, error: 'Sesión no autenticada o inválida' },
+      401
     );
   }
 
@@ -114,8 +119,20 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
   const action = String(body.action || '').trim();
   const state = await loadRbacState();
 
+  // Helper para verificar si un usuario objetivo es Administrador
+  async function isTargetAdminUser(targetId: string, targetEmail?: string): Promise<boolean> {
+    if (targetId === 'usr-root') return true;
+    const rId = state.userCustomRoles[targetId] || (targetEmail ? state.userCustomRoles[targetEmail] : '');
+    if (isAdminRoleCode(rId)) return true;
+    try {
+      const { data } = await supabase.from('profiles').select('role').eq('id', targetId).maybeSingle();
+      if (data && isAdminRoleCode(data.role)) return true;
+    } catch {}
+    return false;
+  }
+
   try {
-    // 1. Guardar matriz de permisos de un usuario específico (12 módulos .ver / .gestionar)
+    // 1. Guardar matriz de permisos de un usuario específico (14 módulos del catálogo)
     if (action === 'save_user_permissions') {
       const targetUserId = String(body.userId || '').trim();
       const targetEmail = String(body.userEmail || '').trim().toLowerCase();
@@ -125,8 +142,27 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
         return jsonResponse({ success: false, error: 'Identificador de usuario requerido' }, 400);
       }
 
+      // Candado de autorización: Administrador o permiso granular usuarios.gestionar_permisos
+      if (!currentRbac.isAdmin && !canManageRolesAndPermissions(currentRbac)) {
+        return jsonResponse(
+          { success: false, error: 'No tienes permisos para gestionar la matriz de permisos de usuarios.' },
+          403
+        );
+      }
+
+      // Candado anti-escalamiento: un no-admin no puede modificar los permisos de una cuenta Administrador
+      const targetIsAdmin = await isTargetAdminUser(targetUserId, targetEmail);
+      if (targetIsAdmin && !currentRbac.isAdmin) {
+        return jsonResponse(
+          { success: false, error: 'No tienes permitido modificar los permisos de una cuenta Administrador.' },
+          403
+        );
+      }
+
       const rawPerms: string[] = Array.isArray(body.permissions) ? body.permissions : [];
-      const normalizedPerms = normalizePermissionsList(rawPerms);
+      // Filtrar permisos para que el funcionario no otorgue lo que él no tiene
+      const filteredPerms = filterNonEscalatedPermissions(currentRbac, rawPerms);
+      const normalizedPerms = normalizePermissionsList(filteredPerms);
 
       await ensureCatalogPermissionsInDb();
 
@@ -189,12 +225,35 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
         return jsonResponse({ success: false, error: 'Nombre, ID y dependencia son obligatorios.' }, 400);
       }
 
+      // Candado de autorización: Administrador o usuarios.editar
+      if (!currentRbac.isAdmin && !tienePermiso(currentRbac, 'usuarios', 'editar')) {
+        return jsonResponse({ success: false, error: 'No tienes permisos para modificar funcionarios.' }, 403);
+      }
+
+      // Candado anti-escalamiento: un no-admin no puede modificar a un Administrador
+      const targetIsAdmin = await isTargetAdminUser(targetUserId, targetEmail);
+      if (targetIsAdmin && !currentRbac.isAdmin) {
+        return jsonResponse(
+          { success: false, error: 'No tienes permitido modificar los datos de una cuenta Administrador.' },
+          403
+        );
+      }
+
       const roleObj =
         state.roles.find((r) => r.id === selectedRoleId || r.code === selectedRoleId) ||
         SYSTEM_ROLES[1]!;
 
-      const isTargetAdmin = targetUserId === 'usr-root' || isAdminRoleCode(roleObj.id);
-      const baseDbRole = isTargetAdmin ? 'admin' : 'funcionario';
+      const isAssigningAdmin = isAdminRoleCode(roleObj.id);
+      // Candado anti-escalamiento: un no-admin no puede asignar rol Administrador
+      if (isAssigningAdmin && !currentRbac.isAdmin) {
+        return jsonResponse(
+          { success: false, error: 'Solo un Administrador puede asignar el rol Administrador.' },
+          403
+        );
+      }
+
+      const willBeAdmin = targetUserId === 'usr-root' || isAssigningAdmin;
+      const baseDbRole = willBeAdmin ? 'admin' : 'funcionario';
       const nowIso = new Date().toISOString();
 
       const { error: profErr } = await supabase
@@ -224,13 +283,15 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
         // Ignorar si la fila no existe en users o FK rechaza rol personalizado
       }
 
-      const finalRoleId = isTargetAdmin ? 'admin' : roleObj.id;
+      const finalRoleId = willBeAdmin ? 'admin' : roleObj.id;
       state.userCustomRoles[targetUserId] = finalRoleId;
       if (targetEmail) state.userCustomRoles[targetEmail] = finalRoleId;
 
       // Si cambia de rol, aplicar plantilla de permisos del nuevo rol salvo que quiera mantener override explícito
-      if (body.applyRolePermissions !== false && !isTargetAdmin) {
-        const templatePerms = normalizePermissionsList(roleObj.permissions || DEFAULT_FUNCIONARIO_PERMISSIONS);
+      if (body.applyRolePermissions !== false && !willBeAdmin) {
+        const rawRolePerms = roleObj.permissions || DEFAULT_FUNCIONARIO_PERMISSIONS;
+        const filteredPerms = filterNonEscalatedPermissions(currentRbac, rawRolePerms);
+        const templatePerms = normalizePermissionsList(filteredPerms);
         state.userPermissionsOverride[targetUserId] = templatePerms;
         if (targetEmail) state.userPermissionsOverride[targetEmail] = templatePerms;
 
@@ -292,11 +353,24 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
         );
       }
 
+      // Candado de autorización: Administrador o usuarios.crear
+      if (!currentRbac.isAdmin && !tienePermiso(currentRbac, 'usuarios', 'crear')) {
+        return jsonResponse({ success: false, error: 'No tienes permisos para registrar nuevos usuarios.' }, 403);
+      }
+
       const roleObj =
         state.roles.find((r) => r.id === selectedRoleId || r.code === selectedRoleId) ||
         SYSTEM_ROLES[1]!;
 
       const isNewAdmin = isAdminRoleCode(roleObj.id);
+      // Candado anti-escalamiento: un no-admin no puede crear cuentas con rol Administrador
+      if (isNewAdmin && !currentRbac.isAdmin) {
+        return jsonResponse(
+          { success: false, error: 'Solo un Administrador puede crear cuentas con rol Administrador.' },
+          403
+        );
+      }
+
       const baseDbRole = isNewAdmin ? 'admin' : 'funcionario';
 
       const { data: createData, error: rpcErr } = await (supabase.rpc as any)('admin_create_user', {
@@ -322,7 +396,9 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
       const assignedRoleId = isNewAdmin ? 'admin' : roleObj.id;
       const initialPerms = isNewAdmin
         ? [...ALL_PERMISSION_IDS]
-        : normalizePermissionsList(roleObj.permissions || DEFAULT_FUNCIONARIO_PERMISSIONS);
+        : normalizePermissionsList(
+            filterNonEscalatedPermissions(currentRbac, roleObj.permissions || DEFAULT_FUNCIONARIO_PERMISSIONS)
+          );
 
       state.userCustomRoles[newId] = assignedRoleId;
       state.userCustomRoles[email] = assignedRoleId;
@@ -384,6 +460,20 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
         return jsonResponse({ success: false, error: 'El usuario Administrador principal está protegido.' }, 400);
       }
 
+      // Candado de autorización: Administrador o usuarios.eliminar
+      if (!currentRbac.isAdmin && !tienePermiso(currentRbac, 'usuarios', 'eliminar')) {
+        return jsonResponse({ success: false, error: 'No tienes permisos para eliminar usuarios.' }, 403);
+      }
+
+      // Candado anti-escalamiento: un no-admin no puede eliminar a un Administrador
+      const targetIsAdmin = await isTargetAdminUser(targetUserId, targetEmail);
+      if (targetIsAdmin && !currentRbac.isAdmin) {
+        return jsonResponse(
+          { success: false, error: 'No tienes permitido eliminar a un usuario Administrador.' },
+          403
+        );
+      }
+
       const { error: delErr } = await (supabase.rpc as any)('admin_delete_user', {
         p_user_id: targetUserId,
       });
@@ -408,7 +498,7 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
         actionType: 'ELIMINACION',
         entity: 'Control de Usuarios y Roles',
         entityId: targetUserId,
-        details: `El Administrador dio de baja y eliminó al funcionario "${targetName}" (${targetEmail}).`,
+        details: `Se dio de baja y eliminó al funcionario "${targetName}" (${targetEmail}).`,
         severity: 'CRITICAL',
       });
 
@@ -419,12 +509,20 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
     if (action === 'upsert_role') {
       const rawId = String(body.id || '').trim();
       const name = String(body.name || '').trim();
-      const desc = String(body.desc || '').trim() || 'Rol personalizado institucional con permisos definidos por el Administrador.';
+      const desc = String(body.desc || '').trim() || 'Rol personalizado institucional con permisos definidos en el sistema.';
       const color = String(body.color || '#00594E').trim();
       const rawPerms: string[] = Array.isArray(body.permissions) ? body.permissions : [];
 
       if (!name) {
         return jsonResponse({ success: false, error: 'El nombre del rol es obligatorio.' }, 400);
+      }
+
+      // Candado de autorización: Administrador o canManageRolesAndPermissions
+      if (!currentRbac.isAdmin && !canManageRolesAndPermissions(currentRbac)) {
+        return jsonResponse(
+          { success: false, error: 'No tienes permisos para crear o modificar roles institucionales.' },
+          403
+        );
       }
 
       const isAdminTarget = rawId === 'admin' || isAdminRoleCode(name);
@@ -437,7 +535,10 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
 
       const roleId = rawId || slugifyRoleId(name);
       const isBaseFuncionario = roleId === 'funcionario';
-      const normalizedPerms = normalizePermissionsList(rawPerms);
+
+      // Anti-escalamiento: filtrar permisos si el solicitante no es administrador
+      const filteredPerms = filterNonEscalatedPermissions(currentRbac, rawPerms);
+      const normalizedPerms = normalizePermissionsList(filteredPerms);
 
       const newRole: SystemRole = {
         id: roleId,
@@ -487,7 +588,7 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
         state.roles.push(newRole);
       }
 
-      // Sincronizar usuarios que tienen este rol personalizado sin override manual o si se solicita propagar
+      // Sincronizar usuarios que tienen este rol personalizado si se solicita propagar
       if (body.propagateToUsers === true) {
         for (const [uid, assignedRid] of Object.entries(state.userCustomRoles)) {
           if (assignedRid === newRole.id) {
@@ -526,6 +627,15 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
     // 6. Eliminar rol personalizado
     if (action === 'delete_role') {
       const roleId = String(body.roleId || '').trim();
+
+      // Candado de autorización: Administrador o canManageRolesAndPermissions
+      if (!currentRbac.isAdmin && !canManageRolesAndPermissions(currentRbac)) {
+        return jsonResponse(
+          { success: false, error: 'No tienes permisos para eliminar roles institucionales.' },
+          403
+        );
+      }
+
       if (!roleId || roleId === 'admin' || roleId === 'funcionario') {
         return jsonResponse(
           { success: false, error: 'Los roles institucionales base (Administrador y Funcionario) están protegidos.' },
@@ -578,4 +688,3 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
     return jsonResponse({ success: false, error: err?.message || 'Error interno en gestión RBAC' }, 500);
   }
 };
-

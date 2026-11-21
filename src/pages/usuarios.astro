@@ -1,7 +1,2115 @@
 ---
 // src/pages/usuarios.astro
-// Redirección amigable al directorio administrativo de usuarios
 export const prerender = false;
-return Astro.redirect('/admin/usuarios');
+
+import AppLayout from '@layouts/AppLayout.astro';
+import { supabase } from '@lib/supabase';
+import {
+  ALL_PERMISSION_IDS,
+  DEFAULT_FUNCIONARIO_PERMISSIONS,
+  GRUPOS_MODULOS,
+  MODULOS_SISTEMA,
+  SYSTEM_ROLES,
+  canManageRolesAndPermissions,
+  getFirstAllowedPath,
+  getRoleDisplayName,
+  isAdminRoleCode,
+  normalizePermissionsList,
+  tienePermiso,
+} from '@lib/permisos';
+import { SESSION_COOKIE_KEY } from '@lib/constants';
+import { loadRbacState, resolveUserRbacServer } from '@lib/rbac-server';
+
+// Validación de sesión y autorización RBAC
+const sessionUserId = Astro.cookies.get(SESSION_COOKIE_KEY)?.value;
+if (!sessionUserId) {
+  return Astro.redirect('/login');
+}
+
+const currentRbac = await resolveUserRbacServer(sessionUserId);
+if (!currentRbac.authenticated) {
+  return Astro.redirect('/login');
+}
+
+// Permitir acceso a Administrador o funcionario con permiso 'usuarios.ver'
+if (!currentRbac.isAdmin && !tienePermiso(currentRbac, 'usuarios', 'ver')) {
+  const fallback = getFirstAllowedPath(currentRbac.effectivePermissions, false);
+  return Astro.redirect(`${fallback}?denied=1`);
+}
+
+// Banderas granulares de permisos del usuario conectado
+const canCreateUser = currentRbac.isAdmin || tienePermiso(currentRbac, 'usuarios', 'crear');
+const canEditUser = currentRbac.isAdmin || tienePermiso(currentRbac, 'usuarios', 'editar');
+const canDeleteUser = currentRbac.isAdmin || tienePermiso(currentRbac, 'usuarios', 'eliminar');
+const canManagePerms = currentRbac.isAdmin || canManageRolesAndPermissions(currentRbac);
+
+// Consultar usuarios y estado RBAC desde Supabase
+const [{ data: dbProfiles }, rbacState] = await Promise.all([
+  supabase.from('profiles').select('*').order('created_at', { ascending: true }),
+  loadRbacState(),
+]);
+
+const usersList = dbProfiles && dbProfiles.length > 0 ? dbProfiles : [];
+const rolesCatalog = rbacState.roles && rbacState.roles.length > 0 ? rbacState.roles : SYSTEM_ROLES;
+
+const enrichedUsers = usersList.map((u: any) => {
+  const email = String(u.email || '').toLowerCase();
+  const isProtectedRoot = u.id === 'usr-root';
+  const assignedRoleId =
+    isProtectedRoot || isAdminRoleCode(u.role)
+      ? 'admin'
+      : rbacState.userCustomRoles[u.id] || rbacState.userCustomRoles[email] || 'funcionario';
+  const isUserAdmin = isProtectedRoot || isAdminRoleCode(assignedRoleId);
+  const roleObj =
+    rolesCatalog.find((r) => r.id === assignedRoleId || r.code === assignedRoleId) ||
+    rolesCatalog.find((r) => r.id === (isUserAdmin ? 'admin' : 'funcionario')) ||
+    SYSTEM_ROLES[isUserAdmin ? 0 : 1]!;
+  const roleLabel = isUserAdmin ? 'Administrador' : getRoleDisplayName(roleObj.id, rolesCatalog);
+  const roleCategory = isUserAdmin ? 'admin' : roleObj.id === 'funcionario' ? 'funcionario' : 'custom';
+
+  return {
+    ...u,
+    assignedRoleId: roleObj.id,
+    roleObj,
+    roleLabel,
+    roleCategory,
+    isUserAdmin,
+    isProtectedRoot,
+  };
+});
+
+const totalUsers = enrichedUsers.length;
+const totalAdmins = enrichedUsers.filter((u: any) => u.isUserAdmin).length;
+const totalFuncionarios = enrichedUsers.filter((u: any) => !u.isUserAdmin).length;
+const customRolesCount = rolesCatalog.filter((r) => !r.isProtected).length;
+const totalRoles = rolesCatalog.length;
+
+const ROLE_PALETTE_OPTIONS = [
+  { hex: '#00594E', name: 'Verde Unitrópico' },
+  { hex: '#B5A160', name: 'Dorado Institucional' },
+  { hex: '#003830', name: 'Verde Bosque' },
+  { hex: '#786832', name: 'Bronce Oscuro' },
+  { hex: '#1E293B', name: 'Pizarra Ejecutivo' },
+  { hex: '#334155', name: 'Carbón Institucional' },
+  { hex: '#7F1D1D', name: 'Vinotinto Sobrio' },
+];
+
+const initialRbacBootstrap = JSON.stringify({
+  currentUser: {
+    id: currentRbac.userId,
+    isAdmin: currentRbac.isAdmin,
+    permissions: currentRbac.effectivePermissions,
+    canCreateUser,
+    canEditUser,
+    canDeleteUser,
+    canManagePerms,
+  },
+  roles: rolesCatalog,
+  modules: MODULOS_SISTEMA,
+  groups: GRUPOS_MODULOS,
+  userCustomRoles: rbacState.userCustomRoles,
+  userPermissions: rbacState.userPermissionsOverride,
+});
 ---
 
+<AppLayout title="Usuarios" activeNav="usuarios">
+  <div class="users-admin-container" style="max-width: 1320px; margin: 0 auto; width: 100%;">
+    
+    <!-- Contenedor Maestro Blanco Anti-Saturación de Fondo Halftone -->
+    <div class="module-board-card">
+
+      <!-- Encabezado Institucional -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+        <div>
+          <h1 style="font-size: 1.65rem; font-weight: 800; color: #111827; margin: 0; letter-spacing: -0.02em;">Directorio de Usuarios y Control de Acceso</h1>
+          <p style="font-size: 0.86rem; color: #52606D; margin: 4px 0 0 0;">
+            Administración institucional de funcionarios, asignación de roles y delegación granular de permisos por módulo
+          </p>
+        </div>
+      </div>
+
+      <!-- 3 Tarjetas Bento KPIs Integradas -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;">
+        
+        <!-- KPI 1: Total Usuarios Registrados -->
+        <div style="background: #F8FAFB; border: 1px solid #E2E8F0; border-radius: 14px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.02);">
+          <div>
+            <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #52606D; letter-spacing: 0.5px; display: block;">TOTAL USUARIOS REGISTRADOS</span>
+            <div style="font-size: 1.85rem; font-weight: 800; color: #00594E; margin-top: 4px; line-height: 1;" id="kpi-total-users">{totalUsers}</div>
+            <span style="font-size: 0.72rem; color: #52606D; margin-top: 4px; display: block;">{totalFuncionarios} funcionario(s) operativo(s)</span>
+          </div>
+          <div style="width: 44px; height: 44px; border-radius: 12px; background: #FFFFFF; border: 1.5px solid #B2CFCB; display: flex; align-items: center; justify-content: center; color: #00594E; flex-shrink: 0;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+        </div>
+
+        <!-- KPI 2: Administradores -->
+        <div style="background: #F8FAFB; border: 1px solid #E2E8F0; border-radius: 14px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.02);">
+          <div>
+            <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #52606D; letter-spacing: 0.5px; display: block;">ADMINISTRADORES</span>
+            <div style="font-size: 1.85rem; font-weight: 800; color: #00594E; margin-top: 4px; line-height: 1;" id="kpi-total-funcionarios">{totalAdmins}</div>
+            <span style="font-size: 0.72rem; color: #52606D; margin-top: 4px; display: block;">Control total y gobierno de seguridad</span>
+          </div>
+          <div style="width: 44px; height: 44px; border-radius: 12px; background: #FFFFFF; border: 1.5px solid #B2CFCB; display: flex; align-items: center; justify-content: center; color: #00594E; flex-shrink: 0;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+        </div>
+
+        <!-- KPI 3: Roles del Sistema -->
+        <div style="background: #F8FAFB; border: 1px solid #E2E8F0; border-radius: 14px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.02);">
+          <div>
+            <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #786832; letter-spacing: 0.5px; display: block;">ROLES INSTITUCIONALES</span>
+            <div style="font-size: 1.85rem; font-weight: 800; color: #786832; margin-top: 4px; line-height: 1;" id="kpi-total-roles">{totalRoles}</div>
+            <span style="font-size: 0.72rem; color: #786832; margin-top: 4px; display: block;" id="kpi-custom-roles-sub">{customRolesCount} rol(es) personalizado(s)</span>
+          </div>
+          <div style="width: 44px; height: 44px; border-radius: 12px; background: #FFFFFF; border: 1.5px solid #DBD2B0; display: flex; align-items: center; justify-content: center; color: #786832; flex-shrink: 0;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Barra de Búsqueda, Filtros y Botones de Acción -->
+      <div style="background: #F8FAFB; border: 1px solid #E2E8F0; border-radius: 14px; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+        
+        <!-- Buscador Instantáneo -->
+        <div style="position: relative; flex: 1; max-width: 380px; min-width: 230px;">
+          <input type="text" id="user-search-input" placeholder="Buscar por nombre, correo, dependencia o rol..." class="form-input" style="padding-left: 38px; border-radius: 10px; border: 1.5px solid #DCE4E3; font-size: 0.85rem; height: 42px;" />
+          <div style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #64748B; display: flex; align-items: center; pointer-events: none;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          </div>
+        </div>
+
+        <!-- Filtros por Rol + Acciones Superiores Condicionadas -->
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 4px; background: #F8FAFC; padding: 4px; border-radius: 10px; border: 1px solid #E2E8F0;">
+            <button type="button" class="btn btn-sm user-filter-btn active" data-role="all" style="font-size: 0.76rem; font-weight: 750; border-radius: 8px; padding: 6px 12px; cursor: pointer; border: none;">Todos</button>
+            <button type="button" class="btn btn-sm user-filter-btn" data-role="admin" style="font-size: 0.76rem; font-weight: 750; border-radius: 8px; padding: 6px 12px; cursor: pointer; border: none;">Administradores</button>
+            <button type="button" class="btn btn-sm user-filter-btn" data-role="funcionario" style="font-size: 0.76rem; font-weight: 750; border-radius: 8px; padding: 6px 12px; cursor: pointer; border: none;">Funcionarios</button>
+            <button type="button" class="btn btn-sm user-filter-btn" data-role="custom" style="font-size: 0.76rem; font-weight: 750; border-radius: 8px; padding: 6px 12px; cursor: pointer; border: none;">Personalizados</button>
+          </div>
+
+          {canManagePerms && (
+            <button type="button" id="btn-open-roles-modal" style="display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; font-weight: 800; font-size: 0.83rem; background: #F7F5EE; border: 1.5px solid #B5A160; color: #786832; border-radius: 10px; cursor: pointer; transition: all 0.2s ease;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="14"/><line x1="9" y1="11" x2="15" y2="11"/></svg>
+              <span>Gestionar Roles</span>
+            </button>
+          )}
+
+          {canCreateUser && (
+            <button type="button" id="btn-open-create-user" style="display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px; font-weight: 800; font-size: 0.83rem; background: #00594E; border: 1.5px solid #00594E; color: #ffffff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 89, 78, 0.22); cursor: pointer; transition: all 0.2s ease;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span>Nuevo Usuario</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      <!-- Tabla Ejecutiva de Usuarios -->
+      <div class="card" style="padding: 0; background: #ffffff; border: 1.5px solid #DCE4E3; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+        <div class="table-responsive pro-scroll-container" style="overflow-x: auto; width: 100%;">
+          <table class="table-users" style="width: 100%; border-collapse: collapse; font-size: 0.86rem; table-layout: auto;">
+            <thead>
+              <tr style="background: #F8FAFC; border-bottom: 2px solid #DCE4E3; text-align: left; color: #52606D; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                <th style="padding: 14px 18px;">Funcionario / Despacho</th>
+                <th style="padding: 14px 16px;">Correo Institucional</th>
+                <th style="padding: 14px 16px;">Dependencia Oficial</th>
+                <th style="padding: 14px 16px;">Rol Asignado</th>
+                <th style="padding: 14px 18px; text-align: right;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="users-table-body">
+              {enrichedUsers.map((u: any) => {
+                const initials = u.full_name ? u.full_name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() : 'US';
+                const cargo = u.cargo || (u.isUserAdmin ? 'Dirección General / Administrador' : 'Despacho Institucional');
+                const avatarUrl = u.avatar_url;
+                const badgeBg = u.isUserAdmin ? '#F2F7F6' : '#F7F5EE';
+                const badgeColor = u.isUserAdmin ? '#00594E' : (u.roleObj?.color && u.roleObj.color !== '#2563EB' ? u.roleObj.color : '#786832');
+                const badgeBorder = u.isUserAdmin ? '#B2CFCB' : '#DBD2B0';
+                const isTargetProtectedAdmin = !currentRbac.isAdmin && u.isUserAdmin;
+
+                return (
+                  <tr
+                    class="user-row"
+                    id={`row-user-${u.id}`}
+                    data-user-id={u.id}
+                    data-user-email={u.email}
+                    data-user-name={u.full_name}
+                    data-user-cargo={cargo}
+                    data-user-role={u.assignedRoleId}
+                    data-user-role-cat={u.roleCategory}
+                    data-user-role-name={u.roleLabel}
+                    data-is-admin={u.isUserAdmin ? 'true' : 'false'}
+                    style="border-bottom: 1px solid #E2E8F0; transition: background 0.15s ease;"
+                  >
+                    <!-- Columna 1: Funcionario -->
+                    <td style="padding: 14px 18px; min-width: 0; max-width: 260px;">
+                      <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+                        <div class="user-avatar-circle" style="width: 38px; height: 38px; min-width: 38px; border-radius: 999px; background: #E6EFEF; color: #00594E; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.84rem; border: 1.5px solid #B2CFCB; overflow: hidden; flex-shrink: 0;">
+                          {avatarUrl ? (
+                            <img src={avatarUrl} alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;" />
+                          ) : (
+                            <span>{initials}</span>
+                          )}
+                        </div>
+                        <div style="min-width: 0; flex: 1; overflow: hidden;">
+                          <div class="user-row-name-text" style="font-weight: 750; color: #111827; font-size: 0.90rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title={u.full_name}>{u.full_name}</div>
+                          <div class="user-row-sub-cargo" style="font-size: 0.74rem; color: #52606D; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title={cargo}>{cargo}</div>
+                        </div>
+                      </div>
+                    </td>
+
+                    <!-- Columna 2: Correo Institucional -->
+                    <td style="padding: 14px 16px; white-space: nowrap;">
+                      <div class="user-email-chip" style="display: inline-flex; align-items: center; gap: 7px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.80rem; color: #111827; background: #F8FAFC; padding: 6px 12px; border-radius: 8px; border: 1.5px solid #DCE4E3; width: max-content; box-sizing: border-box;" title={u.email}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#00594E" stroke-width="2.2" style="flex-shrink: 0;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        <span style="white-space: nowrap;">{u.email}</span>
+                      </div>
+                    </td>
+
+                    <!-- Columna 3: Dependencia -->
+                    <td style="padding: 14px 16px; color: #52606D; font-size: 0.82rem; min-width: 0; max-width: 220px;">
+                      <span class="user-row-cargo-text" style="font-weight: 600; color: #111827; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title={cargo}>{cargo}</span>
+                    </td>
+
+                    <!-- Columna 4: Rol Asignado -->
+                    <td style="padding: 14px 16px; white-space: nowrap;">
+                      <span class="user-row-role-badge" style={`font-size: 0.72rem; padding: 4px 11px; font-weight: 800; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; background: ${badgeBg}; color: ${badgeColor}; border: 1px solid ${badgeBorder};`}>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill={u.isUserAdmin ? 'currentColor' : 'none'} stroke={u.isUserAdmin ? 'none' : 'currentColor'} stroke-width="2.3">
+                          {u.isUserAdmin ? (
+                            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>
+                          ) : (
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                          )}
+                        </svg>
+                        <span>{u.roleLabel.toUpperCase()}</span>
+                      </span>
+                    </td>
+
+                    <!-- Columna 5: Acciones con Blindaje Anti-Escalamiento -->
+                    <td style="padding: 14px 18px; text-align: right; white-space: nowrap;">
+                      <div style="display: inline-flex; gap: 8px; align-items: center; justify-content: flex-end;">
+                        {isTargetProtectedAdmin ? (
+                          <span class="badge-protected" title="Cuenta Administrador protegida contra modificación externa" style="display: inline-flex; align-items: center; gap: 5px; font-size: 0.73rem; font-weight: 750; color: #786832; background: #F7F5EE; border: 1px solid #DBD2B0; padding: 5px 10px; border-radius: 8px;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            <span>Protegido</span>
+                          </span>
+                        ) : (
+                          <>
+                            <!-- Botón 1: Matriz RBAC -->
+                            {canManagePerms && (
+                              <button 
+                                type="button" 
+                                class="btn-manage-perms btn btn-secondary btn-sm" 
+                                data-user-id={u.id} 
+                                data-user-email={u.email}
+                                data-user-name={u.full_name} 
+                                data-user-cargo={cargo} 
+                                data-user-role={u.assignedRoleId} 
+                                title="Configurar matriz de permisos del funcionario"
+                                style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; font-weight: 750; font-size: 0.78rem; border: 1.5px solid #B2CFCB; color: #00594E; background: #F2F7F6; border-radius: 8px; cursor: pointer;"
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="11" r="3"/></svg>
+                                <span>Permisos</span>
+                              </button>
+                            )}
+
+                            <!-- Botón 2: Editar Usuario -->
+                            {canEditUser && (
+                              <button 
+                                type="button" 
+                                class="btn-icon-action btn-edit-user" 
+                                data-user-id={u.id} 
+                                data-user-name={u.full_name} 
+                                data-user-email={u.email} 
+                                data-user-cargo={cargo} 
+                                data-user-role={u.assignedRoleId}
+                                title="Editar información y rol del usuario"
+                                style="width: 32px; height: 32px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: #ffffff; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s ease;"
+                              >
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                              </button>
+                            )}
+
+                            <!-- Botón 3: Eliminar Usuario -->
+                            {canDeleteUser && !u.isProtectedRoot && (
+                              <button 
+                                type="button" 
+                                class="btn-icon-action btn-delete-user" 
+                                data-user-id={u.id} 
+                                data-user-name={u.full_name} 
+                                data-user-email={u.email}
+                                title="Dar de baja y eliminar usuario"
+                                style="width: 32px; height: 32px; border-radius: var(--radius-sm); border: 1px solid #FECACA; background: #FEF2F2; color: #DC2626; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s ease;"
+                              >
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                              </button>
+                            )}
+
+                            {u.isProtectedRoot && (
+                              <span title="La cuenta Administrador principal está protegida contra eliminación" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); opacity: 0.45;">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div> <!-- Fin .module-board-card -->
+
+    <!-- MODAL 1: MATRIZ RBAC ORGANIZADA EN 4 GRUPOS POR USUARIO -->
+    <div class="modal-backdrop" id="modal-permissions" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
+      <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 820px; border-radius: var(--radius-md); box-shadow: 0 20px 45px rgba(0,0,0,0.22); overflow: hidden; display: flex; flex-direction: column; max-height: 92vh;">
+        
+        <div style="background: #ffffff; border-top: 4px solid var(--verde-principal); border-bottom: 1px solid #DCE4E3; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 40px; height: 40px; border-radius: 10px; background: #F2F7F6; border: 1.5px solid #B2CFCB; display: flex; align-items: center; justify-content: center; color: var(--verde-principal);">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="11" r="3"/></svg>
+            </div>
+            <div>
+              <div style="font-size: 0.68rem; font-weight: 750; color: #B5A160; text-transform: uppercase; letter-spacing: 0.05em;">SGD UNITRÓPICO &bull; MATRIZ RBAC (14 MÓDULOS)</div>
+              <h3 style="font-size: 1.15rem; font-weight: 800; color: #111827; margin: 2px 0 0 0;" id="perm-modal-user-name">Configurar Permisos</h3>
+              <div style="font-size: 0.76rem; color: #52606D; margin-top: 2px;" id="perm-modal-user-desc">Define la visibilidad y capacidad de interacción granular por módulo del sistema</div>
+            </div>
+          </div>
+          <button type="button" class="btn-close-modal" id="btn-close-perms-modal" style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid #DCE4E3; background: #F8FAFC; color: #52606D; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; line-height: 1;">&times;</button>
+        </div>
+
+        <div class="pro-scroll-container" style="padding: 18px 24px; overflow-y: auto; flex: 1;">
+          
+          <div id="perms-admin-banner" style="display: none; background: #F2F7F6; border: 1px solid #B2CFCB; color: #00594E; padding: 14px 18px; border-radius: 10px; font-size: 0.82rem; margin-bottom: 16px;">
+            <strong>Control Total Habilitado:</strong> El rol <strong>Administrador</strong> dispone de acceso completo a los 14 módulos del sistema y a la administración integral de seguridad.
+          </div>
+
+          <div id="perms-quick-actions" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 10px 14px;">
+            <span style="font-size: 0.76rem; font-weight: 800; color: #00594E;" id="perms-summary-count">0 / 14 módulos habilitados</span>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button type="button" class="btn-perm-preset" data-preset="operativos" style="font-size: 0.73rem; font-weight: 750; padding: 5px 11px; border-radius: 7px; border: 1.5px solid #B2CFCB; background: #F2F7F6; color: #00594E; cursor: pointer;">Seleccionar operativos</button>
+              <button type="button" class="btn-perm-preset" data-preset="view_all" style="font-size: 0.73rem; font-weight: 750; padding: 5px 10px; border-radius: 7px; border: 1px solid #DBD2B0; background: #F7F5EE; color: #786832; cursor: pointer;">Solo Ver Todo</button>
+              <button type="button" class="btn-perm-preset" data-preset="full_modules" style="font-size: 0.73rem; font-weight: 750; padding: 5px 10px; border-radius: 7px; border: 1px solid #B2CFCB; background: #F2F7F6; color: #00594E; cursor: pointer;">Ver y Gestionar Todo</button>
+              <button type="button" class="btn-perm-preset" data-preset="clear_all" style="font-size: 0.73rem; font-weight: 750; padding: 5px 10px; border-radius: 7px; border: 1px solid #FECACA; background: #FEF2F2; color: #DC2626; cursor: pointer;">Limpiar todo</button>
+            </div>
+          </div>
+
+          <!-- Matriz Organizada por Grupos -->
+          <div id="user-module-matrix-container" style="display: flex; flex-direction: column; gap: 16px;">
+            {GRUPOS_MODULOS.map((grp) => {
+              const groupModules = MODULOS_SISTEMA.filter((m) => m.groupKey === grp.key);
+              return (
+                <div class={`rbac-group-section ${grp.isSensitive ? 'rbac-group-sensitive' : ''}`} style={grp.isSensitive ? 'background: #FDFCF7; border: 1.5px solid #E6D8A7; border-left: 4px solid #B5A160; border-radius: 12px; padding: 14px 16px;' : 'background: #F8FAFC; border: 1.5px solid #DCE4E3; border-radius: 12px; padding: 14px 16px;'}>
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(0,0,0,0.06);">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <span style={`font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: ${grp.isSensitive ? '#786832' : '#00594E'};`}>
+                        {grp.label}
+                      </span>
+                      {grp.isSensitive && (
+                        <span style="font-size: 0.65rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: #F7F5EE; color: #786832; border: 1px solid #DBD2B0;">
+                          Sensible &bull; Control Delegable
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div style="display: flex; flex-direction: column; gap: 10px;">
+                    {groupModules.map((mod) => (
+                      <div class="rbac-module-card" data-module-id={mod.id} data-group-key={mod.groupKey} style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; padding: 12px 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                        <!-- Encabezado de módulo con Switch Maestro -->
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px;">
+                          <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+                            <div style="width: 32px; height: 32px; border-radius: 8px; background: #F2F7F6; border: 1px solid #B2CFCB; display: flex; align-items: center; justify-content: center; color: #00594E; flex-shrink: 0;">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d={mod.icon}/></svg>
+                            </div>
+                            <div style="min-width: 0;">
+                              <div style="font-size: 0.84rem; font-weight: 800; color: #111827;">{mod.label}</div>
+                              <div style="font-size: 0.72rem; color: #64748B;">{mod.description}</div>
+                            </div>
+                          </div>
+
+                          <!-- Switch Maestro del Módulo -->
+                          <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+                            <span style="font-size: 0.70rem; font-weight: 750; color: #52606D;">Acceso</span>
+                            <label class="switch switch-sm" title={`Habilitar o deshabilitar módulo ${mod.label}`}>
+                              <input type="checkbox" class="perm-module-master" data-module-id={mod.id} />
+                              <span class="slider"></span>
+                            </label>
+                          </div>
+                        </div>
+
+                        <!-- Chips de Acciones Granulares -->
+                        <div class="module-actions-chips-wrap" style="display: flex; flex-wrap: wrap; gap: 6px; padding-top: 8px; border-top: 1px dashed #E2E8F0;">
+                          {mod.acciones.map((act) => (
+                            <label class="action-chip" title={act.desc || act.label} data-module-id={mod.id} data-action-id={act.id} data-perm-id={`${mod.id}.${act.id}`}>
+                              <input
+                                type="checkbox"
+                                class="perm-checkbox"
+                                data-module-id={mod.id}
+                                data-action-id={act.id}
+                                data-perm-id={`${mod.id}.${act.id}`}
+                              />
+                              <span class="action-chip-badge">{act.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+        </div>
+
+        <div style="padding: 15px 24px; background: #f8fafc; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+          <button type="button" class="btn btn-ghost" id="btn-cancel-perms-modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btn-save-dynamic-perms" style="padding: 10px 22px; font-weight: 800; background: var(--verde-principal); border-color: var(--verde-principal);">
+            Guardar Permisos RBAC
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- MODAL 2: CREAR NUEVO USUARIO (BLINDADO) -->
+    <div class="modal-backdrop" id="modal-create-user" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
+      <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 520px; border-radius: var(--radius-md); box-shadow: 0 20px 45px rgba(0,0,0,0.2); overflow: hidden;">
+        
+        <div class="modal-header" style="background: #ffffff; border-top: 4px solid var(--verde-principal); border-bottom: 1px solid #DCE4E3; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 40px; height: 40px; border-radius: 10px; background: #F2F7F6; border: 1.5px solid #B2CFCB; display: flex; align-items: center; justify-content: center; color: var(--verde-principal);">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+            </div>
+            <div>
+              <div style="font-size: 0.68rem; font-weight: 750; color: #B5A160; text-transform: uppercase; letter-spacing: 0.05em;">DIRECTORIO INSTITUCIONAL</div>
+              <h3 style="font-size: 1.15rem; font-weight: 800; color: #111827; margin: 2px 0 0 0;">Registrar Nuevo Usuario</h3>
+            </div>
+          </div>
+          <button type="button" class="btn-close-modal" id="btn-close-create-modal" style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid #DCE4E3; background: #F8FAFC; color: #52606D; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; line-height: 1;">&times;</button>
+        </div>
+
+        <form id="form-create-user">
+          <div style="padding: 22px 24px; display: flex; flex-direction: column; gap: 14px;">
+            <div>
+              <label style="font-size: 0.76rem; font-weight: 800; color: #52606D; text-transform: uppercase; letter-spacing: 0.03em; display: block; margin-bottom: 6px;">Nombre Completo *</label>
+              <input type="text" id="create-user-name" name="name" required placeholder="Ej. Dr. Carlos Mendoza" class="form-input" />
+            </div>
+
+            <div>
+              <label style="font-size: 0.76rem; font-weight: 800; color: #52606D; text-transform: uppercase; letter-spacing: 0.03em; display: block; margin-bottom: 6px;">Correo Institucional *</label>
+              <input type="email" id="create-user-email" name="email" required placeholder="usuario@unitropico.edu.co" class="form-input" />
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+              <div>
+                <label style="font-size: 0.76rem; font-weight: 800; color: #52606D; text-transform: uppercase; letter-spacing: 0.03em; display: block; margin-bottom: 6px;">Rol Asignado *</label>
+                <select id="create-user-role" name="role_id" class="form-input" style="height: 42px;">
+                  {currentRbac.isAdmin && <option value="admin">Administrador (Control Total)</option>}
+                  <option value="funcionario" selected>Funcionario (Operativo Estándar)</option>
+                  {rolesCatalog.filter((r) => r.id !== 'admin' && r.id !== 'funcionario').map((r) => (
+                    <option value={r.id}>{r.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style="font-size: 0.76rem; font-weight: 800; color: #52606D; text-transform: uppercase; letter-spacing: 0.03em; display: block; margin-bottom: 6px;">Contraseña Provisional *</label>
+                <input type="password" id="create-user-password" name="password" required minlength="8" placeholder="Mín. 8 caracteres" class="form-input" />
+              </div>
+            </div>
+
+            <div>
+              <label style="font-size: 0.76rem; font-weight: 800; color: #52606D; text-transform: uppercase; letter-spacing: 0.03em; display: block; margin-bottom: 6px;">Dependencia Oficial *</label>
+              <input type="text" id="create-user-cargo" name="cargo" required placeholder="Ej. Secretaría General / Archivo Central" class="form-input" />
+            </div>
+          </div>
+
+          <div style="padding: 16px 24px; background: #f8fafc; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end; gap: 10px;">
+            <button type="button" class="btn btn-secondary" id="btn-cancel-create-user">Cancelar</button>
+            <button type="submit" id="btn-submit-create-user" class="btn btn-primary" style="font-weight: 800; padding: 10px 22px;">Registrar Usuario</button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+
+    <!-- MODAL 3: EDITAR USUARIO (BLINDADO) -->
+    <div class="modal-backdrop" id="modal-edit-user" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
+      <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 500px; border-radius: var(--radius-md); box-shadow: 0 20px 45px rgba(0,0,0,0.2); overflow: hidden;">
+        
+        <div class="modal-header" style="background: #ffffff; border-top: 4px solid var(--verde-principal); border-bottom: 1px solid #DCE4E3; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 40px; height: 40px; border-radius: 10px; background: #F2F7F6; border: 1.5px solid #B2CFCB; display: flex; align-items: center; justify-content: center; color: var(--verde-principal);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </div>
+            <div>
+              <div style="font-size: 0.68rem; font-weight: 750; color: #B5A160; text-transform: uppercase; letter-spacing: 0.05em;">ACTUALIZAR DATOS</div>
+              <h3 style="font-size: 1.15rem; font-weight: 800; color: #111827; margin: 2px 0 0 0;">Editar Funcionario</h3>
+            </div>
+          </div>
+          <button type="button" class="btn-close-modal" id="btn-close-edit-modal" style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid #DCE4E3; background: #F8FAFC; color: #52606D; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; line-height: 1;">&times;</button>
+        </div>
+
+        <form id="form-edit-user">
+          <input type="hidden" id="edit-user-id" name="userId" />
+          
+          <div style="padding: 22px 24px; display: flex; flex-direction: column; gap: 14px;">
+            <div>
+              <label style="font-size: 0.76rem; font-weight: 800; color: #52606D; text-transform: uppercase; letter-spacing: 0.03em; display: block; margin-bottom: 6px;">Nombre Completo *</label>
+              <input type="text" id="edit-user-name" name="name" required class="form-input" />
+            </div>
+
+            <div>
+              <label style="font-size: 0.76rem; font-weight: 800; color: #52606D; text-transform: uppercase; letter-spacing: 0.03em; display: block; margin-bottom: 6px;">Correo Institucional</label>
+              <input type="email" id="edit-user-email" name="email" readonly class="form-input" style="background: #F8FAFC; cursor: not-allowed; color: #64748B;" />
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+              <div>
+                <label style="font-size: 0.76rem; font-weight: 800; color: #52606D; text-transform: uppercase; letter-spacing: 0.03em; display: block; margin-bottom: 6px;">Rol Asignado *</label>
+                <select id="edit-user-role" name="role_id" class="form-input" style="height: 42px;">
+                  {currentRbac.isAdmin && <option value="admin">Administrador (Control Total)</option>}
+                  <option value="funcionario">Funcionario (Operativo Estándar)</option>
+                  {rolesCatalog.filter((r) => r.id !== 'admin' && r.id !== 'funcionario').map((r) => (
+                    <option value={r.id}>{r.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style="font-size: 0.76rem; font-weight: 800; color: #52606D; text-transform: uppercase; letter-spacing: 0.03em; display: block; margin-bottom: 6px;">Dependencia Oficial *</label>
+                <input type="text" id="edit-user-cargo" name="cargo" required class="form-input" />
+              </div>
+            </div>
+          </div>
+
+          <div style="padding: 16px 24px; background: #f8fafc; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end; gap: 10px;">
+            <button type="button" class="btn btn-secondary" id="btn-cancel-edit-user">Cancelar</button>
+            <button type="submit" id="btn-submit-edit-user" class="btn btn-primary" style="font-weight: 800; padding: 10px 22px;">Guardar Cambios</button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+
+    <!-- MODAL 4: CONFIRMAR ELIMINACIÓN -->
+    <div class="modal-backdrop" id="modal-delete-user" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
+      <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 460px; border-radius: var(--radius-md); box-shadow: 0 20px 45px rgba(0,0,0,0.2); overflow: hidden;">
+        
+        <div class="modal-header" style="background: #ffffff; border-top: 4px solid #DC2626; border-bottom: 1px solid #FECACA; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 40px; height: 40px; border-radius: 10px; background: #FEF2F2; border: 1.5px solid #FECACA; display: flex; align-items: center; justify-content: center; color: #DC2626;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <div>
+              <div style="font-size: 0.68rem; font-weight: 750; color: #DC2626; text-transform: uppercase; letter-spacing: 0.05em;">SEGURIDAD INSTITUCIONAL</div>
+              <h3 style="font-size: 1.15rem; font-weight: 800; color: #111827; margin: 2px 0 0 0;">Eliminar Usuario</h3>
+            </div>
+          </div>
+          <button type="button" class="btn-close-modal" id="btn-close-delete-modal" style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid #DCE4E3; background: #F8FAFC; color: #52606D; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; line-height: 1;">&times;</button>
+        </div>
+
+        <div style="padding: 22px 24px;">
+          <input type="hidden" id="delete-user-modal-id" />
+          <input type="hidden" id="delete-user-modal-email" />
+          <p style="font-size: 0.88rem; color: #334155; line-height: 1.5; margin: 0;">
+            ¿Está seguro de eliminar al usuario <strong id="delete-user-modal-name"></strong> (<code id="delete-user-modal-email-text" style="font-size: 0.80rem; background: #F1F5F9; padding: 2px 6px; border-radius: 4px;"></code>)?
+          </p>
+          <div style="background: #FEF2F2; border-left: 3px solid #DC2626; padding: 10px 14px; border-radius: 6px; margin-top: 14px; font-size: 0.78rem; color: #991B1B;">
+            Esta acción revocará de inmediato los permisos y accesos del funcionario en toda la plataforma.
+          </div>
+        </div>
+
+        <div style="padding: 16px 24px; background: #f8fafc; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end; gap: 10px;">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-delete-user">Cancelar</button>
+          <button type="button" id="btn-confirm-delete-user" class="btn" style="background: #DC2626; color: #ffffff; border-color: #DC2626; font-weight: 800; padding: 10px 22px;">Eliminar Funcionario</button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- MODAL 5: GESTIONAR ROLES Y PERMISOS (MATRIZ 4 GRUPOS CON ANTI-ESCALAMIENTO) -->
+    <div class="modal-backdrop" id="modal-roles" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1050; align-items: center; justify-content: center; padding: 20px;">
+      <div class="roles-modal-card">
+
+        <!-- HEADER FIJO -->
+        <div style="background: #ffffff; border-bottom: 1px solid #E2E8F0; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 40px; height: 40px; border-radius: 10px; background: #F7F5EE; border: 1.5px solid #DBD2B0; display: flex; align-items: center; justify-content: center; color: #786832; flex-shrink: 0;">
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+            </div>
+            <div>
+              <div style="font-size: 0.68rem; font-weight: 800; color: #786832; text-transform: uppercase; letter-spacing: 0.05em;">GOBIERNO RBAC &bull; CATÁLOGO INSTITUCIONAL</div>
+              <h3 style="font-size: 1.15rem; font-weight: 800; color: #111827; margin: 2px 0 0 0;">Gestionar Roles y Permisos</h3>
+              <div style="font-size: 0.76rem; color: #52606D; margin-top: 2px;">Cree perfiles personalizados y defina la matriz de permisos por módulo</div>
+            </div>
+          </div>
+          <button type="button" class="btn-close-modal" id="btn-close-roles-modal" style="width: 34px; height: 34px; border-radius: 9px; border: 1px solid #DCE4E3; background: #F8FAFC; color: #52606D; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; line-height: 1; flex-shrink: 0;">&times;</button>
+        </div>
+
+        <!-- CUERPO 2 COLUMNAS CON SCROLL -->
+        <div class="roles-modal-body">
+          <!-- Columna Izquierda: Lista de Roles -->
+          <div class="roles-sidebar-col pro-scroll-container">
+            <button type="button" id="btn-new-custom-role" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 14px; background: #00594E; color: #FFFFFF; border: none; border-radius: 10px; font-weight: 800; font-size: 0.82rem; cursor: pointer; box-shadow: 0 2px 6px rgba(0, 89, 78, 0.2); flex-shrink: 0;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span>Crear Rol Personalizado</span>
+            </button>
+
+            <div id="roles-catalog-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+
+            <div style="margin-top: auto; background: #F7F5EE; border: 1px solid #DBD2B0; border-radius: 10px; padding: 11px 12px; font-size: 0.72rem; line-height: 1.45; color: #786832; font-weight: 600;">
+              Seleccione un rol para consultar o editar sus accesos o cree perfiles para delegar tareas específicas.
+            </div>
+          </div>
+
+          <!-- Columna Derecha: Editor de Rol + Matriz 4 Grupos -->
+          <form id="form-role-editor" class="roles-editor-col">
+            <input type="hidden" id="role-edit-id" />
+            <input type="hidden" id="role-edit-color" value="#00594E" />
+
+            <div id="role-admin-lock-banner" style="display: none; background: #F2F7F6; border: 1px solid #B2CFCB; color: #00594E; padding: 10px 14px; border-radius: 10px; font-size: 0.78rem; flex-shrink: 0;">
+              <strong>Rol Protegido del Sistema:</strong> El rol <strong>Administrador</strong> posee control irrestricto permanente sobre todos los módulos y la seguridad del sistema.
+            </div>
+
+            <!-- Nombre + Selector de Color -->
+            <div style="display: grid; grid-template-columns: 1fr 255px; gap: 14px; align-items: start; flex-shrink: 0;">
+              <div>
+                <label style="font-size: 0.72rem; font-weight: 800; color: #52606D; text-transform: uppercase; letter-spacing: 0.03em; display: block; margin-bottom: 5px;">Nombre del Rol *</label>
+                <input type="text" id="role-edit-name" required placeholder="Ej. Gestor de Archivo" class="role-desc-input" />
+              </div>
+              <div>
+                <label style="font-size: 0.72rem; font-weight: 800; color: #52606D; text-transform: uppercase; letter-spacing: 0.03em; display: block; margin-bottom: 5px;">Color Identificador</label>
+                <div class="role-color-custom-select" id="role-color-picker">
+                  <button type="button" id="role-color-trigger" class="role-color-trigger">
+                    <span style="display: inline-flex; align-items: center; gap: 8px; min-width: 0;">
+                      <span id="role-color-dot" style="width: 14px; height: 14px; border-radius: 50%; background: #00594E; border: 1px solid rgba(0,0,0,0.15); flex-shrink: 0;"></span>
+                      <span id="role-color-label" style="font-size: 0.82rem; font-weight: 700; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Verde Unitrópico</span>
+                    </span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00594E" stroke-width="2.4" style="flex-shrink: 0;"><polyline points="6 9 12 15 18 9"/></svg>
+                  </button>
+                  <div class="role-color-dropdown" id="role-color-dropdown" style="display: none;">
+                    {ROLE_PALETTE_OPTIONS.map((c) => (
+                      <button type="button" class="role-color-option" data-color={c.hex} data-label={c.name}>
+                        <span style={`width: 14px; height: 14px; border-radius: 50%; background: ${c.hex}; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.15);`}></span>
+                        <span style="font-size: 0.80rem; font-weight: 700; color: #111827;">{c.name}</span>
+                        <span style="margin-left: auto; font-family: monospace; font-size: 0.70rem; color: #64748B;">{c.hex}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Swatches + Vista previa en vivo -->
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding: 8px 12px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; flex-shrink: 0;">
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span style="font-size: 0.70rem; font-weight: 800; color: #64748B; text-transform: uppercase;">Muestras:</span>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  {ROLE_PALETTE_OPTIONS.map((c) => (
+                    <button
+                      type="button"
+                      class="role-color-swatch"
+                      data-color={c.hex}
+                      data-label={c.name}
+                      title={`${c.name} (${c.hex})`}
+                      style={`background: ${c.hex};`}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 0.70rem; font-weight: 800; color: #64748B; text-transform: uppercase;">Vista Previa:</span>
+                <span id="role-live-preview-badge" class="role-live-preview-pill" style="background: #F2F7F6; border: 1px solid #00594E; color: #00594E;">
+                  <span id="role-live-preview-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #00594E; flex-shrink: 0;"></span>
+                  <span id="role-live-preview-text">ROL PERSONALIZADO</span>
+                </span>
+              </div>
+            </div>
+
+            <!-- Descripción -->
+            <div style="flex-shrink: 0;">
+              <label style="font-size: 0.72rem; font-weight: 800; color: #52606D; text-transform: uppercase; letter-spacing: 0.03em; display: block; margin-bottom: 5px;">Descripción / Alcance</label>
+              <textarea id="role-edit-desc" rows="2" placeholder="Describe las responsabilidades y alcance operativo del rol..." class="role-desc-input role-desc-textarea"></textarea>
+            </div>
+
+            <!-- Barra de Sincronización + Presets -->
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 9px; padding: 8px 12px; flex-shrink: 0;">
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.76rem; font-weight: 700; color: #334155; cursor: pointer;">
+                <input type="checkbox" id="role-edit-propagate" checked style="accent-color: #00594E;" />
+                <span>Sincronizar permisos en funcionarios asignados a este rol</span>
+              </label>
+
+              <div style="display: flex; gap: 6px;">
+                <button type="button" class="btn-role-preset" data-preset="operativos" style="font-size: 0.70rem; font-weight: 750; padding: 4px 9px; border-radius: 6px; border: 1.5px solid #B2CFCB; background: #F2F7F6; color: #00594E; cursor: pointer;">Operativos</button>
+                <button type="button" class="btn-role-preset" data-preset="view_all" style="font-size: 0.70rem; font-weight: 750; padding: 4px 9px; border-radius: 6px; border: 1px solid #DBD2B0; background: #F7F5EE; color: #786832; cursor: pointer;">Solo Ver</button>
+                <button type="button" class="btn-role-preset" data-preset="full_modules" style="font-size: 0.70rem; font-weight: 750; padding: 4px 9px; border-radius: 6px; border: 1px solid #B2CFCB; background: #F2F7F6; color: #00594E; cursor: pointer;">Todos</button>
+                <button type="button" class="btn-role-preset" data-preset="clear_all" style="font-size: 0.70rem; font-weight: 750; padding: 4px 9px; border-radius: 6px; border: 1px solid #FECACA; background: #FEF2F2; color: #DC2626; cursor: pointer;">Limpiar</button>
+              </div>
+            </div>
+
+            <!-- Matriz de 4 Grupos de Módulos para Rol -->
+            <div class="roles-modules-matrix-wrap pro-scroll-container" style="flex: 1 1 auto; min-height: 220px; max-height: 340px; overflow-y: auto; border: 1.5px solid #DCE4E3; border-radius: 12px; padding: 12px; background: #FAFAFA; display: flex; flex-direction: column; gap: 14px;">
+              {GRUPOS_MODULOS.map((grp) => {
+                const groupModules = MODULOS_SISTEMA.filter((m) => m.groupKey === grp.key);
+                return (
+                  <div class={`rbac-group-section ${grp.isSensitive ? 'rbac-group-sensitive' : ''}`} style={grp.isSensitive ? 'background: #FDFCF7; border: 1.5px solid #E6D8A7; border-left: 4px solid #B5A160; border-radius: 10px; padding: 12px;' : 'background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; padding: 12px;'}>
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid rgba(0,0,0,0.06);">
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style={`font-size: 0.76rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: ${grp.isSensitive ? '#786832' : '#00594E'};`}>
+                          {grp.label}
+                        </span>
+                        {grp.isSensitive && (
+                          <span style="font-size: 0.63rem; font-weight: 800; padding: 2px 7px; border-radius: 999px; background: #F7F5EE; color: #786832; border: 1px solid #DBD2B0;">
+                            Sensible &bull; Control Delegable
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                      {groupModules.map((mod) => (
+                        <div class="role-module-card" data-module-id={mod.id} data-group-key={mod.groupKey} style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px 12px;">
+                          <!-- Cabecera de módulo con Switch Maestro -->
+                          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px;">
+                            <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                              <div style="width: 28px; height: 28px; border-radius: 6px; background: #F2F7F6; border: 1px solid #B2CFCB; display: flex; align-items: center; justify-content: center; color: #00594E; flex-shrink: 0;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d={mod.icon}/></svg>
+                              </div>
+                              <div style="min-width: 0;">
+                                <div style="font-size: 0.81rem; font-weight: 800; color: #111827;">{mod.label}</div>
+                                <div style="font-size: 0.68rem; color: #64748B;">{mod.description}</div>
+                              </div>
+                            </div>
+
+                            <!-- Switch Maestro del Módulo para Rol -->
+                            <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                              <span style="font-size: 0.68rem; font-weight: 750; color: #52606D;">Acceso</span>
+                              <label class="switch switch-sm" title={`Habilitar módulo ${mod.label} para este rol`}>
+                                <input type="checkbox" class="role-module-master" data-module-id={mod.id} />
+                                <span class="slider"></span>
+                              </label>
+                            </div>
+                          </div>
+
+                          <!-- Chips de Acciones Granulares para Rol -->
+                          <div class="module-actions-chips-wrap" style="display: flex; flex-wrap: wrap; gap: 5px; padding-top: 6px; border-top: 1px dashed #E2E8F0;">
+                            {mod.acciones.map((act) => (
+                              <label class="action-chip role-action-chip" title={act.desc || act.label} data-module-id={mod.id} data-action-id={act.id} data-perm-id={`${mod.id}.${act.id}`}>
+                                <input
+                                  type="checkbox"
+                                  class="role-perm-checkbox"
+                                  data-module-id={mod.id}
+                                  data-action-id={act.id}
+                                  data-perm-id={`${mod.id}.${act.id}`}
+                                />
+                                <span class="action-chip-badge">{act.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </form>
+        </div>
+
+        <!-- FOOTER FIJO -->
+        <div class="roles-modal-footer">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span id="role-footer-perm-summary" style="font-size: 0.76rem; font-weight: 800; color: #00594E; background: #F2F7F6; border: 1px solid #B2CFCB; padding: 5px 11px; border-radius: 999px;">
+              0 / 14 módulos habilitados
+            </span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <button type="button" class="btn btn-secondary" id="btn-cancel-roles-modal">Cerrar</button>
+            <button type="submit" form="form-role-editor" id="btn-save-role" class="btn btn-primary" style="font-weight: 800; padding: 9px 20px;">Guardar Cambios del Rol</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <script id="rbac-bootstrap-json" type="application/json" set:html={initialRbacBootstrap}></script>
+
+  <style is:global>
+    .form-input {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 0.86rem;
+      color: var(--text-main);
+      transition: all 0.15s ease;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: var(--verde-principal);
+      box-shadow: 0 0 0 3px var(--verde-suave-bg);
+    }
+    .user-row:hover {
+      background: #F8FAFC !important;
+    }
+    .user-filter-btn {
+      background: transparent;
+      color: #52606D;
+      transition: all 0.15s ease;
+    }
+    .user-filter-btn:hover:not(.active) {
+      background: #E2E8F0;
+      color: #111827;
+    }
+    .user-filter-btn.active {
+      background: #00594E !important;
+      color: #ffffff !important;
+      border-color: #00594E !important;
+    }
+
+    /* Toggle Switches */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+    .switch-sm {
+      width: 38px;
+      height: 21px;
+    }
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #cbd5e1;
+      transition: .2s ease;
+      border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .2s ease;
+      border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+    .switch-sm .slider:before {
+      height: 15px;
+      width: 15px;
+    }
+    .switch input:checked + .slider {
+      background-color: var(--verde-principal) !important;
+    }
+    .switch input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+    .switch-sm input:checked + .slider:before {
+      transform: translateX(17px);
+    }
+    .switch input:disabled + .slider {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    /* Action Chips Granulares */
+    .action-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      user-select: none;
+      background: #F8FAFC;
+      border: 1px solid #DCE4E3;
+      padding: 5px 10px;
+      border-radius: 8px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: #334155;
+      transition: all 0.15s ease;
+    }
+    .action-chip:hover:not(.disabled) {
+      background: #F1F5F9;
+      border-color: #CBD5E1;
+    }
+    .action-chip:has(input:checked) {
+      background: #F2F7F6;
+      border-color: #00594E;
+      color: #00594E;
+    }
+    .action-chip input {
+      margin: 0;
+      width: 14px;
+      height: 14px;
+      accent-color: #00594E;
+    }
+    .action-chip.disabled,
+    .action-chip:has(input:disabled) {
+      opacity: 0.45;
+      cursor: not-allowed !important;
+      background: #F1F5F9 !important;
+      border-color: #E2E8F0 !important;
+      color: #94A3B8 !important;
+    }
+    .rbac-group-sensitive .action-chip:has(input:checked) {
+      background: #F7F5EE;
+      border-color: #B5A160;
+      color: #786832;
+    }
+    .rbac-group-sensitive .action-chip input {
+      accent-color: #B5A160;
+    }
+
+    /* Modal Roles Card */
+    .roles-modal-card {
+      width: 100%;
+      max-width: 980px !important;
+      max-height: 88vh !important;
+      display: flex !important;
+      flex-direction: column !important;
+      background: #FFFFFF !important;
+      border-radius: 18px !important;
+      border: 1px solid #DCE4E3 !important;
+      border-top: 4px solid #00594E !important;
+      box-shadow: 0 24px 48px -12px rgba(0, 89, 78, 0.18), 0 8px 20px -6px rgba(15, 23, 42, 0.08) !important;
+      overflow: hidden !important;
+    }
+    .roles-modal-body {
+      display: grid !important;
+      grid-template-columns: 280px 1fr !important;
+      flex: 1 1 auto !important;
+      min-height: 0 !important;
+      overflow: hidden !important;
+      background: #FFFFFF !important;
+    }
+    .roles-sidebar-col {
+      background: #F8FAFC !important;
+      border-right: 1px solid #E2E8F0 !important;
+      padding: 16px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 12px !important;
+      min-height: 0 !important;
+      overflow-y: auto !important;
+    }
+    .roles-editor-col {
+      padding: 18px 22px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 12px !important;
+      min-height: 0 !important;
+      overflow-y: auto !important;
+      background: #FFFFFF !important;
+    }
+    .roles-modal-footer {
+      background: #FFFFFF !important;
+      border-top: 1px solid #E2E8F0 !important;
+      padding: 14px 24px !important;
+      display: flex !important;
+      justify-content: space-between !important;
+      align-items: center !important;
+      flex-shrink: 0 !important;
+    }
+    .role-desc-input {
+      width: 100% !important;
+      padding: 9px 12px !important;
+      font-size: 0.83rem !important;
+      color: #1E293B !important;
+      background: #FFFFFF !important;
+      border: 1px solid #CBD5E1 !important;
+      border-radius: 10px !important;
+      font-family: inherit !important;
+      box-sizing: border-box !important;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+    }
+    .role-desc-input:focus {
+      outline: none !important;
+      border-color: #00594E !important;
+      box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.1) !important;
+    }
+    .role-desc-textarea {
+      resize: none !important;
+      line-height: 1.4 !important;
+      min-height: 54px !important;
+    }
+
+    /* Color picker */
+    .role-color-custom-select {
+      position: relative !important;
+      width: 100% !important;
+    }
+    .role-color-trigger {
+      width: 100% !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      padding: 9px 12px !important;
+      background: #FFFFFF !important;
+      border: 1px solid #CBD5E1 !important;
+      border-radius: 10px !important;
+      cursor: pointer !important;
+      font-family: inherit !important;
+      transition: all 0.15s ease !important;
+    }
+    .role-color-dropdown {
+      position: absolute !important;
+      top: calc(100% + 4px) !important;
+      left: 0 !important;
+      right: 0 !important;
+      background: #FFFFFF !important;
+      border: 1px solid #CBD5E1 !important;
+      border-radius: 10px !important;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.12) !important;
+      padding: 6px !important;
+      z-index: 100 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 3px !important;
+      max-height: 220px !important;
+      overflow-y: auto !important;
+    }
+    .role-color-option {
+      width: 100% !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 8px !important;
+      padding: 6px 10px !important;
+      border-radius: 7px !important;
+      background: transparent !important;
+      border: none !important;
+      cursor: pointer !important;
+      text-align: left !important;
+      transition: background 0.12s ease !important;
+    }
+    .role-color-option:hover {
+      background: #F1F5F9 !important;
+    }
+    .role-color-swatch {
+      width: 20px !important;
+      height: 20px !important;
+      border-radius: 50% !important;
+      border: 1px solid rgba(0,0,0,0.15) !important;
+      cursor: pointer !important;
+      padding: 0 !important;
+      transition: transform 0.12s ease !important;
+    }
+    .role-color-swatch:hover {
+      transform: scale(1.15) !important;
+    }
+    .role-color-swatch.selected {
+      outline: 2px solid #00594E !important;
+      outline-offset: 1px !important;
+    }
+    .role-live-preview-pill {
+      font-size: 0.70rem !important;
+      font-weight: 800 !important;
+      letter-spacing: 0.04em !important;
+      padding: 3px 9px !important;
+      border-radius: 999px !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 6px !important;
+    }
+
+    /* Roles List Item in Sidebar */
+    .role-sidebar-item {
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1.5px solid #E2E8F0;
+      background: #FFFFFF;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      transition: all 0.15s ease;
+      text-align: left;
+      position: relative;
+    }
+    .role-sidebar-item:hover {
+      border-color: #B2CFCB;
+      background: #F2F7F6;
+    }
+    .role-sidebar-item.active {
+      border-color: #00594E !important;
+      background: #F2F7F6 !important;
+      box-shadow: 0 2px 6px rgba(0, 89, 78, 0.12);
+    }
+  </style>
+
+  <script>
+    import { ALL_PERMISSION_IDS, DEFAULT_FUNCIONARIO_PERMISSIONS, isAdminRoleCode, normalizePermissionsList } from '@lib/permisos';
+    import type { SystemRole } from '@lib/types';
+
+    // 1. Cargar bootstrap RBAC inicial
+    const bootstrapEl = document.getElementById('rbac-bootstrap-json');
+    const bootstrapData = bootstrapEl ? JSON.parse(bootstrapEl.textContent || '{}') : {};
+    const currentUser = bootstrapData.currentUser || {};
+    const isCurrentUserAdmin = Boolean(currentUser.isAdmin);
+    const currentUserPerms = normalizePermissionsList(currentUser.permissions || []);
+
+    let rolesCatalog: SystemRole[] = Array.isArray(bootstrapData.roles) ? bootstrapData.roles : [];
+    const userPermissionsMap: Record<string, string[]> = bootstrapData.userPermissions || {};
+    const userCustomRolesMap: Record<string, string> = bootstrapData.userCustomRoles || {};
+    const systemModules = Array.isArray(bootstrapData.modules) ? bootstrapData.modules : [];
+
+    let activePermsUserId: string | null = null;
+    let activePermsUserEmail = '';
+    let activePermsUserName = '';
+    let activeRoleEditorId: string | null = null;
+
+    // Toast helper
+    function notifyToast(msg: string, type: 'success' | 'error' | 'info' = 'info') {
+      if (typeof (window as any).showToast === 'function') {
+        (window as any).showToast(msg, type);
+      } else {
+        alert(msg);
+      }
+    }
+
+    // 2. Buscador y Filtro por Rol en Tabla
+    const searchInput = document.getElementById('user-search-input') as HTMLInputElement | null;
+    const filterButtons = document.querySelectorAll<HTMLButtonElement>('.user-filter-btn');
+    const userRows = document.querySelectorAll<HTMLTableRowElement>('.user-row');
+
+    function applyUserFilters() {
+      const q = (searchInput?.value || '').trim().toLowerCase();
+      const activeRoleBtn = document.querySelector<HTMLButtonElement>('.user-filter-btn.active');
+      const roleFilter = activeRoleBtn?.dataset.role || 'all';
+
+      userRows.forEach((row) => {
+        const name = (row.dataset.userName || '').toLowerCase();
+        const email = (row.dataset.userEmail || '').toLowerCase();
+        const cargo = (row.dataset.userCargo || '').toLowerCase();
+        const roleCat = row.dataset.userRoleCat || 'funcionario';
+        const roleName = (row.dataset.userRoleName || '').toLowerCase();
+
+        const matchesQuery = !q || name.includes(q) || email.includes(q) || cargo.includes(q) || roleName.includes(q);
+        const matchesRole = roleFilter === 'all' || roleCat === roleFilter;
+
+        row.style.display = matchesQuery && matchesRole ? '' : 'none';
+      });
+    }
+
+    searchInput?.addEventListener('input', applyUserFilters);
+    filterButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        filterButtons.forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        applyUserFilters();
+      });
+    });
+
+    // ─────────────────────────────────────────────────────────────
+    // 3. Modal 1: Permisos RBAC por Usuario (4 Grupos, Switches y Chips)
+    // ─────────────────────────────────────────────────────────────
+    const permsModal = document.getElementById('modal-permissions');
+    const permsUserName = document.getElementById('perm-modal-user-name');
+    const permsUserDesc = document.getElementById('perm-modal-user-desc');
+    const permsAdminBanner = document.getElementById('perms-admin-banner');
+    const permsQuickActions = document.getElementById('perms-quick-actions');
+    const btnSavePerms = document.getElementById('btn-save-dynamic-perms') as HTMLButtonElement | null;
+    const btnClosePerms = document.getElementById('btn-close-perms-modal');
+    const btnCancelPerms = document.getElementById('btn-cancel-perms-modal');
+    const permsSummaryCount = document.getElementById('perms-summary-count');
+
+    function updateUserMatrixSummary() {
+      const allModules = document.querySelectorAll<HTMLElement>('.rbac-module-card');
+      let activeCount = 0;
+      allModules.forEach((card) => {
+        const modId = card.dataset.moduleId || '';
+        const masterSwitch = card.querySelector<HTMLInputElement>('.perm-module-master');
+        const anyChecked = card.querySelector<HTMLInputElement>('.perm-checkbox:checked');
+        if (masterSwitch?.checked || anyChecked) {
+          activeCount += 1;
+        }
+      });
+      if (permsSummaryCount) {
+        permsSummaryCount.textContent = `${activeCount} / 14 módulos habilitados`;
+      }
+    }
+
+    function setupUserMatrixInteractions() {
+      // Toggle Switch Maestro
+      document.querySelectorAll<HTMLInputElement>('.perm-module-master').forEach((master) => {
+        master.addEventListener('change', () => {
+          const modId = master.dataset.moduleId || '';
+          const card = master.closest('.rbac-module-card');
+          if (!card) return;
+
+          const chips = card.querySelectorAll<HTMLInputElement>('.perm-checkbox');
+          if (master.checked) {
+            // Al encender, activar al menos la acción "ver"
+            const verCb = card.querySelector<HTMLInputElement>(`.perm-checkbox[data-action-id="ver"]`);
+            if (verCb && !verCb.disabled) verCb.checked = true;
+          } else {
+            // Al apagar, desactivar todas las acciones del módulo
+            chips.forEach((cb) => {
+              if (!cb.disabled) cb.checked = false;
+            });
+          }
+          updateUserMatrixSummary();
+        });
+      });
+
+      // Checkbox de acción granular individual
+      document.querySelectorAll<HTMLInputElement>('.perm-checkbox').forEach((cb) => {
+        cb.addEventListener('change', () => {
+          const card = cb.closest('.rbac-module-card');
+          if (!card) return;
+
+          const master = card.querySelector<HTMLInputElement>('.perm-module-master');
+          const verCb = card.querySelector<HTMLInputElement>(`.perm-checkbox[data-action-id="ver"]`);
+          const anyChecked = card.querySelector<HTMLInputElement>('.perm-checkbox:checked');
+
+          if (cb.checked) {
+            if (master) master.checked = true;
+            if (verCb && !verCb.disabled) verCb.checked = true;
+          } else {
+            if (cb.dataset.actionId === 'ver') {
+              // Si desmarca 'ver', desmarcar todas las demás acciones del módulo
+              card.querySelectorAll<HTMLInputElement>('.perm-checkbox').forEach((other) => {
+                if (!other.disabled) other.checked = false;
+              });
+              if (master) master.checked = false;
+            } else if (!anyChecked) {
+              if (master) master.checked = false;
+            }
+          }
+          updateUserMatrixSummary();
+        });
+      });
+    }
+
+    setupUserMatrixInteractions();
+
+    function applyUserPermPreset(preset: string) {
+      document.querySelectorAll<HTMLElement>('.rbac-module-card').forEach((card) => {
+        const grpKey = card.dataset.groupKey || '';
+        const master = card.querySelector<HTMLInputElement>('.perm-module-master');
+        const chips = card.querySelectorAll<HTMLInputElement>('.perm-checkbox');
+
+        if (preset === 'clear_all') {
+          if (master && !master.disabled) master.checked = false;
+          chips.forEach((cb) => {
+            if (!cb.disabled) cb.checked = false;
+          });
+        } else if (preset === 'operativos') {
+          const isOperativo = grpKey === 'operativo';
+          if (isOperativo) {
+            if (master && !master.disabled) master.checked = true;
+            chips.forEach((cb) => {
+              if (!cb.disabled) cb.checked = true;
+            });
+          }
+        } else if (preset === 'view_all') {
+          if (master && !master.disabled) master.checked = true;
+          chips.forEach((cb) => {
+            if (!cb.disabled) {
+              cb.checked = cb.dataset.actionId === 'ver';
+            }
+          });
+        } else if (preset === 'full_modules') {
+          if (master && !master.disabled) master.checked = true;
+          chips.forEach((cb) => {
+            if (!cb.disabled) cb.checked = true;
+          });
+        }
+      });
+      updateUserMatrixSummary();
+    }
+
+    document.querySelectorAll<HTMLButtonElement>('.btn-perm-preset').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        applyUserPermPreset(btn.dataset.preset || '');
+      });
+    });
+
+    function closePermsModal() {
+      if (permsModal) permsModal.style.display = 'none';
+      activePermsUserId = null;
+      activePermsUserEmail = '';
+      activePermsUserName = '';
+    }
+
+    btnClosePerms?.addEventListener('click', closePermsModal);
+    btnCancelPerms?.addEventListener('click', closePermsModal);
+
+    function openPermsModal(userId: string, userEmail: string, userName: string, userCargo: string, userRoleId: string) {
+      activePermsUserId = userId;
+      activePermsUserEmail = userEmail.toLowerCase();
+      activePermsUserName = userName;
+
+      const roleObj = rolesCatalog.find((r) => r.id === userRoleId || r.code === userRoleId);
+      const isTargetAdmin = userId === 'usr-root' || isAdminRoleCode(userRoleId);
+      const roleLabel = isTargetAdmin ? 'Administrador' : roleObj?.name || getRoleDisplayName(userRoleId, rolesCatalog);
+
+      if (permsUserName) permsUserName.textContent = `Permisos: ${userName}`;
+      if (permsUserDesc) permsUserDesc.textContent = `${userCargo} • Rol: ${roleLabel}`;
+      if (permsAdminBanner) permsAdminBanner.style.display = isTargetAdmin ? 'block' : 'none';
+      if (permsQuickActions) permsQuickActions.style.display = isTargetAdmin ? 'none' : 'flex';
+      if (btnSavePerms) btnSavePerms.disabled = isTargetAdmin;
+
+      const hasOverrideId = Object.prototype.hasOwnProperty.call(userPermissionsMap, userId);
+      const hasOverrideEmail = Boolean(
+        activePermsUserEmail && Object.prototype.hasOwnProperty.call(userPermissionsMap, activePermsUserEmail)
+      );
+
+      const effectivePerms = isTargetAdmin
+        ? ALL_PERMISSION_IDS
+        : hasOverrideId
+          ? normalizePermissionsList(userPermissionsMap[userId])
+          : hasOverrideEmail
+            ? normalizePermissionsList(userPermissionsMap[activePermsUserEmail])
+            : normalizePermissionsList(roleObj?.permissions || DEFAULT_FUNCIONARIO_PERMISSIONS);
+
+      // Sincronizar switches y checkboxes granulares aplicando blindaje anti-escalamiento
+      document.querySelectorAll<HTMLElement>('.rbac-module-card').forEach((card) => {
+        const modId = card.dataset.moduleId || '';
+        const masterSwitch = card.querySelector<HTMLInputElement>('.perm-module-master');
+        const chips = card.querySelectorAll<HTMLInputElement>('.perm-checkbox');
+
+        let hasAnyActionActive = false;
+
+        chips.forEach((cb) => {
+          const permId = cb.dataset.permId || '';
+          const isGranted = isTargetAdmin || effectivePerms.includes(permId);
+          cb.checked = isGranted;
+
+          // Candado anti-escalamiento: Si el usuario que configura no es admin y no posee este permiso
+          const canGrant = isCurrentUserAdmin || currentUserPerms.includes(permId);
+          cb.disabled = isTargetAdmin || !canGrant;
+          cb.title = !canGrant ? 'No posees este permiso en tu propia cuenta para otorgarlo' : '';
+
+          const chipLabel = cb.closest('.action-chip');
+          if (chipLabel) {
+            chipLabel.classList.toggle('disabled', cb.disabled);
+          }
+
+          if (isGranted) hasAnyActionActive = true;
+        });
+
+        if (masterSwitch) {
+          masterSwitch.checked = isTargetAdmin || hasAnyActionActive || effectivePerms.includes(`${modId}.ver`);
+          masterSwitch.disabled = isTargetAdmin;
+        }
+      });
+
+      updateUserMatrixSummary();
+      if (permsModal) permsModal.style.display = 'flex';
+    }
+
+    document.querySelectorAll<HTMLButtonElement>('.btn-manage-perms').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        openPermsModal(
+          btn.dataset.userId || '',
+          btn.dataset.userEmail || '',
+          btn.dataset.userName || '',
+          btn.dataset.userCargo || '',
+          btn.dataset.userRole || 'funcionario'
+        );
+      });
+    });
+
+    btnSavePerms?.addEventListener('click', async () => {
+      if (!activePermsUserId) return;
+      const selectedPerms: string[] = [];
+      document.querySelectorAll<HTMLInputElement>('.perm-checkbox:checked').forEach((cb) => {
+        if (cb.dataset.permId) selectedPerms.push(cb.dataset.permId);
+      });
+
+      if (btnSavePerms) {
+        btnSavePerms.textContent = 'Guardando...';
+        btnSavePerms.disabled = true;
+      }
+
+      try {
+        const res = await fetch('/api/admin/rbac', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            action: 'save_user_permissions',
+            userId: activePermsUserId,
+            userEmail: activePermsUserEmail,
+            userName: activePermsUserName,
+            permissions: selectedPerms,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Error guardando permisos en servidor.');
+        }
+
+        const savedList = Array.isArray(data.permissions) ? data.permissions : selectedPerms;
+        userPermissionsMap[activePermsUserId] = savedList;
+        if (activePermsUserEmail) userPermissionsMap[activePermsUserEmail] = savedList;
+
+        notifyToast('Matriz de permisos RBAC guardada con éxito.', 'success');
+        closePermsModal();
+      } catch (err: any) {
+        notifyToast(err?.message || 'Error al guardar permisos.', 'error');
+      } finally {
+        if (btnSavePerms) {
+          btnSavePerms.textContent = 'Guardar Permisos RBAC';
+          btnSavePerms.disabled = false;
+        }
+      }
+    });
+
+    // ─────────────────────────────────────────────────────────────
+    // 4. Modal 2: Crear Usuario (Blindado)
+    // ─────────────────────────────────────────────────────────────
+    const createModal = document.getElementById('modal-create-user');
+    const btnOpenCreate = document.getElementById('btn-open-create-user');
+    const btnCloseCreate = document.getElementById('btn-close-create-modal');
+    const btnCancelCreate = document.getElementById('btn-cancel-create-user');
+    const formCreateUser = document.getElementById('form-create-user') as HTMLFormElement | null;
+    const btnSubmitCreate = document.getElementById('btn-submit-create-user') as HTMLButtonElement | null;
+
+    btnOpenCreate?.addEventListener('click', () => {
+      if (formCreateUser) formCreateUser.reset();
+      if (createModal) createModal.style.display = 'flex';
+    });
+
+    function closeCreateModal() {
+      if (createModal) createModal.style.display = 'none';
+    }
+    btnCloseCreate?.addEventListener('click', closeCreateModal);
+    btnCancelCreate?.addEventListener('click', closeCreateModal);
+
+    formCreateUser?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = (document.getElementById('create-user-name') as HTMLInputElement)?.value.trim();
+      const email = (document.getElementById('create-user-email') as HTMLInputElement)?.value.trim();
+      const password = (document.getElementById('create-user-password') as HTMLInputElement)?.value;
+      const roleId = (document.getElementById('create-user-role') as HTMLSelectElement)?.value;
+      const cargo = (document.getElementById('create-user-cargo') as HTMLInputElement)?.value.trim();
+
+      if (!name || !email || !password || !cargo) {
+        notifyToast('Por favor diligencie todos los campos requeridos.', 'error');
+        return;
+      }
+
+      if (btnSubmitCreate) {
+        btnSubmitCreate.textContent = 'Registrando...';
+        btnSubmitCreate.disabled = true;
+      }
+
+      try {
+        const res = await fetch('/api/admin/rbac', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            action: 'create_user',
+            name,
+            email,
+            password,
+            roleId,
+            cargo,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'No se pudo crear el usuario.');
+        }
+
+        notifyToast(`Usuario ${name} registrado satisfactoriamente.`, 'success');
+        closeCreateModal();
+        setTimeout(() => window.location.reload(), 600);
+      } catch (err: any) {
+        notifyToast(err?.message || 'Error al registrar usuario.', 'error');
+      } finally {
+        if (btnSubmitCreate) {
+          btnSubmitCreate.textContent = 'Registrar Usuario';
+          btnSubmitCreate.disabled = false;
+        }
+      }
+    });
+
+    // ─────────────────────────────────────────────────────────────
+    // 5. Modal 3: Editar Usuario (Blindado)
+    // ─────────────────────────────────────────────────────────────
+    const editModal = document.getElementById('modal-edit-user');
+    const editUserId = document.getElementById('edit-user-id') as HTMLInputElement | null;
+    const editUserName = document.getElementById('edit-user-name') as HTMLInputElement | null;
+    const editUserEmail = document.getElementById('edit-user-email') as HTMLInputElement | null;
+    const editUserRole = document.getElementById('edit-user-role') as HTMLSelectElement | null;
+    const editUserCargo = document.getElementById('edit-user-cargo') as HTMLInputElement | null;
+    const formEditUser = document.getElementById('form-edit-user') as HTMLFormElement | null;
+    const btnCloseEdit = document.getElementById('btn-close-edit-modal');
+    const btnCancelEdit = document.getElementById('btn-cancel-edit-user');
+    const btnSubmitEdit = document.getElementById('btn-submit-edit-user') as HTMLButtonElement | null;
+
+    function closeEditModal() {
+      if (editModal) editModal.style.display = 'none';
+    }
+    btnCloseEdit?.addEventListener('click', closeEditModal);
+    btnCancelEdit?.addEventListener('click', closeEditModal);
+
+    document.querySelectorAll<HTMLButtonElement>('.btn-edit-user').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const uid = btn.dataset.userId || '';
+        const name = btn.dataset.userName || '';
+        const email = btn.dataset.userEmail || '';
+        const role = btn.dataset.userRole || 'funcionario';
+        const cargo = btn.dataset.userCargo || '';
+
+        if (editUserId) editUserId.value = uid;
+        if (editUserName) editUserName.value = name;
+        if (editUserEmail) editUserEmail.value = email;
+        if (editUserCargo) editUserCargo.value = cargo;
+        if (editUserRole) editUserRole.value = role;
+
+        if (editModal) editModal.style.display = 'flex';
+      });
+    });
+
+    formEditUser?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const uid = editUserId?.value;
+      const name = editUserName?.value.trim();
+      const email = editUserEmail?.value.trim();
+      const roleId = editUserRole?.value;
+      const cargo = editUserCargo?.value.trim();
+
+      if (!uid || !name || !cargo) {
+        notifyToast('Nombre y dependencia son obligatorios.', 'error');
+        return;
+      }
+
+      if (btnSubmitEdit) {
+        btnSubmitEdit.textContent = 'Guardando...';
+        btnSubmitEdit.disabled = true;
+      }
+
+      try {
+        const res = await fetch('/api/admin/rbac', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            action: 'update_user',
+            userId: uid,
+            userEmail: email,
+            name,
+            roleId,
+            cargo,
+            applyRolePermissions: true,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Error al actualizar funcionario.');
+        }
+
+        notifyToast('Funcionario modificado con éxito.', 'success');
+        closeEditModal();
+        setTimeout(() => window.location.reload(), 600);
+      } catch (err: any) {
+        notifyToast(err?.message || 'Error al actualizar funcionario.', 'error');
+      } finally {
+        if (btnSubmitEdit) {
+          btnSubmitEdit.textContent = 'Guardar Cambios';
+          btnSubmitEdit.disabled = false;
+        }
+      }
+    });
+
+    // ─────────────────────────────────────────────────────────────
+    // 6. Modal 4: Eliminar Usuario
+    // ─────────────────────────────────────────────────────────────
+    const deleteModal = document.getElementById('modal-delete-user');
+    const deleteUserId = document.getElementById('delete-user-modal-id') as HTMLInputElement | null;
+    const deleteUserEmail = document.getElementById('delete-user-modal-email') as HTMLInputElement | null;
+    const deleteUserName = document.getElementById('delete-user-modal-name');
+    const deleteUserEmailText = document.getElementById('delete-user-modal-email-text');
+    const btnCloseDelete = document.getElementById('btn-close-delete-modal');
+    const btnCancelDelete = document.getElementById('btn-cancel-delete-user');
+    const btnConfirmDelete = document.getElementById('btn-confirm-delete-user') as HTMLButtonElement | null;
+
+    function closeDeleteModal() {
+      if (deleteModal) deleteModal.style.display = 'none';
+    }
+    btnCloseDelete?.addEventListener('click', closeDeleteModal);
+    btnCancelDelete?.addEventListener('click', closeDeleteModal);
+
+    document.querySelectorAll<HTMLButtonElement>('.btn-delete-user').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const uid = btn.dataset.userId || '';
+        const name = btn.dataset.userName || '';
+        const email = btn.dataset.userEmail || '';
+
+        if (deleteUserId) deleteUserId.value = uid;
+        if (deleteUserEmail) deleteUserEmail.value = email;
+        if (deleteUserName) deleteUserName.textContent = name;
+        if (deleteUserEmailText) deleteUserEmailText.textContent = email;
+
+        if (deleteModal) deleteModal.style.display = 'flex';
+      });
+    });
+
+    btnConfirmDelete?.addEventListener('click', async () => {
+      const uid = deleteUserId?.value;
+      const email = deleteUserEmail?.value;
+      const name = deleteUserName?.textContent || '';
+
+      if (!uid) return;
+
+      if (btnConfirmDelete) {
+        btnConfirmDelete.textContent = 'Eliminando...';
+        btnConfirmDelete.disabled = true;
+      }
+
+      try {
+        const res = await fetch('/api/admin/rbac', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            action: 'delete_user',
+            userId: uid,
+            userEmail: email,
+            userName: name,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'No se pudo eliminar el funcionario.');
+        }
+
+        notifyToast(`Funcionario ${name} dado de baja correctamente.`, 'success');
+        closeDeleteModal();
+        setTimeout(() => window.location.reload(), 600);
+      } catch (err: any) {
+        notifyToast(err?.message || 'Error al eliminar usuario.', 'error');
+      } finally {
+        if (btnConfirmDelete) {
+          btnConfirmDelete.textContent = 'Eliminar Funcionario';
+          btnConfirmDelete.disabled = false;
+        }
+      }
+    });
+
+    // ─────────────────────────────────────────────────────────────
+    // 7. Modal 5: Gestionar Roles (Matriz 4 Grupos, Switches y Chips)
+    // ─────────────────────────────────────────────────────────────
+    const rolesModal = document.getElementById('modal-roles');
+    const btnOpenRoles = document.getElementById('btn-open-roles-modal');
+    const btnCloseRoles = document.getElementById('btn-close-roles-modal');
+    const btnCancelRoles = document.getElementById('btn-cancel-roles-modal');
+    const btnNewCustomRole = document.getElementById('btn-new-custom-role');
+    const rolesListContainer = document.getElementById('roles-catalog-list');
+    const roleEditId = document.getElementById('role-edit-id') as HTMLInputElement | null;
+    const roleEditName = document.getElementById('role-edit-name') as HTMLInputElement | null;
+    const roleEditColor = document.getElementById('role-edit-color') as HTMLInputElement | null;
+    const roleColorPicker = document.getElementById('role-color-picker');
+    const roleColorTrigger = document.getElementById('role-color-trigger') as HTMLButtonElement | null;
+    const roleColorDropdown = document.getElementById('role-color-dropdown');
+    const roleColorDot = document.getElementById('role-color-dot');
+    const roleColorLabel = document.getElementById('role-color-label');
+    const roleEditDesc = document.getElementById('role-edit-desc') as HTMLTextAreaElement | null;
+    const roleEditPropagate = document.getElementById('role-edit-propagate') as HTMLInputElement | null;
+    const roleAdminLockBanner = document.getElementById('role-admin-lock-banner');
+    const btnSaveRole = document.getElementById('btn-save-role') as HTMLButtonElement | null;
+    const roleLivePreviewBadge = document.getElementById('role-live-preview-badge');
+    const roleLivePreviewDot = document.getElementById('role-live-preview-dot');
+    const roleLivePreviewText = document.getElementById('role-live-preview-text');
+    const roleFooterPermSummary = document.getElementById('role-footer-perm-summary');
+
+    const ROLE_COLOR_NAMES: Record<string, string> = {
+      '#00594E': 'Verde Unitrópico',
+      '#B5A160': 'Dorado Institucional',
+      '#003830': 'Verde Bosque',
+      '#786832': 'Bronce Oscuro',
+      '#1E293B': 'Pizarra Ejecutivo',
+      '#334155': 'Carbón Institucional',
+      '#7F1D1D': 'Vinotinto Sobrio',
+    };
+
+    function updateRoleMatrixSummary() {
+      const allModules = document.querySelectorAll<HTMLElement>('.role-module-card');
+      let activeCount = 0;
+      let totalCheckedActions = 0;
+      allModules.forEach((card) => {
+        const masterSwitch = card.querySelector<HTMLInputElement>('.role-module-master');
+        const checkedChips = card.querySelectorAll<HTMLInputElement>('.role-perm-checkbox:checked');
+        if (masterSwitch?.checked || checkedChips.length > 0) {
+          activeCount += 1;
+        }
+        totalCheckedActions += checkedChips.length;
+      });
+      if (roleFooterPermSummary) {
+        roleFooterPermSummary.textContent = `${activeCount} / 14 módulos (${totalCheckedActions} acciones activas)`;
+      }
+    }
+
+    function setupRoleMatrixInteractions() {
+      // Switch Maestro en Roles
+      document.querySelectorAll<HTMLInputElement>('.role-module-master').forEach((master) => {
+        master.addEventListener('change', () => {
+          const card = master.closest('.role-module-card');
+          if (!card) return;
+
+          const chips = card.querySelectorAll<HTMLInputElement>('.role-perm-checkbox');
+          if (master.checked) {
+            const verCb = card.querySelector<HTMLInputElement>(`.role-perm-checkbox[data-action-id="ver"]`);
+            if (verCb && !verCb.disabled) verCb.checked = true;
+          } else {
+            chips.forEach((cb) => {
+              if (!cb.disabled) cb.checked = false;
+            });
+          }
+          updateRoleMatrixSummary();
+        });
+      });
+
+      // Checkbox granular en Roles
+      document.querySelectorAll<HTMLInputElement>('.role-perm-checkbox').forEach((cb) => {
+        cb.addEventListener('change', () => {
+          const card = cb.closest('.role-module-card');
+          if (!card) return;
+
+          const master = card.querySelector<HTMLInputElement>('.role-module-master');
+          const verCb = card.querySelector<HTMLInputElement>(`.role-perm-checkbox[data-action-id="ver"]`);
+          const anyChecked = card.querySelector<HTMLInputElement>('.role-perm-checkbox:checked');
+
+          if (cb.checked) {
+            if (master) master.checked = true;
+            if (verCb && !verCb.disabled) verCb.checked = true;
+          } else {
+            if (cb.dataset.actionId === 'ver') {
+              card.querySelectorAll<HTMLInputElement>('.role-perm-checkbox').forEach((other) => {
+                if (!other.disabled) other.checked = false;
+              });
+              if (master) master.checked = false;
+            } else if (!anyChecked) {
+              if (master) master.checked = false;
+            }
+          }
+          updateRoleMatrixSummary();
+        });
+      });
+    }
+
+    setupRoleMatrixInteractions();
+
+    function applyRolePermPreset(preset: string) {
+      document.querySelectorAll<HTMLElement>('.role-module-card').forEach((card) => {
+        const grpKey = card.dataset.groupKey || '';
+        const master = card.querySelector<HTMLInputElement>('.role-module-master');
+        const chips = card.querySelectorAll<HTMLInputElement>('.role-perm-checkbox');
+
+        if (preset === 'clear_all') {
+          if (master && !master.disabled) master.checked = false;
+          chips.forEach((cb) => {
+            if (!cb.disabled) cb.checked = false;
+          });
+        } else if (preset === 'operativos') {
+          const isOperativo = grpKey === 'operativo';
+          if (isOperativo) {
+            if (master && !master.disabled) master.checked = true;
+            chips.forEach((cb) => {
+              if (!cb.disabled) cb.checked = true;
+            });
+          }
+        } else if (preset === 'view_all') {
+          if (master && !master.disabled) master.checked = true;
+          chips.forEach((cb) => {
+            if (!cb.disabled) {
+              cb.checked = cb.dataset.actionId === 'ver';
+            }
+          });
+        } else if (preset === 'full_modules') {
+          if (master && !master.disabled) master.checked = true;
+          chips.forEach((cb) => {
+            if (!cb.disabled) cb.checked = true;
+          });
+        }
+      });
+      updateRoleMatrixSummary();
+    }
+
+    document.querySelectorAll<HTMLButtonElement>('.btn-role-preset').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        applyRolePermPreset(btn.dataset.preset || '');
+      });
+    });
+
+    function setSelectedRoleColor(rawHex: string, disabled = false) {
+      const normalized = (rawHex || '#00594E').toUpperCase();
+      const matchingKey = Object.keys(ROLE_COLOR_NAMES).find((k) => k.toUpperCase() === normalized) || '#00594E';
+      if (roleEditColor) roleEditColor.value = matchingKey;
+      if (roleColorDot) roleColorDot.style.background = matchingKey;
+      if (roleColorLabel) roleColorLabel.textContent = ROLE_COLOR_NAMES[matchingKey] || 'Verde Unitrópico';
+      if (roleColorTrigger) roleColorTrigger.disabled = disabled;
+      if (roleColorDropdown) roleColorDropdown.style.display = 'none';
+
+      document.querySelectorAll<HTMLButtonElement>('.role-color-option').forEach((opt) => {
+        const optHex = (opt.dataset.color || '').toUpperCase();
+        opt.classList.toggle('selected', optHex === matchingKey.toUpperCase());
+      });
+      document.querySelectorAll<HTMLButtonElement>('.role-color-swatch').forEach((sw) => {
+        const swHex = (sw.dataset.color || '').toUpperCase();
+        sw.classList.toggle('selected', swHex === matchingKey.toUpperCase());
+        sw.disabled = disabled;
+      });
+      updateRoleBadgePreview();
+    }
+
+    function updateRoleBadgePreview() {
+      const hex = roleEditColor?.value || '#00594E';
+      const labelTxt = (roleEditName?.value || '').trim() || 'ROL PERSONALIZADO';
+      if (roleLivePreviewText) roleLivePreviewText.textContent = labelTxt.toUpperCase();
+      if (roleLivePreviewDot) roleLivePreviewDot.style.background = hex;
+      if (roleLivePreviewBadge) {
+        roleLivePreviewBadge.style.color = hex;
+        roleLivePreviewBadge.style.borderColor = hex;
+      }
+    }
+
+    roleEditName?.addEventListener('input', updateRoleBadgePreview);
+
+    roleColorTrigger?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!roleColorDropdown || roleColorTrigger.disabled) return;
+      const isOpen = roleColorDropdown.style.display === 'flex';
+      roleColorDropdown.style.display = isOpen ? 'none' : 'flex';
+    });
+
+    document.querySelectorAll<HTMLButtonElement>('.role-color-option').forEach((opt) => {
+      opt.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const chosen = opt.dataset.color || '#00594E';
+        setSelectedRoleColor(chosen, roleColorTrigger?.disabled || false);
+      });
+    });
+
+    document.querySelectorAll<HTMLButtonElement>('.role-color-swatch').forEach((sw) => {
+      sw.addEventListener('click', () => {
+        if (sw.disabled) return;
+        const chosen = sw.dataset.color || '#00594E';
+        setSelectedRoleColor(chosen, roleColorTrigger?.disabled || false);
+      });
+    });
+
+    document.addEventListener('click', (e) => {
+      if (roleColorDropdown && roleColorPicker && !roleColorPicker.contains(e.target as Node)) {
+        roleColorDropdown.style.display = 'none';
+      }
+    });
+
+    function loadRoleIntoEditor(role?: SystemRole | null) {
+      const isNew = !role;
+      const isAdminRole = Boolean(role && role.id === 'admin');
+      const isBaseProtected = Boolean(role && role.isProtected);
+
+      activeRoleEditorId = role ? role.id : '';
+      if (roleEditId) roleEditId.value = activeRoleEditorId;
+      if (roleEditName) {
+        roleEditName.value = role ? role.name : '';
+        roleEditName.readOnly = isBaseProtected;
+        roleEditName.style.background = isBaseProtected ? '#F8FAFC' : '#FFFFFF';
+      }
+      setSelectedRoleColor(role?.color || '#00594E', isAdminRole);
+      if (roleEditDesc) {
+        roleEditDesc.value = role?.desc || '';
+        roleEditDesc.readOnly = isAdminRole;
+        roleEditDesc.style.background = isAdminRole ? '#F8FAFC' : '#FFFFFF';
+      }
+      if (roleAdminLockBanner) {
+        roleAdminLockBanner.style.display = isAdminRole ? 'block' : 'none';
+      }
+      if (btnSaveRole) {
+        btnSaveRole.disabled = isAdminRole;
+        btnSaveRole.textContent = isNew ? 'Crear Rol' : 'Guardar Cambios del Rol';
+      }
+
+      const rolePerms = isAdminRole
+        ? ALL_PERMISSION_IDS
+        : isNew
+          ? DEFAULT_FUNCIONARIO_PERMISSIONS
+          : normalizePermissionsList(role?.permissions || DEFAULT_FUNCIONARIO_PERMISSIONS);
+
+      // Sincronizar matriz del rol
+      document.querySelectorAll<HTMLElement>('.role-module-card').forEach((card) => {
+        const modId = card.dataset.moduleId || '';
+        const masterSwitch = card.querySelector<HTMLInputElement>('.role-module-master');
+        const chips = card.querySelectorAll<HTMLInputElement>('.role-perm-checkbox');
+
+        let hasAnyActionActive = false;
+
+        chips.forEach((cb) => {
+          const permId = cb.dataset.permId || '';
+          const isGranted = isAdminRole || rolePerms.includes(permId);
+          cb.checked = isGranted;
+
+          // Candado anti-escalamiento en roles: Un no-admin no puede crear roles con permisos que no posee
+          const canGrant = isCurrentUserAdmin || currentUserPerms.includes(permId);
+          cb.disabled = isAdminRole || !canGrant;
+          cb.title = !canGrant ? 'No posees este permiso en tu cuenta' : '';
+
+          const chipLabel = cb.closest('.role-action-chip');
+          if (chipLabel) {
+            chipLabel.classList.toggle('disabled', cb.disabled);
+          }
+
+          if (isGranted) hasAnyActionActive = true;
+        });
+
+        if (masterSwitch) {
+          masterSwitch.checked = isAdminRole || hasAnyActionActive || rolePerms.includes(`${modId}.ver`);
+          masterSwitch.disabled = isAdminRole;
+        }
+      });
+
+      updateRoleMatrixSummary();
+      updateRoleBadgePreview();
+    }
+
+    function renderRolesCatalog() {
+      if (!rolesListContainer) return;
+      rolesListContainer.innerHTML = '';
+
+      rolesCatalog.forEach((role) => {
+        const item = document.createElement('div');
+        item.className = `role-sidebar-item ${role.id === activeRoleEditorId ? 'active' : ''}`;
+        item.dataset.roleId = role.id;
+
+        const isAdm = role.id === 'admin';
+        const isFunc = role.id === 'funcionario';
+        const tagText = isAdm ? 'Control Total' : isFunc ? 'Operativo Base' : 'Personalizado';
+
+        item.innerHTML = `
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 7px; min-width: 0;">
+              <span style="width: 10px; height: 10px; border-radius: 50%; background: ${role.color || '#00594E'}; flex-shrink: 0;"></span>
+              <strong style="font-size: 0.83rem; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${role.name}</strong>
+            </div>
+            <span style="font-size: 0.64rem; font-weight: 800; padding: 2px 7px; border-radius: 999px; background: #F8FAFC; border: 1px solid #CBD5E1; color: #475569; white-space: nowrap;">
+              ${tagText}
+            </span>
+          </div>
+          <div style="font-size: 0.70rem; color: #64748B; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+            ${role.desc || 'Sin descripción'}
+          </div>
+        `;
+
+        item.addEventListener('click', () => {
+          document.querySelectorAll('.role-sidebar-item').forEach((it) => it.classList.remove('active'));
+          item.classList.add('active');
+          loadRoleIntoEditor(role);
+        });
+
+        rolesListContainer.appendChild(item);
+      });
+    }
+
+    btnOpenRoles?.addEventListener('click', () => {
+      renderRolesCatalog();
+      const defaultRole = rolesCatalog.find((r) => r.id === 'funcionario') || rolesCatalog[0];
+      loadRoleIntoEditor(defaultRole);
+      if (rolesModal) rolesModal.style.display = 'flex';
+    });
+
+    btnNewCustomRole?.addEventListener('click', () => {
+      document.querySelectorAll('.role-sidebar-item').forEach((it) => it.classList.remove('active'));
+      loadRoleIntoEditor(null);
+    });
+
+    function closeRolesModal() {
+      if (rolesModal) rolesModal.style.display = 'none';
+      activeRoleEditorId = null;
+    }
+
+    btnCloseRoles?.addEventListener('click', closeRolesModal);
+    btnCancelRoles?.addEventListener('click', closeRolesModal);
+
+    // Guardar Rol (upsert_role)
+    const formRoleEditor = document.getElementById('form-role-editor') as HTMLFormElement | null;
+    formRoleEditor?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = roleEditId?.value || '';
+      const name = roleEditName?.value.trim() || '';
+      const color = roleEditColor?.value || '#00594E';
+      const desc = roleEditDesc?.value.trim() || '';
+      const propagate = Boolean(roleEditPropagate?.checked);
+
+      if (!name) {
+        notifyToast('El nombre del rol es obligatorio.', 'error');
+        return;
+      }
+
+      const selectedPerms: string[] = [];
+      document.querySelectorAll<HTMLInputElement>('.role-perm-checkbox:checked').forEach((cb) => {
+        if (cb.dataset.permId) selectedPerms.push(cb.dataset.permId);
+      });
+
+      if (btnSaveRole) {
+        btnSaveRole.textContent = 'Guardando...';
+        btnSaveRole.disabled = true;
+      }
+
+      try {
+        const res = await fetch('/api/admin/rbac', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            action: 'upsert_role',
+            id,
+            name,
+            color,
+            desc,
+            permissions: selectedPerms,
+            propagateToUsers: propagate,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'No se pudo guardar el rol.');
+        }
+
+        if (Array.isArray(data.roles)) {
+          rolesCatalog = data.roles;
+        } else if (data.role) {
+          const idx = rolesCatalog.findIndex((r) => r.id === data.role.id);
+          if (idx >= 0) rolesCatalog[idx] = data.role;
+          else rolesCatalog.push(data.role);
+        }
+
+        renderRolesCatalog();
+        loadRoleIntoEditor(data.role || rolesCatalog.find((r) => r.id === id));
+        notifyToast(`Rol "${name}" guardado correctamente.`, 'success');
+      } catch (err: any) {
+        notifyToast(err?.message || 'Error guardando rol.', 'error');
+      } finally {
+        if (btnSaveRole) {
+          btnSaveRole.textContent = 'Guardar Cambios del Rol';
+          btnSaveRole.disabled = false;
+        }
+      }
+    });
+  </script>
+</AppLayout>

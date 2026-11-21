@@ -1,0 +1,6 @@
+---
+// src/pages/cuerpos-colegiados.astro
+// Redirección amigable y compatible hacia Cuerpos Colegiados (/normas)
+export const prerender = false;
+return Astro.redirect('/normas' + Astro.url.search);
+---
