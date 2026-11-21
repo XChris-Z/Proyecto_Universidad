@@ -7640,6 +7640,35 @@ mark.juridico-mark {
   border-color: #00463D !important;
 }
 
+/* ==========================================================================
+   SELECTOR DE COLOR IDENTIFICADOR EN MODAL ROLES (.color-dropdown-menu)
+   ========================================================================== */
+.color-dropdown-menu {
+  display: none !important;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 60;
+  background-color: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 14px 28px -6px rgba(15, 23, 42, 0.16);
+  flex-direction: column;
+  gap: 2px;
+}
+
+.color-dropdown-menu.is-open {
+  display: flex !important;
+}
+
+/* Rotación suave de la flecha cuando está abierto */
+.color-dropdown-trigger[aria-expanded="true"] .dropdown-chevron {
+  transform: rotate(180deg);
+}
+
+
 
 
 

@@ -687,15 +687,15 @@ const initialRbacBootstrap = JSON.stringify({
               </div>
               <div>
                 <label style="font-size: 0.72rem; font-weight: 800; color: #52606D; text-transform: uppercase; letter-spacing: 0.03em; display: block; margin-bottom: 5px;">Color Identificador</label>
-                <div class="role-color-custom-select" id="role-color-picker">
-                  <button type="button" id="role-color-trigger" class="role-color-trigger">
+                <div class="role-color-custom-select color-dropdown-wrapper" id="role-color-picker" style="position: relative;">
+                  <button type="button" id="role-color-trigger" class="role-color-trigger color-dropdown-trigger" aria-expanded="false" aria-haspopup="listbox">
                     <span style="display: inline-flex; align-items: center; gap: 8px; min-width: 0;">
                       <span id="role-color-dot" style="width: 14px; height: 14px; border-radius: 50%; background: #00594E; border: 1px solid rgba(0,0,0,0.15); flex-shrink: 0;"></span>
                       <span id="role-color-label" style="font-size: 0.82rem; font-weight: 700; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Verde Unitrópico</span>
                     </span>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00594E" stroke-width="2.4" style="flex-shrink: 0;"><polyline points="6 9 12 15 18 9"/></svg>
+                    <svg class="dropdown-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00594E" stroke-width="2.4" style="flex-shrink: 0; transition: transform 0.2s ease;"><polyline points="6 9 12 15 18 9"/></svg>
                   </button>
-                  <div class="role-color-dropdown" id="role-color-dropdown" style="display: none;">
+                  <div class="role-color-dropdown color-dropdown-menu" id="role-color-dropdown">
                     {ROLE_PALETTE_OPTIONS.map((c) => (
                       <button type="button" class="role-color-option" data-color={c.hex} data-label={c.name}>
                         <span style={`width: 14px; height: 14px; border-radius: 50%; background: ${c.hex}; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.15);`}></span>
@@ -1072,22 +1072,37 @@ const initialRbacBootstrap = JSON.stringify({
       font-family: inherit !important;
       transition: all 0.15s ease !important;
     }
+    .color-dropdown-menu,
     .role-color-dropdown {
+      display: none !important;
       position: absolute !important;
-      top: calc(100% + 4px) !important;
+      top: calc(100% + 6px) !important;
       left: 0 !important;
       right: 0 !important;
-      background: #FFFFFF !important;
+      z-index: 60 !important;
+      background-color: #FFFFFF !important;
       border: 1px solid #CBD5E1 !important;
-      border-radius: 10px !important;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.12) !important;
+      border-radius: 12px !important;
       padding: 6px !important;
-      z-index: 100 !important;
-      display: flex !important;
+      box-shadow: 0 14px 28px -6px rgba(15, 23, 42, 0.16) !important;
       flex-direction: column !important;
-      gap: 3px !important;
+      gap: 2px !important;
       max-height: 220px !important;
       overflow-y: auto !important;
+    }
+    .color-dropdown-menu.is-open,
+    .role-color-dropdown.is-open {
+      display: flex !important;
+    }
+    .color-dropdown-trigger[aria-expanded="true"] .dropdown-chevron,
+    .role-color-trigger[aria-expanded="true"] .dropdown-chevron,
+    .role-color-trigger[aria-expanded="true"] svg {
+      transform: rotate(180deg) !important;
+    }
+    .color-dropdown-trigger .dropdown-chevron,
+    .role-color-trigger .dropdown-chevron,
+    .role-color-trigger svg {
+      transition: transform 0.2s ease !important;
     }
     .role-color-option {
       width: 100% !important;
@@ -1857,6 +1872,30 @@ const initialRbacBootstrap = JSON.stringify({
       });
     });
 
+    // Helpers de Control Estricto para Selector de Color en Modal de Roles
+    function cerrarDropdownColor() {
+      if (roleColorDropdown) {
+        roleColorDropdown.classList.remove('is-open');
+        roleColorDropdown.style.display = 'none';
+      }
+      if (roleColorTrigger) {
+        roleColorTrigger.setAttribute('aria-expanded', 'false');
+      }
+    }
+
+    function toggleDropdownColor(e?: Event) {
+      if (e) e.stopPropagation();
+      if (!roleColorDropdown || roleColorTrigger?.disabled) return;
+      const isOpen = roleColorDropdown.classList.contains('is-open');
+      if (isOpen) {
+        cerrarDropdownColor();
+      } else {
+        roleColorDropdown.classList.add('is-open');
+        roleColorDropdown.style.display = 'flex';
+        roleColorTrigger?.setAttribute('aria-expanded', 'true');
+      }
+    }
+
     function setSelectedRoleColor(rawHex: string, disabled = false) {
       const normalized = (rawHex || '#00594E').toUpperCase();
       const matchingKey = Object.keys(ROLE_COLOR_NAMES).find((k) => k.toUpperCase() === normalized) || '#00594E';
@@ -1864,7 +1903,7 @@ const initialRbacBootstrap = JSON.stringify({
       if (roleColorDot) roleColorDot.style.background = matchingKey;
       if (roleColorLabel) roleColorLabel.textContent = ROLE_COLOR_NAMES[matchingKey] || 'Verde Unitrópico';
       if (roleColorTrigger) roleColorTrigger.disabled = disabled;
-      if (roleColorDropdown) roleColorDropdown.style.display = 'none';
+      cerrarDropdownColor();
 
       document.querySelectorAll<HTMLButtonElement>('.role-color-option').forEach((opt) => {
         const optHex = (opt.dataset.color || '').toUpperCase();
@@ -1892,10 +1931,7 @@ const initialRbacBootstrap = JSON.stringify({
     roleEditName?.addEventListener('input', updateRoleBadgePreview);
 
     roleColorTrigger?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (!roleColorDropdown || roleColorTrigger.disabled) return;
-      const isOpen = roleColorDropdown.style.display === 'flex';
-      roleColorDropdown.style.display = isOpen ? 'none' : 'flex';
+      toggleDropdownColor(e);
     });
 
     document.querySelectorAll<HTMLButtonElement>('.role-color-option').forEach((opt) => {
@@ -1903,6 +1939,7 @@ const initialRbacBootstrap = JSON.stringify({
         e.stopPropagation();
         const chosen = opt.dataset.color || '#00594E';
         setSelectedRoleColor(chosen, roleColorTrigger?.disabled || false);
+        cerrarDropdownColor();
       });
     });
 
@@ -1911,16 +1948,25 @@ const initialRbacBootstrap = JSON.stringify({
         if (sw.disabled) return;
         const chosen = sw.dataset.color || '#00594E';
         setSelectedRoleColor(chosen, roleColorTrigger?.disabled || false);
+        cerrarDropdownColor();
       });
     });
 
     document.addEventListener('click', (e) => {
       if (roleColorDropdown && roleColorPicker && !roleColorPicker.contains(e.target as Node)) {
-        roleColorDropdown.style.display = 'none';
+        cerrarDropdownColor();
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && roleColorDropdown?.classList.contains('is-open')) {
+        e.stopPropagation();
+        cerrarDropdownColor();
       }
     });
 
     function loadRoleIntoEditor(role?: SystemRole | null) {
+      cerrarDropdownColor();
       const isNew = !role;
       const isAdminRole = Boolean(role && role.id === 'admin');
       const isBaseProtected = Boolean(role && role.isProtected);
@@ -2027,6 +2073,7 @@ const initialRbacBootstrap = JSON.stringify({
     }
 
     btnOpenRoles?.addEventListener('click', () => {
+      cerrarDropdownColor();
       renderRolesCatalog();
       const defaultRole = rolesCatalog.find((r) => r.id === 'funcionario') || rolesCatalog[0];
       loadRoleIntoEditor(defaultRole);
@@ -2034,11 +2081,13 @@ const initialRbacBootstrap = JSON.stringify({
     });
 
     btnNewCustomRole?.addEventListener('click', () => {
+      cerrarDropdownColor();
       document.querySelectorAll('.role-sidebar-item').forEach((it) => it.classList.remove('active'));
       loadRoleIntoEditor(null);
     });
 
     function closeRolesModal() {
+      cerrarDropdownColor();
       if (rolesModal) rolesModal.style.display = 'none';
       activeRoleEditorId = null;
     }
