@@ -1,0 +1,525 @@
+---
+// src/components/ModalSubidaArchivo.astro
+// Componente Global Reutilizable de Subida de Archivos Estilo Google (Drag & Drop + Examinar + Vista Previa)
+---
+
+<div id="global-file-upload-modal" class="gdrop-overlay" style="display: none;" aria-hidden="true">
+  <div class="gdrop-card" role="dialog" aria-modal="true" aria-labelledby="gdrop-modal-title">
+    
+    <!-- Encabezado del Modal -->
+    <div class="gdrop-header">
+      <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+        <div class="gdrop-header-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+        </div>
+        <div class="gdrop-header-text">
+          <h3 id="gdrop-modal-title" class="gdrop-title">Subir Archivo</h3>
+          <p id="gdrop-modal-subtitle" class="gdrop-subtitle">Arrastra y suelta tu archivo aquí o examina en tu equipo</p>
+        </div>
+      </div>
+      <button type="button" id="gdrop-btn-close" class="gdrop-btn-close" aria-label="Cerrar modal">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Zona de Carga / Drag & Drop -->
+    <div class="gdrop-body">
+      <div class="gdrop-zone" id="gdrop-zone">
+        <div class="gdrop-cloud-icon">
+          <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path>
+            <path d="M12 12v9"></path>
+            <path d="m16 16-4-4-4 4"></path>
+          </svg>
+        </div>
+        <div class="gdrop-drop-prompt" id="gdrop-drop-prompt">
+          Arrastra y suelta tus archivos aquí
+        </div>
+        <div class="gdrop-divider">
+          <span>o</span>
+        </div>
+        <button type="button" id="gdrop-btn-browse" class="gdrop-btn-browse">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <span>Examinar en tu equipo</span>
+        </button>
+        <div class="gdrop-format-hint" id="gdrop-format-hint">
+          Formatos admitidos: PDF, DOCX, XLSX, JPG, PNG &middot; Capacidad Ilimitada
+        </div>
+        <input type="file" id="gdrop-file-input" style="display: none;" />
+      </div>
+
+      <!-- Alerta de Validación / Error -->
+      <div id="gdrop-error-alert" class="gdrop-error-alert" style="display: none;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="flex-shrink: 0;">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <span id="gdrop-error-msg" style="flex: 1;"></span>
+        <button type="button" id="gdrop-btn-dismiss-error" style="background: none; border: none; color: inherit; cursor: pointer; padding: 2px 4px; font-size: 1.1rem; line-height: 1;">&times;</button>
+      </div>
+
+      <!-- Lista de Previsualización en Tiempo Real -->
+      <div class="gdrop-preview-container" id="gdrop-preview-container" style="display: none;">
+        <div class="gdrop-preview-header">
+          <span class="gdrop-preview-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            <span>Archivos listos para confirmar (<strong id="gdrop-preview-count">0</strong>)</span>
+          </span>
+          <button type="button" id="gdrop-btn-clear" class="gdrop-btn-clear">Limpiar selección</button>
+        </div>
+        <div class="gdrop-preview-list" id="gdrop-preview-list"></div>
+      </div>
+    </div>
+
+    <!-- Pie del Modal con Acciones -->
+    <div class="gdrop-footer">
+      <button type="button" id="gdrop-btn-cancel" class="gdrop-btn-cancel">
+        Cancelar
+      </button>
+      <button type="button" id="gdrop-btn-confirm" class="gdrop-btn-confirm" disabled>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <span id="gdrop-btn-confirm-text">Confirmar y Usar Archivo</span>
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  interface OpcionesModalSubida {
+    titulo?: string;
+    subtitulo?: string;
+    accept?: string;
+    multiple?: boolean;
+    maxSizeMB?: number;
+    textoConfirmar?: string;
+    archivosIniciales?: File[];
+  }
+
+  (function () {
+    let activeFiles: File[] = [];
+    let currentOptions: OpcionesModalSubida = {};
+    let resolvePromise: ((files: File[] | null) => void) | null = null;
+
+    const modalEl = document.getElementById('global-file-upload-modal');
+    const titleEl = document.getElementById('gdrop-modal-title');
+    const subtitleEl = document.getElementById('gdrop-modal-subtitle');
+    const closeBtn = document.getElementById('gdrop-btn-close');
+    const cancelBtn = document.getElementById('gdrop-btn-cancel');
+    const confirmBtn = document.getElementById('gdrop-btn-confirm') as HTMLButtonElement | null;
+    const confirmTextEl = document.getElementById('gdrop-btn-confirm-text');
+    const zoneEl = document.getElementById('gdrop-zone');
+    const browseBtn = document.getElementById('gdrop-btn-browse');
+    const fileInput = document.getElementById('gdrop-file-input') as HTMLInputElement | null;
+    const formatHintEl = document.getElementById('gdrop-format-hint');
+    const errorAlertEl = document.getElementById('gdrop-error-alert');
+    const errorMsgEl = document.getElementById('gdrop-error-msg');
+    const dismissErrorBtn = document.getElementById('gdrop-btn-dismiss-error');
+    const previewContainer = document.getElementById('gdrop-preview-container');
+    const previewList = document.getElementById('gdrop-preview-list');
+    const previewCount = document.getElementById('gdrop-preview-count');
+    const clearBtn = document.getElementById('gdrop-btn-clear');
+
+    function showError(msg: string) {
+      if (errorAlertEl && errorMsgEl) {
+        errorMsgEl.textContent = msg;
+        errorAlertEl.style.display = 'flex';
+      }
+    }
+
+    function clearError() {
+      if (errorAlertEl) errorAlertEl.style.display = 'none';
+      if (errorMsgEl) errorMsgEl.textContent = '';
+    }
+
+    dismissErrorBtn?.addEventListener('click', clearError);
+
+    function formatFileSize(bytes: number): string {
+      if (!bytes || bytes <= 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    function fileMatchesAccept(file: File, acceptStr?: string): boolean {
+      if (!acceptStr || acceptStr.trim() === '' || acceptStr === '*' || acceptStr === '*/*') return true;
+      const patterns = acceptStr.split(',').map((p) => p.trim().toLowerCase()).filter(Boolean);
+      const fileName = file.name.toLowerCase();
+      const fileType = (file.type || '').toLowerCase();
+
+      return patterns.some((pat) => {
+        if (pat.startsWith('.')) {
+          return fileName.endsWith(pat);
+        }
+        if (pat.endsWith('/*')) {
+          const base = pat.slice(0, -1);
+          return fileType.startsWith(base);
+        }
+        return fileType === pat;
+      });
+    }
+
+    function getFileExtension(filename: string): string {
+      const idx = filename.lastIndexOf('.');
+      return idx !== -1 ? filename.slice(idx + 1).toUpperCase() : 'DOC';
+    }
+
+    function getExtBadgeClass(ext: string): string {
+      const e = ext.toLowerCase();
+      if (['pdf'].includes(e)) return 'ext-pdf';
+      if (['doc', 'docx', 'odt', 'rtf'].includes(e)) return 'ext-doc';
+      if (['xls', 'xlsx', 'csv', 'ods'].includes(e)) return 'ext-xls';
+      if (['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'].includes(e)) return 'ext-img';
+      if (['zip', 'rar', '7z', 'tar', 'gz'].includes(e)) return 'ext-zip';
+      return 'ext-gen';
+    }
+
+    function renderPreviews() {
+      if (!previewContainer || !previewList || !previewCount || !confirmBtn) return;
+
+      clearError();
+
+      if (activeFiles.length === 0) {
+        previewContainer.style.display = 'none';
+        previewList.innerHTML = '';
+        previewCount.textContent = '0';
+        confirmBtn.disabled = true;
+        return;
+      }
+
+      previewContainer.style.display = 'block';
+      previewCount.textContent = String(activeFiles.length);
+      confirmBtn.disabled = false;
+
+      previewList.innerHTML = '';
+      activeFiles.forEach((file, index) => {
+        const ext = getFileExtension(file.name);
+        const isImage = file.type.startsWith('image/');
+        const badgeClass = getExtBadgeClass(ext);
+        const sizeFormatted = formatFileSize(file.size);
+
+        const item = document.createElement('div');
+        item.className = 'gdrop-preview-item';
+
+        const left = document.createElement('div');
+        left.className = 'gdrop-preview-left';
+
+        if (isImage) {
+          const img = document.createElement('img');
+          img.className = 'gdrop-preview-img-thumb';
+          img.src = URL.createObjectURL(file);
+          img.alt = file.name;
+          left.appendChild(img);
+        } else {
+          const badge = document.createElement('div');
+          badge.className = `gdrop-badge-ext ${badgeClass}`;
+          badge.textContent = ext.slice(0, 4);
+          left.appendChild(badge);
+        }
+
+        const info = document.createElement('div');
+        info.className = 'gdrop-preview-info';
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'gdrop-preview-name';
+        nameSpan.title = file.name;
+        nameSpan.textContent = file.name;
+
+        const metaSpan = document.createElement('span');
+        metaSpan.className = 'gdrop-preview-size';
+        metaSpan.textContent = `${sizeFormatted} · Listo`;
+
+        info.appendChild(nameSpan);
+        info.appendChild(metaSpan);
+        left.appendChild(info);
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'gdrop-preview-remove';
+        removeBtn.title = 'Quitar este archivo';
+        removeBtn.innerHTML = `
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        `;
+        removeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          activeFiles.splice(index, 1);
+          renderPreviews();
+        });
+
+        item.appendChild(left);
+        item.appendChild(removeBtn);
+        previewList.appendChild(item);
+      });
+    }
+
+    function addFiles(newFiles: File[]) {
+      if (!newFiles || newFiles.length === 0) return;
+      const accept = currentOptions.accept;
+      const maxMb = currentOptions.maxSizeMB || 100;
+      const maxBytes = maxMb * 1024 * 1024;
+      const isMultiple = !!currentOptions.multiple;
+
+      const rejectedAccept: string[] = [];
+      const rejectedSize: string[] = [];
+      const validToAdd: File[] = [];
+
+      newFiles.forEach((f) => {
+        if (!fileMatchesAccept(f, accept)) {
+          rejectedAccept.push(f.name);
+          return;
+        }
+        if (f.size > maxBytes) {
+          rejectedSize.push(`${f.name} (${formatFileSize(f.size)})`);
+          return;
+        }
+        validToAdd.push(f);
+      });
+
+      if (rejectedAccept.length > 0) {
+        showError(`El archivo no corresponde al formato requerido (${accept || 'admitido'}): ${rejectedAccept.slice(0, 2).join(', ')}${rejectedAccept.length > 2 ? '...' : ''}`);
+      } else if (rejectedSize.length > 0) {
+        showError(`El archivo excede el tamaño máximo permitido (${maxMb} MB): ${rejectedSize.slice(0, 2).join(', ')}`);
+      }
+
+      if (validToAdd.length === 0) return;
+
+      if (!isMultiple) {
+        activeFiles = [validToAdd[0]];
+      } else {
+        validToAdd.forEach((vf) => {
+          const exists = activeFiles.some((x) => x.name === vf.name && x.size === vf.size);
+          if (!exists) activeFiles.push(vf);
+        });
+      }
+
+      renderPreviews();
+    }
+
+    clearBtn?.addEventListener('click', () => {
+      activeFiles = [];
+      renderPreviews();
+    });
+
+    // Zona Drag and Drop
+    zoneEl?.addEventListener('dragenter', (e) => {
+      e.preventDefault();
+      zoneEl.classList.add('is-dragover');
+    });
+
+    zoneEl?.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      zoneEl.classList.add('is-dragover');
+    });
+
+    zoneEl?.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      // Solo quitar si el cursor realmente salió del contenedor
+      const related = (e as MouseEvent).relatedTarget as Node | null;
+      if (!related || !zoneEl.contains(related)) {
+        zoneEl.classList.remove('is-dragover');
+      }
+    });
+
+    zoneEl?.addEventListener('drop', (e) => {
+      e.preventDefault();
+      zoneEl.classList.remove('is-dragover');
+      if (e.dataTransfer && e.dataTransfer.files) {
+        addFiles(Array.from(e.dataTransfer.files));
+      }
+    });
+
+    // Clic en dropzone abre examinador excepto si se pulsa un botón específico
+    zoneEl?.addEventListener('click', (e) => {
+      const t = e.target as HTMLElement;
+      if (t.closest('#gdrop-btn-browse')) return; // Ya tiene su propio listener
+      browseBtn?.click();
+    });
+
+    browseBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (fileInput) {
+        fileInput.value = '';
+        fileInput.click();
+      }
+    });
+
+    fileInput?.addEventListener('change', () => {
+      if (fileInput.files) {
+        addFiles(Array.from(fileInput.files));
+      }
+    });
+
+    function cerrar(filesResultado: File[] | null = null) {
+      if (modalEl) {
+        modalEl.style.display = 'none';
+        modalEl.classList.remove('is-open');
+        modalEl.setAttribute('aria-hidden', 'true');
+      }
+      if (resolvePromise) {
+        resolvePromise(filesResultado);
+        resolvePromise = null;
+      }
+      activeFiles = [];
+      currentOptions = {};
+      clearError();
+    }
+
+    closeBtn?.addEventListener('click', () => cerrar(null));
+    cancelBtn?.addEventListener('click', () => cerrar(null));
+
+    modalEl?.addEventListener('click', (e) => {
+      if (e.target === modalEl) {
+        cerrar(null);
+      }
+    });
+
+    confirmBtn?.addEventListener('click', () => {
+      if (activeFiles.length > 0) {
+        const result = [...activeFiles];
+        cerrar(result);
+      }
+    });
+
+    // Prevenir que el navegador abra archivos si se sueltan fuera de la zona mientras el modal está abierto
+    window.addEventListener('dragover', (e) => {
+      if (modalEl && modalEl.classList.contains('is-open')) {
+        e.preventDefault();
+      }
+    });
+    window.addEventListener('drop', (e) => {
+      if (modalEl && modalEl.classList.contains('is-open')) {
+        e.preventDefault();
+      }
+    });
+
+    // Escape para cerrar modal sin afectar modales inferiores
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modalEl && modalEl.classList.contains('is-open')) {
+        e.stopPropagation();
+        e.preventDefault();
+        cerrar(null);
+      }
+    }, true);
+
+    // API Global
+    (window as any).abrirModalSubida = function (opciones: OpcionesModalSubida = {}): Promise<File[] | null> {
+      currentOptions = opciones || {};
+      activeFiles = currentOptions.archivosIniciales ? [...currentOptions.archivosIniciales] : [];
+
+      if (titleEl) {
+        titleEl.textContent = currentOptions.titulo || 'Subir Archivo';
+      }
+      if (subtitleEl) {
+        subtitleEl.textContent = currentOptions.subtitulo || 'Arrastra y suelta tu archivo aquí o examina en tu equipo';
+      }
+      if (confirmTextEl) {
+        confirmTextEl.textContent = currentOptions.textoConfirmar || (currentOptions.multiple ? 'Confirmar Archivos' : 'Confirmar y Usar Archivo');
+      }
+
+      if (fileInput) {
+        fileInput.value = '';
+        fileInput.accept = currentOptions.accept || '';
+        fileInput.multiple = !!currentOptions.multiple;
+      }
+
+      if (formatHintEl) {
+        const acceptStr = currentOptions.accept ? currentOptions.accept.toUpperCase().replace(/\./g, '') : 'PDF, DOCX, XLSX, JPG, PNG';
+        const limitStr = currentOptions.maxSizeMB ? `Hasta ${currentOptions.maxSizeMB} MB` : 'Capacidad Ilimitada';
+        formatHintEl.textContent = `Formatos admitidos: ${acceptStr} · ${limitStr}`;
+      }
+
+      clearError();
+      renderPreviews();
+
+      if (modalEl) {
+        modalEl.style.display = 'flex';
+        modalEl.classList.add('is-open');
+        modalEl.setAttribute('aria-hidden', 'false');
+      }
+
+      return new Promise<File[] | null>((resolve) => {
+        resolvePromise = resolve;
+      });
+    };
+
+    (window as any).cerrarModalSubida = function () {
+      cerrar(null);
+    };
+
+    // Disparadores Declarativos: elementos con data-modal-upload-target="#selector"
+    (window as any).inicializarDisparadoresSubida = function () {
+      document.addEventListener('click', async (e) => {
+        const trigger = (e.target as HTMLElement).closest('[data-modal-upload-target]') as HTMLElement | null;
+        if (!trigger) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const targetSelector = trigger.getAttribute('data-modal-upload-target');
+        if (!targetSelector) return;
+
+        const targetInput = document.querySelector(targetSelector) as HTMLInputElement | null;
+        if (!targetInput) {
+          console.warn(`[ModalSubidaArchivo] No se encontró el input target: ${targetSelector}`);
+          return;
+        }
+
+        const titulo = trigger.getAttribute('data-modal-title') || targetInput.getAttribute('title') || 'Cargar Documento';
+        const subtitulo = trigger.getAttribute('data-modal-subtitle') || 'Arrastre su archivo a la zona o examine en su equipo';
+        const accept = trigger.getAttribute('data-modal-accept') || targetInput.accept || '';
+        const multiple = trigger.hasAttribute('data-modal-multiple')
+          ? trigger.getAttribute('data-modal-multiple') === 'true'
+          : targetInput.multiple;
+        const maxSizeMB = trigger.hasAttribute('data-modal-max-size-mb')
+          ? parseFloat(trigger.getAttribute('data-modal-max-size-mb') || '100')
+          : 100;
+        const textoConfirmar = trigger.getAttribute('data-modal-confirm-text') || 'Seleccionar Archivo';
+
+        try {
+          const files = await (window as any).abrirModalSubida({
+            titulo,
+            subtitulo,
+            accept,
+            multiple,
+            maxSizeMB,
+            textoConfirmar,
+          });
+
+          if (files && files.length > 0) {
+            const dt = new DataTransfer();
+            files.forEach((f) => dt.items.add(f));
+            targetInput.files = dt.files;
+            targetInput.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        } catch (err) {
+          console.error('[ModalSubidaArchivo] Error procesando carga:', err);
+        }
+      });
+    };
+
+    // Inicializar disparadores automáticamente al cargar el DOM
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => (window as any).inicializarDisparadoresSubida());
+    } else {
+      (window as any).inicializarDisparadoresSubida();
+    }
+  })();
+</script>

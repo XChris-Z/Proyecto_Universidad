@@ -116,7 +116,26 @@ export function initNormas() {
     }
   });
 
-  browseFileBtn?.addEventListener('click', () => fileInput?.click());
+  browseFileBtn?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    if (typeof (window as any).abrirModalSubida === 'function') {
+      const files = await (window as any).abrirModalSubida({
+        titulo: 'Soporte Documental Oficial',
+        subtitulo: 'Arrastre el documento oficial (PDF o DOCX) o examine en su equipo',
+        accept: '.pdf,.docx',
+        multiple: false,
+        textoConfirmar: 'Adjuntar Soporte',
+      });
+      if (files && files[0] && fileInput) {
+        const dt = new DataTransfer();
+        dt.items.add(files[0]);
+        fileInput.files = dt.files;
+        fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    } else {
+      fileInput?.click();
+    }
+  });
   fileInput?.addEventListener('change', () => {
     if (fileInput.files && fileInput.files[0] && fileLabel) {
       fileLabel.textContent = `Archivo seleccionado: ${fileInput.files[0].name} (${(fileInput.files[0].size / 1024).toFixed(1)} KB)`;
@@ -177,7 +196,26 @@ export function initNormas() {
     if (e.target === excelModal) closeExcelModal();
   });
 
-  browseExcelBtn?.addEventListener('click', () => excelFileInput?.click());
+  browseExcelBtn?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    if (typeof (window as any).abrirModalSubida === 'function') {
+      const files = await (window as any).abrirModalSubida({
+        titulo: 'Importar Normativa desde Hoja de Cálculo',
+        subtitulo: 'Arrastre su libro de Excel (.xlsx) o archivo CSV o examine en su equipo',
+        accept: '.xlsx,.xls,.csv',
+        multiple: false,
+        textoConfirmar: 'Cargar Hoja de Cálculo',
+      });
+      if (files && files[0] && excelFileInput) {
+        const dt = new DataTransfer();
+        dt.items.add(files[0]);
+        excelFileInput.files = dt.files;
+        excelFileInput.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    } else {
+      excelFileInput?.click();
+    }
+  });
   excelFileInput?.addEventListener('change', () => {
     if (excelFileInput.files && excelFileInput.files[0] && excelFileName) {
       excelFileName.textContent = `Archivo seleccionado: ${excelFileInput.files[0].name}`;

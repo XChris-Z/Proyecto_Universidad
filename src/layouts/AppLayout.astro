@@ -3,6 +3,7 @@
 import Layout from './Layout.astro';
 import Sidebar from '@components/layout/Sidebar.astro';
 import Topbar from '@components/layout/Topbar.astro';
+import ModalSubidaArchivo from '@components/ModalSubidaArchivo.astro';
 
 interface Props {
   title?: string;
@@ -163,6 +164,9 @@ Astro.response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate
       </div>
     </div>
   </div>
+
+  <!-- Modal Global Reutilizable de Subida de Archivos Estilo Google -->
+  <ModalSubidaArchivo />
 </Layout>
 
 <script>

@@ -392,6 +392,31 @@ import { supabase } from '@lib/supabase';
 
     // 3. Subida de Avatar al bucket 'avatars' de Supabase Storage
     const avatarInput = document.getElementById('avatar-file-input') as HTMLInputElement;
+    const btnAvatarCamera = document.getElementById('btn-avatar-camera');
+
+    btnAvatarCamera?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof (window as any).abrirModalSubida === 'function') {
+        const files = await (window as any).abrirModalSubida({
+          titulo: 'Cambiar Foto Institucional',
+          subtitulo: 'Arrastra tu foto de perfil o examina en tu equipo (PNG, JPG, WEBP)',
+          accept: 'image/png,image/jpeg,image/webp',
+          multiple: false,
+          maxSizeMB: 5,
+          textoConfirmar: 'Actualizar Foto',
+        });
+        if (files && files[0] && avatarInput) {
+          const dt = new DataTransfer();
+          dt.items.add(files[0]);
+          avatarInput.files = dt.files;
+          avatarInput.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      } else {
+        avatarInput?.click();
+      }
+    });
+
     if (avatarInput) {
       avatarInput.addEventListener('change', async (e: Event) => {
         const file = (e.target as HTMLInputElement).files?.[0];

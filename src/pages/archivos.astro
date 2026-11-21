@@ -4800,13 +4800,27 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
     }
 
     // Manejador Global de Subida de Respuesta Final Oficial (respetando nombre 100% original)
-    document.addEventListener('click', (e) => {
+    document.addEventListener('click', async (e) => {
       const target = (e.target as HTMLElement).closest('.btn-subir-respuesta-final, .btn-cambiar-respuesta-final') as HTMLElement | null;
       if (target) {
         const petId = target.getAttribute('data-peticion-id');
         if (petId) {
           currentUploadPetId = petId;
-          if (inputSubirRespuestaFinal) {
+          if (typeof (window as any).abrirModalSubida === 'function') {
+            const files = await (window as any).abrirModalSubida({
+              titulo: 'Subir Respuesta al Solicitante',
+              subtitulo: 'Repositorio institucional del oficio final firmado en PDF o documento oficial',
+              accept: '.pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip',
+              multiple: false,
+              textoConfirmar: 'Subir Respuesta Oficial',
+            });
+            if (files && files[0] && inputSubirRespuestaFinal) {
+              const dt = new DataTransfer();
+              dt.items.add(files[0]);
+              inputSubirRespuestaFinal.files = dt.files;
+              inputSubirRespuestaFinal.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+          } else if (inputSubirRespuestaFinal) {
             inputSubirRespuestaFinal.value = '';
             inputSubirRespuestaFinal.click();
           }

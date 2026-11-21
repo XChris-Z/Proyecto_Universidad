@@ -7668,6 +7668,458 @@ mark.juridico-mark {
   transform: rotate(180deg);
 }
 
+/* ==========================================================================
+   MODAL GLOBAL DE SUBIDA DE ARCHIVOS ESTILO GOOGLE (.gdrop-*)
+   ========================================================================== */
+.gdrop-overlay {
+  display: none !important;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.68);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  z-index: 100005 !important;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.gdrop-overlay.is-open {
+  display: flex !important;
+  animation: gdropFadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes gdropFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.gdrop-card {
+  background: #FFFFFF;
+  border-radius: 16px;
+  border: 1.5px solid #DCE4E3;
+  border-top: 4px solid #00594E;
+  box-shadow: 0 24px 54px rgba(15, 23, 42, 0.22);
+  width: 100%;
+  max-width: 530px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-height: 92vh;
+  box-sizing: border-box;
+}
+
+.gdrop-header {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #E2E8F0;
+  background: #F8FAFB;
+}
+
+.gdrop-header-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #E6EFEF;
+  color: #00594E;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.gdrop-header-text {
+  min-width: 0;
+}
+
+.gdrop-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #111827;
+  margin: 0;
+  line-height: 1.25;
+}
+
+.gdrop-subtitle {
+  font-size: 0.72rem;
+  color: #64748B;
+  margin: 2px 0 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gdrop-btn-close {
+  background: transparent;
+  border: none;
+  color: #64748B;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.gdrop-btn-close:hover {
+  background: #E2E8F0;
+  color: #0F172A;
+}
+
+.gdrop-body {
+  padding: 16px 20px 8px 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.gdrop-zone {
+  border: 2px dashed #CBD5E1;
+  border-radius: 14px;
+  background: #FAFBFB;
+  padding: 24px 18px;
+  text-align: center;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.gdrop-zone:hover,
+.gdrop-zone.is-dragover {
+  border-color: #00594E;
+  background: #F0F7F5;
+}
+
+.gdrop-zone.is-dragover {
+  transform: scale(1.01);
+  box-shadow: 0 0 0 4px rgba(0, 89, 78, 0.12);
+}
+
+.gdrop-cloud-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: #E6EFEF;
+  color: #00594E;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.gdrop-drop-prompt {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.gdrop-divider {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 160px;
+  margin: 6px 0;
+  color: #94A3B8;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.gdrop-divider::before,
+.gdrop-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #E2E8F0;
+}
+
+.gdrop-divider span {
+  padding: 0 8px;
+}
+
+.gdrop-btn-browse {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #FFFFFF;
+  border: 1.5px solid #00594E;
+  color: #00594E;
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 0.80rem;
+  font-weight: 750;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 89, 78, 0.1);
+  margin-top: 4px;
+}
+
+.gdrop-btn-browse:hover {
+  background: #00594E;
+  color: #FFFFFF;
+  box-shadow: 0 3px 8px rgba(0, 89, 78, 0.2);
+}
+
+.gdrop-format-hint {
+  font-size: 0.70rem;
+  color: #64748B;
+  margin-top: 10px;
+  font-weight: 500;
+}
+
+.gdrop-error-alert {
+  background: #FEF2F2;
+  border: 1px solid #FCA5A5;
+  color: #B91C1C;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gdrop-preview-container {
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #FFFFFF;
+}
+
+.gdrop-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.gdrop-preview-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: #00594E;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.gdrop-btn-clear {
+  background: none;
+  border: none;
+  font-size: 0.70rem;
+  font-weight: 700;
+  color: #DC2626;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.gdrop-preview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.gdrop-preview-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #F8FAFB;
+  border: 1px solid #EEF2F6;
+  transition: all 0.15s ease;
+}
+
+.gdrop-preview-item:hover {
+  background: #F1F5F9;
+  border-color: #CBD5E1;
+}
+
+.gdrop-preview-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.gdrop-preview-img-thumb {
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1.5px solid #00594E;
+  flex-shrink: 0;
+}
+
+.gdrop-badge-ext {
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.64rem;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+.gdrop-badge-ext.ext-pdf {
+  background: #FEE2E2;
+  color: #DC2626;
+  border: 1px solid #FECACA;
+}
+
+.gdrop-badge-ext.ext-doc {
+  background: #DBEAFE;
+  color: #2563EB;
+  border: 1px solid #BFDBFE;
+}
+
+.gdrop-badge-ext.ext-xls {
+  background: #D1FAE5;
+  color: #059669;
+  border: 1px solid #A7F3D0;
+}
+
+.gdrop-badge-ext.ext-img {
+  background: #FEF3C7;
+  color: #D97706;
+  border: 1px solid #FDE68A;
+}
+
+.gdrop-badge-ext.ext-zip {
+  background: #F3E8FF;
+  color: #9333EA;
+  border: 1px solid #E9D5FF;
+}
+
+.gdrop-badge-ext.ext-gen {
+  background: #E6EFEF;
+  color: #00594E;
+  border: 1px solid #B2CFCB;
+}
+
+.gdrop-preview-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.gdrop-preview-name {
+  display: block;
+  font-size: 0.80rem;
+  font-weight: 750;
+  color: #0F172A;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gdrop-preview-size {
+  display: block;
+  font-size: 0.68rem;
+  color: #64748B;
+  margin-top: 1px;
+}
+
+.gdrop-preview-remove {
+  background: none;
+  border: none;
+  color: #94A3B8;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.gdrop-preview-remove:hover {
+  color: #DC2626;
+  background: #FEE2E2;
+}
+
+.gdrop-footer {
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid #E2E8F0;
+  background: #F8FAFB;
+}
+
+.gdrop-btn-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: 8px;
+  border: none;
+  background: #00594E;
+  color: #FFFFFF;
+  font-size: 0.80rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 6px rgba(0, 89, 78, 0.2);
+}
+
+.gdrop-btn-confirm:hover:not(:disabled) {
+  background: #00443B;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 89, 78, 0.25);
+}
+
+.gdrop-btn-confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.gdrop-btn-cancel {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid #CBD5E1;
+  background: #FFFFFF;
+  color: #475569;
+  font-size: 0.80rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.gdrop-btn-cancel:hover {
+  background: #F1F5F9;
+  color: #1E293B;
+}
+
+
 
 
 

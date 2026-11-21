@@ -211,6 +211,34 @@ export async function initProgramas() {
   const deleteBtn = document.getElementById('btn-detail-delete-prog') as HTMLButtonElement | null;
   const uploadDocBtn = document.getElementById('btn-detail-upload-doc') as HTMLButtonElement | null;
   const detailFileInput = document.getElementById('detail-upload-file-input') as HTMLInputElement | null;
+  const detailFileLabel = document.getElementById('detail-upload-file-label');
+
+  detailFileInput?.addEventListener('change', () => {
+    if (detailFileInput.files && detailFileInput.files[0] && detailFileLabel) {
+      detailFileLabel.textContent = detailFileInput.files[0].name;
+      detailFileLabel.style.color = '#00594E';
+      detailFileLabel.style.fontWeight = '700';
+    } else if (detailFileLabel) {
+      detailFileLabel.textContent = 'Ningún archivo seleccionado';
+      detailFileLabel.style.color = '#64748B';
+      detailFileLabel.style.fontWeight = 'normal';
+    }
+  });
+
+  const newProgFileInput = document.getElementById('new-prog-archivo') as HTMLInputElement | null;
+  const newProgFileLabel = document.getElementById('new-prog-archivo-label');
+
+  newProgFileInput?.addEventListener('change', () => {
+    if (newProgFileInput.files && newProgFileInput.files[0] && newProgFileLabel) {
+      newProgFileLabel.textContent = newProgFileInput.files[0].name;
+      newProgFileLabel.style.color = '#00594E';
+      newProgFileLabel.style.fontWeight = '700';
+    } else if (newProgFileLabel) {
+      newProgFileLabel.textContent = 'Ningún archivo seleccionado';
+      newProgFileLabel.style.color = '#64748B';
+      newProgFileLabel.style.fontWeight = 'normal';
+    }
+  });
 
   function closeDetail() {
     if (detailModal) {

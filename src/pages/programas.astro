@@ -137,7 +137,13 @@ const countAcred = programasList.filter((p: any) => p.categoria === 'acreditacio
             <span>Documento de Soporte / Acto Administrativo (PDF, DOC, DOCX)</span>
             <span style="font-size: 0.70rem; color: #00594E; font-weight: 700;">Opcional</span>
           </label>
-          <input type="file" id="new-prog-archivo" class="form-input" accept=".pdf,.doc,.docx" style="padding: 7px 10px; font-size: 0.82rem; border-radius: 8px; border: 1.5px solid #DCE4E3;" />
+          <div style="display: flex; gap: 10px; align-items: center; margin-top: 4px;">
+            <input type="file" id="new-prog-archivo" accept=".pdf,.doc,.docx" style="display: none;" />
+            <button type="button" class="btn btn-secondary btn-sm" data-modal-upload-target="#new-prog-archivo" data-modal-title="Documento de Soporte del Programa" data-modal-subtitle="Arrastre el acto administrativo o documento oficial en PDF o examine en su equipo" data-modal-accept=".pdf,.doc,.docx" data-modal-confirm-text="Adjuntar Soporte" style="border: 1.5px solid #00594E; color: #00594E; font-weight: 700; border-radius: 8px; padding: 7px 14px; cursor: pointer; background: #FFFFFF;">
+              Examinar / Arrastrar Documento
+            </button>
+            <span id="new-prog-archivo-label" style="font-size: 0.76rem; color: #64748B;">Ningún archivo seleccionado</span>
+          </div>
           <span style="font-size: 0.72rem; color: #64748B; margin-top: 3px; display: block;">
             El archivo se custodiará automáticamente en el repositorio digital seguro institucional.
           </span>
@@ -215,7 +221,11 @@ const countAcred = programasList.filter((p: any) => p.categoria === 'acreditacio
               Adjuntar / Reemplazar Documento de Soporte (PDF, DOC, DOCX):
             </label>
             <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-              <input type="file" id="detail-upload-file-input" accept=".pdf,.doc,.docx" class="form-input" style="flex: 1; min-width: 200px; padding: 6px 10px; font-size: 0.80rem; border-radius: 8px; border: 1.5px solid #DCE4E3;" />
+              <input type="file" id="detail-upload-file-input" accept=".pdf,.doc,.docx" style="display: none;" />
+              <button type="button" class="btn btn-secondary btn-sm" data-modal-upload-target="#detail-upload-file-input" data-modal-title="Documento de Soporte del Programa" data-modal-subtitle="Arrastre el documento oficial (PDF o DOCX) o examine en su equipo" data-modal-accept=".pdf,.doc,.docx" data-modal-confirm-text="Seleccionar Archivo" style="border: 1.5px solid #00594E; color: #00594E; font-weight: 700; border-radius: 8px; padding: 6px 14px; cursor: pointer; background: #FFFFFF;">
+                Examinar Archivo
+              </button>
+              <span id="detail-upload-file-label" style="font-size: 0.76rem; color: #64748B; flex: 1; min-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Ningún archivo seleccionado</span>
               <button type="button" class="btn btn-secondary btn-sm" id="btn-detail-upload-doc" style="white-space: nowrap; font-weight: 750; border: 1.5px solid #B2CFCB; background: #F2F7F6; color: #00594E; border-radius: 8px; padding: 6px 14px; cursor: pointer;">
                 Subir Documento
               </button>

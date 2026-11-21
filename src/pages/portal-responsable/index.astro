@@ -2,6 +2,7 @@
 // src/pages/portal-responsable/index.astro
 // Portal Oficial de Entrega de Anexos UI/UX Pro Max — SGD Unitrópico
 import Layout from '@layouts/Layout.astro';
+import ModalSubidaArchivo from '@components/ModalSubidaArchivo.astro';
 ---
 
 <Layout title="Portal de Entrega de Anexos — SGD Unitrópico">
@@ -420,6 +421,9 @@ import Layout from '@layouts/Layout.astro';
     </footer>
 
   </div>
+
+  <!-- Modal Global de Subida Estilo Google -->
+  <ModalSubidaArchivo />
 </Layout>
 
 <style>
@@ -2105,7 +2109,23 @@ import Layout from '@layouts/Layout.astro';
 
   // 3. Drag and Drop de Archivos
   if (dropZone && fileInput) {
-    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('click', async (e) => {
+      e.preventDefault();
+      if (typeof (window as any).abrirModalSubida === 'function') {
+        const files = await (window as any).abrirModalSubida({
+          titulo: 'Cargar Aportes o Anexos Documentales',
+          subtitulo: 'Arrastre sus documentos o examine en su equipo para enviarlos a la dependencia',
+          accept: '.pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip',
+          multiple: true,
+          textoConfirmar: 'Agregar a la Cola de Envío',
+        });
+        if (files && files.length > 0) {
+          handleFilesSelected(files);
+        }
+      } else {
+        fileInput.click();
+      }
+    });
 
     dropZone.addEventListener('dragover', (e) => {
       e.preventDefault();

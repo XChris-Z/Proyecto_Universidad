@@ -682,7 +682,27 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
     const browseActaBtn = document.getElementById('btn-browse-acta');
     const actaLabel = document.getElementById('member-acta-label');
 
-    browsePhotoBtn?.addEventListener('click', () => photoInput?.click());
+    browsePhotoBtn?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      if (typeof (window as any).abrirModalSubida === 'function') {
+        const files = await (window as any).abrirModalSubida({
+          titulo: 'Fotografía Institucional del Miembro',
+          subtitulo: 'Arrastre la foto o examine en su equipo (PNG, JPG, WEBP)',
+          accept: 'image/*',
+          multiple: false,
+          maxSizeMB: 5,
+          textoConfirmar: 'Usar Fotografía',
+        });
+        if (files && files[0] && photoInput) {
+          const dt = new DataTransfer();
+          dt.items.add(files[0]);
+          photoInput.files = dt.files;
+          photoInput.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      } else {
+        photoInput?.click();
+      }
+    });
     photoInput?.addEventListener('change', () => {
       if (photoInput.files && photoInput.files[0] && photoLabel) {
         photoLabel.textContent = photoInput.files[0].name;
@@ -690,7 +710,26 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
       }
     });
 
-    browseActaBtn?.addEventListener('click', () => actaInput?.click());
+    browseActaBtn?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      if (typeof (window as any).abrirModalSubida === 'function') {
+        const files = await (window as any).abrirModalSubida({
+          titulo: 'Acta de Designación / Posesión',
+          subtitulo: 'Arrastre el documento oficial (PDF o DOCX) o examine en su equipo',
+          accept: '.pdf,.docx',
+          multiple: false,
+          textoConfirmar: 'Adjuntar Acta',
+        });
+        if (files && files[0] && actaInput) {
+          const dt = new DataTransfer();
+          dt.items.add(files[0]);
+          actaInput.files = dt.files;
+          actaInput.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      } else {
+        actaInput?.click();
+      }
+    });
     actaInput?.addEventListener('change', () => {
       if (actaInput.files && actaInput.files[0] && actaLabel) {
         actaLabel.textContent = actaInput.files[0].name;
@@ -835,7 +874,26 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
     const changeActaLabel = document.getElementById('change-acta-label');
     const saveChangeBtn = document.getElementById('btn-save-change') as HTMLButtonElement | null;
 
-    browseChangeActaBtn?.addEventListener('click', () => changeActaInput?.click());
+    browseChangeActaBtn?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      if (typeof (window as any).abrirModalSubida === 'function') {
+        const files = await (window as any).abrirModalSubida({
+          titulo: 'Acta Soporte de Cambio / Nombramiento',
+          subtitulo: 'Arrastre el documento oficial (PDF o DOCX) o examine en su equipo',
+          accept: '.pdf,.docx',
+          multiple: false,
+          textoConfirmar: 'Adjuntar Documento Soporte',
+        });
+        if (files && files[0] && changeActaInput) {
+          const dt = new DataTransfer();
+          dt.items.add(files[0]);
+          changeActaInput.files = dt.files;
+          changeActaInput.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      } else {
+        changeActaInput?.click();
+      }
+    });
     changeActaInput?.addEventListener('change', () => {
       if (changeActaInput.files && changeActaInput.files[0] && changeActaLabel) {
         changeActaLabel.textContent = changeActaInput.files[0].name;

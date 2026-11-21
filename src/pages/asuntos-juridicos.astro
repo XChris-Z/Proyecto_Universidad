@@ -1361,7 +1361,26 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
     const docDescInput = document.getElementById('doc-input-desc');
     const submitDocBtn = document.getElementById('btn-submit-upload-doc');
 
-    browseDocFileBtn?.addEventListener('click', () => docFileInput?.click());
+    browseDocFileBtn?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      if (typeof (window as any).abrirModalSubida === 'function') {
+        const files = await (window as any).abrirModalSubida({
+          titulo: 'Cargar Documento Jurídico',
+          subtitulo: 'Arrastre el documento o examine en su equipo para extracción de texto e indexación',
+          accept: '.pdf,.docx,.txt,.csv',
+          multiple: false,
+          textoConfirmar: 'Seleccionar Documento',
+        });
+        if (files && files[0] && docFileInput) {
+          const dt = new DataTransfer();
+          dt.items.add(files[0]);
+          docFileInput.files = dt.files;
+          docFileInput.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      } else {
+        docFileInput?.click();
+      }
+    });
     docFileInput?.addEventListener('change', () => {
       if (docFileInput.files && docFileInput.files[0] && docFileLabel) {
         const f = docFileInput.files[0];
