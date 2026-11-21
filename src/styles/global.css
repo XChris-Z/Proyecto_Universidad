@@ -8119,6 +8119,50 @@ mark.juridico-mark {
   color: #1E293B;
 }
 
+/* ==========================================================================
+   MIEMBROS DE CONSEJO: VISTAS SUBPÁGINA Y ESTADOS DE ARCHIVO
+   ========================================================================== */
+.main-subpage-tabs .module-tab-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 8px 18px !important;
+  font-size: 0.88rem !important;
+  font-weight: 750 !important;
+  border-radius: 10px !important;
+}
+
+.main-subpage-tabs .module-tab-btn.active {
+  background: #00594E !important;
+  color: #FFFFFF !important;
+  border-color: #00594E !important;
+  box-shadow: 0 4px 12px rgba(0, 89, 78, 0.22) !important;
+}
+
+.main-subpage-tabs .module-tab-btn .tab-count {
+  font-size: 0.72rem !important;
+  padding: 2px 8px !important;
+  border-radius: 999px !important;
+}
+
+.badge-reemplazado {
+  background: #FFFBEB !important;
+  color: #92400E !important;
+  border: 1px solid #FDE68A !important;
+}
+
+.member-card.card-reemplazado {
+  background: #FFFFFF !important;
+  border: 1.5px solid #DBD2B0 !important;
+  border-left: 4.5px solid #B5A160 !important;
+}
+
+.member-card.card-reemplazado:hover {
+  border-color: #B5A160 !important;
+  box-shadow: 0 6px 18px rgba(181, 161, 96, 0.16) !important;
+}
+
+
 
 
 

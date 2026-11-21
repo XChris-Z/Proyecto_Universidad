@@ -1,6 +1,7 @@
 ---
 // src/pages/miembros-consejo.astro
 // Módulo de Gestión de Miembros de Consejo (CSU, CA, Rectoría)
+// Reorganización UI/UX Pro Max: Vistas "Activos" vs "Archivo", Registro Histórico (2021+) y Trazabilidad Oficial
 import AppLayout from '@layouts/AppLayout.astro';
 import { supabase } from '@lib/supabase';
 
@@ -15,58 +16,69 @@ const now = new Date();
 const todayMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
 function calculateStatus(m: any) {
-  const isInactive = String(m.estado || '').toLowerCase() === 'inactivo';
-  if (isInactive) {
-    return {
-      type: 'inactivo',
-      diasRestantes: 0,
-      badgeText: 'Inactivo / Reemplazado',
-      cardClass: 'card-inactivo',
-      badgeClass: 'badge-inactivo',
-    };
+  const estadoLower = String(m.estado || 'activo').toLowerCase();
+  let diasRestantes = 999;
+
+  if (m.fecha_fin) {
+    const [y, mth, d] = m.fecha_fin.split('-').map(Number);
+    const finMs = new Date(y, (mth || 1) - 1, d || 1).getTime();
+    diasRestantes = Math.ceil((finMs - todayMs) / (1000 * 60 * 60 * 24));
   }
 
-  if (!m.fecha_fin) {
-    return {
-      type: 'activo',
-      diasRestantes: 999,
-      badgeText: 'Activo · Vigente',
-      cardClass: 'card-activo',
-      badgeClass: 'badge-activo',
-    };
-  }
+  const isManuallyArchived = estadoLower === 'inactivo' || estadoLower === 'archivado';
+  const isExpired = diasRestantes < 0;
 
-  const [y, mth, d] = m.fecha_fin.split('-').map(Number);
-  const finMs = new Date(y, (mth || 1) - 1, d || 1).getTime();
-  const diasRestantes = Math.ceil((finMs - todayMs) / (1000 * 60 * 60 * 24));
+  // Clasificación de Vista Principal: 'activos' o 'archivo'
+  const viewGroup = (isManuallyArchived || isExpired) ? 'archivo' : 'activos';
 
-  if (diasRestantes <= 0) {
-    const diasVencido = Math.abs(diasRestantes);
-    return {
-      type: 'vencido',
-      diasRestantes,
-      badgeText: diasVencido === 0 ? 'VENCE HOY' : `VENCIDO (hace ${diasVencido} día${diasVencido === 1 ? '' : 's'})`,
-      cardClass: 'card-vencido',
-      badgeClass: 'badge-vencido',
-    };
-  }
+  let type: 'vigente' | 'proximo' | 'vencido' | 'inactivo' | 'reemplazado' = 'vigente';
+  let badgeText = 'Vigente';
+  let badgeClass = 'badge-activo';
+  let cardClass = 'card-activo';
 
-  if (diasRestantes <= 30) {
-    return {
-      type: 'proximo',
-      diasRestantes,
-      badgeText: `PRÓXIMO A VENCER (faltan ${diasRestantes} día${diasRestantes === 1 ? '' : 's'})`,
-      cardClass: 'card-proximo',
-      badgeClass: 'badge-proximo',
-    };
+  if (viewGroup === 'archivo') {
+    if (isManuallyArchived) {
+      if (m.razon_cambio) {
+        type = 'reemplazado';
+        badgeText = 'Reemplazado / Retirado';
+        badgeClass = 'badge-reemplazado';
+        cardClass = 'card-reemplazado';
+      } else {
+        type = 'inactivo';
+        badgeText = 'Archivado · Histórico';
+        badgeClass = 'badge-inactivo';
+        cardClass = 'card-inactivo';
+      }
+    } else {
+      // Periodo vencido por fecha fin < hoy
+      type = 'vencido';
+      const diasVencido = Math.abs(diasRestantes);
+      badgeText = diasVencido === 0 ? 'VENCE HOY' : `Periodo Vencido (${diasVencido}d)`;
+      badgeClass = 'badge-vencido';
+      cardClass = 'card-vencido';
+    }
+  } else {
+    // Miembro Activo
+    if (diasRestantes <= 30) {
+      type = 'proximo';
+      badgeText = diasRestantes === 0 ? 'VENCE HOY' : `PRÓXIMO A VENCER (faltan ${diasRestantes} día${diasRestantes === 1 ? '' : 's'})`;
+      badgeClass = 'badge-proximo';
+      cardClass = 'card-proximo';
+    } else {
+      type = 'vigente';
+      badgeText = 'Activo · Vigente';
+      badgeClass = 'badge-activo';
+      cardClass = 'card-activo';
+    }
   }
 
   return {
-    type: 'activo',
+    viewGroup,
+    type,
     diasRestantes,
-    badgeText: 'Activo · Vigente',
-    cardClass: 'card-activo',
-    badgeClass: 'badge-activo',
+    badgeText,
+    badgeClass,
+    cardClass,
   };
 }
 
@@ -106,11 +118,14 @@ const miembrosView = rawMiembros.map((m: any) => {
   };
 });
 
-const total = miembrosView.length;
-const activosCount = miembrosView.filter((m) => m.statusInfo.type === 'activo').length;
-const proximosCount = miembrosView.filter((m) => m.statusInfo.type === 'proximo').length;
+const totalGeneral = miembrosView.length;
+const totalActivos = miembrosView.filter((m) => m.statusInfo.viewGroup === 'activos').length;
+const totalArchivo = miembrosView.filter((m) => m.statusInfo.viewGroup === 'archivo').length;
+
+const activosVigentes = miembrosView.filter((m) => m.statusInfo.type === 'vigente').length;
+const proximosVencer = miembrosView.filter((m) => m.statusInfo.type === 'proximo').length;
 const vencidosCount = miembrosView.filter((m) => m.statusInfo.type === 'vencido').length;
-const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactivo').length;
+const archivadosReemplazados = miembrosView.filter((m) => m.statusInfo.type === 'inactivo' || m.statusInfo.type === 'reemplazado').length;
 ---
 
 <AppLayout title="Miembros de Consejo — Cuerpos Colegiados" activeNav="miembros-consejo">
@@ -132,30 +147,52 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
         </p>
       </div>
 
+      <!-- Botón Contextual (Sin doble '+') -->
       <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-        <button class="btn btn-primary" id="btn-open-member-modal" type="button" style="background: #00594E; border: 1.5px solid #00594E; color: #ffffff; font-weight: 800; font-size: 0.84rem; border-radius: 10px; padding: 10px 18px; box-shadow: 0 2px 8px rgba(0, 89, 78, 0.25); cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M12 5v14M5 12h14"/></svg>
-          <span>+ Registrar Miembro</span>
+        <button
+          class="btn btn-primary"
+          id="btn-open-member-modal"
+          type="button"
+          style="background: #00594E; border: 1.5px solid #00594E; color: #ffffff; font-weight: 800; font-size: 0.84rem; border-radius: 10px; padding: 10px 18px; box-shadow: 0 2px 8px rgba(0, 89, 78, 0.25); cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.18s ease;"
+        >
+          <svg id="btn-open-member-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="8.5" cy="7" r="4"></circle>
+            <line x1="20" y1="8" x2="20" y2="14"></line>
+            <line x1="23" y1="11" x2="17" y2="11"></line>
+          </svg>
+          <span id="btn-open-member-text">Registrar Miembro</span>
         </button>
       </div>
     </header>
 
-    <!-- Fila de KPIs de Semáforo de Miembros -->
-    <div class="miembros-kpi-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-top: 18px;">
-      <div class="kpi-mini-card" style="background: #FFFFFF; border: 1px solid #DCE4E3; border-radius: 12px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;">
-        <div>
-          <span style="font-size: 0.72rem; font-weight: 700; color: #64748B; text-transform: uppercase;">Total Registrados</span>
-          <div style="font-size: 1.45rem; font-weight: 800; color: #111827;">{total}</div>
-        </div>
-        <div style="width: 38px; height: 38px; border-radius: 10px; background: #F8FAFC; color: #00594E; display: flex; align-items: center; justify-content: center;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-        </div>
+    <!-- Conmutador Principal de Subpáginas: ACTIVOS vs ARCHIVO -->
+    <div class="miembros-subpage-switcher" style="margin-top: 18px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; padding-bottom: 16px; border-bottom: 1.5px solid #E2E8F0;">
+      <div class="module-tabs-container main-subpage-tabs" role="tablist" style="margin-bottom: 0 !important;">
+        <button type="button" class="module-tab-btn active" data-view="activos" id="tab-view-activos">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span>Activos</span>
+          <span class="tab-count" id="count-badge-activos">{totalActivos}</span>
+        </button>
+        <button type="button" class="module-tab-btn" data-view="archivo" id="tab-view-archivo">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+          <span>Archivo</span>
+          <span class="tab-count" id="count-badge-archivo">{totalArchivo}</span>
+        </button>
       </div>
 
+      <div id="view-subtitle-info" style="font-size: 0.78rem; color: #64748B; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+        <span class="pulse-indicator-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #00594E; display: inline-block;"></span>
+        <span id="view-subtitle-text">Mostrando únicamente integrantes con periodo vigente o en curso.</span>
+      </div>
+    </div>
+
+    <!-- Tira de Métricas KPI Contextuales -->
+    <div class="miembros-kpi-row" id="kpi-strip-activos" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-top: 16px;">
       <div class="kpi-mini-card" style="background: #FFFFFF; border: 1px solid #B2CFCB; border-radius: 12px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;">
         <div>
           <span style="font-size: 0.72rem; font-weight: 700; color: #00594E; text-transform: uppercase;">Activos · Vigentes</span>
-          <div style="font-size: 1.45rem; font-weight: 800; color: #00594E;">{activosCount}</div>
+          <div style="font-size: 1.45rem; font-weight: 800; color: #00594E;" id="kpi-activos-vigentes">{activosVigentes}</div>
         </div>
         <div style="width: 38px; height: 38px; border-radius: 10px; background: #F0F7F5; color: #00594E; display: flex; align-items: center; justify-content: center;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
@@ -165,31 +202,43 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
       <div class="kpi-mini-card" style="background: #FFFFFF; border: 1px solid #FCA5A5; border-radius: 12px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;">
         <div>
           <span style="font-size: 0.72rem; font-weight: 700; color: #EF4444; text-transform: uppercase;">Próximos a Vencer (&le; 30d)</span>
-          <div style="font-size: 1.45rem; font-weight: 800; color: #DC2626;">{proximosCount}</div>
+          <div style="font-size: 1.45rem; font-weight: 800; color: #DC2626;" id="kpi-proximos-vencer">{proximosVencer}</div>
         </div>
         <div style="width: 38px; height: 38px; border-radius: 10px; background: #FFF5F5; color: #EF4444; display: flex; align-items: center; justify-content: center;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         </div>
       </div>
+    </div>
 
-      <div class="kpi-mini-card" style="background: #FFFFFF; border: 1px solid #DC2626; border-radius: 12px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;">
+    <div class="miembros-kpi-row" id="kpi-strip-archivo" style="display: none; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-top: 16px;">
+      <div class="kpi-mini-card" style="background: #FFFFFF; border: 1.5px solid #FCA5A5; border-radius: 12px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;">
         <div>
-          <span style="font-size: 0.72rem; font-weight: 700; color: #DC2626; text-transform: uppercase;">Periodo Vencido</span>
-          <div style="font-size: 1.45rem; font-weight: 800; color: #DC2626;">{vencidosCount}</div>
+          <span style="font-size: 0.72rem; font-weight: 700; color: #DC2626; text-transform: uppercase;">Periodo Vencido (Histórico)</span>
+          <div style="font-size: 1.45rem; font-weight: 800; color: #DC2626;" id="kpi-vencidos-archivo">{vencidosCount}</div>
         </div>
         <div style="width: 38px; height: 38px; border-radius: 10px; background: #FEF2F2; color: #DC2626; display: flex; align-items: center; justify-content: center;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+      </div>
+
+      <div class="kpi-mini-card" style="background: #FFFFFF; border: 1.5px solid #DBD2B0; border-radius: 12px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;">
+        <div>
+          <span style="font-size: 0.72rem; font-weight: 700; color: #786832; text-transform: uppercase;">Reemplazados / Archivados</span>
+          <div style="font-size: 1.45rem; font-weight: 800; color: #786832;" id="kpi-reemplazados-archivo">{archivadosReemplazados}</div>
+        </div>
+        <div style="width: 38px; height: 38px; border-radius: 10px; background: #F7F5EE; color: #786832; display: flex; align-items: center; justify-content: center;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
         </div>
       </div>
     </div>
 
-    <!-- Pestañas y Filtros -->
-    <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 12px;">
+    <!-- Barra de Filtros: Por Cuerpo Colegiado y Búsqueda -->
+    <div style="margin-top: 18px; display: flex; flex-direction: column; gap: 12px;">
       <!-- Pestañas por Cuerpo Colegiado -->
-      <div class="module-tabs-container module-tabs" id="colegiado-filter-tabs" role="tablist">
+      <div class="module-tabs-container module-tabs" id="colegiado-filter-tabs" role="tablist" style="margin-bottom: 0 !important;">
         <button type="button" class="module-tab-btn active" data-col="all">
           <span>Todos los Consejos</span>
-          <span class="tab-count">{total}</span>
+          <span class="tab-count" id="count-colegiado-tab">{totalActivos}</span>
         </button>
         <button type="button" class="module-tab-btn" data-col="csu">
           <span>Consejo Superior (CSU)</span>
@@ -202,7 +251,7 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
         </button>
       </div>
 
-      <!-- Barra de Filtros secundarios y Búsqueda -->
+      <!-- Barra de Búsqueda -->
       <div class="filter-bar" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
         <div style="position: relative; flex: 1; min-width: 260px;">
           <input
@@ -216,17 +265,6 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
           </div>
         </div>
-
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <label style="font-size: 0.74rem; font-weight: 700; color: #64748B; text-transform: uppercase;">Estado:</label>
-          <select id="member-status-select" class="form-input" style="height: 40px; border-radius: 10px; font-size: 0.82rem; font-weight: 600; padding: 4px 12px; border: 1.5px solid #DCE4E3; background: #FFFFFF;">
-            <option value="all">Todos los Estados</option>
-            <option value="activo">Solo Activos (Vigentes)</option>
-            <option value="proximo">Próximos a Vencer (&le; 30d)</option>
-            <option value="vencido">Periodo Vencido</option>
-            <option value="inactivo">Inactivos / Reemplazados</option>
-          </select>
-        </div>
       </div>
     </div>
 
@@ -236,29 +274,30 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
         miembrosView.map((m: any) => (
           <article
             class={`member-card ${m.statusInfo.cardClass}`}
+            data-view-group={m.statusInfo.viewGroup}
             data-col={m.colegiadoCode}
             data-status={m.statusInfo.type}
             data-id={m.id}
           >
             <!-- Cabecera de la tarjeta con Foto/Avatar y Badge de Estado -->
             <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
-              <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
                 {m.foto_url ? (
                   <img
                     src={m.foto_url}
                     alt={m.nombre_completo}
-                    style="width: 56px; height: 56px; border-radius: 999px; object-fit: cover; border: 2px solid #00594E; flex-shrink: 0;"
+                    style="width: 54px; height: 54px; border-radius: 999px; object-fit: cover; border: 2px solid #00594E; flex-shrink: 0;"
                   />
                 ) : (
-                  <div style="width: 56px; height: 56px; border-radius: 999px; background: #F0F7F5; border: 2px solid #00594E; color: #00594E; font-size: 1.15rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                  <div style="width: 54px; height: 54px; border-radius: 999px; background: #F0F7F5; border: 2px solid #00594E; color: #00594E; font-size: 1.12rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                     {m.initials}
                   </div>
                 )}
                 <div style="min-width: 0;">
-                  <h3 style="margin: 0; font-size: 0.98rem; font-weight: 800; color: #111827; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  <h3 style="margin: 0; font-size: 0.96rem; font-weight: 800; color: #111827; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title={m.nombre_completo}>
                     {m.nombre_completo}
                   </h3>
-                  <div style="font-size: 0.78rem; font-weight: 700; color: #786832; margin-top: 2px;">
+                  <div style="font-size: 0.77rem; font-weight: 700; color: #786832; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                     {m.cargo_calidad}
                   </div>
                   <div style="font-size: 0.71rem; color: #64748B; margin-top: 1px;">
@@ -275,7 +314,7 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
             </div>
 
             <!-- Período de Vigencia -->
-            <div style="margin-top: 14px; background: rgba(0, 89, 78, 0.04); border: 1px solid rgba(0, 89, 78, 0.12); border-radius: 8px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; font-size: 0.76rem;">
+            <div style="margin-top: 14px; background: rgba(0, 89, 78, 0.04); border: 1px solid rgba(0, 89, 78, 0.12); border-radius: 8px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem;">
               <div style="display: flex; align-items: center; gap: 6px; color: #00443B;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                 <span><strong>Periodo:</strong> {m.fechaInicioFmt} &mdash; {m.fechaFinFmt}</span>
@@ -317,9 +356,15 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
                   )}
                 </div>
               )}
+
+              {!m.acta_cambio_url && m.razon_cambio && (
+                <div style="font-size: 0.70rem; color: #78350F; background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 6px; padding: 5px 8px; font-style: italic;">
+                  Motivo de cierre: {m.razon_cambio}
+                </div>
+              )}
             </div>
 
-            <!-- Acciones de la Tarjeta -->
+            <!-- Acciones de la Tarjeta Contextuales -->
             <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(0, 0, 0, 0.08); display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
               <button
                 type="button"
@@ -331,16 +376,30 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
                 <span>Editar</span>
               </button>
 
-              <button
-                type="button"
-                class="btn-change-member"
-                data-id={m.id}
-                data-name={m.nombre_completo}
-                style="all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 4px 10px; font-size: 0.74rem; font-weight: 600; border-radius: 6px; background: #F7F5EE; border: 1px solid #B5A160; color: #786832; cursor: pointer; transition: all 0.16s ease;"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-                <span>Reemplazo / Cambio</span>
-              </button>
+              {m.statusInfo.viewGroup === 'activos' ? (
+                <button
+                  type="button"
+                  class="btn-change-member"
+                  data-id={m.id}
+                  data-name={m.nombre_completo}
+                  title="Archivar o registrar cambio antes de vencimiento"
+                  style="all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 4px 10px; font-size: 0.74rem; font-weight: 600; border-radius: 6px; background: #F7F5EE; border: 1px solid #B5A160; color: #786832; cursor: pointer; transition: all 0.16s ease;"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                  <span>Archivar / Registrar Cambio</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  class="btn-reactivar-member"
+                  data-member={JSON.stringify(m)}
+                  title="Reactivar integrante para un nuevo periodo estatutario"
+                  style="all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 4px 10px; font-size: 0.74rem; font-weight: 700; border-radius: 6px; background: #F0FDF4; border: 1px solid #86EFAC; color: #166534; cursor: pointer; transition: all 0.16s ease;"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                  <span>Reactivar / Nuevo Periodo</span>
+                </button>
+              )}
 
               <button
                 type="button"
@@ -366,22 +425,41 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
     <!-- Mensaje de sin resultados por filtro -->
     <div id="members-filter-empty" style="display: none; padding: 40px 20px; text-align: center; background: #F8FAFC; border: 1px dashed #CBD5E1; border-radius: 14px; margin-top: 18px;">
       <div style="font-weight: 700; font-size: 1.02rem; color: #111827;">Sin coincidencias para los filtros seleccionados</div>
-      <p style="font-size: 0.82rem; color: #64748B; margin-top: 4px;">Ajuste el consejo colegiado, el estado o la búsqueda de texto.</p>
+      <p style="font-size: 0.82rem; color: #64748B; margin-top: 4px;">Ajuste el cuerpo colegiado o el término de búsqueda de texto.</p>
     </div>
   </section>
 
-  <!-- MODAL: Registrar / Editar Miembro -->
+  <!-- MODAL: Registrar / Editar Miembro (Con soporte de Miembro Activo vs Registro Histórico) -->
   <div class="modal-backdrop" id="member-crud-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(2px);">
     <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 620px; border-radius: 16px; box-shadow: 0 20px 45px rgba(0,0,0,0.2); overflow: hidden; border-top: 4px solid #00594E;">
+      
       <div class="modal-header" style="background: #F2F7F6; border-bottom: 1.5px solid #DCE4E3; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
         <h3 id="member-modal-title" style="font-size: 1.12rem; font-weight: 800; color: #00594E; margin: 0;">Registrar Miembro de Consejo</h3>
         <button type="button" class="btn-close-modal" id="btn-close-member-modal" style="background: none; border: none; cursor: pointer; color: #64748B;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
+
       <div class="modal-body" style="padding: 22px 24px; max-height: calc(85vh - 120px); overflow-y: auto;">
+        
+        <!-- Selector Segmentado: Miembro Activo vs Registro en Archivo Histórico -->
+        <div class="modal-mode-selector" style="display: flex; background: #F1F5F9; border-radius: 10px; padding: 4px; margin-bottom: 16px; gap: 4px;">
+          <button type="button" class="mode-tab-btn active" data-mode="activo" id="btn-mode-activo" style="flex: 1; border: none; padding: 8px 12px; border-radius: 8px; font-size: 0.82rem; font-weight: 750; cursor: pointer; transition: all 0.15s ease; background: #00594E; color: #FFFFFF;">
+            Miembro Activo
+          </button>
+          <button type="button" class="mode-tab-btn" data-mode="archivado" id="btn-mode-archivado" style="flex: 1; border: none; padding: 8px 12px; border-radius: 8px; font-size: 0.82rem; font-weight: 750; cursor: pointer; transition: all 0.15s ease; background: transparent; color: #64748B;">
+            Registro en Archivo Histórico
+          </button>
+        </div>
+
+        <!-- Alerta Informativa cuando fecha de fin ya expiró en modo Activo -->
+        <div id="notice-fecha-vencida" style="display: none; background: #EFF6FF; border: 1px solid #BFDBFE; border-left: 4px solid #3B82F6; border-radius: 8px; padding: 10px 14px; font-size: 0.75rem; color: #1E40AF; margin-bottom: 14px;">
+          <strong>Nota de clasificación:</strong> Por la fecha de finalización ingresada (anterior a hoy), este registro se guardará directamente en la pestaña <strong>Archivo</strong> como <strong>Periodo Vencido</strong>.
+        </div>
+
         <form id="form-member-crud">
           <input type="hidden" id="member-form-id" />
+          <input type="hidden" id="member-form-estado" value="activo" />
 
           <div class="form-group" style="margin-bottom: 14px;">
             <label class="form-label" style="font-size: 0.76rem; font-weight: 700; color: #0F172A; text-transform: uppercase; margin-bottom: 5px; display: block;">Cuerpo Colegiado *</label>
@@ -408,6 +486,7 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
             <input type="email" id="member-form-correo" class="form-input" placeholder="ejemplo@unitropico.edu.co" style="width: 100%; height: 38px; border-radius: 8px; border: 1.5px solid #DCE4E3; font-size: 0.85rem;" />
           </div>
 
+          <!-- Fechas sin restricciones de año mínimo (admite 2021, 2020, 2018...) -->
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
             <div>
               <label class="form-label" style="font-size: 0.76rem; font-weight: 700; color: #0F172A; text-transform: uppercase; margin-bottom: 5px; display: block;">Fecha de Inicio de Periodo *</label>
@@ -416,6 +495,23 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
             <div>
               <label class="form-label" style="font-size: 0.76rem; font-weight: 700; color: #0F172A; text-transform: uppercase; margin-bottom: 5px; display: block;">Fecha de Caducidad / Fin *</label>
               <input type="date" id="member-form-fin" class="form-input" required style="width: 100%; height: 38px; border-radius: 8px; border: 1.5px solid #DCE4E3; font-size: 0.85rem;" />
+            </div>
+          </div>
+
+          <!-- Campos adicionales cuando está en modo Archivo Histórico -->
+          <div id="historico-extra-fields" style="display: none; background: #F8FAFB; border: 1px dashed #CBD5E1; border-radius: 10px; padding: 14px; margin-bottom: 14px;">
+            <div class="form-group" style="margin-bottom: 12px;">
+              <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #786832; text-transform: uppercase; margin-bottom: 4px; display: block;">Motivo de Finalización / Observación Histórica</label>
+              <input type="text" id="member-form-razon-hist" class="form-input" placeholder="Ej: Culminación de periodo estatutario, Renuncia, Reemplazo..." style="width: 100%; height: 38px; border-radius: 8px; border: 1.5px solid #DBD2B0; font-size: 0.84rem;" />
+            </div>
+
+            <div>
+              <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #786832; text-transform: uppercase; margin-bottom: 4px; display: block;">Acta de Cierre / Cambio (Opcional)</label>
+              <div style="background: #FFFFFF; border: 1.5px dashed #B5A160; border-radius: 8px; padding: 10px; text-align: center;">
+                <input type="file" id="member-form-acta-hist" accept=".pdf,.docx" style="display: none;" />
+                <button type="button" id="btn-browse-acta-hist" class="btn btn-secondary btn-sm" style="font-size: 0.74rem; padding: 4px 12px; border-radius: 6px; cursor: pointer;">Seleccionar Acta de Cierre</button>
+                <div id="member-acta-hist-label" style="font-size: 0.70rem; color: #64748B; margin-top: 4px;">Ningún documento adjunto</div>
+              </div>
             </div>
           </div>
 
@@ -449,7 +545,7 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
   <div class="modal-backdrop" id="member-change-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(2px);">
     <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 540px; border-radius: 16px; box-shadow: 0 20px 45px rgba(0,0,0,0.2); overflow: hidden; border-top: 4px solid #B5A160;">
       <div class="modal-header" style="background: #F7F5EE; border-bottom: 1.5px solid #DBD2B0; padding: 16px 22px; display: flex; justify-content: space-between; align-items: center;">
-        <h3 style="font-size: 1.08rem; font-weight: 800; color: #786832; margin: 0;">Registrar Cambio o Reemplazo</h3>
+        <h3 style="font-size: 1.08rem; font-weight: 800; color: #786832; margin: 0;">Archivar o Registrar Cambio</h3>
         <button type="button" class="btn-close-modal" id="btn-close-change-modal" style="background: none; border: none; cursor: pointer; color: #64748B;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
@@ -458,7 +554,7 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
         <form id="form-member-change">
           <input type="hidden" id="change-member-id" />
           <div style="font-size: 0.84rem; color: #1E293B; margin-bottom: 14px;">
-            Miembro a reemplazar/retirar: <strong id="change-member-name"></strong>
+            Miembro a archivar/reemplazar: <strong id="change-member-name"></strong>
           </div>
 
           <div class="form-group" style="margin-bottom: 14px;">
@@ -477,7 +573,7 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
 
           <div style="display: flex; justify-content: flex-end; gap: 10px; padding-top: 14px; border-top: 1px solid #DCE4E3;">
             <button type="button" class="btn btn-ghost" id="btn-cancel-change-modal">Cancelar</button>
-            <button type="submit" class="btn btn-primary" id="btn-save-change" style="background: #B5A160; border-color: #B5A160; color: #003830; font-weight: 700;">Confirmar Cambio</button>
+            <button type="submit" class="btn btn-primary" id="btn-save-change" style="background: #B5A160; border-color: #B5A160; color: #003830; font-weight: 700;">Confirmar y Archivar</button>
           </div>
         </form>
       </div>
@@ -534,20 +630,26 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
 
     /* Estado: Vencido (<= 0 días) */
     .member-card.card-vencido {
-      background: #FEF2F2 !important;
-      border: 2px solid #DC2626 !important;
-      box-shadow: 0 6px 16px rgba(220, 38, 38, 0.14) !important;
+      background: #FFFFFF !important;
+      border: 1.5px solid #CBD5E1 !important;
+      border-left: 4.5px solid #DC2626 !important;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
     }
     .member-card.card-vencido:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 22px rgba(220, 38, 38, 0.22) !important;
+      box-shadow: 0 6px 18px rgba(220, 38, 38, 0.12) !important;
     }
 
-    /* Estado: Inactivo / Reemplazado */
+    /* Estado: Inactivo / Histórico */
     .member-card.card-inactivo {
-      background: #F8FAFC !important;
-      border: 1px solid #CBD5E1 !important;
-      opacity: 0.85;
+      background: #FFFFFF !important;
+      border: 1.5px solid #CBD5E1 !important;
+      border-left: 4.5px solid #64748B !important;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
+    }
+    .member-card.card-inactivo:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(100, 116, 139, 0.12) !important;
     }
 
     /* Badges de Estado */
@@ -577,10 +679,10 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
     }
 
     .badge-vencido {
-      background: #DC2626;
-      color: #FFFFFF;
-      border: 1px solid #B91C1C;
-      font-weight: 900;
+      background: #FEF2F2;
+      color: #DC2626;
+      border: 1px solid #FCA5A5;
+      font-weight: 800;
     }
 
     .badge-inactivo {
@@ -607,40 +709,114 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
 
   <script>
     import { supabase } from '@lib/supabase';
-    import { logSystemActivity } from '@lib/audit';
 
+    // Estado Reactivo del Módulo
+    let currentView: 'activos' | 'archivo' = (sessionStorage.getItem('sgd_miembros_view') as any) || 'activos';
     let currentColegiado = 'all';
-    let currentStatus = 'all';
 
+    const subpageTabs = document.querySelectorAll('.main-subpage-tabs .module-tab-btn');
     const colTabs = document.querySelectorAll('#colegiado-filter-tabs .module-tab-btn');
-    const statusSelect = document.getElementById('member-status-select') as HTMLSelectElement | null;
     const searchInput = document.getElementById('member-search-input') as HTMLInputElement | null;
     const cards = document.querySelectorAll('.member-card') as NodeListOf<HTMLElement>;
     const emptyMsg = document.getElementById('members-filter-empty');
 
+    const openMemberBtn = document.getElementById('btn-open-member-modal');
+    const openMemberIcon = document.getElementById('btn-open-member-icon');
+    const openMemberText = document.getElementById('btn-open-member-text');
+
+    const kpiStripActivos = document.getElementById('kpi-strip-activos');
+    const kpiStripArchivo = document.getElementById('kpi-strip-archivo');
+    const viewSubtitleText = document.getElementById('view-subtitle-text');
+    const countColegiadoTab = document.getElementById('count-colegiado-tab');
+
+    function updateViewUI() {
+      // 1. Pestañas de subpágina
+      subpageTabs.forEach((tab) => {
+        const v = tab.getAttribute('data-view');
+        tab.classList.toggle('active', v === currentView);
+      });
+
+      // 2. Tira de KPIs contextual
+      if (kpiStripActivos && kpiStripArchivo) {
+        if (currentView === 'activos') {
+          kpiStripActivos.style.display = 'grid';
+          kpiStripArchivo.style.display = 'none';
+        } else {
+          kpiStripActivos.style.display = 'none';
+          kpiStripArchivo.style.display = 'grid';
+        }
+      }
+
+      // 3. Subtítulo informativo
+      if (viewSubtitleText) {
+        viewSubtitleText.textContent = currentView === 'activos'
+          ? 'Mostrando únicamente integrantes con periodo vigente o en curso.'
+          : 'Mostrando trazabilidad histórica: periodos vencidos y miembros retirados o reemplazados.';
+      }
+
+      // 4. Botón contextual en cabecera
+      if (openMemberText && openMemberIcon) {
+        if (currentView === 'activos') {
+          openMemberText.textContent = 'Registrar Miembro';
+          openMemberIcon.innerHTML = `
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="8.5" cy="7" r="4"></circle>
+            <line x1="20" y1="8" x2="20" y2="14"></line>
+            <line x1="23" y1="11" x2="17" y2="11"></line>
+          `;
+        } else {
+          openMemberText.textContent = 'Registrar Miembro Histórico';
+          openMemberIcon.innerHTML = `
+            <polyline points="21 8 21 21 3 21 3 8"></polyline>
+            <rect x="1" y="3" width="22" height="5"></rect>
+            <line x1="10" y1="12" x2="14" y2="12"></line>
+          `;
+        }
+      }
+
+      sessionStorage.setItem('sgd_miembros_view', currentView);
+      filterMembers();
+    }
+
     function filterMembers() {
       const q = (searchInput?.value || '').toLowerCase().trim();
       let visible = 0;
+      let totalInCurrentSubpage = 0;
 
       cards.forEach((card) => {
+        const viewGroup = card.getAttribute('data-view-group') || 'activos';
         const col = card.getAttribute('data-col') || '';
-        const st = card.getAttribute('data-status') || '';
         const text = card.textContent?.toLowerCase() || '';
 
+        const matchView = viewGroup === currentView;
+        if (matchView) totalInCurrentSubpage++;
+
         const matchCol = currentColegiado === 'all' || col === currentColegiado;
-        const matchSt = currentStatus === 'all' || st === currentStatus;
         const matchQ = !q || text.includes(q);
 
-        const show = matchCol && matchSt && matchQ;
+        const show = matchView && matchCol && matchQ;
         card.style.display = show ? 'flex' : 'none';
         if (show) visible++;
       });
+
+      if (countColegiadoTab) {
+        countColegiadoTab.textContent = String(totalInCurrentSubpage);
+      }
 
       if (emptyMsg) {
         emptyMsg.style.display = visible === 0 && cards.length > 0 ? 'block' : 'none';
       }
     }
 
+    // Eventos Pestañas Principales (Activos vs Archivo)
+    subpageTabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        currentView = (tab.getAttribute('data-view') as any) || 'activos';
+        updateViewUI();
+      });
+    });
+
+    // Eventos Pestañas Cuerpo Colegiado
     colTabs.forEach((tab) => {
       tab.addEventListener('click', () => {
         colTabs.forEach((t) => t.classList.remove('active'));
@@ -650,21 +826,23 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
       });
     });
 
-    statusSelect?.addEventListener('change', () => {
-      currentStatus = statusSelect.value;
-      filterMembers();
-    });
-
     searchInput?.addEventListener('input', () => filterMembers());
 
-    // Modal Crear / Editar Miembro
+    // =========================================================================
+    // MODAL DE REGISTRO / EDICIÓN DE MIEMBRO
+    // =========================================================================
     const memberModal = document.getElementById('member-crud-modal');
-    const openMemberBtn = document.getElementById('btn-open-member-modal');
     const closeMemberBtn = document.getElementById('btn-close-member-modal');
     const cancelMemberBtn = document.getElementById('btn-cancel-member-modal');
     const memberForm = document.getElementById('form-member-crud') as HTMLFormElement | null;
     const memberModalTitle = document.getElementById('member-modal-title');
     const saveMemberBtn = document.getElementById('btn-save-member') as HTMLButtonElement | null;
+
+    const btnModeActivo = document.getElementById('btn-mode-activo');
+    const btnModeArchivado = document.getElementById('btn-mode-archivado');
+    const estadoInput = document.getElementById('member-form-estado') as HTMLInputElement | null;
+    const historicoExtraFields = document.getElementById('historico-extra-fields');
+    const noticeFechaVencida = document.getElementById('notice-fecha-vencida');
 
     const idInput = document.getElementById('member-form-id') as HTMLInputElement | null;
     const colSelect = document.getElementById('member-form-colegiado') as HTMLSelectElement | null;
@@ -673,6 +851,7 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
     const correoInput = document.getElementById('member-form-correo') as HTMLInputElement | null;
     const inicioInput = document.getElementById('member-form-inicio') as HTMLInputElement | null;
     const finInput = document.getElementById('member-form-fin') as HTMLInputElement | null;
+    const razonHistInput = document.getElementById('member-form-razon-hist') as HTMLInputElement | null;
 
     const photoInput = document.getElementById('member-form-foto') as HTMLInputElement | null;
     const browsePhotoBtn = document.getElementById('btn-browse-photo');
@@ -682,6 +861,63 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
     const browseActaBtn = document.getElementById('btn-browse-acta');
     const actaLabel = document.getElementById('member-acta-label');
 
+    const actaHistInput = document.getElementById('member-form-acta-hist') as HTMLInputElement | null;
+    const browseActaHistBtn = document.getElementById('btn-browse-acta-hist');
+    const actaHistLabel = document.getElementById('member-acta-hist-label');
+
+    function setModalMode(mode: 'activo' | 'archivado') {
+      if (estadoInput) estadoInput.value = mode;
+
+      if (btnModeActivo && btnModeArchivado) {
+        if (mode === 'activo') {
+          btnModeActivo.style.background = '#00594E';
+          btnModeActivo.style.color = '#FFFFFF';
+          btnModeArchivado.style.background = 'transparent';
+          btnModeArchivado.style.color = '#64748B';
+          if (historicoExtraFields) historicoExtraFields.style.display = 'none';
+        } else {
+          btnModeActivo.style.background = 'transparent';
+          btnModeActivo.style.color = '#64748B';
+          btnModeArchivado.style.background = '#786832';
+          btnModeArchivado.style.color = '#FFFFFF';
+          if (historicoExtraFields) historicoExtraFields.style.display = 'block';
+        }
+      }
+
+      checkFechaVencida();
+    }
+
+    btnModeActivo?.addEventListener('click', () => setModalMode('activo'));
+    btnModeArchivado?.addEventListener('click', () => setModalMode('archivado'));
+
+    function checkFechaVencida() {
+      if (!finInput || !noticeFechaVencida || !estadoInput) return;
+      const finVal = finInput.value;
+      if (!finVal) {
+        noticeFechaVencida.style.display = 'none';
+        return;
+      }
+
+      const todayIso = new Date().toISOString().split('T')[0];
+      const isPast = finVal < todayIso;
+      const isActivoMode = estadoInput.value === 'activo';
+
+      if (isPast && isActivoMode) {
+        noticeFechaVencida.style.display = 'block';
+      } else {
+        noticeFechaVencida.style.display = 'none';
+      }
+    }
+
+    finInput?.addEventListener('input', checkFechaVencida);
+    inicioInput?.addEventListener('input', () => {
+      if (inicioInput?.value && finInput?.value && finInput.value < inicioInput.value) {
+        finInput.value = inicioInput.value;
+      }
+      checkFechaVencida();
+    });
+
+    // Subida de Archivos Integrada con ModalSubidaArchivo
     browsePhotoBtn?.addEventListener('click', async (e) => {
       e.preventDefault();
       if (typeof (window as any).abrirModalSubida === 'function') {
@@ -703,6 +939,7 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
         photoInput?.click();
       }
     });
+
     photoInput?.addEventListener('change', () => {
       if (photoInput.files && photoInput.files[0] && photoLabel) {
         photoLabel.textContent = photoInput.files[0].name;
@@ -730,6 +967,7 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
         actaInput?.click();
       }
     });
+
     actaInput?.addEventListener('change', () => {
       if (actaInput.files && actaInput.files[0] && actaLabel) {
         actaLabel.textContent = actaInput.files[0].name;
@@ -737,13 +975,53 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
       }
     });
 
+    browseActaHistBtn?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      if (typeof (window as any).abrirModalSubida === 'function') {
+        const files = await (window as any).abrirModalSubida({
+          titulo: 'Acta de Cierre / Relevo Histórico',
+          subtitulo: 'Arrastre el documento oficial (PDF o DOCX) o examine en su equipo',
+          accept: '.pdf,.docx',
+          multiple: false,
+          textoConfirmar: 'Adjuntar Acta de Cierre',
+        });
+        if (files && files[0] && actaHistInput) {
+          const dt = new DataTransfer();
+          dt.items.add(files[0]);
+          actaHistInput.files = dt.files;
+          actaHistInput.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      } else {
+        actaHistInput?.click();
+      }
+    });
+
+    actaHistInput?.addEventListener('change', () => {
+      if (actaHistInput.files && actaHistInput.files[0] && actaHistLabel) {
+        actaHistLabel.textContent = actaHistInput.files[0].name;
+        actaHistLabel.style.color = '#786832';
+      }
+    });
+
+    // Abrir modal desde el botón superior contextual
     openMemberBtn?.addEventListener('click', () => {
       if (!memberModal) return;
       if (memberForm) memberForm.reset();
       if (idInput) idInput.value = '';
-      if (memberModalTitle) memberModalTitle.textContent = 'Registrar Miembro de Consejo';
+
+      if (currentView === 'archivo') {
+        if (memberModalTitle) memberModalTitle.textContent = 'Registrar Miembro Histórico (Archivo)';
+        setModalMode('archivado');
+      } else {
+        if (memberModalTitle) memberModalTitle.textContent = 'Registrar Miembro de Consejo';
+        setModalMode('activo');
+      }
+
       if (photoLabel) photoLabel.textContent = 'Ninguna imagen';
       if (actaLabel) actaLabel.textContent = 'Ningún documento';
+      if (actaHistLabel) actaHistLabel.textContent = 'Ningún documento adjunto';
+      if (noticeFechaVencida) noticeFechaVencida.style.display = 'none';
+
       memberModal.style.display = 'flex';
     });
 
@@ -756,7 +1034,7 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
       if (e.target === memberModal) closeMemberModal();
     });
 
-    // Delegación: Botón Editar
+    // Botón Editar
     document.querySelectorAll('.btn-edit-member').forEach((btn) => {
       btn.addEventListener('click', () => {
         const raw = btn.getAttribute('data-member');
@@ -771,10 +1049,16 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
           if (inicioInput) inicioInput.value = m.fecha_inicio || '';
           if (finInput) finInput.value = m.fecha_fin || '';
 
+          const estadoOrig = String(m.estado || 'activo').toLowerCase();
+          setModalMode(estadoOrig === 'archivado' || estadoOrig === 'inactivo' ? 'archivado' : 'activo');
+
+          if (razonHistInput) razonHistInput.value = m.razon_cambio || '';
+
           if (photoLabel) photoLabel.textContent = m.foto_url ? 'Foto actual conservada' : 'Ninguna imagen';
           if (actaLabel) actaLabel.textContent = m.acta_inicio_nombre || (m.acta_inicio_url ? 'Acta actual conservada' : 'Ningún documento');
-          if (memberModalTitle) memberModalTitle.textContent = 'Editar Miembro de Consejo';
+          if (actaHistLabel) actaHistLabel.textContent = m.acta_cambio_nombre || (m.acta_cambio_url ? 'Acta de cierre conservada' : 'Ningún documento adjunto');
 
+          if (memberModalTitle) memberModalTitle.textContent = 'Editar Integrante de Consejo';
           memberModal.style.display = 'flex';
         } catch (err) {
           console.error('Error parseando datos de miembro:', err);
@@ -782,9 +1066,48 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
       });
     });
 
-    // Guardar / Actualizar Miembro en Supabase (DB + Storage)
+    // Botón Reactivar / Nuevo Periodo (Desde vista Archivo)
+    document.querySelectorAll('.btn-reactivar-member').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const raw = btn.getAttribute('data-member');
+        if (!raw || !memberModal) return;
+        try {
+          const m = JSON.parse(raw);
+          if (memberForm) memberForm.reset();
+          if (idInput) idInput.value = ''; // Crear nuevo periodo como registro limpio
+          if (colSelect) colSelect.value = m.cuerpo_colegiado || 'Consejo Superior Universitario (CSU)';
+          if (nombreInput) nombreInput.value = m.nombre_completo || '';
+          if (cargoInput) cargoInput.value = m.cargo_calidad || '';
+          if (correoInput) correoInput.value = m.correo || '';
+
+          const todayIso = new Date().toISOString().split('T')[0];
+          if (inicioInput) inicioInput.value = todayIso;
+          if (finInput) finInput.value = '';
+
+          setModalMode('activo');
+
+          if (photoLabel) photoLabel.textContent = m.foto_url ? 'Foto conservada' : 'Ninguna imagen';
+          if (actaLabel) actaLabel.textContent = 'Adjunte nueva acta de posesión';
+          if (actaHistLabel) actaHistLabel.textContent = 'Ningún documento adjunto';
+
+          if (memberModalTitle) memberModalTitle.textContent = `Reactivar Mandato — ${m.nombre_completo}`;
+          memberModal.style.display = 'flex';
+        } catch (err) {
+          console.error('Error preparando reactivación:', err);
+        }
+      });
+    });
+
+    // Enviar Formulario de Registro / Edición
     memberForm?.addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (!finInput || !inicioInput) return;
+
+      if (finInput.value < inicioInput.value) {
+        alert('La fecha de fin no puede ser anterior a la fecha de inicio.');
+        return;
+      }
+
       if (saveMemberBtn) {
         saveMemberBtn.disabled = true;
         saveMemberBtn.textContent = 'Guardando...';
@@ -795,8 +1118,10 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
         let fotoUrl: string | null = null;
         let actaUrl: string | null = null;
         let actaNombre: string | null = null;
+        let actaCambioUrl: string | null = null;
+        let actaCambioNombre: string | null = null;
 
-        // Subida de foto a Supabase Storage si se eligió
+        // Subida de foto a Supabase Storage
         if (photoInput?.files && photoInput.files[0]) {
           const file = photoInput.files[0];
           const clean = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
@@ -808,7 +1133,7 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
           }
         }
 
-        // Subida de acta de inicio si se eligió
+        // Subida de acta de inicio
         if (actaInput?.files && actaInput.files[0]) {
           const file = actaInput.files[0];
           actaNombre = file.name;
@@ -821,14 +1146,28 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
           }
         }
 
+        // Subida de acta de cierre si aplica
+        if (actaHistInput?.files && actaHistInput.files[0]) {
+          const file = actaHistInput.files[0];
+          actaCambioNombre = file.name;
+          const clean = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+          const path = `miembros/cambios/${Date.now()}_${clean}`;
+          const { error: upErr } = await supabase.storage.from('peticiones').upload(path, file, { contentType: file.type || 'application/pdf', upsert: true });
+          if (!upErr) {
+            const { data: pub } = supabase.storage.from('peticiones').getPublicUrl(path);
+            actaCambioUrl = pub?.publicUrl || null;
+          }
+        }
+
         const payload: Record<string, any> = {
+          id: memberId,
           cuerpo_colegiado: colSelect?.value || 'Consejo Superior Universitario (CSU)',
           nombre_completo: nombreInput?.value.trim() || '',
           cargo_calidad: cargoInput?.value.trim() || '',
           correo: correoInput?.value.trim() || null,
-          fecha_inicio: inicioInput?.value || new Date().toISOString().split('T')[0],
-          fecha_fin: finInput?.value || new Date().toISOString().split('T')[0],
-          updated_at: new Date().toISOString(),
+          fecha_inicio: inicioInput.value,
+          fecha_fin: finInput.value,
+          estado: estadoInput?.value || 'activo',
         };
 
         if (fotoUrl) payload.foto_url = fotoUrl;
@@ -836,19 +1175,34 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
           payload.acta_inicio_url = actaUrl;
           payload.acta_inicio_nombre = actaNombre;
         }
-
-        if (memberId) {
-          const { error } = await supabase.from('miembros_consejo' as any).update(payload).eq('id', memberId);
-          if (error) throw error;
-          (window as any).showToast?.('Miembro actualizado exitosamente.', 'success');
-        } else {
-          payload.estado = 'activo';
-          payload.created_at = new Date().toISOString();
-          const { error } = await supabase.from('miembros_consejo' as any).insert([payload]);
-          if (error) throw error;
-          (window as any).showToast?.('Miembro registrado exitosamente.', 'success');
+        if (actaCambioUrl) {
+          payload.acta_cambio_url = actaCambioUrl;
+          payload.acta_cambio_nombre = actaCambioNombre;
+        }
+        if (razonHistInput?.value.trim()) {
+          payload.razon_cambio = razonHistInput.value.trim();
         }
 
+        const res = await fetch('/api/miembros-consejo/guardar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        const resJson = await res.json().catch(() => ({}));
+        if (!res.ok || !resJson.success) {
+          throw new Error(resJson.error || 'Error en servidor guardando miembro.');
+        }
+
+        // Si se guardó en modo histórico o con fecha vencida, orientar la vista a Archivo
+        const todayIso = new Date().toISOString().split('T')[0];
+        if (payload.estado === 'archivado' || payload.fecha_fin < todayIso) {
+          sessionStorage.setItem('sgd_miembros_view', 'archivo');
+        } else {
+          sessionStorage.setItem('sgd_miembros_view', 'activos');
+        }
+
+        (window as any).showToast?.('Miembro guardado exitosamente.', 'success');
         window.location.reload();
       } catch (err: any) {
         console.error('Error guardando miembro:', err);
@@ -861,7 +1215,9 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
       }
     });
 
-    // Modal: Registrar Cambio / Reemplazo
+    // =========================================================================
+    // MODAL: ARCHIVAR O REGISTRAR CAMBIO
+    // =========================================================================
     const changeModal = document.getElementById('member-change-modal');
     const closeChangeBtn = document.getElementById('btn-close-change-modal');
     const cancelChangeBtn = document.getElementById('btn-cancel-change-modal');
@@ -894,6 +1250,7 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
         changeActaInput?.click();
       }
     });
+
     changeActaInput?.addEventListener('change', () => {
       if (changeActaInput.files && changeActaInput.files[0] && changeActaLabel) {
         changeActaLabel.textContent = changeActaInput.files[0].name;
@@ -947,31 +1304,31 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
           }
         }
 
-        const updateData: Record<string, any> = {
-          estado: 'inactivo',
+        const payload: Record<string, any> = {
+          id,
           razon_cambio: changeRazonInput?.value.trim() || 'Reemplazo o culminación de periodo',
-          updated_at: new Date().toISOString(),
         };
 
         if (cambioUrl) {
-          updateData.acta_cambio_url = cambioUrl;
-          updateData.acta_cambio_nombre = cambioNombre;
+          payload.acta_cambio_url = cambioUrl;
+          payload.acta_cambio_nombre = cambioNombre;
         }
 
-        const { error } = await supabase.from('miembros_consejo' as any).update(updateData).eq('id', id);
-        if (error) throw error;
-
-        await logSystemActivity({
-          actor: { id: 'usr-root', name: 'ING. Christian Lemus', role: 'admin' },
-          action: 'Reemplazo / Cambio de Miembro de Consejo',
-          actionType: 'ACTUALIZACION',
-          entity: 'Cuerpos Colegiados',
-          entityId: id,
-          details: `Se registró cambio/reemplazo para miembro de consejo. Motivo: ${updateData.razon_cambio}.`,
-          severity: 'INFO',
+        const res = await fetch('/api/miembros-consejo/cambio', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
         });
 
-        (window as any).showToast?.('Cambio registrado exitosamente.', 'success');
+        const resJson = await res.json().catch(() => ({}));
+        if (!res.ok || !resJson.success) {
+          throw new Error(resJson.error || 'Error registrando cambio en servidor.');
+        }
+
+        // El miembro archivado pasará a la vista Archivo
+        sessionStorage.setItem('sgd_miembros_view', 'archivo');
+
+        (window as any).showToast?.('Cambio registrado y archivado exitosamente.', 'success');
         window.location.reload();
       } catch (err: any) {
         console.error('Error registrando cambio:', err);
@@ -979,12 +1336,14 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
       } finally {
         if (saveChangeBtn) {
           saveChangeBtn.disabled = false;
-          saveChangeBtn.textContent = 'Confirmar Cambio';
+          saveChangeBtn.textContent = 'Confirmar y Archivar';
         }
       }
     });
 
-    // Delegación: Botón Eliminar
+    // =========================================================================
+    // BOTÓN ELIMINAR MIEMBRO
+    // =========================================================================
     document.querySelectorAll('.btn-delete-member').forEach((btn) => {
       btn.addEventListener('click', async () => {
         const id = btn.getAttribute('data-id');
@@ -995,23 +1354,22 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
         if (!confirmed) return;
 
         try {
-          const { error } = await supabase.from('miembros_consejo' as any).delete().eq('id', id);
-          if (error) throw error;
-
-          await logSystemActivity({
-            actor: { id: 'usr-root', name: 'ING. Christian Lemus', role: 'admin' },
-            action: 'Eliminación de Miembro de Consejo',
-            actionType: 'ELIMINACION',
-            entity: 'Cuerpos Colegiados',
-            entityId: id,
-            details: `Se eliminó el miembro de consejo: ${name}.`,
-            severity: 'CRITICAL',
+          const res = await fetch('/api/miembros-consejo/eliminar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id }),
           });
+
+          const resJson = await res.json().catch(() => ({}));
+          if (!res.ok || !resJson.success) {
+            throw new Error(resJson.error || 'Error eliminando en servidor.');
+          }
 
           (window as any).showToast?.(`Miembro "${name}" eliminado correctamente.`, 'info');
           const card = btn.closest('.member-card') as HTMLElement | null;
           if (card) {
             card.remove();
+            filterMembers();
           } else {
             window.location.reload();
           }
@@ -1021,5 +1379,8 @@ const inactivosCount = miembrosView.filter((m) => m.statusInfo.type === 'inactiv
         }
       });
     });
+
+    // Inicializar Vista al cargar
+    updateViewUI();
   </script>
 </AppLayout>
