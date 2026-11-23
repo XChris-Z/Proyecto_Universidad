@@ -93,9 +93,12 @@ function formatDate(dateStr?: string | null) {
 
 function getInitials(name: string) {
   if (!name) return 'MC';
-  const chunks = name.trim().split(/\s+/);
-  if (chunks.length === 1) return chunks[0].slice(0, 2).toUpperCase();
-  return (chunks[0][0] + chunks[1][0]).toUpperCase();
+  const chunks = name.trim().split(/\s+/).filter(Boolean);
+  if (chunks.length === 0) return 'MC';
+  const first = chunks[0] || 'M';
+  if (chunks.length === 1) return first.slice(0, 2).toUpperCase();
+  const second = chunks[1] || 'C';
+  return ((first[0] || 'M') + (second[0] || 'C')).toUpperCase();
 }
 
 function getColegiadoCode(nombre: string) {
@@ -898,7 +901,7 @@ const archivadosReemplazados = miembrosView.filter((m) => m.statusInfo.type === 
         return;
       }
 
-      const todayIso = new Date().toISOString().split('T')[0];
+      const todayIso = new Date().toISOString().slice(0, 10);
       const isPast = finVal < todayIso;
       const isActivoMode = estadoInput.value === 'activo';
 
@@ -1080,7 +1083,7 @@ const archivadosReemplazados = miembrosView.filter((m) => m.statusInfo.type === 
           if (cargoInput) cargoInput.value = m.cargo_calidad || '';
           if (correoInput) correoInput.value = m.correo || '';
 
-          const todayIso = new Date().toISOString().split('T')[0];
+          const todayIso = new Date().toISOString().slice(0, 10);
           if (inicioInput) inicioInput.value = todayIso;
           if (finInput) finInput.value = '';
 
@@ -1195,7 +1198,7 @@ const archivadosReemplazados = miembrosView.filter((m) => m.statusInfo.type === 
         }
 
         // Si se guardó en modo histórico o con fecha vencida, orientar la vista a Archivo
-        const todayIso = new Date().toISOString().split('T')[0];
+        const todayIso = new Date().toISOString().slice(0, 10);
         if (payload.estado === 'archivado' || payload.fecha_fin < todayIso) {
           sessionStorage.setItem('sgd_miembros_view', 'archivo');
         } else {

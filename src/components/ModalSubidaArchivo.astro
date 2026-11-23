@@ -302,7 +302,10 @@
       if (validToAdd.length === 0) return;
 
       if (!isMultiple) {
-        activeFiles = [validToAdd[0]];
+        const first = validToAdd[0];
+        if (first) {
+          activeFiles = [first];
+        }
       } else {
         validToAdd.forEach((vf) => {
           const exists = activeFiles.some((x) => x.name === vf.name && x.size === vf.size);
@@ -505,7 +508,7 @@
 
           if (files && files.length > 0) {
             const dt = new DataTransfer();
-            files.forEach((f) => dt.items.add(f));
+            files.forEach((f: File) => dt.items.add(f));
             targetInput.files = dt.files;
             targetInput.dispatchEvent(new Event('change', { bubbles: true }));
           }

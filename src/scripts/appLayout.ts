@@ -34,6 +34,12 @@ declare global {
     currentLoggedUser: InstitutionalUser;
     updateUserProfileUI: () => void;
     sgdRbacState?: { user: ClientRbacUserState; roles: SystemRole[] };
+    abrirModalSubida?: (opciones?: any) => Promise<File[] | null>;
+    cerrarModalSubida?: () => void;
+    inicializarDisparadoresSubida?: () => void;
+    inicializarSelectsPersonalizados?: () => void;
+    refrescarSelectPersonalizado?: (selectEl: HTMLElement) => void;
+    openFolderDetail?: (radicadoOrId: string) => void;
   }
 }
 

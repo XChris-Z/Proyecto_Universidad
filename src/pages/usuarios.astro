@@ -1377,7 +1377,7 @@ const initialRbacBootstrap = JSON.stringify({
 
       const roleObj = rolesCatalog.find((r) => r.id === userRoleId || r.code === userRoleId);
       const isTargetAdmin = userId === 'usr-root' || isAdminRoleCode(userRoleId);
-      const roleLabel = isTargetAdmin ? 'Administrador' : roleObj?.name || getRoleDisplayName(userRoleId, rolesCatalog);
+      const roleLabel = isTargetAdmin ? 'Administrador' : roleObj?.name || userRoleId;
 
       if (permsUserName) permsUserName.textContent = `Permisos: ${userName}`;
       if (permsUserDesc) permsUserDesc.textContent = `${userCargo} • Rol: ${roleLabel}`;
