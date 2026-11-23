@@ -16,9 +16,22 @@ export async function initAuditoria() {
   const emptyState = document.getElementById('audit-empty-state');
   if (!tbody) return;
 
-  // Cargar bitácora real de Supabase (excluyendo snapshots y eventos de perfil)
-  let rawLogs: AuditLog[] = await fetchAuditLogsFromSupabase();
+  // Cargar bitácora inicial del servidor si está disponible para render instantáneo
+  const windowInitial = (window as any).__SGD_INITIAL_LOGS__;
+  let rawLogs: AuditLog[] = Array.isArray(windowInitial) && windowInitial.length > 0
+    ? (windowInitial as AuditLog[])
+    : await fetchAuditLogsFromSupabase();
   let logs: AuditLog[] = (rawLogs || []).filter(isRelevantAuditLog);
+
+  // Si se usó el bootstrap SSR, refrescar en segundo plano sin bloquear
+  if (Array.isArray(windowInitial) && windowInitial.length > 0) {
+    fetchAuditLogsFromSupabase().then((refreshed) => {
+      if (Array.isArray(refreshed) && refreshed.length > 0) {
+        logs = refreshed.filter(isRelevantAuditLog);
+        renderAuditLogsView();
+      }
+    }).catch(() => {});
+  }
 
   function updateCounters(filteredList: AuditLog[]) {
     const kpiTotal = document.getElementById('audit-kpi-total');
@@ -121,7 +134,10 @@ export async function initAuditoria() {
       }
 
       const cleanAction = cleanAuditActionTitle(log.action)
-        .replace(/ACTUALIZACIÓN DE ROL RBAC/gi, 'ACTUALIZACIÓN DE ROL DEL SISTEMA')
+        .replace(/(?:ACTUALIZACIÓN|ACTUALIZACION|CREACIÓN|CREACION|ELIMINACIÓN|ELIMINACION)\s+DE\s+ROL\s+RBAC/gi, (match) => {
+          const verb = match.split(/\s+/)[0];
+          return `${verb} de Rol del Sistema`;
+        })
         .replace(/Catálogo de Roles RBAC/gi, 'Configuración de Roles')
         .replace(/\bRBAC\b/g, 'del Sistema');
 

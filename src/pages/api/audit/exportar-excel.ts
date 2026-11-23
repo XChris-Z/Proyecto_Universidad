@@ -56,7 +56,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
       });
       const displayActor = resolveExportActorName(normalizedActor.name);
       const actionTitle = cleanAuditActionTitle(d.action);
-      const ipDisplay = sanitizeAuditDisplayIp(d.ip);
+      const ipDisplay = sanitizeAuditDisplayIp(d.ip_address || d.ip);
       const fechaBogota = formatBogotaTimestamp(d.raw_timestamp || d.timestamp);
       const moduleRef = [d.entity || 'Sistema SGD', d.entity_id || '']
         .filter(Boolean)
@@ -73,7 +73,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
         moduleRef,
         details: String(d.details || '').replace(/\[RESPUESTA_META\]:\s*\{[\s\S]*?\}/gi, '').trim(),
         severity: String(d.severity || 'INFO').toUpperCase(),
-        hash: String(d.hash || 'SHA256-SIN-REGISTRO'),
+        hash: String(d.integrity_hash || d.hash || 'SHA256-SIN-REGISTRO'),
       };
     });
 

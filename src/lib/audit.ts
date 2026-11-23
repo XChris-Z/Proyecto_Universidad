@@ -18,8 +18,9 @@ export function isRelevantAuditLog(log: { entity?: string | null; action?: strin
   const entity = (log.entity || '').toLowerCase().trim();
   const action = (log.action || '').toLowerCase().trim();
 
-  // Excluir snapshots técnicos internos
-  if (entity === 'rbac_state_snapshot') return false;
+  // Excluir snapshots técnicos internos y probes sintéticas
+  if (entity === 'rbac_state_snapshot' || entity === 'd') return false;
+  if (action === 'c' || action.startsWith('xxxx') || action === 'prueba de insercion' || action.startsWith('prueba actor_id')) return false;
 
   // Excluir cambios de perfil personal y credenciales de usuario
   if (
@@ -128,7 +129,10 @@ export function cleanAuditActionTitle(rawAction?: string | null): string {
     .replace(/\[RESPUESTA_META\]:\s*\{[\s\S]*?\}/gi, '')
     .replace(/\[REV_APROBADO:[^\]]+\]/gi, '')
     .replace(/\[RECHAZADO:[^\]]+\]/gi, '')
-    .replace(/ACTUALIZACIÓN DE ROL RBAC/gi, 'ACTUALIZACIÓN DE ROL DEL SISTEMA')
+    .replace(/(?:ACTUALIZACIÓN|ACTUALIZACION|CREACIÓN|CREACION|ELIMINACIÓN|ELIMINACION)\s+DE\s+ROL\s+RBAC/gi, (match) => {
+      const verb = match.split(/\s+/)[0];
+      return `${verb} de Rol del Sistema`;
+    })
     .replace(/Catálogo de Roles RBAC/gi, 'Configuración de Roles')
     .replace(/\bRBAC\b/g, 'del Sistema')
     .replace(/\(\s*\)/g, '')
@@ -337,15 +341,22 @@ export async function logSystemActivity(params: LogSystemActivityParams): Promis
   const now = new Date();
   const cleanAction = cleanAuditActionTitle(params.action);
 
-  // Detección de dispositivo / terminal desde cookie, headers o fallback
+  // Detección de dispositivo / terminal desde cookie, headers o fallback (con tolerancia a URIs)
   let detectedDevice = '';
   if (params.cookies) {
-    detectedDevice = decodeURIComponent(params.cookies.get('unitropico_device_info')?.value || '').trim();
+    try {
+      const raw = params.cookies.get('unitropico_device_info')?.value;
+      if (raw) detectedDevice = decodeURIComponent(raw).trim();
+    } catch {
+      detectedDevice = params.cookies.get('unitropico_device_info')?.value?.trim() || '';
+    }
   }
   if (!detectedDevice && params.request) {
-    const rawCookie = params.request.headers.get('cookie') || '';
-    const match = rawCookie.match(/unitropico_device_info=([^;]+)/i);
-    if (match && match[1]) detectedDevice = decodeURIComponent(match[1]).trim();
+    try {
+      const rawCookie = params.request.headers.get('cookie') || '';
+      const match = rawCookie.match(/unitropico_device_info=([^;]+)/i);
+      if (match && match[1]) detectedDevice = decodeURIComponent(match[1]).trim();
+    } catch {}
     if (!detectedDevice) {
       const ua = params.request.headers.get('user-agent') || '';
       let os = 'Win11';
@@ -365,6 +376,9 @@ export async function logSystemActivity(params: LogSystemActivityParams): Promis
   if (!detectedDevice) {
     detectedDevice = 'Win11-Chrome [T-84A1]';
   }
+
+  // Criptograma base respetando el límite estricto de 50 caracteres de PostgreSQL (varchar 50)
+  const safeCipher = 'AES-256-GCM / SHA-256';
 
   const entry: AuditLog = {
     id: `alog-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
@@ -389,7 +403,7 @@ export async function logSystemActivity(params: LogSystemActivityParams): Promis
     }),
     ip: displayIp,
     device: detectedDevice,
-    cipher: `AES-256-GCM / SHA-256 | Equipo: ${detectedDevice}`,
+    cipher: safeCipher,
   };
 
   if (typeof window !== 'undefined') {
@@ -397,7 +411,7 @@ export async function logSystemActivity(params: LogSystemActivityParams): Promis
     saveLogs(logs.slice(0, 200));
   }
 
-  // Persistir en Supabase con tolerancia a columnas inet o FK estrictas en actor_id
+  // Persistir en Supabase con tolerancia a columnas inet o FK estrictas en actor_id y fallback mutuo admin/anon
   try {
     const buildPayload = (useIp: string | null, useActorId: string | null) => ({
       id: entry.id,
@@ -418,7 +432,7 @@ export async function logSystemActivity(params: LogSystemActivityParams): Promis
       previous_hash: entry.previousHash,
       integrity_hash: entry.integrityHash,
       ip_address: useIp,
-      cipher: entry.cipher,
+      cipher: String(entry.cipher || 'AES-256-GCM / SHA-256').slice(0, 50),
       raw_timestamp: entry.rawTimestamp,
     });
 
@@ -432,12 +446,23 @@ export async function logSystemActivity(params: LogSystemActivityParams): Promis
 
     const dbClient = (supabaseAdmin || supabase) as any;
     let res = await dbClient.from('audit_logs').insert([buildPayload(dbIp, initialActorId)]);
+
+    // Si supabaseAdmin falla (p. ej. token expirado en hosting), reintentar de inmediato con supabase anon
+    if (res.error && dbClient !== supabase) {
+      res = await supabase.from('audit_logs').insert([buildPayload(dbIp, initialActorId)]);
+    }
+
+    // Reintento sin IP en caso de incompatibilidad con columna inet
     if (res.error) {
-      res = await dbClient.from('audit_logs').insert([buildPayload(null, initialActorId)]);
+      const activeClient = dbClient !== supabase ? supabase : dbClient;
+      res = await activeClient.from('audit_logs').insert([buildPayload(null, initialActorId)]);
     }
+
+    // Reintento sin actor_id en caso de constraint FK
     if (res.error && initialActorId) {
-      res = await dbClient.from('audit_logs').insert([buildPayload(null, null)]);
+      res = await supabase.from('audit_logs').insert([buildPayload(null, null)]);
     }
+
     if (res.error) {
       console.error('[AUDITORIA ERROR] Error registrando evento en Supabase:', res.error);
     }
@@ -452,11 +477,24 @@ export async function logSystemActivity(params: LogSystemActivityParams): Promis
 export async function fetchAuditLogsFromSupabase(): Promise<AuditLog[]> {
   try {
     const dbClient = (supabaseAdmin || supabase) as any;
-    const { data, error } = await dbClient
+    let { data, error } = await dbClient
       .from('audit_logs')
       .select('*')
       .order('raw_timestamp', { ascending: false })
       .limit(300);
+
+    // Si falla el cliente privilegiado, reintentar con el cliente público anon de Supabase
+    if ((error || !data || data.length === 0) && dbClient !== supabase) {
+      const fallbackRes = await supabase
+        .from('audit_logs')
+        .select('*')
+        .order('raw_timestamp', { ascending: false })
+        .limit(300);
+      if (!fallbackRes.error && fallbackRes.data && fallbackRes.data.length > 0) {
+        data = fallbackRes.data;
+        error = null;
+      }
+    }
 
     if (error) {
       console.error('[AUDITORIA ERROR] Error consultando logs de Supabase:', error);

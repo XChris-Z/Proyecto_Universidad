@@ -80,11 +80,15 @@ export async function resolveSessionActor(
   cookies?: AstroCookies | null,
   fallbackActor?: Partial<ResolvedActor> | null
 ): Promise<ResolvedActor> {
-  const activeEmailCookie = decodeURIComponent(
-    cookies?.get('unitropico_active_user_email')?.value ||
-    cookies?.get('sgd_session_email')?.value ||
-    ''
-  ).trim().toLowerCase();
+  let activeEmailCookie = '';
+  try {
+    const rawCookie = cookies?.get('unitropico_active_user_email')?.value ||
+      cookies?.get('sgd_session_email')?.value ||
+      '';
+    activeEmailCookie = rawCookie ? decodeURIComponent(rawCookie).trim().toLowerCase() : '';
+  } catch {
+    activeEmailCookie = (cookies?.get('unitropico_active_user_email')?.value || cookies?.get('sgd_session_email')?.value || '').trim().toLowerCase();
+  }
 
   if (activeEmailCookie) {
     if (activeEmailCookie === 'christianlemus.es@unitropico.edu.co') {

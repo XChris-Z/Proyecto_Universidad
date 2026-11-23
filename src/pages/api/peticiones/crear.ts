@@ -637,7 +637,7 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
     }
 
     await Promise.allSettled(emailNotifications);
-    console.log(`[PETICIÓN CREADA] Radicado: ${peticionData.numero_radicado} - Subcarpetas: ${subcarpetas.length} - Dependencias únicas: ${oficinasData.length} - Notificaciones a oficinas: ${emailNotifications.length}`);
+    console.log(`[PETICIÓN CREADA] Radicado: ${peticionData.numero_radicado} - Subcarpetas: ${(subcarpetas || []).length} - Dependencias únicas: ${(oficinasData || []).length} - Notificaciones a oficinas: ${emailNotifications.length}`);
 
     // Registrar en auditoría con el funcionario autenticado (sin anónimos)
     const fallbackName = funcionario_nombre && !/an[oó]nimo/i.test(funcionario_nombre)

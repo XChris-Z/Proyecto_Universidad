@@ -7,16 +7,41 @@ Astro.response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate
 
 import AppLayout from '@layouts/AppLayout.astro';
 import { supabase, supabaseAdmin } from '@lib/supabase';
-import { isRelevantAuditLog } from '@lib/audit';
+import {
+  isRelevantAuditLog,
+  formatBogotaTimestamp,
+  normalizeAuditActor,
+  sanitizeAuditDisplayIp,
+} from '@lib/audit';
 
 const db = supabaseAdmin || supabase;
 
 // Consultar bitácora oficial en tiempo real desde Supabase (excluyendo snapshots técnicos y eventos no esenciales como perfil)
-const { data: rawDbLogs } = await db
-  .from('audit_logs')
-  .select('*')
-  .or('entity.is.null,entity.neq.rbac_state_snapshot')
-  .order('raw_timestamp', { ascending: false });
+let rawDbLogs: any[] = [];
+try {
+  const q = await db
+    .from('audit_logs')
+    .select('*')
+    .or('entity.is.null,entity.neq.rbac_state_snapshot')
+    .order('raw_timestamp', { ascending: false });
+  if (q.data && q.data.length > 0) {
+    rawDbLogs = q.data;
+  } else if (db !== supabase) {
+    const fallbackQ = await supabase
+      .from('audit_logs')
+      .select('*')
+      .or('entity.is.null,entity.neq.rbac_state_snapshot')
+      .order('raw_timestamp', { ascending: false });
+    rawDbLogs = fallbackQ.data || [];
+  }
+} catch {
+  const fallbackQ = await supabase
+    .from('audit_logs')
+    .select('*')
+    .or('entity.is.null,entity.neq.rbac_state_snapshot')
+    .order('raw_timestamp', { ascending: false });
+  rawDbLogs = fallbackQ.data || [];
+}
 
 // Consultar funcionarios y usuarios registrados para el filtro dinámico
 const { data: rawProfiles } = await db
@@ -40,8 +65,12 @@ const dbLogs = (rawDbLogs || [])
   .map(l => {
     let aName = l.actor_name;
     let cleanAction = (l.action || '')
-      .replace(/ACTUALIZACIÓN DE ROL RBAC/gi, 'ACTUALIZACIÓN DE ROL DEL SISTEMA')
+      .replace(/(?:ACTUALIZACIÓN|ACTUALIZACION|CREACIÓN|CREACION|ELIMINACIÓN|ELIMINACION)\s+DE\s+ROL\s+RBAC/gi, (match: string) => {
+        const verb = match.split(/\s+/)[0];
+        return `${verb} de Rol del Sistema`;
+      })
       .replace(/Catálogo de Roles RBAC/gi, 'Configuración de Roles')
+      .replace(/Roles RBAC/gi, 'Roles del Sistema')
       .replace(/\bRBAC\b/g, 'del Sistema');
     let cleanEntity = (l.entity || '')
       .replace(/Catálogo de Roles RBAC/gi, 'Configuración de Roles')
@@ -49,6 +78,30 @@ const dbLogs = (rawDbLogs || [])
       .replace(/\bRBAC\b/g, 'del Sistema');
     return { ...l, actor_name: aName, action: cleanAction, entity: cleanEntity };
   });
+
+const mappedDbLogs = dbLogs.map((l: any) => ({
+  id: l.id,
+  timestamp: formatBogotaTimestamp(l.raw_timestamp || Date.now()),
+  rawTimestamp: l.raw_timestamp,
+  actor: normalizeAuditActor({
+    id: l.actor_id || 'usr-root',
+    name: l.actor_name,
+    role: l.actor_role,
+  }),
+  action: l.action,
+  actionType: l.action_type || 'ACCESO',
+  entity: l.entity || 'Sistema',
+  entityId: l.entity_id,
+  details: l.details || '',
+  before: l.before_state,
+  after: l.after_state,
+  severity: l.severity || 'INFO',
+  previousHash: l.previous_hash || '0'.repeat(64),
+  integrityHash: l.integrity_hash || '0'.repeat(64),
+  ip: sanitizeAuditDisplayIp(l.ip_address),
+  device: (l.after_state?.device_info || 'Win11-Chrome [T-84A1]'),
+  cipher: l.cipher || 'AES-256-GCM / SHA-256',
+}));
 
 const totalLogs = dbLogs.length;
 const totalRadicaciones = dbLogs.filter(l => l.action_type === 'SUBIDA_ARCHIVO' || l.action_type === 'RADICACION').length;
@@ -350,8 +403,9 @@ const totalCierresYValidaciones = dbLogs.filter(l => {
   }
 </style>
 
-<script is:inline define:vars={{ activeRadicados }}>
+<script is:inline define:vars={{ activeRadicados, initialLogs: mappedDbLogs }}>
   window.__SGD_ACTIVE_RADICADOS__ = activeRadicados;
+  window.__SGD_INITIAL_LOGS__ = initialLogs;
 </script>
 
 <script>
