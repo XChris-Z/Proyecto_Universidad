@@ -324,6 +324,8 @@ const initialRbacBootstrap = JSON.stringify({
                                 data-user-email={u.email} 
                                 data-user-cargo={cargo} 
                                 data-user-role={u.assignedRoleId}
+                                data-user-estado={u.is_active === false ? 'inactivo' : 'activo'}
+                                data-user-subtitulo={u.subtitulo || ''}
                                 title="Editar información y rol del usuario"
                                 style="width: 32px; height: 32px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: #ffffff; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s ease;"
                               >
@@ -511,10 +513,10 @@ const initialRbacBootstrap = JSON.stringify({
               <div>
                 <label style="font-size: 0.76rem; font-weight: 800; color: #52606D; text-transform: uppercase; letter-spacing: 0.03em; display: block; margin-bottom: 6px;">Rol Asignado *</label>
                 <select id="create-user-role" name="role_id" class="form-input" style="height: 42px;">
-                  {currentRbac.isAdmin && <option value="admin">Administrador (Control Total)</option>}
-                  <option value="funcionario" selected>Funcionario (Operativo Estándar)</option>
+                  {currentRbac.isAdmin && <option value="admin" data-color="#00594E">Administrador</option>}
+                  <option value="funcionario" selected data-color="#B5A160">Funcionario</option>
                   {rolesCatalog.filter((r) => r.id !== 'admin' && r.id !== 'funcionario').map((r) => (
-                    <option value={r.id}>{r.name}</option>
+                    <option value={r.id} data-color={r.color || '#64748B'}>{r.name}</option>
                   ))}
                 </select>
               </div>
@@ -541,10 +543,11 @@ const initialRbacBootstrap = JSON.stringify({
     </div>
 
     <!-- MODAL 3: EDITAR USUARIO (BLINDADO) -->
+    <!-- MODAL 3: EDITAR FUNCIONARIO (BLINDADO Y SINCRONIZADO) -->
     <div class="modal-backdrop" id="modal-edit-user" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
-      <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 500px; border-radius: var(--radius-md); box-shadow: 0 20px 45px rgba(0,0,0,0.2); overflow: hidden;">
+      <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 580px; border-radius: var(--radius-md); box-shadow: 0 20px 45px rgba(0,0,0,0.2); overflow: hidden; max-height: 90vh; display: flex; flex-direction: column;">
         
-        <div class="modal-header" style="background: #ffffff; border-top: 4px solid var(--verde-principal); border-bottom: 1px solid #DCE4E3; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
+        <div class="modal-header" style="background: #ffffff; border-top: 4px solid var(--verde-principal); border-bottom: 1px solid #DCE4E3; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
           <div style="display: flex; align-items: center; gap: 12px;">
             <div style="width: 40px; height: 40px; border-radius: 10px; background: #F2F7F6; border: 1.5px solid #B2CFCB; display: flex; align-items: center; justify-content: center; color: var(--verde-principal);">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -557,28 +560,47 @@ const initialRbacBootstrap = JSON.stringify({
           <button type="button" class="btn-close-modal" id="btn-close-edit-modal" style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid #DCE4E3; background: #F8FAFC; color: #52606D; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; line-height: 1;">&times;</button>
         </div>
 
-        <form id="form-edit-user">
+        <form id="form-edit-user" style="display: flex; flex-direction: column; overflow-y: auto;">
           <input type="hidden" id="edit-user-id" name="userId" />
+          <input type="hidden" id="edit-user-original-role" />
           
           <div style="padding: 22px 24px; display: flex; flex-direction: column; gap: 14px;">
-            <div>
-              <label style="font-size: 0.76rem; font-weight: 800; color: #52606D; text-transform: uppercase; letter-spacing: 0.03em; display: block; margin-bottom: 6px;">Nombre Completo *</label>
-              <input type="text" id="edit-user-name" name="name" required class="form-input" />
+            <!-- Banner de error del modal -->
+            <div id="edit-user-error-banner" style="display: none; background: #FEF2F2; border: 1.5px solid #FECACA; border-radius: 8px; padding: 10px 14px; color: #991B1B; font-size: 0.82rem; font-weight: 600;"></div>
+
+            <!-- Fila 1: Nombre y Correo Institucional -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+              <div>
+                <label style="font-size: 0.76rem; font-weight: 800; color: #52606D; text-transform: uppercase; letter-spacing: 0.03em; display: block; margin-bottom: 6px;">Nombre Completo *</label>
+                <input type="text" id="edit-user-name" name="name" required class="form-input" />
+              </div>
+
+              <div>
+                <label style="font-size: 0.76rem; font-weight: 800; color: #52606D; text-transform: uppercase; letter-spacing: 0.03em; display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <span>Correo Institucional *</span>
+                  {!currentRbac.isAdmin && <span style="font-size: 0.68rem; color: #94A3B8; text-transform: none;">🔒 Bloqueado</span>}
+                </label>
+                <input
+                  type="email"
+                  id="edit-user-email"
+                  name="email"
+                  required
+                  readonly={!currentRbac.isAdmin}
+                  class="form-input"
+                  style={!currentRbac.isAdmin ? "background: #F8FAFC; cursor: not-allowed; color: #64748B;" : ""}
+                />
+              </div>
             </div>
 
-            <div>
-              <label style="font-size: 0.76rem; font-weight: 800; color: #52606D; text-transform: uppercase; letter-spacing: 0.03em; display: block; margin-bottom: 6px;">Correo Institucional</label>
-              <input type="email" id="edit-user-email" name="email" readonly class="form-input" style="background: #F8FAFC; cursor: not-allowed; color: #64748B;" />
-            </div>
-
+            <!-- Fila 2: Rol Asignado y Dependencia Oficial -->
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
               <div>
                 <label style="font-size: 0.76rem; font-weight: 800; color: #52606D; text-transform: uppercase; letter-spacing: 0.03em; display: block; margin-bottom: 6px;">Rol Asignado *</label>
                 <select id="edit-user-role" name="role_id" class="form-input" style="height: 42px;">
-                  {currentRbac.isAdmin && <option value="admin">Administrador (Control Total)</option>}
-                  <option value="funcionario">Funcionario (Operativo Estándar)</option>
+                  {currentRbac.isAdmin && <option value="admin" data-color="#00594E">Administrador</option>}
+                  <option value="funcionario" data-color="#B5A160">Funcionario</option>
                   {rolesCatalog.filter((r) => r.id !== 'admin' && r.id !== 'funcionario').map((r) => (
-                    <option value={r.id}>{r.name}</option>
+                    <option value={r.id} data-color={r.color || '#64748B'}>{r.name}</option>
                   ))}
                 </select>
               </div>
@@ -588,9 +610,47 @@ const initialRbacBootstrap = JSON.stringify({
                 <input type="text" id="edit-user-cargo" name="cargo" required class="form-input" />
               </div>
             </div>
+
+            <!-- Fila 3: Cargo / Subtítulo y Estado de la Cuenta -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+              <div>
+                <label style="font-size: 0.76rem; font-weight: 800; color: #52606D; text-transform: uppercase; letter-spacing: 0.03em; display: block; margin-bottom: 6px;">Cargo / Subtítulo</label>
+                <input type="text" id="edit-user-subtitulo" name="subtitulo" placeholder="Ej. Profesional Universitario" class="form-input" />
+              </div>
+
+              <div>
+                <label style="font-size: 0.76rem; font-weight: 800; color: #52606D; text-transform: uppercase; letter-spacing: 0.03em; display: block; margin-bottom: 6px;">Estado de la Cuenta *</label>
+                <select id="edit-user-estado" name="estado" class="form-input" style="height: 42px;">
+                  <option value="activo" data-color="#10B981">Activo</option>
+                  <option value="inactivo" data-color="#EF4444">Inactivo / Suspendido</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Checkbox condicional: Aplicar matriz de permisos si cambia de rol -->
+            <div id="edit-user-role-change-box" style="display: none; background: #F0F7F5; border: 1.5px solid #B2CFCB; border-radius: 8px; padding: 10px 14px;">
+              <label style="display: flex; align-items: center; gap: 9px; cursor: pointer; font-size: 0.8rem; font-weight: 700; color: #00443B;">
+                <input type="checkbox" id="edit-user-apply-role-perms" name="applyRolePermissions" checked style="width: 16px; height: 16px; accent-color: #00594E; cursor: pointer;" />
+                <span>Aplicar la matriz de permisos base del nuevo rol</span>
+              </label>
+            </div>
+
+            <!-- Acordeón Desplegable Compacto: Restablecer Contraseña -->
+            <details style="background: #F8FAFC; border: 1px solid #CBD5E1; border-radius: 8px; padding: 10px 14px;">
+              <summary style="font-size: 0.8rem; font-weight: 700; color: #00594E; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <span>Cambiar / Restablecer Contraseña (Opcional)</span>
+              </summary>
+              <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px;">
+                <label style="font-size: 0.74rem; font-weight: 700; color: #64748B; text-transform: uppercase;">Nueva Contraseña Provisional</label>
+                <input type="password" id="edit-user-password" name="password" minlength="8" placeholder="Mínimo 8 caracteres (dejar en blanco para no modificar)" class="form-input" autocomplete="new-password" />
+                <span style="font-size: 0.72rem; color: #94A3B8;">Si no desea cambiar la contraseña actual del usuario, deje este campo vacío.</span>
+              </div>
+            </details>
+
           </div>
 
-          <div style="padding: 16px 24px; background: #f8fafc; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end; gap: 10px;">
+          <div style="padding: 16px 24px; background: #f8fafc; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end; gap: 10px; flex-shrink: 0;">
             <button type="button" class="btn btn-secondary" id="btn-cancel-edit-user">Cancelar</button>
             <button type="submit" id="btn-submit-edit-user" class="btn btn-primary" style="font-weight: 800; padding: 10px 22px;">Guardar Cambios</button>
           </div>
@@ -1567,11 +1627,18 @@ const initialRbacBootstrap = JSON.stringify({
     // 5. Modal 3: Editar Usuario (Blindado)
     // ─────────────────────────────────────────────────────────────
     const editModal = document.getElementById('modal-edit-user');
+    const editErrorBanner = document.getElementById('edit-user-error-banner') as HTMLDivElement | null;
     const editUserId = document.getElementById('edit-user-id') as HTMLInputElement | null;
+    const editUserOriginalRole = document.getElementById('edit-user-original-role') as HTMLInputElement | null;
     const editUserName = document.getElementById('edit-user-name') as HTMLInputElement | null;
     const editUserEmail = document.getElementById('edit-user-email') as HTMLInputElement | null;
     const editUserRole = document.getElementById('edit-user-role') as HTMLSelectElement | null;
     const editUserCargo = document.getElementById('edit-user-cargo') as HTMLInputElement | null;
+    const editUserSubtitulo = document.getElementById('edit-user-subtitulo') as HTMLInputElement | null;
+    const editUserEstado = document.getElementById('edit-user-estado') as HTMLSelectElement | null;
+    const editUserPassword = document.getElementById('edit-user-password') as HTMLInputElement | null;
+    const editUserRoleChangeBox = document.getElementById('edit-user-role-change-box') as HTMLDivElement | null;
+    const editUserApplyPerms = document.getElementById('edit-user-apply-role-perms') as HTMLInputElement | null;
     const formEditUser = document.getElementById('form-edit-user') as HTMLFormElement | null;
     const btnCloseEdit = document.getElementById('btn-close-edit-modal');
     const btnCancelEdit = document.getElementById('btn-cancel-edit-user');
@@ -1579,9 +1646,18 @@ const initialRbacBootstrap = JSON.stringify({
 
     function closeEditModal() {
       if (editModal) editModal.style.display = 'none';
+      if (editErrorBanner) editErrorBanner.style.display = 'none';
     }
     btnCloseEdit?.addEventListener('click', closeEditModal);
     btnCancelEdit?.addEventListener('click', closeEditModal);
+
+    editUserRole?.addEventListener('change', () => {
+      const orig = editUserOriginalRole?.value || '';
+      const curr = editUserRole?.value || '';
+      if (editUserRoleChangeBox) {
+        editUserRoleChangeBox.style.display = curr !== orig ? 'block' : 'none';
+      }
+    });
 
     document.querySelectorAll<HTMLButtonElement>('.btn-edit-user').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -1590,12 +1666,26 @@ const initialRbacBootstrap = JSON.stringify({
         const email = btn.dataset.userEmail || '';
         const role = btn.dataset.userRole || 'funcionario';
         const cargo = btn.dataset.userCargo || '';
+        const subtitulo = btn.dataset.userSubtitulo || '';
+        const estado = btn.dataset.userEstado || 'activo';
 
+        if (editErrorBanner) editErrorBanner.style.display = 'none';
         if (editUserId) editUserId.value = uid;
         if (editUserName) editUserName.value = name;
         if (editUserEmail) editUserEmail.value = email;
         if (editUserCargo) editUserCargo.value = cargo;
+        if (editUserSubtitulo) editUserSubtitulo.value = subtitulo;
+        if (editUserOriginalRole) editUserOriginalRole.value = role;
         if (editUserRole) editUserRole.value = role;
+        if (editUserEstado) editUserEstado.value = estado;
+        if (editUserPassword) editUserPassword.value = '';
+        if (editUserRoleChangeBox) editUserRoleChangeBox.style.display = 'none';
+        if (editUserApplyPerms) editUserApplyPerms.checked = true;
+
+        if (typeof (window as any).refrescarSelectPersonalizado === 'function') {
+          if (editUserRole) (window as any).refrescarSelectPersonalizado(editUserRole);
+          if (editUserEstado) (window as any).refrescarSelectPersonalizado(editUserEstado);
+        }
 
         if (editModal) editModal.style.display = 'flex';
       });
@@ -1608,42 +1698,75 @@ const initialRbacBootstrap = JSON.stringify({
       const email = editUserEmail?.value.trim();
       const roleId = editUserRole?.value;
       const cargo = editUserCargo?.value.trim();
+      const subtitulo = editUserSubtitulo?.value.trim();
+      const estado = editUserEstado?.value || 'activo';
+      const password = editUserPassword?.value.trim();
 
       if (!uid || !name || !cargo) {
+        if (editErrorBanner) {
+          editErrorBanner.textContent = 'Nombre completo y dependencia oficial son obligatorios.';
+          editErrorBanner.style.display = 'block';
+        }
         notifyToast('Nombre y dependencia son obligatorios.', 'error');
         return;
       }
 
-      if (btnSubmitEdit) {
-        btnSubmitEdit.textContent = 'Guardando...';
-        btnSubmitEdit.disabled = true;
+      if (password && password.length < 8) {
+        if (editErrorBanner) {
+          editErrorBanner.textContent = 'La nueva contraseña debe tener mínimo 8 caracteres.';
+          editErrorBanner.style.display = 'block';
+        }
+        notifyToast('La nueva contraseña debe tener mínimo 8 caracteres.', 'error');
+        return;
       }
 
+      if (btnSubmitEdit) {
+        btnSubmitEdit.textContent = 'Guardando cambios...';
+        btnSubmitEdit.disabled = true;
+      }
+      if (editErrorBanner) editErrorBanner.style.display = 'none';
+
       try {
-        const res = await fetch('/api/admin/rbac', {
+        const payload = {
+          userId: uid,
+          userEmail: email,
+          name,
+          roleId,
+          cargo,
+          subtitulo,
+          estado,
+          password: password || undefined,
+          applyRolePermissions: editUserApplyPerms ? editUserApplyPerms.checked : true,
+        };
+
+        const res = await fetch('/api/usuarios/editar', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'same-origin',
-          body: JSON.stringify({
-            action: 'update_user',
-            userId: uid,
-            userEmail: email,
-            name,
-            roleId,
-            cargo,
-            applyRolePermissions: true,
-          }),
+          body: JSON.stringify(payload),
         });
+
         const data = await res.json().catch(() => ({}));
         if (!res.ok || !data.success) {
-          throw new Error(data.error || 'Error al actualizar funcionario.');
+          const errMsg = data.error || 'Error al actualizar funcionario.';
+          if (editErrorBanner) {
+            editErrorBanner.textContent = errMsg;
+            editErrorBanner.style.display = 'block';
+          }
+          notifyToast(errMsg, 'error');
+          return;
         }
 
         notifyToast('Funcionario modificado con éxito.', 'success');
         closeEditModal();
-        setTimeout(() => window.location.reload(), 600);
+        setTimeout(() => window.location.reload(), 500);
       } catch (err: any) {
-        notifyToast(err?.message || 'Error al actualizar funcionario.', 'error');
+        const errMsg = err?.message || 'Error de conexión al actualizar funcionario.';
+        if (editErrorBanner) {
+          editErrorBanner.textContent = errMsg;
+          editErrorBanner.style.display = 'block';
+        }
+        notifyToast(errMsg, 'error');
       } finally {
         if (btnSubmitEdit) {
           btnSubmitEdit.textContent = 'Guardar Cambios';

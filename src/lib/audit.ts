@@ -136,6 +136,40 @@ export function cleanAuditActionTitle(rawAction?: string | null): string {
     .trim();
 }
 
+/**
+ * Calcula un resumen legible de diferencias campo a campo ("antes" vs "después")
+ */
+export function computeHumanDiff(
+  beforeData: Record<string, any> = {},
+  afterData: Record<string, any> = {},
+  fieldLabels: Record<string, string> = {}
+): { diffText: string; changedFieldsCount: number } {
+  const changes: string[] = [];
+
+  for (const [key, newVal] of Object.entries(afterData)) {
+    if (newVal === undefined) continue;
+    if (['updated_at', 'id', 'created_at', 'peticion_id'].includes(key)) continue;
+
+    const oldVal = beforeData[key];
+
+    // Normalizar para comparación (trims y null/undefined)
+    const normalizedOld = oldVal === null || oldVal === undefined ? '' : String(oldVal).trim();
+    const normalizedNew = newVal === null || newVal === undefined ? '' : String(newVal).trim();
+
+    if (normalizedOld !== normalizedNew) {
+      const label = fieldLabels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+      const displayOld = normalizedOld || '(vacío)';
+      const displayNew = normalizedNew || '(vacío)';
+      changes.push(`${label}: '${displayOld}' → '${displayNew}'`);
+    }
+  }
+
+  return {
+    diffText: changes.join(' • '),
+    changedFieldsCount: changes.length,
+  };
+}
+
 export function normalizeAuditActor(actor: {
   id?: string | null;
   name?: string | null;

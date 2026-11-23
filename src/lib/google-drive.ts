@@ -1081,6 +1081,36 @@ export function extractDriveFolderId(input?: string | null): string | null {
 }
 
 /**
+ * Renombra una carpeta raíz de radicado en Google Drive cuando se actualiza el número de radicado.
+ * Nunca interrumpe el flujo si Google Drive no está disponible o la carpeta no existe.
+ */
+export async function renombrarCarpetaRadicadoEnDrive(
+  folderIdOrUrl?: string | null,
+  nuevoNombre?: string | null
+): Promise<{ success: boolean; error?: string }> {
+  if (!folderIdOrUrl || !nuevoNombre) {
+    return { success: false, error: 'Identificador de carpeta o nuevo nombre ausente' };
+  }
+  const cleanId = extractDriveFolderId(folderIdOrUrl);
+  if (!cleanId) {
+    return { success: false, error: 'Identificador de carpeta no válido' };
+  }
+  const safeName = sanitizeDriveName(nuevoNombre);
+  try {
+    const { drive } = await getGoogleDriveClient();
+    await drive.files.update({
+      fileId: cleanId,
+      requestBody: { name: safeName },
+      supportsAllDrives: true,
+    });
+    return { success: true };
+  } catch (err: any) {
+    console.warn(`[Drive Rename Warning] No se pudo renombrar carpeta en Drive ${cleanId}:`, err?.message);
+    return { success: false, error: err?.message || 'Error comunicando con Google Drive' };
+  }
+}
+
+/**
  * 1. Elimina la carpeta de un radicado en Google Drive usando su ID o buscando por prefijo de radicado.
  * Nunca bloquea la operación si no está configurado o si no existe en Drive.
  */

@@ -1067,4 +1067,225 @@ export function initAppLayout() {
   btnCloseSwitchFooter?.addEventListener('click', () => {
     if (switchUserModal) switchUserModal.style.display = 'none';
   });
+
+  // Inicializar motor global de desplegables personalizados institucionales
+  initCustomSelects();
+}
+
+/**
+ * Motor Reutilizable de Desplegables Personalizados Institucionales (Custom Selects)
+ */
+export function initCustomSelects() {
+  function closeAllMenus() {
+    document.querySelectorAll('.u-select-menu.is-open').forEach((menu) => {
+      menu.classList.remove('is-open');
+    });
+    document.querySelectorAll('.u-select-trigger[aria-expanded="true"]').forEach((trig) => {
+      trig.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  // Refrescar un select personalizado específico
+  window.refrescarSelectPersonalizado = function (selectEl: HTMLElement) {
+    if (!(selectEl instanceof HTMLSelectElement)) return;
+    const wrapper = (selectEl as any).__wrapper || selectEl.closest('.u-select-wrapper');
+    if (!wrapper) return;
+    const trigger = wrapper.querySelector('.u-select-trigger') as HTMLButtonElement | null;
+    const valueContainer = wrapper.querySelector('.u-select-value') as HTMLSpanElement | null;
+    const menu = (wrapper as any).__menu as HTMLDivElement | null;
+    if (!trigger || !valueContainer || !menu) return;
+
+    trigger.disabled = selectEl.disabled;
+
+    // Buscar opción seleccionada o primera
+    const selectedOption =
+      selectEl.selectedOptions && selectEl.selectedOptions[0]
+        ? selectEl.selectedOptions[0]
+        : selectEl.options[selectEl.selectedIndex] || selectEl.options[0];
+
+    const selectedVal = selectedOption ? selectedOption.value : '';
+    const selectedText = selectedOption ? selectedOption.text : '';
+    const selectedColor = selectedOption?.getAttribute('data-color') || '';
+
+    // Renderizar valor actual en el botón trigger
+    let triggerHtml = '';
+    if (selectedColor) {
+      triggerHtml += `<span class="u-select-dot" style="background-color: ${selectedColor};"></span>`;
+    }
+    triggerHtml += `<span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${selectedText || 'Seleccione una opción'}</span>`;
+    valueContainer.innerHTML = triggerHtml;
+
+    // Reconstruir lista de opciones dentro del menú flotante
+    menu.innerHTML = '';
+    Array.from(selectEl.options).forEach((opt) => {
+      const isSelected = opt.value === selectedVal;
+      const optColor = opt.getAttribute('data-color') || '';
+      const optBtn = document.createElement('button');
+      optBtn.type = 'button';
+      optBtn.className = `u-select-option ${isSelected ? 'is-selected' : ''}`;
+      optBtn.setAttribute('data-value', opt.value);
+      optBtn.setAttribute('role', 'option');
+      optBtn.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+
+      let optContent = `<div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">`;
+      if (optColor) {
+        optContent += `<span class="u-select-dot" style="background-color: ${optColor};"></span>`;
+      }
+      optContent += `<span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${opt.text}</span></div>`;
+      if (isSelected) {
+        optContent += `<svg class="u-select-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`;
+      }
+      optBtn.innerHTML = optContent;
+
+      optBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (selectEl.value !== opt.value) {
+          selectEl.value = opt.value;
+          selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+          selectEl.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        window.refrescarSelectPersonalizado?.(selectEl);
+        closeAllMenus();
+        trigger.focus();
+      });
+
+      menu.appendChild(optBtn);
+    });
+  };
+
+  // Inicializar todos los selects aptos en la página
+  window.inicializarSelectsPersonalizados = function () {
+    const selects = document.querySelectorAll<HTMLSelectElement>(
+      'select:not([data-native-select="true"]):not([multiple])'
+    );
+
+    selects.forEach((sel) => {
+      if ((sel as any).__wrapper || sel.closest('.u-select-wrapper')) {
+        window.refrescarSelectPersonalizado?.(sel);
+        return;
+      }
+
+      // Ocultar select nativo manteniéndolo funcional para FormData y eventos
+      sel.classList.add('sr-only');
+      sel.style.position = 'absolute';
+      sel.style.width = '1px';
+      sel.style.height = '1px';
+      sel.style.padding = '0';
+      sel.style.margin = '-1px';
+      sel.style.overflow = 'hidden';
+      sel.style.clip = 'rect(0, 0, 0, 0)';
+      sel.style.border = '0';
+      sel.style.pointerEvents = 'none';
+
+      // Crear contenedor wrapper
+      const wrapper = document.createElement('div');
+      wrapper.className = 'u-select-wrapper';
+      sel.parentNode?.insertBefore(wrapper, sel);
+      wrapper.appendChild(sel);
+
+      // Crear botón disparador (trigger)
+      const trigger = document.createElement('button');
+      trigger.type = 'button';
+      trigger.className = 'u-select-trigger';
+      trigger.setAttribute('aria-haspopup', 'listbox');
+      trigger.setAttribute('aria-expanded', 'false');
+      trigger.disabled = sel.disabled;
+
+      const valueContainer = document.createElement('span');
+      valueContainer.className = 'u-select-value';
+      trigger.appendChild(valueContainer);
+
+      const chevron = document.createElement('span');
+      chevron.className = 'u-select-chevron';
+      chevron.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 9l6 6 6-6"/></svg>`;
+      trigger.appendChild(chevron);
+      wrapper.appendChild(trigger);
+
+      // Crear menú flotante fijo al body para evitar cualquier recorte por overflow
+      const menu = document.createElement('div');
+      menu.className = 'u-select-menu';
+      menu.setAttribute('role', 'listbox');
+      document.body.appendChild(menu);
+
+      // Vincular referencias cruzadas
+      (wrapper as any).__menu = menu;
+      (sel as any).__wrapper = wrapper;
+      (sel as any).__menu = menu;
+
+      function positionMenu() {
+        const rect = trigger.getBoundingClientRect();
+        menu.style.width = `${Math.max(rect.width, 160)}px`;
+        menu.style.left = `${rect.left}px`;
+
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const menuHeight = Math.min(menu.scrollHeight || 180, 240);
+
+        if (spaceBelow < 220 && rect.top > 220) {
+          // Abrir hacia arriba
+          menu.style.top = 'auto';
+          menu.style.bottom = `${window.innerHeight - rect.top + 4}px`;
+        } else {
+          // Abrir hacia abajo
+          menu.style.bottom = 'auto';
+          menu.style.top = `${rect.bottom + 4}px`;
+        }
+      }
+
+      trigger.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (sel.disabled) return;
+
+        const isOpen = menu.classList.contains('is-open');
+        closeAllMenus();
+        if (!isOpen) {
+          positionMenu();
+          menu.classList.add('is-open');
+          trigger.setAttribute('aria-expanded', 'true');
+        }
+      });
+
+      // Observador de mutaciones para opciones añadidas/editadas dinámicamente
+      const observer = new MutationObserver(() => {
+        trigger.disabled = sel.disabled;
+        window.refrescarSelectPersonalizado?.(sel);
+      });
+      observer.observe(sel, { attributes: true, childList: true, subtree: true });
+
+      // Sincronizar valor inicial
+      window.refrescarSelectPersonalizado?.(sel);
+    });
+  };
+
+  // Listeners globales de cierre y posición
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
+    if (!target.closest('.u-select-wrapper') && !target.closest('.u-select-menu')) {
+      closeAllMenus();
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const openMenus = document.querySelectorAll('.u-select-menu.is-open');
+      if (openMenus.length > 0) {
+        e.stopPropagation();
+        closeAllMenus();
+      }
+    }
+  });
+
+  window.addEventListener('scroll', () => closeAllMenus(), { passive: true });
+  window.addEventListener('resize', () => closeAllMenus(), { passive: true });
+
+  // Ejecución inicial
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      window.inicializarSelectsPersonalizados?.();
+    });
+  } else {
+    window.inicializarSelectsPersonalizados?.();
+  }
 }
