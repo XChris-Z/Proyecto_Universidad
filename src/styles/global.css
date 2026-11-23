@@ -8302,6 +8302,73 @@ mark.juridico-mark {
   flex-shrink: 0;
 }
 
+/* ==========================================================================
+   AUDITORÍA Y TRAZABILIDAD — PROPORCIONES DE TABLA, BADGES Y ENVOLTURA LIMPIA
+   ========================================================================== */
+.auditoria-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  background: #FFFFFF;
+}
+
+.auditoria-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.auditoria-table th,
+.auditoria-table td {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
+.auditoria-ref-code {
+  color: #00594E;
+  font-weight: 700;
+  font-size: 0.84rem;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+}
+
+.auditoria-detalle-texto {
+  font-size: 0.80rem;
+  color: #334155;
+  margin-top: 4px;
+  line-height: 1.45;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
+.auditoria-accion-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.74rem;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  line-height: 1.3;
+}
+
+@media (max-width: 1024px) {
+  .auditoria-table {
+    min-width: 900px;
+  }
+}
+
+
 
 
 

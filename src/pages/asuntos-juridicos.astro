@@ -762,7 +762,15 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
     }
   </style>
 
-  <script define:vars={{ carpetas, documentos }}>
+  <script is:inline define:vars={{ carpetas, documentos }}>
+    window.__SGD_JURIDICO_BOOTSTRAP__ = { carpetas, documentos };
+  </script>
+
+  <script>
+    const bootstrap = (window as any).__SGD_JURIDICO_BOOTSTRAP__ || {};
+    const carpetas: any[] = bootstrap.carpetas || [];
+    const documentos: any[] = bootstrap.documentos || [];
+
     // Estado reactivo en memoria
     let currentCategoria = 'conceptos_internos';
     let currentFolderId = null;
@@ -1363,7 +1371,7 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
 
     browseDocFileBtn?.addEventListener('click', async (e) => {
       e.preventDefault();
-      const modalOpener = window['abrirModalSubida'];
+      const modalOpener = (window as any).abrirModalSubida;
       if (typeof modalOpener === 'function') {
         const files = await modalOpener({
           titulo: 'Cargar Documento Jurídico',
@@ -1372,10 +1380,10 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
           multiple: false,
           textoConfirmar: 'Seleccionar Documento',
         });
-        if (files && files[0] && docFileInput) {
+        if (files && files[0] && docFileInput && 'files' in docFileInput) {
           const dt = new DataTransfer();
           dt.items.add(files[0]);
-          docFileInput.files = dt.files;
+          (docFileInput as HTMLInputElement).files = dt.files;
           docFileInput.dispatchEvent(new Event('change', { bubbles: true }));
         }
       } else {

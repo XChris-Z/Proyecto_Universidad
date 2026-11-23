@@ -581,6 +581,9 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
         // Snapshot mantiene consistencia incluso si RLS limita tablas auxiliares
       }
 
+      const roleExists = state.roles.some((r) => r.id === newRole.id || r.code === newRole.code);
+      const isNewRole = !roleExists;
+
       const idx = state.roles.findIndex((r) => r.id === newRole.id);
       if (idx >= 0) {
         state.roles[idx] = newRole;
@@ -607,11 +610,15 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
         clientAddress,
         cookies,
         actor,
-        action: `${idx >= 0 ? 'Actualización' : 'Creación'} de Rol del Sistema (${newRole.name})`,
+        action: isNewRole
+          ? `CREACIÓN DE ROL DEL SISTEMA (${newRole.name.toUpperCase()})`
+          : `ACTUALIZACIÓN DE ROL DEL SISTEMA (${newRole.name.toUpperCase()})`,
         actionType: 'SEGURIDAD',
         entity: 'Configuración de Roles',
         entityId: newRole.id,
-        details: `Se configuró el rol "${newRole.name}" con ${normalizedPerms.length} permiso(s) modular(es).`,
+        details: isNewRole
+          ? `Se creó el rol ${newRole.name} con ${normalizedPerms.length} permisos activos.`
+          : `Se actualizó el rol ${newRole.name} (${normalizedPerms.length} permisos configurados).`,
         after: newRole,
         severity: 'WARN',
       });
@@ -667,7 +674,7 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
         clientAddress,
         cookies,
         actor,
-        action: `Eliminación de Rol del Sistema (${targetRole.name})`,
+        action: `ELIMINACIÓN DE ROL DEL SISTEMA (${targetRole.name.toUpperCase()})`,
         actionType: 'ELIMINACION',
         entity: 'Configuración de Roles',
         entityId: roleId,

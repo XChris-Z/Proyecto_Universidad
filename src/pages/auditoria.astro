@@ -252,16 +252,16 @@ const totalCierresYValidaciones = dbLogs.filter(l => {
         </div>
       </div>
 
-      <!-- Tabla Ejecutiva de Trazabilidad y Logs (Con scrollbar interna propia y Sticky Header) -->
-      <div class="auditoria-table-card" style="border: 1px solid #E2E8F0; border-radius: 14px; overflow: hidden;">
-        <div class="pro-scroll-container audit-log-container audit-table-wrapper">
-          <table class="doc-table audit-table">
+      <!-- Tabla Ejecutiva de Trazabilidad y Logs -->
+      <div class="auditoria-table-card" style="border: 1px solid #E2E8F0; border-radius: 14px; overflow: hidden; background: #FFFFFF;">
+        <div class="auditoria-table-wrapper pro-scroll-container audit-log-container audit-table-wrapper">
+          <table class="auditoria-table doc-table audit-table">
             <thead>
               <tr style="background: #F8FAFC; border-bottom: 2px solid #DCE4E3; text-align: left; color: #52606D; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.5px;">
-                <th style="padding: 13px 18px; width: 170px;">Fecha y Hora</th>
-                <th style="padding: 13px 18px; min-width: 240px;">Funcionario Responsable</th>
-                <th style="padding: 13px 18px; width: 220px;">Acción / Evento</th>
-                <th style="padding: 13px 18px;">Expediente / Detalle de Trazabilidad</th>
+                <th style="padding: 13px 18px; width: 16%;">Fecha y Hora</th>
+                <th style="padding: 13px 18px; width: 20%;">Funcionario Responsable</th>
+                <th style="padding: 13px 18px; width: 25%;">Acción / Evento</th>
+                <th style="padding: 13px 18px; width: 39%;">Expediente / Detalle de Trazabilidad</th>
               </tr>
             </thead>
             <tbody id="audit-logs-tbody">
@@ -334,27 +334,29 @@ const totalCierresYValidaciones = dbLogs.filter(l => {
     box-sizing: border-box;
   }
 
-  .auditoria-table-card .audit-table-wrapper {
-    width: 100%;
-    max-width: 100%;
-    max-height: calc(100vh - 330px);
-    min-height: 360px;
-    overflow-y: auto;
-    overflow-x: auto;
+  .auditoria-table-card .audit-table-wrapper,
+  .auditoria-table-wrapper {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: visible !important;
     position: relative;
     border: none;
     border-radius: 0;
     box-shadow: none;
+    background: #FFFFFF;
   }
 
-  .auditoria-table-card .audit-table {
-    width: 100%;
-    table-layout: auto;
-    border-collapse: collapse;
+  .auditoria-table-card .audit-table,
+  .auditoria-table {
+    width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
     font-size: 0.85rem;
   }
 
-  .auditoria-table-card .audit-table thead th {
+  .auditoria-table-card .audit-table thead th,
+  .auditoria-table thead th {
     padding: 13px 16px;
     background: #F2F7F6;
     border-bottom: 2px solid #DCE4E3;
@@ -368,32 +370,44 @@ const totalCierresYValidaciones = dbLogs.filter(l => {
     top: 0;
     z-index: 10;
     box-shadow: 0 1px 0 #DCE4E3;
-    white-space: nowrap;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
   }
 
-  .auditoria-table-card .audit-table tbody td {
+  .auditoria-table-card .audit-table tbody td,
+  .auditoria-table tbody td {
     padding: 14px 16px;
-    vertical-align: middle;
+    vertical-align: top;
     border-bottom: 1px solid #E2E8F0;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
   }
 
-  .auditoria-table-card .audit-table th:nth-child(4),
-  .auditoria-table-card .audit-table td:nth-child(4) {
-    min-width: 170px;
-    white-space: normal;
-    word-break: break-word;
+  .auditoria-table th:nth-child(1),
+  .auditoria-table td:nth-child(1) {
+    width: 16% !important;
   }
 
-  .auditoria-table-card .audit-table th:nth-child(5),
-  .auditoria-table-card .audit-table td:nth-child(5) {
-    min-width: 240px;
-    white-space: normal;
+  .auditoria-table th:nth-child(2),
+  .auditoria-table td:nth-child(2) {
+    width: 20% !important;
   }
 
-  .auditoria-table-card .audit-table th:last-child,
-  .auditoria-table-card .audit-table td:last-child {
-    padding-right: 22px;
-    white-space: nowrap;
+  .auditoria-table th:nth-child(3),
+  .auditoria-table td:nth-child(3) {
+    width: 25% !important;
+  }
+
+  .auditoria-table th:nth-child(4),
+  .auditoria-table td:nth-child(4) {
+    width: 39% !important;
+  }
+
+  @media (max-width: 1024px) {
+    .auditoria-table-card .audit-table,
+    .auditoria-table {
+      min-width: 900px !important;
+    }
   }
 
   @media (max-width: 960px) {

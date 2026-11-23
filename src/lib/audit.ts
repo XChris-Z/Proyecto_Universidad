@@ -174,6 +174,29 @@ export function computeHumanDiff(
   };
 }
 
+/**
+ * Extrae iniciales institucionales limpias de 2 caracteres en mayúsculas, removiendo
+ * de forma rigurosa prefijos profesionales y títulos (ING., DR., DRA., LIC., MG., ESP., PROF., ABG., SR., SRA., ARQ., TEC., etc.)
+ * Ejemplo: "ING. Christian Lemus" -> "CL", "ING. Oscar G" -> "OG"
+ */
+export function obtenerIniciales(nombreCompleto?: string | null): string {
+  if (!nombreCompleto) return 'SG';
+
+  const clean = nombreCompleto
+    .trim()
+    .replace(/^(?:ing|dr|dra|lic|mg|esp|prof|abg|sr|sra|arq|tec|doc|msc|phd)\.?\s+/i, '')
+    .trim();
+
+  const partes = clean.split(/\s+/).filter(Boolean);
+  const p0 = partes[0] || '';
+  const p1 = partes[1] || '';
+
+  if (!p0) return 'SG';
+  if (!p1) return p0.substring(0, 2).toUpperCase();
+
+  return ((p0[0] || '') + (p1[0] || '')).toUpperCase() || 'SG';
+}
+
 export function normalizeAuditActor(actor: {
   id?: string | null;
   name?: string | null;
@@ -231,18 +254,10 @@ export function normalizeAuditActor(actor: {
     roleLabel = normalizeInstitutionalRole(rawRole);
   }
 
-  const initials =
-    cleanName === 'ING. Christian Lemus'
-      ? 'IC'
-      : actor?.initials?.trim() ||
-        cleanName
-          .split(/\s+/)
-          .filter(Boolean)
-          .map((n) => n[0])
-          .join('')
-          .substring(0, 2)
-          .toUpperCase() ||
-        'SG';
+  let initials = actor?.initials?.trim();
+  if (!initials || initials === 'IC' || initials === 'IO' || /^[A-Z]{3,}$/.test(initials)) {
+    initials = obtenerIniciales(cleanName);
+  }
 
   const avatarColor =
     actor?.avatarColor || (roleLabel === 'Administrador' ? '#00594E' : '#B5A160');
