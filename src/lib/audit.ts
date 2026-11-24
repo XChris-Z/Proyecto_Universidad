@@ -156,6 +156,38 @@ export function cleanAuditActionTitle(rawAction?: string | null): string {
 }
 
 /**
+ * Determina de forma unificada si un registro de auditoría corresponde a un expediente / radicado
+ */
+export function esEventoDeExpediente(log: { entity?: string | null; entityId?: string | null; entity_id?: string | null; action?: string | null }): boolean {
+  if (!log) return false;
+  const modulosExpediente = [
+    'peticiones radicadas',
+    'carpetas de radicados',
+    'subir petición',
+    'subir peticion',
+    'peticiones',
+    'archivos',
+    'expedientes',
+    'carpetas',
+  ];
+  const entity = (log.entity || '').toLowerCase().trim();
+  const entityId = (log.entityId || log.entity_id || '').trim();
+  const action = (log.action || '').toLowerCase();
+
+  // Si pertenece a otros módulos institucionales, estrictamente no es expediente
+  if (/rol|usuario|miembro|consejo|norma|smtp|configuraci[oó]n|perfil/i.test(entity) || /rol|usuario|miembro|sesi[oó]n/i.test(action)) {
+    return false;
+  }
+
+  if (modulosExpediente.includes(entity)) return true;
+  if (/^RAD[-_]/i.test(entityId)) return true;
+  if (/(?:radicaci[oó]n|expediente|petici[oó]n|pr[oó]rroga|soporte|respuesta)/i.test(action)) {
+    return true;
+  }
+  return false;
+}
+
+/**
  * Calcula un resumen legible de diferencias campo a campo ("antes" vs "después")
  */
 export function computeHumanDiff(

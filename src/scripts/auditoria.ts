@@ -9,36 +9,11 @@ import {
   obtenerIniciales,
   formatBogotaTimestamp,
   isRelevantAuditLog,
+  esEventoDeExpediente,
 } from '@lib/audit';
 import type { AuditLog } from '@lib/types';
 
-function esEventoDeExpediente(log: AuditLog): boolean {
-  const modulosExpediente = [
-    'peticiones radicadas',
-    'carpetas de radicados',
-    'subir petición',
-    'subir peticion',
-    'peticiones',
-    'archivos',
-    'expedientes',
-    'carpetas',
-  ];
-  const entity = (log.entity || '').toLowerCase().trim();
-  const entityId = (log.entityId || '').trim();
-  const action = (log.action || '').toLowerCase();
 
-  // Si pertenece a otros módulos institucionales, estrictamente no es expediente
-  if (/rol|usuario|miembro|consejo|norma|smtp|configuraci[oó]n|perfil/i.test(entity) || /rol|usuario|miembro|sesi[oó]n/i.test(action)) {
-    return false;
-  }
-
-  if (modulosExpediente.includes(entity)) return true;
-  if (/^RAD[-_]/i.test(entityId)) return true;
-  if (/(?:radicaci[oó]n|expediente|petici[oó]n|pr[oó]rroga|soporte|respuesta)/i.test(action)) {
-    return true;
-  }
-  return false;
-}
 
 function sortLogsDescending(list: AuditLog[]): AuditLog[] {
   return [...list].sort((a, b) => {
@@ -62,7 +37,15 @@ export async function initAuditoria() {
   if (!tbody) return;
 
   // Cargar bitácora inicial del servidor si está disponible para render instantáneo
-  const windowInitial = (window as any).__SGD_INITIAL_LOGS__;
+  const initialDataEl = document.getElementById('audit-initial-data');
+  let parsedBootstrap: any = null;
+  if (initialDataEl?.textContent) {
+    try { parsedBootstrap = JSON.parse(initialDataEl.textContent); } catch {}
+  }
+  const windowInitial = (window as any).__SGD_INITIAL_LOGS__ || parsedBootstrap?.initialLogs;
+  if (parsedBootstrap?.activeRadicados) {
+    (window as any).__SGD_ACTIVE_RADICADOS__ = parsedBootstrap.activeRadicados;
+  }
   let rawLogs: AuditLog[] = Array.isArray(windowInitial) && windowInitial.length > 0
     ? (windowInitial as AuditLog[])
     : await fetchAuditLogsFromSupabase();

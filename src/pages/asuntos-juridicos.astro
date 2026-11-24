@@ -762,8 +762,20 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
     }
   </style>
 
-  <script is:inline define:vars={{ carpetas, documentos }}>
+  <script id="juridico-bootstrap-data" type="application/json" is:inline set:html={JSON.stringify({ carpetas, documentos })}></script>
+
+  <script is:inline>
     // @ts-nocheck
+    const __juridicoBootstrap = (() => {
+      try {
+        return JSON.parse(document.getElementById('juridico-bootstrap-data')?.textContent || '{}');
+      } catch {
+        return {};
+      }
+    })();
+    const carpetas = Array.isArray(__juridicoBootstrap.carpetas) ? __juridicoBootstrap.carpetas : [];
+    const documentos = Array.isArray(__juridicoBootstrap.documentos) ? __juridicoBootstrap.documentos : [];
+
     // Estado reactivo en memoria
     let currentCategoria = 'conceptos_internos';
     let currentFolderId = null;

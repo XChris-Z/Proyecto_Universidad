@@ -12,6 +12,8 @@ import {
   formatBogotaTimestamp,
   normalizeAuditActor,
   sanitizeAuditDisplayIp,
+  cleanAuditActionTitle,
+  esEventoDeExpediente,
 } from '@lib/audit';
 
 const db = supabaseAdmin || supabase;
@@ -277,7 +279,101 @@ const totalCierresYValidaciones = dbLogs.filter(l => {
               </tr>
             </thead>
             <tbody id="audit-logs-tbody">
-              <!-- Generado dinámicamente desde JS -->
+              {mappedDbLogs.map((log: any) => {
+                let actionBadgeClass = 'subida';
+                if (log.actionType === 'ELIMINACION' || log.severity === 'CRITICAL') actionBadgeClass = 'eliminacion';
+                else if (log.actionType === 'MODIFICACION' || log.actionType === 'GESTION') actionBadgeClass = 'modificacion';
+                else if (log.actionType === 'RESPUESTA') actionBadgeClass = 'respuesta';
+                else if (log.actionType === 'SEGURIDAD') actionBadgeClass = 'seguridad';
+
+                const cleanActor = log.actor;
+                const cleanAction = cleanAuditActionTitle(log.action);
+                const cleanTimestamp = log.timestamp;
+                const entityIdStr = String(log.entityId || '').trim();
+                const entityStr = String(log.entity || 'Sistema').trim();
+                const esExp = esEventoDeExpediente(log);
+
+                const radPattern = /RAD-\d{4}-\d+/i;
+                const radicadoFromObj = (log.after as any)?.numero_radicado || (log.before as any)?.numero_radicado;
+                let radText = '';
+                if (radicadoFromObj && typeof radicadoFromObj === 'string' && radPattern.test(radicadoFromObj)) {
+                  radText = radicadoFromObj.toUpperCase();
+                } else if (radPattern.test(entityIdStr)) {
+                  radText = (entityIdStr.match(radPattern)?.[0] || entityIdStr).toUpperCase();
+                } else if (esExp) {
+                  const match = String(log.action || '').match(radPattern) || String(log.details || '').match(radPattern);
+                  if (match) radText = match[0].toUpperCase();
+                }
+
+                const isDeleted = esExp && radText ? (
+                  log.actionType === 'ELIMINACION' ||
+                  (log.action && log.action.toLowerCase().includes('eliminac')) ||
+                  (activeRadicados.length > 0 && !activeRadicados.includes(radText))
+                ) : false;
+
+                let displayRef = entityIdStr;
+                if (!displayRef || /^[0-9a-f-]{16,}$/i.test(displayRef) || /^(usr|cal|alog|doc|pet|sec|config|role|perm|dep|ofi)-/i.test(displayRef)) {
+                  displayRef = (log.after as any)?.name || (log.before as any)?.name || entityStr;
+                } else {
+                  displayRef = displayRef.replace(/^(?:rol_|role_|usr_)/i, '').replace(/_/g, ' ');
+                }
+
+                const cleanDetails = String(log.details || '')
+                  .replace(/an[oó]nimo\s*·\s*funcionario/gi, 'Funcionario Registrado')
+                  .replace(/por\s*an[oó]nimo/gi, 'por Funcionario Registrado');
+
+                return (
+                  <tr>
+                    <td style="vertical-align: top; padding: 14px 18px; width: 16%; word-break: break-word;">
+                      <div style="font-weight: 700; color: var(--text-main); font-size: 0.84rem;">{cleanTimestamp}</div>
+                    </td>
+                    <td style="vertical-align: top; padding: 14px 18px; width: 20%; word-break: break-word;">
+                      <div class="audit-user-cell" style="display: flex; align-items: center; gap: 10px;">
+                        <div class="audit-user-avatar" style={`background: ${cleanActor.avatarColor}; width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.75rem; color: #ffffff; flex-shrink: 0;`}>
+                          {cleanActor.initials}
+                        </div>
+                        <div style="min-width: 0; overflow-wrap: break-word; word-wrap: break-word;">
+                          <div class="audit-user-name" style="font-weight: 750; color: #111827; font-size: 0.84rem; line-height: 1.25;">{cleanActor.name}</div>
+                          <div class="audit-user-role" style="font-size: 0.72rem; color: #52606D; margin-top: 2px; font-weight: 600;">{cleanActor.role}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td style="vertical-align: top; padding: 14px 18px; width: 25%; word-break: break-word;">
+                      <div class={`audit-action-badge ${actionBadgeClass}`}>
+                        <span class="audit-badge-dot"></span>
+                        <span style="overflow-wrap: break-word; word-wrap: break-word; white-space: normal;">{cleanAction}</span>
+                      </div>
+                    </td>
+                    <td style="vertical-align: top; padding: 14px 18px; width: 39%; word-break: break-word;">
+                      <div class="audit-details-cell">
+                        {esExp && radText ? (
+                          <>
+                            <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
+                              <span class="auditoria-ref-code">{radText}</span>
+                              {isDeleted && (
+                                <span style="display: inline-block; font-size: 0.68rem; font-weight: 750; background: #FEE2E2; color: #991B1B; border: 1px solid #FCA5A5; padding: 1px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle;">Expediente eliminado</span>
+                              )}
+                            </div>
+                            <div style="font-size: 0.74rem; color: #64748B; margin-top: 2px;">{entityStr}</div>
+                          </>
+                        ) : (
+                          <>
+                            <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
+                              <span class="auditoria-ref-code">{displayRef.toUpperCase()}</span>
+                            </div>
+                            <div style="font-size: 0.74rem; color: #64748B; margin-top: 2px;">{entityStr}</div>
+                          </>
+                        )}
+                        {cleanDetails && (
+                          <div class="audit-details-text" style="font-size: 0.76rem; color: #52606D; margin-top: 5px; line-height: 1.45; word-break: break-word; overflow-wrap: break-word; white-space: normal;">
+                            {cleanDetails}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -429,9 +525,15 @@ const totalCierresYValidaciones = dbLogs.filter(l => {
   }
 </style>
 
-<script is:inline define:vars={{ activeRadicados, initialLogs: mappedDbLogs }}>
-  window.__SGD_ACTIVE_RADICADOS__ = activeRadicados;
-  window.__SGD_INITIAL_LOGS__ = initialLogs;
+<script id="audit-initial-data" type="application/json" is:inline set:html={JSON.stringify({ activeRadicados, initialLogs: mappedDbLogs })}></script>
+<script is:inline>
+  (() => {
+    try {
+      const parsed = JSON.parse(document.getElementById('audit-initial-data')?.textContent || '{}');
+      window.__SGD_ACTIVE_RADICADOS__ = parsed.activeRadicados || [];
+      window.__SGD_INITIAL_LOGS__ = parsed.initialLogs || [];
+    } catch {}
+  })();
 </script>
 
 <script>

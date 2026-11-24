@@ -90,7 +90,7 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
           <div class="subir-sla-legend" id="sla-chart-legend">
             <span class="subir-legend-placeholder" id="sla-legend-placeholder">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              <span>Defina las fechas en el paso 2 para calcular la línea de tiempo</span>
+              <span>Defina las fechas en Control de Fechas y Plazos para calcular la línea de tiempo</span>
             </span>
             <div class="subir-legend-real" id="sla-legend-real" style="display: none; width: 100%; justify-content: space-between; align-items: center;">
               <span class="subir-legend-item">
@@ -120,7 +120,7 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             </div>
             <div>
-              <h3 class="subir-card-title">1. Documento Base de la Petición</h3>
+              <h3 class="subir-card-title">Documento Base de la Petición</h3>
               <p class="subir-card-subtitle">Adjunte el oficio o memorial original (Capacidad Ilimitada · Soporte de Archivos Pesados).</p>
             </div>
           </div>
@@ -218,7 +218,7 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             </div>
             <div>
-              <h3 class="subir-card-title">2. Control de Fechas y Plazos</h3>
+              <h3 class="subir-card-title">Control de Fechas y Plazos</h3>
               <p class="subir-card-subtitle">Defina manualmente los plazos de respuesta sin automatismos rígidos.</p>
             </div>
           </div>
@@ -288,7 +288,7 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
           </div>
           <div>
-            <h3 class="subir-card-title">3. Datos del Solicitante y Clasificación</h3>
+            <h3 class="subir-card-title">Datos del Solicitante y Clasificación</h3>
             <p class="subir-card-subtitle">Asunto principal, datos de contacto del solicitante y prioridad institucional</p>
           </div>
         </div>
@@ -364,15 +364,15 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
             </div>
             <div>
-              <h3 class="subir-card-title">4. Subcarpetas y Dependencias Responsables</h3>
+              <h3 class="subir-card-title">Subcarpetas y Dependencias Responsables</h3>
               <p class="subir-card-subtitle">Estructure las subcarpetas del radicado y asigne las oficinas encargadas de aportar soportes</p>
             </div>
           </div>
 
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-            <button type="button" id="btn-toggle-numeral-builder" class="btn-numeral-builder-toggle" title="Genere series de subcarpetas por numerales como 1A, 1B, 1C o 2B, 3C con un clic">
+            <button type="button" id="btn-toggle-numeral-builder" class="btn-numeral-builder-toggle" title="Cree múltiples subcarpetas en serie (ej. 1A, 1B, 1C o 2B, 3C)">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
-              <span>Constructor por Numerales</span>
+              <span>Generar Subcarpetas</span>
             </button>
             <span class="subir-root-chip" id="subir-root-chip">Carpeta Raíz: Automático (RAD-2026-XXXXX)</span>
             <span class="subir-count-chip" id="subcarpetas-count-badge">1 Subcarpeta</span>
@@ -387,8 +387,8 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
               </div>
               <div>
-                <h4 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: #00594E;">Constructor Rápido de Subcarpetas por Numerales</h4>
-                <p style="margin: 2px 0 0; font-size: 0.74rem; color: #475569;">Genere series estandarizadas (ej. 1A, 1B, 1C o 2B, 3C) con rangos o literales y etiquetas opcionales.</p>
+                <h4 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: #00594E;">Generar Subcarpetas</h4>
+                <p style="margin: 2px 0 0; font-size: 0.74rem; color: #475569;">Cree múltiples subcarpetas en serie (ej. 1A, 1B, 1C o 2B, 3C) con rangos o literales.</p>
               </div>
             </div>
             <button type="button" id="btn-close-numeral-builder" class="numeral-builder-close-btn" title="Cerrar constructor">&times;</button>
@@ -467,9 +467,9 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               <span>Agregar Otra Subcarpeta al Expediente</span>
             </button>
-            <button type="button" id="btn-footer-numeral-builder" class="btn-numeral-builder-secondary" title="Construir por numerales y literales">
+            <button type="button" id="btn-footer-numeral-builder" class="btn-numeral-builder-secondary" title="Cree múltiples subcarpetas en serie (ej. 1A, 1B, 1C o 2B, 3C)">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
-              <span>Constructor por Numerales (ej. 1A, 1B, 1C)</span>
+              <span>Generar Subcarpetas (ej. 1A, 1B, 1C)</span>
             </button>
           </div>
 
@@ -1766,7 +1766,7 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
     .numeral-radio-label input {
       accent-color: #00594E;
     }
-    .numeral-row-card {
+    :global(.numeral-row-card) {
       background: #F8FAFC;
       border: 1px solid #E2E8F0;
       border-radius: 10px;
@@ -1778,11 +1778,11 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
       transition: border-color 0.15s;
     }
     @media (max-width: 900px) {
-      .numeral-row-card {
+      :global(.numeral-row-card) {
         grid-template-columns: 1fr 1fr;
       }
     }
-    .numeral-row-card:hover {
+    :global(.numeral-row-card:hover) {
       border-color: #CBD5E1;
     }
     .btn-add-numeral-row {
@@ -1804,7 +1804,7 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
       border-style: solid;
       transform: translateY(-1px);
     }
-    .numeral-row-delete-btn {
+    :global(.numeral-row-delete-btn) {
       width: 32px;
       height: 32px;
       border-radius: 8px;
@@ -1819,11 +1819,11 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
       font-weight: 800;
       transition: all 0.15s ease;
     }
-    .numeral-row-delete-btn:hover:not(:disabled) {
+    :global(.numeral-row-delete-btn:hover:not(:disabled)) {
       background: #DC2626;
       color: #FFFFFF;
     }
-    .numeral-row-delete-btn:disabled {
+    :global(.numeral-row-delete-btn:disabled) {
       opacity: 0.35;
       cursor: not-allowed;
       border-color: #E2E8F0;
@@ -1847,7 +1847,7 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
       overflow-y: auto;
       padding: 2px 0;
     }
-    .numeral-preview-pill {
+    :global(.numeral-preview-pill) {
       display: inline-flex;
       align-items: center;
       gap: 6px;
@@ -1861,7 +1861,7 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
       font-family: 'JetBrains Mono', ui-monospace, monospace;
       box-shadow: 0 1px 3px rgba(0,0,0,0.03);
     }
-    .numeral-preview-pill-tag {
+    :global(.numeral-preview-pill-tag) {
       font-family: inherit;
       font-size: 0.70rem;
       font-weight: 500;
@@ -1870,6 +1870,45 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+    :global(.subcarpeta-toggle-btn) {
+      height: 32px;
+      background: #F0F7F5;
+      border: 1px solid rgba(0, 89, 78, 0.22);
+      color: #00594E;
+      border-radius: 8px;
+      padding: 0 12px;
+      font-size: 0.74rem;
+      font-weight: 750;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.16s ease;
+    }
+    :global(.subcarpeta-toggle-btn:hover) {
+      background: #E2F1ED;
+      border-color: #00594E;
+    }
+    :global(.btn-remove-subcarpeta) {
+      height: 32px;
+      background: #FFFFFF;
+      border: 1px solid #DCE4E3;
+      color: #475569;
+      border-radius: 8px;
+      padding: 0 12px;
+      font-size: 0.74rem;
+      font-weight: 750;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.16s ease;
+    }
+    :global(.btn-remove-subcarpeta:hover) {
+      background: #FEE2E2;
+      color: #DC2626;
+      border-color: #FECACA;
     }
     .numeral-builder-actions {
       display: flex;
@@ -2475,9 +2514,9 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
           <div class="subcarpeta-card" data-sub-uid="${sub.uid}" style="background: #FBF9F5; border: 1px solid #DCE4E3; border-left: 4px solid #00594E; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 14px; position: relative; animation: subirCrossfade 0.2s ease;">
             
             <!-- Cabecera de la subcarpeta -->
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: ${isCollapsed ? 'none' : '1px solid #E6EBEB'}; padding-bottom: ${isCollapsed ? '0' : '10px'};">
-              <div style="display: flex; align-items: center; gap: 9px; flex-wrap: wrap;">
-                <span style="width: 28px; height: 28px; border-radius: 8px; background: #F2F7F6; border: 1px solid #B2CFCB; color: #00594E; display: inline-flex; align-items: center; justify-content: center;">
+            <div class="subcarpeta-card-header" data-sub-uid="${sub.uid}" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: ${isCollapsed ? 'none' : '1px solid #E6EBEB'}; padding-bottom: ${isCollapsed ? '0' : '10px'}; cursor: pointer; user-select: none;">
+              <div style="display: flex; align-items: center; gap: 9px; flex-wrap: wrap; min-width: 0;">
+                <span style="width: 28px; height: 28px; border-radius: 8px; background: #F2F7F6; border: 1px solid #B2CFCB; color: #00594E; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg>
                 </span>
                 <strong style="font-size: 0.92rem; color: #111827;">Subcarpeta #${idx + 1}</strong>
@@ -2489,14 +2528,14 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
 
               <div style="display: flex; align-items: center; gap: 8px;">
                 ${subcarpetasState.length > 1 ? `
-                  <button type="button" class="btn-toggle-sub-collapse" data-sub-uid="${sub.uid}" title="${isCollapsed ? 'Expandir subcarpeta' : 'Contraer subcarpeta'}">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="transform: ${isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'}; transition: transform 0.2s;"><polyline points="6 9 12 15 18 9"/></svg>
+                  <button type="button" class="subcarpeta-toggle-btn btn-toggle-sub-collapse" data-sub-uid="${sub.uid}" title="${isCollapsed ? 'Expandir subcarpeta' : 'Contraer subcarpeta'}">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" style="transform: ${isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'}; transition: transform 0.2s;"><polyline points="6 9 12 15 18 9"/></svg>
                     <span>${isCollapsed ? 'Expandir' : 'Contraer'}</span>
                   </button>
                 ` : ''}
 
                 ${canDelete ? `
-                  <button type="button" class="btn-remove-subcarpeta" data-sub-uid="${sub.uid}" title="Eliminar esta subcarpeta" style="border: 1px solid #DCE4E3; background: #FFFFFF; color: #475569; border-radius: 8px; padding: 4px 10px; font-size: 0.72rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+                  <button type="button" class="btn-remove-subcarpeta" data-sub-uid="${sub.uid}" title="Eliminar esta subcarpeta">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                     <span>Eliminar Subcarpeta</span>
                   </button>
@@ -2504,12 +2543,15 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
               </div>
             </div>
 
-            ${isCollapsed ? `
-              <div class="sub-collapse-summary">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00594E" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                <span><strong>${escapeHtmlText(sub.nombre || '(Sin nombre definido)')}</strong> &bull; ${selectedCount} dependencia(s) asignada(s) ${sub.descripcion ? `&bull; <em>"${escapeHtmlText(sub.descripcion.slice(0, 60))}${sub.descripcion.length > 60 ? '...' : ''}"</em>` : ''}</span>
-              </div>
-            ` : `
+            ${isCollapsed ? (
+              selectedCount > 0 ? `
+                <div style="font-size: 0.74rem; color: #475569; margin-top: 4px; padding-left: 37px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  <strong style="color: #00594E;">Oficinas asignadas:</strong> ${escapeHtmlText(
+                    sub.selectedOffices.map((id) => oficinasCatalog.find((o) => o.id === id)?.nombre || id).join(', ')
+                  )}
+                </div>
+              ` : ''
+            ) : `
               <!-- Campos de la subcarpeta -->
               <div style="display: grid; grid-template-columns: minmax(240px, 1fr) 2fr; gap: 14px;" class="grid-sub-fields">
                 <div>
@@ -2583,9 +2625,25 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
     }
 
     function attachSubcarpetasEvents() {
-      // Toggle de colapso por tarjeta
+      // Toggle de colapso al hacer clic en el encabezado
+      subcarpetasContainer?.querySelectorAll('.subcarpeta-card-header').forEach((header) => {
+        header.addEventListener('click', (e) => {
+          const target = e.target as HTMLElement;
+          if (target.closest('.btn-remove-subcarpeta')) return;
+          syncCurrentInputsToState();
+          const uid = Number(header.getAttribute('data-sub-uid'));
+          const sub = subcarpetasState.find((s) => s.uid === uid);
+          if (sub) {
+            sub.collapsed = !sub.collapsed;
+            renderSubcarpetas();
+          }
+        });
+      });
+
+      // Toggle de colapso por botón explícito
       subcarpetasContainer?.querySelectorAll('.btn-toggle-sub-collapse').forEach((btn) => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
           syncCurrentInputsToState();
           const uid = Number(btn.getAttribute('data-sub-uid'));
           const sub = subcarpetasState.find((s) => s.uid === uid);
