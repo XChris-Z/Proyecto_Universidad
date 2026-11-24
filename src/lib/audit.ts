@@ -51,7 +51,7 @@ function loadLogs(): AuditLog[] {
   }
 }
 
-function saveLogs(logs: AuditLog[]): void {
+export function saveLogs(logs: AuditLog[]): void {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(AUDIT_STORAGE_KEY, JSON.stringify(logs));
@@ -572,7 +572,7 @@ export async function fetchAuditLogsFromSupabase(): Promise<AuditLog[]> {
     console.warn('[Audit] Error obteniendo logs de Supabase:', err);
   }
 
-  return loadLogs();
+  return [];
 }
 
 /** Obtiene los logs de auditoría locales */

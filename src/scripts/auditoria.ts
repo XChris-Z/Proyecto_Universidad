@@ -52,15 +52,24 @@ export async function initAuditoria() {
     : await fetchAuditLogsFromSupabase();
   let logs: AuditLog[] = (rawLogs || []).filter(isRelevantAuditLog);
 
-  // Si se usó el bootstrap SSR, refrescar en segundo plano sin bloquear
-  if (Array.isArray(windowInitial) && windowInitial.length > 0) {
-    fetchAuditLogsFromSupabase().then((refreshed) => {
-      if (Array.isArray(refreshed) && refreshed.length > 0) {
-        logs = refreshed.filter(isRelevantAuditLog);
+  // Sincronizar de inmediato el almacenamiento local con los datos reales vigentes del servidor
+  if (Array.isArray(windowInitial) && windowInitial.length > 0 && typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('sgd_audit_logs', JSON.stringify(logs));
+    } catch {}
+  }
+
+  // Refrescar en segundo plano desde Supabase sin bloquear ni sobrescribir con datos obsoletos
+  fetchAuditLogsFromSupabase().then((refreshed) => {
+    if (Array.isArray(refreshed) && refreshed.length > 0) {
+      const filtered = refreshed.filter(isRelevantAuditLog);
+      // Validar que realmente traiga datos y que no degrade la lista actual
+      if (filtered.length >= logs.length || filtered.some((f) => !logs.some((l) => l.id === f.id))) {
+        logs = filtered;
         renderAuditLogsView();
       }
-    }).catch(() => {});
-  }
+    }
+  }).catch(() => {});
 
   function updateCounters(filteredList: AuditLog[]) {
     const kpiTotal = document.getElementById('audit-kpi-total');

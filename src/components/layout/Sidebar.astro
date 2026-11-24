@@ -77,7 +77,7 @@ const visibleGroups = navGroupsRaw
       <!-- Logo Oficial Expandido -->
       <img 
         id="sidebar-brand-expanded"
-        src="/simbolo-color.png" 
+        src="/logo.png" 
         alt="Universidad Internacional del Trópico Americano" 
         class="sidebar-brand-full"
       />
@@ -92,22 +92,6 @@ const visibleGroups = navGroupsRaw
     </a>
 
     <div class="brand-actions-wrap">
-      <!-- Selector discreto de variante institucional (Símbolo / Color / Bandera) -->
-      <button
-        type="button"
-        class="btn-logo-variant-toggle"
-        id="btn-toggle-logo-variant"
-        aria-label="Probar variante de logo institucional"
-        data-tooltip="Probar variante de logo institucional"
-        title="Probar variante de logo institucional"
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="12 2 2 7 12 12 22 7 12 2"/>
-          <polyline points="2 17 12 22 22 17"/>
-          <polyline points="2 12 12 17 22 12"/>
-        </svg>
-      </button>
-
       <!-- Botón de plegar / desplegar en la esquina superior derecha del Sidebar -->
       <button
         type="button"
@@ -268,43 +252,6 @@ const visibleGroups = navGroupsRaw
 
       window.addEventListener('unitropico:profile-updated', handleProfileUpdate);
       window.addEventListener('sgd-user-updated', handleProfileUpdate);
-
-      // Gestión y alternancia en vivo de variante de logo institucional
-      var LOGO_VARIANTS = [
-        { id: 'simbolo', src: '/simbolo-color.png', label: 'Escudo + Tipografía Horizontal' },
-        { id: 'color', src: '/color.png', label: 'Palma Institucional + Tipografía' },
-        { id: 'bandera', src: '/bandera-color.png', label: 'Escudo Institucional + Bandera' }
-      ];
-
-      function applyLogoVariant(variantId) {
-        var found = LOGO_VARIANTS.find(function(v) { return v.id === variantId; }) || LOGO_VARIANTS[0];
-        var imgEl = document.getElementById('sidebar-brand-expanded');
-        if (imgEl) {
-          imgEl.src = found.src;
-        }
-        try {
-          localStorage.setItem('unitropico_logo_variant', found.id);
-        } catch (e) {}
-      }
-
-      try {
-        var currentVariant = localStorage.getItem('unitropico_logo_variant') || 'simbolo';
-        applyLogoVariant(currentVariant);
-      } catch (e) {}
-
-      var btnVariant = document.getElementById('btn-toggle-logo-variant');
-      if (btnVariant) {
-        btnVariant.addEventListener('click', function(ev) {
-          ev.preventDefault();
-          ev.stopPropagation();
-          var cur = localStorage.getItem('unitropico_logo_variant') || 'simbolo';
-          var curIdx = LOGO_VARIANTS.findIndex(function(v) { return v.id === cur; });
-          var nextIdx = (curIdx + 1) % LOGO_VARIANTS.length;
-          var nextVar = LOGO_VARIANTS[nextIdx];
-          applyLogoVariant(nextVar.id);
-          btnVariant.setAttribute('title', 'Variante activa: ' + nextVar.label + ' (Clic para cambiar)');
-        });
-      }
     })();
   </script>
 
@@ -318,29 +265,6 @@ const visibleGroups = navGroupsRaw
       align-items: center;
       gap: 6px;
       flex-shrink: 0;
-    }
-
-    .btn-logo-variant-toggle {
-      width: 28px;
-      height: 28px;
-      border-radius: 8px;
-      border: 1px solid #DCE4E3;
-      background: #F8FAF9;
-      color: #00594E;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      flex-shrink: 0;
-      padding: 0;
-    }
-
-    .btn-logo-variant-toggle:hover {
-      background: #E6F0EE;
-      border-color: #B2CFCB;
-      color: #00594E;
-      transform: scale(1.06);
     }
 
     :global(.sidebar-brand-full) {
@@ -369,11 +293,6 @@ const visibleGroups = navGroupsRaw
     :global(body.sidebar-collapsed .sidebar-brand-mini-img) {
       display: block !important;
       margin: 0 auto !important;
-    }
-
-    :global(html.sidebar-is-collapsed .btn-logo-variant-toggle),
-    :global(body.sidebar-collapsed .btn-logo-variant-toggle) {
-      display: none !important;
     }
 
     :global(html.sidebar-is-collapsed .brand-actions-wrap),

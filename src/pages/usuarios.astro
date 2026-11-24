@@ -892,6 +892,7 @@ const initialRbacBootstrap = JSON.stringify({
             </span>
           </div>
           <div style="display: flex; align-items: center; gap: 10px;">
+            <button type="button" class="btn btn-danger" id="btn-delete-custom-role" style="display: none; background: #FEF2F2; color: #DC2626; border: 1.5px solid #FECACA; font-weight: 750; font-size: 0.8rem; border-radius: 9px; padding: 8px 14px; cursor: pointer;">Eliminar Rol</button>
             <button type="button" class="btn btn-secondary" id="btn-cancel-roles-modal">Cerrar</button>
             <button type="submit" form="form-role-editor" id="btn-save-role" class="btn btn-primary" style="font-weight: 800; padding: 9px 20px;">Guardar Cambios del Rol</button>
           </div>
@@ -1871,6 +1872,7 @@ const initialRbacBootstrap = JSON.stringify({
     const roleEditPropagate = document.getElementById('role-edit-propagate') as HTMLInputElement | null;
     const roleAdminLockBanner = document.getElementById('role-admin-lock-banner');
     const btnSaveRole = document.getElementById('btn-save-role') as HTMLButtonElement | null;
+    const btnDeleteRole = document.getElementById('btn-delete-custom-role') as HTMLButtonElement | null;
     const roleLivePreviewBadge = document.getElementById('role-live-preview-badge');
     const roleLivePreviewDot = document.getElementById('role-live-preview-dot');
     const roleLivePreviewText = document.getElementById('role-live-preview-text');
@@ -2114,6 +2116,10 @@ const initialRbacBootstrap = JSON.stringify({
         btnSaveRole.disabled = isAdminRole;
         btnSaveRole.textContent = isNew ? 'Crear Rol' : 'Guardar Cambios del Rol';
       }
+      if (btnDeleteRole) {
+        const canDelete = Boolean(role && !role.isProtected && role.id !== 'admin' && role.id !== 'funcionario');
+        btnDeleteRole.style.display = canDelete ? 'inline-flex' : 'none';
+      }
 
       const rolePerms = isAdminRole
         ? ALL_PERMISSION_IDS
@@ -2273,6 +2279,7 @@ const initialRbacBootstrap = JSON.stringify({
 
         renderRolesCatalog();
         loadRoleIntoEditor(data.role || rolesCatalog.find((r) => r.id === id));
+        syncAllRoleSelects();
         notifyToast(`Rol "${name}" guardado correctamente.`, 'success');
       } catch (err: any) {
         notifyToast(err?.message || 'Error guardando rol.', 'error');
@@ -2283,5 +2290,90 @@ const initialRbacBootstrap = JSON.stringify({
         }
       }
     });
+
+    // Eliminar Rol Personalizado
+    btnDeleteRole?.addEventListener('click', async () => {
+      if (!activeRoleEditorId || activeRoleEditorId === 'admin' || activeRoleEditorId === 'funcionario') return;
+      const targetRole = rolesCatalog.find((r) => r.id === activeRoleEditorId);
+      const roleName = targetRole?.name || activeRoleEditorId;
+
+      if (!confirm(`¿Está seguro de eliminar el rol "${roleName}"? Los usuarios asociados pasarán a rol base Funcionario.`)) {
+        return;
+      }
+
+      btnDeleteRole.disabled = true;
+      btnDeleteRole.textContent = 'Eliminando...';
+
+      try {
+        const res = await fetch('/api/admin/rbac', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            action: 'delete_role',
+            roleId: activeRoleEditorId,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'No se pudo eliminar el rol.');
+        }
+
+        rolesCatalog = rolesCatalog.filter((r) => r.id !== activeRoleEditorId);
+        renderRolesCatalog();
+        const defaultRole = rolesCatalog.find((r) => r.id === 'funcionario') || rolesCatalog[0];
+        loadRoleIntoEditor(defaultRole);
+        syncAllRoleSelects();
+        notifyToast(`Rol "${roleName}" eliminado satisfactoriamente.`, 'success');
+      } catch (err: any) {
+        notifyToast(err?.message || 'Error al eliminar el rol.', 'error');
+      } finally {
+        if (btnDeleteRole) {
+          btnDeleteRole.disabled = false;
+          btnDeleteRole.textContent = 'Eliminar Rol';
+        }
+      }
+    });
+
+    // Sincronizar dinámicamente selects y KPIs de roles en toda la interfaz
+    function syncAllRoleSelects() {
+      const createUserRole = document.getElementById('create-user-role') as HTMLSelectElement | null;
+      const editUserRole = document.getElementById('edit-user-role') as HTMLSelectElement | null;
+
+      [createUserRole, editUserRole].forEach((sel) => {
+        if (!sel) return;
+        const currentVal = sel.value;
+        let html = '';
+        if (isCurrentUserAdmin) {
+          html += '<option value="admin" data-color="#00594E">Administrador</option>';
+        }
+        html += '<option value="funcionario" data-color="#B5A160">Funcionario</option>';
+
+        rolesCatalog
+          .filter((r) => r.id !== 'admin' && r.id !== 'funcionario')
+          .forEach((r) => {
+            const isSel = r.id === currentVal ? 'selected' : '';
+            html += `<option value="${r.id}" data-color="${r.color || '#64748B'}" ${isSel}>${r.name}</option>`;
+          });
+
+        sel.innerHTML = html;
+        if (currentVal && sel.querySelector(`option[value="${currentVal}"]`)) {
+          sel.value = currentVal;
+        }
+        if (typeof (window as any).refrescarSelectPersonalizado === 'function') {
+          (window as any).refrescarSelectPersonalizado(sel);
+        }
+      });
+
+      // Actualizar contadores de roles en cabecera
+      const totalRolesEl = document.getElementById('kpi-total-roles');
+      const customRolesSubEl = document.getElementById('kpi-custom-roles-sub');
+      const customRolesCount = rolesCatalog.filter((r) => !r.isProtected).length;
+      if (totalRolesEl) totalRolesEl.textContent = String(rolesCatalog.length);
+      if (customRolesSubEl) customRolesSubEl.textContent = `${customRolesCount} rol(es) personalizado(s)`;
+    }
+
+    // Inicializar sincronización de selects al cargar
+    syncAllRoleSelects();
   </script>
 </AppLayout>

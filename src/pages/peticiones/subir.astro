@@ -2097,20 +2097,10 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
                   class="form-input sub-input-nombre" 
                   data-sub-uid="${sub.uid}" 
                   value="${escapeHtmlAttr(sub.nombre)}" 
-                  placeholder="Ej: Concepto Jurídico, Soportes Técnicos, Certificación Académica..." 
+                  placeholder="Ej: 1A, 1B, Punto 2 o nombre libre de la subcarpeta" 
                   required 
                   style="font-size: 0.84rem; font-weight: 700; background: #ffffff;"
                 />
-
-                <!-- Sugerencias rápidas -->
-                <div class="subcarpeta-sugerencias">
-                  <span class="sugerencias-label">Sugerencias:</span>
-                  <button type="button" class="sugerencia-chip ${sub.nombre === 'Anexos y Soportes' ? 'is-selected' : ''}" data-sub-uid="${sub.uid}" data-sug="Anexos y Soportes">Anexos y Soportes</button>
-                  <button type="button" class="sugerencia-chip ${sub.nombre === 'Insumos de Respuesta' ? 'is-selected' : ''}" data-sub-uid="${sub.uid}" data-sug="Insumos de Respuesta">Insumos de Respuesta</button>
-                  <button type="button" class="sugerencia-chip ${sub.nombre === 'Certificaciones y Actas' ? 'is-selected' : ''}" data-sub-uid="${sub.uid}" data-sug="Certificaciones y Actas">Certificaciones y Actas</button>
-                  <button type="button" class="sugerencia-chip ${sub.nombre === 'Concepto Técnico / Jurídico' ? 'is-selected' : ''}" data-sub-uid="${sub.uid}" data-sug="Concepto Técnico / Jurídico">Concepto Técnico / Jurídico</button>
-                  <button type="button" class="sugerencia-chip ${sub.nombre === 'Evidencias Documentales' ? 'is-selected' : ''}" data-sub-uid="${sub.uid}" data-sug="Evidencias Documentales">Evidencias Documentales</button>
-                </div>
               </div>
 
               <div>
@@ -2124,6 +2114,16 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
                   placeholder="Especifique los certificados, actas o documentos que las dependencias deben aportar aquí..." 
                   style="font-size: 0.82rem; resize: vertical; background: #ffffff;"
                 >${escapeHtmlText(sub.descripcion)}</textarea>
+
+                <!-- Sugerencias rápidas de requerimientos -->
+                <div class="subcarpeta-sugerencias" style="margin-top: 6px;">
+                  <span class="sugerencias-label">Sugerencias:</span>
+                  <button type="button" class="sugerencia-chip ${(sub.descripcion || '').toLowerCase().includes('aportar anexos y soportes documentales') ? 'is-selected' : ''}" data-sub-uid="${sub.uid}" data-sug="Aportar anexos y soportes documentales">Aportar anexos y soportes documentales</button>
+                  <button type="button" class="sugerencia-chip ${(sub.descripcion || '').toLowerCase().includes('emitir concepto técnico o jurídico') ? 'is-selected' : ''}" data-sub-uid="${sub.uid}" data-sug="Emitir concepto técnico o jurídico">Emitir concepto técnico o jurídico</button>
+                  <button type="button" class="sugerencia-chip ${(sub.descripcion || '').toLowerCase().includes('adjuntar certificaciones y actas vigentes') ? 'is-selected' : ''}" data-sub-uid="${sub.uid}" data-sug="Adjuntar certificaciones y actas vigentes">Adjuntar certificaciones y actas vigentes</button>
+                  <button type="button" class="sugerencia-chip ${(sub.descripcion || '').toLowerCase().includes('remitir insumos para proyectar respuesta') ? 'is-selected' : ''}" data-sub-uid="${sub.uid}" data-sug="Remitir insumos para proyectar respuesta">Remitir insumos para proyectar respuesta</button>
+                  <button type="button" class="sugerencia-chip ${(sub.descripcion || '').toLowerCase().includes('enviar evidencias y trazabilidad del trámite') ? 'is-selected' : ''}" data-sub-uid="${sub.uid}" data-sug="Enviar evidencias y trazabilidad del trámite">Enviar evidencias y trazabilidad del trámite</button>
+                </div>
               </div>
             </div>
 
@@ -2168,34 +2168,67 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
         });
       });
 
-      // Chips de sugerencias rápidas para el nombre de subcarpeta
+      // Chips de sugerencias rápidas para instrucciones de subcarpeta
       subcarpetasContainer?.querySelectorAll('.sugerencia-chip').forEach((sugBtn) => {
         sugBtn.addEventListener('click', (e) => {
           e.preventDefault();
           const uid = Number(sugBtn.getAttribute('data-sub-uid'));
           const sugText = sugBtn.getAttribute('data-sug') || '';
           const sub = subcarpetasState.find((s) => s.uid === uid);
-          if (!sub) return;
-          sub.nombre = sugText;
+          if (!sub || !sugText) return;
+
           const card = sugBtn.closest('.subcarpeta-card');
-          const nameInput = card?.querySelector('.sub-input-nombre') as HTMLInputElement | null;
-          if (nameInput) {
-            nameInput.value = sugText;
-            nameInput.focus();
+          const descInput = card?.querySelector('.sub-input-desc') as HTMLTextAreaElement | null;
+          let currentText = (sub.descripcion || '').trim();
+
+          const lowerCurrent = currentText.toLowerCase();
+          const lowerSug = sugText.toLowerCase();
+
+          if (lowerCurrent.includes(lowerSug)) {
+            // Alternar: remover la sugerencia limpiamente si ya estaba presente
+            const regex = new RegExp(`(?:\\.?\\s*)?${sugText.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}(?:\\.?\\s*)?`, 'gi');
+            currentText = currentText.replace(regex, ' ').replace(/\s+/g, ' ').replace(/\.\s*\./g, '.').trim();
+            if (currentText.startsWith('.')) currentText = currentText.slice(1).trim();
+            if (currentText.endsWith('.')) currentText = currentText.slice(0, -1).trim();
+            sugBtn.classList.remove('is-selected');
+          } else {
+            // Añadir limpiamente sin borrar el texto que el usuario ya redactó
+            if (!currentText) {
+              currentText = sugText;
+            } else {
+              const cleanCurrent = currentText.replace(/\.+$/, '').trim();
+              currentText = `${cleanCurrent}. ${sugText}`;
+            }
+            sugBtn.classList.add('is-selected');
           }
-          const wrapper = sugBtn.closest('.subcarpeta-sugerencias');
-          wrapper?.querySelectorAll('.sugerencia-chip').forEach((c) => c.classList.remove('is-selected'));
-          sugBtn.classList.add('is-selected');
+
+          sub.descripcion = currentText;
+          if (descInput) {
+            descInput.value = currentText;
+            descInput.dispatchEvent(new Event('input', { bubbles: true }));
+          }
         });
       });
 
-      // Textareas de descripción
+      // Textareas de descripción con sincronización activa de chips
       subcarpetasContainer?.querySelectorAll('.sub-input-desc').forEach((textarea) => {
         textarea.addEventListener('input', (e) => {
           const target = e.target as HTMLTextAreaElement;
           const uid = Number(target.getAttribute('data-sub-uid'));
           const sub = subcarpetasState.find((s) => s.uid === uid);
-          if (sub) sub.descripcion = target.value;
+          if (sub) {
+            sub.descripcion = target.value;
+            const card = target.closest('.subcarpeta-card');
+            const lowerVal = target.value.toLowerCase();
+            card?.querySelectorAll<HTMLButtonElement>('.sugerencia-chip').forEach((chip) => {
+              const sug = (chip.getAttribute('data-sug') || '').toLowerCase();
+              if (sug && lowerVal.includes(sug)) {
+                chip.classList.add('is-selected');
+              } else {
+                chip.classList.remove('is-selected');
+              }
+            });
+          }
         });
       });
 
