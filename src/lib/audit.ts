@@ -65,7 +65,22 @@ function getLastHash(logs: AuditLog[]): string {
 }
 
 export function formatBogotaTimestamp(dateInput?: Date | string | number | null): string {
-  const d = dateInput ? new Date(dateInput) : new Date();
+  if (!dateInput) return '';
+  let d: Date;
+  if (dateInput instanceof Date) {
+    d = dateInput;
+  } else if (typeof dateInput === 'number') {
+    d = new Date(dateInput);
+  } else if (typeof dateInput === 'string') {
+    const trimmed = dateInput.trim();
+    if (/^\d{10,14}$/.test(trimmed)) {
+      d = new Date(Number(trimmed));
+    } else {
+      d = new Date(trimmed);
+    }
+  } else {
+    d = new Date(dateInput as any);
+  }
   if (Number.isNaN(d.getTime())) return String(dateInput || '');
   return d.toLocaleString('es-CO', {
     timeZone: BOGOTA_TZ,

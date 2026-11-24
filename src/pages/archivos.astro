@@ -1145,7 +1145,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
     </div>
   </div>
 
-  <script id="data-archivos-oficinas" type="application/json" set:html={JSON.stringify(oficinasCatalogo)} />
+  <script id="data-archivos-oficinas" type="application/json" is:inline set:html={JSON.stringify(oficinasCatalogo)}></script>
 
   <style is:global>
     /* Estilos Globales para elementos dinámicos del Modal de Respuesta al Solicitante */

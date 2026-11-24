@@ -40,6 +40,22 @@ function esEventoDeExpediente(log: AuditLog): boolean {
   return false;
 }
 
+function sortLogsDescending(list: AuditLog[]): AuditLog[] {
+  return [...list].sort((a, b) => {
+    const parseTime = (val?: string | number | null) => {
+      if (!val) return 0;
+      if (typeof val === 'number') return val;
+      const t = String(val).trim();
+      if (/^\d{10,14}$/.test(t)) return Number(t);
+      const ms = new Date(t).getTime();
+      return Number.isNaN(ms) ? 0 : ms;
+    };
+    const tA = parseTime(a.rawTimestamp || (a as any).created_at);
+    const tB = parseTime(b.rawTimestamp || (b as any).created_at);
+    return tB - tA;
+  });
+}
+
 export async function initAuditoria() {
   const tbody = document.getElementById('audit-logs-tbody');
   const emptyState = document.getElementById('audit-empty-state');
@@ -50,7 +66,7 @@ export async function initAuditoria() {
   let rawLogs: AuditLog[] = Array.isArray(windowInitial) && windowInitial.length > 0
     ? (windowInitial as AuditLog[])
     : await fetchAuditLogsFromSupabase();
-  let logs: AuditLog[] = (rawLogs || []).filter(isRelevantAuditLog);
+  let logs: AuditLog[] = sortLogsDescending((rawLogs || []).filter(isRelevantAuditLog));
 
   // Sincronizar de inmediato el almacenamiento local con los datos reales vigentes del servidor
   if (Array.isArray(windowInitial) && windowInitial.length > 0 && typeof window !== 'undefined') {
@@ -62,7 +78,7 @@ export async function initAuditoria() {
   // Refrescar en segundo plano desde Supabase sin bloquear ni sobrescribir con datos obsoletos
   fetchAuditLogsFromSupabase().then((refreshed) => {
     if (Array.isArray(refreshed) && refreshed.length > 0) {
-      const filtered = refreshed.filter(isRelevantAuditLog);
+      const filtered = sortLogsDescending(refreshed.filter(isRelevantAuditLog));
       // Validar que realmente traiga datos y que no degrade la lista actual
       if (filtered.length >= logs.length || filtered.some((f) => !logs.some((l) => l.id === f.id))) {
         logs = filtered;

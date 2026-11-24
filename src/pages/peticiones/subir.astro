@@ -370,8 +370,88 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
           </div>
 
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <button type="button" id="btn-toggle-numeral-builder" class="btn-numeral-builder-toggle" title="Genere series de subcarpetas por numerales como 1A, 1B, 1C o 2B, 3C con un clic">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
+              <span>Constructor por Numerales</span>
+            </button>
             <span class="subir-root-chip" id="subir-root-chip">Carpeta Raíz: Automático (RAD-2026-XXXXX)</span>
             <span class="subir-count-chip" id="subcarpetas-count-badge">1 Subcarpeta</span>
+          </div>
+        </div>
+
+        <!-- Panel Mini-Constructor por Numerales -->
+        <div id="panel-numeral-builder" class="numeral-builder-panel" style="display: none;">
+          <div class="numeral-builder-header">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div class="numeral-builder-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              </div>
+              <div>
+                <h4 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: #00594E;">Constructor Rápido de Subcarpetas por Numerales</h4>
+                <p style="margin: 2px 0 0; font-size: 0.74rem; color: #475569;">Genere series estandarizadas (ej. 1A, 1B, 1C o 2B, 3C) con rangos o literales y etiquetas opcionales.</p>
+              </div>
+            </div>
+            <button type="button" id="btn-close-numeral-builder" class="numeral-builder-close-btn" title="Cerrar constructor">&times;</button>
+          </div>
+
+          <!-- Selector de Separador -->
+          <div class="numeral-builder-format-row">
+            <label class="numeral-field-label">Formato de unión numeral-letra:</label>
+            <div class="numeral-format-options">
+              <label class="numeral-radio-label">
+                <input type="radio" name="numeral-sep" value="" checked class="numeral-sep-radio" />
+                <span>Sin espacio (ej. <strong>1A</strong>)</span>
+              </label>
+              <label class="numeral-radio-label">
+                <input type="radio" name="numeral-sep" value="-" class="numeral-sep-radio" />
+                <span>Guion (ej. <strong>1-A</strong>)</span>
+              </label>
+              <label class="numeral-radio-label">
+                <input type="radio" name="numeral-sep" value="." class="numeral-sep-radio" />
+                <span>Punto (ej. <strong>1.A</strong>)</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Filas dinámicas de Numerales -->
+          <div id="numeral-rows-container" style="display: flex; flex-direction: column; gap: 10px;">
+            <!-- Se generan vía JS -->
+          </div>
+
+          <!-- Botón agregar otra serie / numeral -->
+          <div style="display: flex; justify-content: flex-start; margin-top: 4px;">
+            <button type="button" id="btn-add-numeral-row" class="btn-add-numeral-row">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
+              <span>Agregar Otra Serie / Numeral</span>
+            </button>
+          </div>
+
+          <!-- Caja de Previsualización en Tiempo Real -->
+          <div class="numeral-preview-box">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="font-size: 0.73rem; font-weight: 800; text-transform: uppercase; color: #00594E;">Vista Previa en Tiempo Real:</span>
+              <span id="numeral-preview-count" style="font-size: 0.72rem; font-weight: 750; color: #786832; background: #F7F5EE; border: 1px solid #DBD2B0; padding: 2px 8px; border-radius: 999px;">0 subcarpetas a generar</span>
+            </div>
+            <div id="numeral-preview-chips" class="numeral-preview-chips">
+              <!-- Chips generados en vivo -->
+            </div>
+            <div id="numeral-builder-warning" style="display: none; margin-top: 8px; padding: 6px 12px; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA;"></div>
+          </div>
+
+          <!-- Barra de Acciones del Constructor -->
+          <div class="numeral-builder-actions">
+            <label style="display: inline-flex; align-items: center; gap: 7px; font-size: 0.78rem; font-weight: 600; color: #374151; cursor: pointer; user-select: none;">
+              <input type="checkbox" id="numeral-replace-empty" checked style="accent-color: #00594E; width: 16px; height: 16px;" />
+              <span>Reemplazar subcarpetas vacías existentes</span>
+            </label>
+
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <button type="button" id="btn-cancel-numeral-builder" class="btn-numeral-cancel">Cancelar</button>
+              <button type="button" id="btn-generate-subcarpetas" class="btn-numeral-generate" disabled>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 13l4 4L19 7"/></svg>
+                <span id="btn-generate-subcarpetas-text">Generar Subcarpetas</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -382,10 +462,16 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
 
         <!-- Barra inferior del constructor -->
         <div class="subir-subcarpetas-footer">
-          <button type="button" id="btn-add-subcarpeta" class="btn-add-subcarpeta-pro">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            <span>Agregar Otra Subcarpeta al Expediente</span>
-          </button>
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <button type="button" id="btn-add-subcarpeta" class="btn-add-subcarpeta-pro">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span>Agregar Otra Subcarpeta al Expediente</span>
+            </button>
+            <button type="button" id="btn-footer-numeral-builder" class="btn-numeral-builder-secondary" title="Construir por numerales y literales">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
+              <span>Constructor por Numerales (ej. 1A, 1B, 1C)</span>
+            </button>
+          </div>
 
           <button type="submit" id="btn-submit-peticion" class="btn-submit-subir-pro">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
@@ -395,7 +481,7 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
       </div>
 
       <!-- JSON del catálogo de oficinas disponibles para el constructor de subcarpetas -->
-      <script id="data-oficinas-catalog" type="application/json" set:html={JSON.stringify(oficinas)} />
+      <script id="data-oficinas-catalog" type="application/json" is:inline set:html={JSON.stringify(oficinas)}></script>
 
     </form>
   </section>
@@ -1553,6 +1639,318 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
       border-color: #786832 !important;
       background: #F7F5EE !important;
     }
+
+    /* =========================================================================
+       Mini-Constructor por Numerales y Colapso de Subcarpetas
+       ========================================================================= */
+    .btn-numeral-builder-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 13px;
+      background: #F2F7F6;
+      color: #00594E;
+      border: 1.5px solid #B2CFCB;
+      border-radius: 8px;
+      font-size: 0.76rem;
+      font-weight: 750;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+    .btn-numeral-builder-toggle:hover {
+      background: #00594E;
+      color: #FFFFFF;
+      border-color: #00594E;
+      box-shadow: 0 3px 10px rgba(0, 89, 78, 0.16);
+      transform: translateY(-1px);
+    }
+    .btn-numeral-builder-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 15px;
+      background: #F7F5EE;
+      color: #786832;
+      border: 1.5px solid #DBD2B0;
+      border-radius: 9px;
+      font-size: 0.80rem;
+      font-weight: 750;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+    .btn-numeral-builder-secondary:hover {
+      background: #B5A160;
+      color: #FFFFFF;
+      border-color: #B5A160;
+      box-shadow: 0 3px 10px rgba(181, 161, 96, 0.22);
+      transform: translateY(-1px);
+    }
+    .numeral-builder-panel {
+      background: #FFFFFF;
+      border: 1.5px solid #DCE4E3;
+      border-left: 4px solid #00594E;
+      border-radius: 14px;
+      padding: 18px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: 0 10px 28px rgba(0, 89, 78, 0.07);
+      animation: subirCrossfade 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .numeral-builder-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #E6EBEB;
+      padding-bottom: 12px;
+    }
+    .numeral-builder-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 9px;
+      background: #F2F7F6;
+      border: 1px solid #B2CFCB;
+      color: #00594E;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .numeral-builder-close-btn {
+      background: transparent;
+      border: none;
+      font-size: 1.5rem;
+      color: #64748B;
+      cursor: pointer;
+      line-height: 1;
+      padding: 2px 6px;
+      border-radius: 6px;
+      transition: color 0.15s, background 0.15s;
+    }
+    .numeral-builder-close-btn:hover {
+      color: #DC2626;
+      background: #FEE2E2;
+    }
+    .numeral-builder-format-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      background: #FBF9F5;
+      padding: 10px 14px;
+      border-radius: 9px;
+      border: 1px solid #E6EBEB;
+    }
+    .numeral-field-label {
+      font-size: 0.74rem;
+      font-weight: 750;
+      color: #00594E;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .numeral-format-options {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .numeral-radio-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.80rem;
+      color: #374151;
+      cursor: pointer;
+      user-select: none;
+    }
+    .numeral-radio-label input {
+      accent-color: #00594E;
+    }
+    .numeral-row-card {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 10px;
+      padding: 12px 14px;
+      display: grid;
+      grid-template-columns: 80px 190px minmax(130px, 1fr) minmax(160px, 1.2fr) 36px;
+      gap: 10px;
+      align-items: center;
+      transition: border-color 0.15s;
+    }
+    @media (max-width: 900px) {
+      .numeral-row-card {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    .numeral-row-card:hover {
+      border-color: #CBD5E1;
+    }
+    .btn-add-numeral-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      background: #F2F7F6;
+      color: #00594E;
+      border: 1px dashed #00594E;
+      border-radius: 8px;
+      font-size: 0.76rem;
+      font-weight: 750;
+      cursor: pointer;
+      transition: all 0.16s ease;
+    }
+    .btn-add-numeral-row:hover {
+      background: #E6F2EF;
+      border-style: solid;
+      transform: translateY(-1px);
+    }
+    .numeral-row-delete-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid #FECACA;
+      background: #FEF2F2;
+      color: #DC2626;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 800;
+      transition: all 0.15s ease;
+    }
+    .numeral-row-delete-btn:hover:not(:disabled) {
+      background: #DC2626;
+      color: #FFFFFF;
+    }
+    .numeral-row-delete-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      border-color: #E2E8F0;
+      background: #F1F5F9;
+      color: #94A3B8;
+    }
+    .numeral-preview-box {
+      background: #F7F5EE;
+      border: 1.5px solid #DBD2B0;
+      border-radius: 10px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .numeral-preview-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      max-height: 120px;
+      overflow-y: auto;
+      padding: 2px 0;
+    }
+    .numeral-preview-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #FFFFFF;
+      color: #00594E;
+      border: 1px solid #B2CFCB;
+      padding: 3px 9px;
+      border-radius: 6px;
+      font-size: 0.76rem;
+      font-weight: 750;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    .numeral-preview-pill-tag {
+      font-family: inherit;
+      font-size: 0.70rem;
+      font-weight: 500;
+      color: #64748B;
+      max-width: 140px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .numeral-builder-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid #E6EBEB;
+      padding-top: 14px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .btn-numeral-cancel {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid #DCE4E3;
+      background: #FFFFFF;
+      color: #475569;
+      font-size: 0.80rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.16s ease;
+    }
+    .btn-numeral-cancel:hover {
+      background: #F1F5F9;
+      color: #1E293B;
+    }
+    .btn-numeral-generate {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 20px;
+      border-radius: 9px;
+      border: none;
+      background: #00594E;
+      color: #FFFFFF;
+      font-size: 0.84rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      box-shadow: 0 4px 14px rgba(0, 89, 78, 0.22);
+    }
+    .btn-numeral-generate:hover:not(:disabled) {
+      background: #00443B;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(0, 89, 78, 0.28);
+    }
+    .btn-numeral-generate:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+    .btn-toggle-sub-collapse {
+      background: #FFFFFF;
+      border: 1px solid #DCE4E3;
+      color: #475569;
+      border-radius: 8px;
+      padding: 4px 9px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.16s ease;
+    }
+    .btn-toggle-sub-collapse:hover {
+      background: #F2F7F6;
+      color: #00594E;
+      border-color: #B2CFCB;
+    }
+    .sub-collapse-summary {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: #F8FAFC;
+      border: 1px dashed #CBD5E1;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      color: #475569;
+    }
   </style>
 
   <script>
@@ -1992,12 +2390,21 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
       console.error('Error cargando catálogo de oficinas:', e);
     }
 
-    let subcarpetasState = [
+    interface SubcarpetaItem {
+      uid: number;
+      nombre: string;
+      descripcion: string;
+      selectedOffices: string[];
+      collapsed?: boolean;
+    }
+
+    let subcarpetasState: SubcarpetaItem[] = [
       {
         uid: Date.now(),
         nombre: '',
         descripcion: '',
         selectedOffices: [] as string[],
+        collapsed: false,
       },
     ];
 
@@ -2027,6 +2434,7 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
       subcarpetasContainer.innerHTML = subcarpetasState.map((sub, idx) => {
         const canDelete = subcarpetasState.length > 1;
         const selectedCount = sub.selectedOffices.length;
+        const isCollapsed = Boolean(sub.collapsed);
 
         const officesChipsHtml = oficinasCatalog.map((ofi: any) => {
           const isChecked = sub.selectedOffices.includes(ofi.id);
@@ -2067,80 +2475,97 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
           <div class="subcarpeta-card" data-sub-uid="${sub.uid}" style="background: #FBF9F5; border: 1px solid #DCE4E3; border-left: 4px solid #00594E; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 14px; position: relative; animation: subirCrossfade 0.2s ease;">
             
             <!-- Cabecera de la subcarpeta -->
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid #E6EBEB; padding-bottom: 10px;">
-              <div style="display: flex; align-items: center; gap: 9px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: ${isCollapsed ? 'none' : '1px solid #E6EBEB'}; padding-bottom: ${isCollapsed ? '0' : '10px'};">
+              <div style="display: flex; align-items: center; gap: 9px; flex-wrap: wrap;">
                 <span style="width: 28px; height: 28px; border-radius: 8px; background: #F2F7F6; border: 1px solid #B2CFCB; color: #00594E; display: inline-flex; align-items: center; justify-content: center;">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg>
                 </span>
                 <strong style="font-size: 0.92rem; color: #111827;">Subcarpeta #${idx + 1}</strong>
+                ${sub.nombre ? `<span style="font-size: 0.82rem; font-weight: 800; color: #00594E; background: #E6F2EF; padding: 2px 8px; border-radius: 6px; font-family: 'JetBrains Mono', ui-monospace, monospace;">${escapeHtmlText(sub.nombre)}</span>` : ''}
                 <span style="font-size: 0.70rem; font-weight: 700; color: ${selectedCount > 0 ? '#00594E' : '#64748B'}; background: ${selectedCount > 0 ? '#F2F7F6' : '#F8FAFC'}; border: 1px solid ${selectedCount > 0 ? '#B2CFCB' : '#DCE4E3'}; padding: 2px 9px; border-radius: 999px;">
                   ${selectedCount} dependencia${selectedCount === 1 ? '' : 's'} asignada${selectedCount === 1 ? '' : 's'}
                 </span>
               </div>
 
-              ${canDelete ? `
-                <button type="button" class="btn-remove-subcarpeta" data-sub-uid="${sub.uid}" title="Eliminar esta subcarpeta" style="border: 1px solid #DCE4E3; background: #FFFFFF; color: #475569; border-radius: 8px; padding: 4px 10px; font-size: 0.72rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                  <span>Eliminar Subcarpeta</span>
-                </button>
-              ` : ''}
+              <div style="display: flex; align-items: center; gap: 8px;">
+                ${subcarpetasState.length > 1 ? `
+                  <button type="button" class="btn-toggle-sub-collapse" data-sub-uid="${sub.uid}" title="${isCollapsed ? 'Expandir subcarpeta' : 'Contraer subcarpeta'}">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="transform: ${isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'}; transition: transform 0.2s;"><polyline points="6 9 12 15 18 9"/></svg>
+                    <span>${isCollapsed ? 'Expandir' : 'Contraer'}</span>
+                  </button>
+                ` : ''}
+
+                ${canDelete ? `
+                  <button type="button" class="btn-remove-subcarpeta" data-sub-uid="${sub.uid}" title="Eliminar esta subcarpeta" style="border: 1px solid #DCE4E3; background: #FFFFFF; color: #475569; border-radius: 8px; padding: 4px 10px; font-size: 0.72rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    <span>Eliminar Subcarpeta</span>
+                  </button>
+                ` : ''}
+              </div>
             </div>
 
-            <!-- Campos de la subcarpeta -->
-            <div style="display: grid; grid-template-columns: minmax(240px, 1fr) 2fr; gap: 14px;" class="grid-sub-fields">
-              <div>
-                <label style="font-size: 0.75rem; font-weight: 700; color: var(--text-main); text-transform: uppercase; margin-bottom: 4px; display: block;">
-                  Nombre de la Subcarpeta *
-                </label>
-                <input 
-                  type="text" 
-                  class="form-input sub-input-nombre" 
-                  data-sub-uid="${sub.uid}" 
-                  value="${escapeHtmlAttr(sub.nombre)}" 
-                  placeholder="Ej: 1A, 1B, Punto 2 o nombre libre de la subcarpeta" 
-                  required 
-                  style="font-size: 0.84rem; font-weight: 700; background: #ffffff;"
-                />
+            ${isCollapsed ? `
+              <div class="sub-collapse-summary">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00594E" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <span><strong>${escapeHtmlText(sub.nombre || '(Sin nombre definido)')}</strong> &bull; ${selectedCount} dependencia(s) asignada(s) ${sub.descripcion ? `&bull; <em>"${escapeHtmlText(sub.descripcion.slice(0, 60))}${sub.descripcion.length > 60 ? '...' : ''}"</em>` : ''}</span>
               </div>
+            ` : `
+              <!-- Campos de la subcarpeta -->
+              <div style="display: grid; grid-template-columns: minmax(240px, 1fr) 2fr; gap: 14px;" class="grid-sub-fields">
+                <div>
+                  <label style="font-size: 0.75rem; font-weight: 700; color: var(--text-main); text-transform: uppercase; margin-bottom: 4px; display: block;">
+                    Nombre de la Subcarpeta *
+                  </label>
+                  <input 
+                    type="text" 
+                    class="form-input sub-input-nombre" 
+                    data-sub-uid="${sub.uid}" 
+                    value="${escapeHtmlAttr(sub.nombre)}" 
+                    placeholder="Ej: 1A, 1B, Punto 2 o nombre libre de la subcarpeta" 
+                    required 
+                    style="font-size: 0.84rem; font-weight: 700; background: #ffffff;"
+                  />
+                </div>
 
-              <div>
-                <label style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; display: block;">
-                  Instrucciones o requerimiento de anexos para esta subcarpeta
-                </label>
-                <textarea 
-                  class="form-input sub-input-desc" 
-                  data-sub-uid="${sub.uid}" 
-                  rows="2" 
-                  placeholder="Especifique los certificados, actas o documentos que las dependencias deben aportar aquí..." 
-                  style="font-size: 0.82rem; resize: vertical; background: #ffffff;"
-                >${escapeHtmlText(sub.descripcion)}</textarea>
+                <div>
+                  <label style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; display: block;">
+                    Instrucciones o requerimiento de anexos para esta subcarpeta
+                  </label>
+                  <textarea 
+                    class="form-input sub-input-desc" 
+                    data-sub-uid="${sub.uid}" 
+                    rows="2" 
+                    placeholder="Especifique los certificados, actas o documentos que las dependencias deben aportar aquí..." 
+                    style="font-size: 0.82rem; resize: vertical; background: #ffffff;"
+                  >${escapeHtmlText(sub.descripcion)}</textarea>
 
-                <!-- Sugerencias rápidas de requerimientos -->
-                <div class="subcarpeta-sugerencias" style="margin-top: 6px;">
-                  <span class="sugerencias-label">Sugerencias:</span>
-                  <button type="button" class="sugerencia-chip ${(sub.descripcion || '').toLowerCase().includes('aportar anexos y soportes documentales') ? 'is-selected' : ''}" data-sub-uid="${sub.uid}" data-sug="Aportar anexos y soportes documentales">Aportar anexos y soportes documentales</button>
-                  <button type="button" class="sugerencia-chip ${(sub.descripcion || '').toLowerCase().includes('emitir concepto técnico o jurídico') ? 'is-selected' : ''}" data-sub-uid="${sub.uid}" data-sug="Emitir concepto técnico o jurídico">Emitir concepto técnico o jurídico</button>
-                  <button type="button" class="sugerencia-chip ${(sub.descripcion || '').toLowerCase().includes('adjuntar certificaciones y actas vigentes') ? 'is-selected' : ''}" data-sub-uid="${sub.uid}" data-sug="Adjuntar certificaciones y actas vigentes">Adjuntar certificaciones y actas vigentes</button>
-                  <button type="button" class="sugerencia-chip ${(sub.descripcion || '').toLowerCase().includes('remitir insumos para proyectar respuesta') ? 'is-selected' : ''}" data-sub-uid="${sub.uid}" data-sug="Remitir insumos para proyectar respuesta">Remitir insumos para proyectar respuesta</button>
-                  <button type="button" class="sugerencia-chip ${(sub.descripcion || '').toLowerCase().includes('enviar evidencias y trazabilidad del trámite') ? 'is-selected' : ''}" data-sub-uid="${sub.uid}" data-sug="Enviar evidencias y trazabilidad del trámite">Enviar evidencias y trazabilidad del trámite</button>
+                  <!-- Sugerencias rápidas de requerimientos -->
+                  <div class="subcarpeta-sugerencias" style="margin-top: 6px;">
+                    <span class="sugerencias-label">Sugerencias:</span>
+                    <button type="button" class="sugerencia-chip ${(sub.descripcion || '').toLowerCase().includes('aportar anexos y soportes documentales') ? 'is-selected' : ''}" data-sub-uid="${sub.uid}" data-sug="Aportar anexos y soportes documentales">Aportar anexos y soportes documentales</button>
+                    <button type="button" class="sugerencia-chip ${(sub.descripcion || '').toLowerCase().includes('emitir concepto técnico o jurídico') ? 'is-selected' : ''}" data-sub-uid="${sub.uid}" data-sug="Emitir concepto técnico o jurídico">Emitir concepto técnico o jurídico</button>
+                    <button type="button" class="sugerencia-chip ${(sub.descripcion || '').toLowerCase().includes('adjuntar certificaciones y actas vigentes') ? 'is-selected' : ''}" data-sub-uid="${sub.uid}" data-sug="Adjuntar certificaciones y actas vigentes">Adjuntar certificaciones y actas vigentes</button>
+                    <button type="button" class="sugerencia-chip ${(sub.descripcion || '').toLowerCase().includes('remitir insumos para proyectar respuesta') ? 'is-selected' : ''}" data-sub-uid="${sub.uid}" data-sug="Remitir insumos para proyectar respuesta">Remitir insumos para proyectar respuesta</button>
+                    <button type="button" class="sugerencia-chip ${(sub.descripcion || '').toLowerCase().includes('enviar evidencias y trazabilidad del trámite') ? 'is-selected' : ''}" data-sub-uid="${sub.uid}" data-sug="Enviar evidencias y trazabilidad del trámite">Enviar evidencias y trazabilidad del trámite</button>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <!-- Selector de Oficinas Responsables Asignadas a esta Subcarpeta -->
-            <div style="margin-top: 4px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <label style="font-size: 0.75rem; font-weight: 700; color: var(--dorado-oscuro); text-transform: uppercase;">
-                  Dependencias Asignadas a esta Subcarpeta *
-                </label>
-                <span style="font-size: 0.70rem; color: var(--text-muted);">
-                  Haga clic sobre una o más dependencias para asignarlas
-                </span>
+              <!-- Selector de Oficinas Responsables Asignadas a esta Subcarpeta -->
+              <div style="margin-top: 4px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <label style="font-size: 0.75rem; font-weight: 700; color: var(--dorado-oscuro); text-transform: uppercase;">
+                    Dependencias Asignadas a esta Subcarpeta *
+                  </label>
+                  <span style="font-size: 0.70rem; color: var(--text-muted);">
+                    Haga clic sobre una o más dependencias para asignarlas
+                  </span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 8px;">
+                  ${officesChipsHtml}
+                </div>
               </div>
-              <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 8px;">
-                ${officesChipsHtml}
-              </div>
-            </div>
+            `}
 
           </div>
         `;
@@ -2158,6 +2583,19 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
     }
 
     function attachSubcarpetasEvents() {
+      // Toggle de colapso por tarjeta
+      subcarpetasContainer?.querySelectorAll('.btn-toggle-sub-collapse').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          syncCurrentInputsToState();
+          const uid = Number(btn.getAttribute('data-sub-uid'));
+          const sub = subcarpetasState.find((s) => s.uid === uid);
+          if (sub) {
+            sub.collapsed = !sub.collapsed;
+            renderSubcarpetas();
+          }
+        });
+      });
+
       // Inputs de nombre
       subcarpetasContainer?.querySelectorAll('.sub-input-nombre').forEach((input) => {
         input.addEventListener('input', (e) => {
@@ -2271,6 +2709,7 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
         nombre: '',
         descripcion: '',
         selectedOffices: [],
+        collapsed: false,
       });
       renderSubcarpetas();
       // Scroll suave hacia la nueva subcarpeta
@@ -2278,6 +2717,425 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
       if (cards && cards.length > 0) {
         cards[cards.length - 1]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
+    });
+
+    // =========================================================================
+    // Lógica del Mini-Constructor por Numerales
+    // =========================================================================
+    const panelNumeralBuilder = document.getElementById('panel-numeral-builder');
+    const btnToggleNumeralBuilder = document.getElementById('btn-toggle-numeral-builder');
+    const btnFooterNumeralBuilder = document.getElementById('btn-footer-numeral-builder');
+    const btnCloseNumeralBuilder = document.getElementById('btn-close-numeral-builder');
+    const btnCancelNumeralBuilder = document.getElementById('btn-cancel-numeral-builder');
+    const btnAddNumeralRow = document.getElementById('btn-add-numeral-row');
+    const btnGenerateSubcarpetas = document.getElementById('btn-generate-subcarpetas') as HTMLButtonElement | null;
+    const btnGenerateSubcarpetasText = document.getElementById('btn-generate-subcarpetas-text');
+    const numeralRowsContainer = document.getElementById('numeral-rows-container');
+    const numeralPreviewChips = document.getElementById('numeral-preview-chips');
+    const numeralPreviewCount = document.getElementById('numeral-preview-count');
+    const numeralBuilderWarning = document.getElementById('numeral-builder-warning');
+    const numeralReplaceEmpty = document.getElementById('numeral-replace-empty') as HTMLInputElement | null;
+    const numeralSepRadios = document.querySelectorAll<HTMLInputElement>('.numeral-sep-radio');
+
+    interface NumeralRowDef {
+      id: number;
+      numeral: string;
+      mode: 'rango' | 'especificos' | 'solo_numeral';
+      desde: string;
+      hasta: string;
+      especificos: string;
+      etiqueta: string;
+    }
+
+    let numeralRows: NumeralRowDef[] = [
+      { id: 1, numeral: '1', mode: 'rango', desde: 'A', hasta: 'C', especificos: '', etiqueta: '' },
+    ];
+
+    const alphabetAtoZ = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
+    function getSelectedNumeralSeparator(): string {
+      let sep = '';
+      numeralSepRadios.forEach((r) => {
+        if (r.checked) sep = r.value;
+      });
+      return sep;
+    }
+
+    function renderNumeralRows() {
+      if (!numeralRowsContainer) return;
+
+      numeralRowsContainer.innerHTML = numeralRows.map((row) => {
+        const canDelete = numeralRows.length > 1;
+
+        const optionsDesde = alphabetAtoZ.map((letra) =>
+          `<option value="${letra}" ${row.desde === letra ? 'selected' : ''}>${letra}</option>`
+        ).join('');
+
+        const optionsHasta = alphabetAtoZ.map((letra) =>
+          `<option value="${letra}" ${row.hasta === letra ? 'selected' : ''}>${letra}</option>`
+        ).join('');
+
+        return `
+          <div class="numeral-row-card" data-row-id="${row.id}">
+            <!-- 1. Numeral -->
+            <div>
+              <label style="font-size: 0.68rem; font-weight: 750; color: #00594E; text-transform: uppercase; display: block; margin-bottom: 3px;">Numeral</label>
+              <input 
+                type="text" 
+                class="form-input numeral-row-num" 
+                data-row-id="${row.id}" 
+                value="${escapeHtmlAttr(row.numeral)}" 
+                placeholder="Ej. 1" 
+                required 
+                style="font-size: 0.85rem; font-weight: 800; font-family: monospace; text-align: center; padding: 6px 8px; background: #FFFFFF;"
+              />
+            </div>
+
+            <!-- 2. Modo -->
+            <div>
+              <label style="font-size: 0.68rem; font-weight: 750; color: #475569; text-transform: uppercase; display: block; margin-bottom: 3px;">Modo de Generación</label>
+              <select class="form-select numeral-row-mode" data-row-id="${row.id}" data-native-select="true" style="font-size: 0.80rem; font-weight: 700; padding: 6px 10px; background: #FFFFFF;">
+                <option value="rango" ${row.mode === 'rango' ? 'selected' : ''}>Rango (Desde-Hasta)</option>
+                <option value="especificos" ${row.mode === 'especificos' ? 'selected' : ''}>Literales (ej. A, C, E)</option>
+                <option value="solo_numeral" ${row.mode === 'solo_numeral' ? 'selected' : ''}>Solo Numeral (sin letra)</option>
+              </select>
+            </div>
+
+            <!-- 3. Controles según modo -->
+            <div>
+              ${row.mode === 'rango' ? `
+                <label style="font-size: 0.68rem; font-weight: 750; color: #475569; text-transform: uppercase; display: block; margin-bottom: 3px;">Rango de Letras</label>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <select class="form-select numeral-row-desde" data-row-id="${row.id}" data-native-select="true" style="font-size: 0.82rem; font-weight: 800; padding: 6px 6px; text-align: center; background: #FFFFFF; font-family: monospace;">
+                    ${optionsDesde}
+                  </select>
+                  <span style="font-size: 0.76rem; font-weight: 800; color: #64748B;">a</span>
+                  <select class="form-select numeral-row-hasta" data-row-id="${row.id}" data-native-select="true" style="font-size: 0.82rem; font-weight: 800; padding: 6px 6px; text-align: center; background: #FFFFFF; font-family: monospace;">
+                    ${optionsHasta}
+                  </select>
+                </div>
+              ` : row.mode === 'especificos' ? `
+                <label style="font-size: 0.68rem; font-weight: 750; color: #475569; text-transform: uppercase; display: block; margin-bottom: 3px;">Letras (comas/espacios)</label>
+                <input 
+                  type="text" 
+                  class="form-input numeral-row-spec" 
+                  data-row-id="${row.id}" 
+                  value="${escapeHtmlAttr(row.especificos)}" 
+                  placeholder="Ej. A, B, D, F" 
+                  style="font-size: 0.82rem; font-weight: 700; padding: 6px 10px; background: #FFFFFF; font-family: monospace;"
+                />
+              ` : `
+                <label style="font-size: 0.68rem; font-weight: 750; color: #94A3B8; text-transform: uppercase; display: block; margin-bottom: 3px;">Letras</label>
+                <div style="font-size: 0.75rem; color: #64748B; font-style: italic; padding: 7px 0;">Solo número (ej. "${row.numeral || '1'}")</div>
+              `}
+            </div>
+
+            <!-- 4. Etiqueta opcional -->
+            <div>
+              <label style="font-size: 0.68rem; font-weight: 750; color: #475569; text-transform: uppercase; display: block; margin-bottom: 3px;">Etiqueta Opcional</label>
+              <input 
+                type="text" 
+                class="form-input numeral-row-tag" 
+                data-row-id="${row.id}" 
+                value="${escapeHtmlAttr(row.etiqueta)}" 
+                placeholder="Ej. Soportes, Concepto" 
+                style="font-size: 0.80rem; padding: 6px 10px; background: #FFFFFF;"
+              />
+            </div>
+
+            <!-- 5. Eliminar fila -->
+            <div style="display: flex; justify-content: flex-end; align-items: flex-end; height: 100%;">
+              <button 
+                type="button" 
+                class="numeral-row-delete-btn" 
+                data-row-id="${row.id}" 
+                ${canDelete ? '' : 'disabled'} 
+                title="Eliminar serie"
+              >&times;</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      attachNumeralRowEvents();
+      updateNumeralPreview();
+    }
+
+    function attachNumeralRowEvents() {
+      if (!numeralRowsContainer) return;
+
+      // Numeral input
+      numeralRowsContainer.querySelectorAll('.numeral-row-num').forEach((inp) => {
+        inp.addEventListener('input', (e) => {
+          const target = e.target as HTMLInputElement;
+          const rId = Number(target.getAttribute('data-row-id'));
+          const row = numeralRows.find((r) => r.id === rId);
+          if (row) {
+            row.numeral = target.value.trim();
+            updateNumeralPreview();
+          }
+        });
+      });
+
+      // Modo select
+      numeralRowsContainer.querySelectorAll('.numeral-row-mode').forEach((sel) => {
+        sel.addEventListener('change', (e) => {
+          const target = e.target as HTMLSelectElement;
+          const rId = Number(target.getAttribute('data-row-id'));
+          const row = numeralRows.find((r) => r.id === rId);
+          if (row) {
+            row.mode = target.value as any;
+            renderNumeralRows();
+          }
+        });
+      });
+
+      // Desde select
+      numeralRowsContainer.querySelectorAll('.numeral-row-desde').forEach((sel) => {
+        sel.addEventListener('change', (e) => {
+          const target = e.target as HTMLSelectElement;
+          const rId = Number(target.getAttribute('data-row-id'));
+          const row = numeralRows.find((r) => r.id === rId);
+          if (row) {
+            row.desde = target.value;
+            updateNumeralPreview();
+          }
+        });
+      });
+
+      // Hasta select
+      numeralRowsContainer.querySelectorAll('.numeral-row-hasta').forEach((sel) => {
+        sel.addEventListener('change', (e) => {
+          const target = e.target as HTMLSelectElement;
+          const rId = Number(target.getAttribute('data-row-id'));
+          const row = numeralRows.find((r) => r.id === rId);
+          if (row) {
+            row.hasta = target.value;
+            updateNumeralPreview();
+          }
+        });
+      });
+
+      // Especificos input
+      numeralRowsContainer.querySelectorAll('.numeral-row-spec').forEach((inp) => {
+        inp.addEventListener('input', (e) => {
+          const target = e.target as HTMLInputElement;
+          const rId = Number(target.getAttribute('data-row-id'));
+          const row = numeralRows.find((r) => r.id === rId);
+          if (row) {
+            row.especificos = target.value;
+            updateNumeralPreview();
+          }
+        });
+      });
+
+      // Etiqueta input
+      numeralRowsContainer.querySelectorAll('.numeral-row-tag').forEach((inp) => {
+        inp.addEventListener('input', (e) => {
+          const target = e.target as HTMLInputElement;
+          const rId = Number(target.getAttribute('data-row-id'));
+          const row = numeralRows.find((r) => r.id === rId);
+          if (row) {
+            row.etiqueta = target.value;
+            updateNumeralPreview();
+          }
+        });
+      });
+
+      // Eliminar fila
+      numeralRowsContainer.querySelectorAll('.numeral-row-delete-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const rId = Number(btn.getAttribute('data-row-id'));
+          if (numeralRows.length <= 1) return;
+          numeralRows = numeralRows.filter((r) => r.id !== rId);
+          renderNumeralRows();
+        });
+      });
+    }
+
+    interface GeneratedSubfolder {
+      code: string;
+      fullName: string;
+      tag?: string;
+    }
+
+    function computeGeneratedNames(): { items: GeneratedSubfolder[]; error?: string } {
+      const sep = getSelectedNumeralSeparator();
+      const items: GeneratedSubfolder[] = [];
+
+      for (const row of numeralRows) {
+        const num = (row.numeral || '').trim();
+        if (!num) {
+          return { items: [], error: 'Cada fila debe contener un número o prefijo para la serie.' };
+        }
+
+        const tag = (row.etiqueta || '').trim();
+
+        if (row.mode === 'rango') {
+          const codeDesde = (row.desde || 'A').toUpperCase().charCodeAt(0);
+          const codeHasta = (row.hasta || 'C').toUpperCase().charCodeAt(0);
+
+          if (codeHasta < codeDesde) {
+            return {
+              items: [],
+              error: `En la serie ${num}: la letra final ("${row.hasta}") no puede ser anterior a la inicial ("${row.desde}").`,
+            };
+          }
+
+          for (let c = codeDesde; c <= codeHasta; c++) {
+            const letter = String.fromCharCode(c);
+            const code = `${num}${sep}${letter}`;
+            const fullName = tag ? `${code} - ${tag}` : code;
+            items.push({ code, fullName, tag });
+          }
+        } else if (row.mode === 'especificos') {
+          const rawTokens = (row.especificos || '')
+            .split(/[,;\s]+/)
+            .map((t) => t.trim().toUpperCase())
+            .filter(Boolean);
+
+          if (rawTokens.length === 0) {
+            // Placeholder si aún no escribió
+            const code = `${num}${sep}A`;
+            const fullName = tag ? `${code} - ${tag}` : code;
+            items.push({ code, fullName, tag });
+          } else {
+            for (const token of rawTokens) {
+              const code = `${num}${sep}${token}`;
+              const fullName = tag ? `${code} - ${tag}` : code;
+              items.push({ code, fullName, tag });
+            }
+          }
+        } else if (row.mode === 'solo_numeral') {
+          const code = `${num}`;
+          const fullName = tag ? `${code} - ${tag}` : code;
+          items.push({ code, fullName, tag });
+        }
+      }
+
+      if (items.length > 40) {
+        return {
+          items,
+          error: `Se generarán ${items.length} subcarpetas. Por favor limite a un máximo de 40 subcarpetas por lote.`,
+        };
+      }
+
+      return { items };
+    }
+
+    function updateNumeralPreview() {
+      if (!numeralPreviewChips || !numeralPreviewCount) return;
+
+      const { items, error } = computeGeneratedNames();
+
+      if (error) {
+        if (numeralBuilderWarning) {
+          numeralBuilderWarning.textContent = error;
+          numeralBuilderWarning.style.display = 'block';
+        }
+        if (btnGenerateSubcarpetas) btnGenerateSubcarpetas.disabled = true;
+      } else {
+        if (numeralBuilderWarning) numeralBuilderWarning.style.display = 'none';
+        if (btnGenerateSubcarpetas) btnGenerateSubcarpetas.disabled = items.length === 0;
+      }
+
+      numeralPreviewCount.textContent = `${items.length} subcarpeta${items.length === 1 ? '' : 's'} a generar`;
+      if (btnGenerateSubcarpetasText) {
+        btnGenerateSubcarpetasText.textContent = items.length > 0 ? `Generar ${items.length} Subcarpetas` : 'Generar Subcarpetas';
+      }
+
+      if (items.length === 0) {
+        numeralPreviewChips.innerHTML = '<span style="font-size: 0.74rem; color: #94A3B8; font-style: italic;">Complete los campos para previsualizar los nombres de las subcarpetas.</span>';
+        return;
+      }
+
+      numeralPreviewChips.innerHTML = items.map((it) => `
+        <span class="numeral-preview-pill">
+          <span>${it.code}</span>
+          ${it.tag ? `<span class="numeral-preview-pill-tag">${escapeHtmlText(it.tag)}</span>` : ''}
+        </span>
+      `).join('');
+    }
+
+    // Cambiar separador
+    numeralSepRadios.forEach((r) => {
+      r.addEventListener('change', updateNumeralPreview);
+    });
+
+    // Agregar otra serie
+    btnAddNumeralRow?.addEventListener('click', () => {
+      // Autoincrementar numeral basado en el último
+      let nextNum = 2;
+      const numValues = numeralRows.map((r) => parseInt(r.numeral, 10)).filter((n) => !isNaN(n));
+      if (numValues.length > 0) {
+        nextNum = Math.max(...numValues) + 1;
+      }
+      const newId = Date.now() + Math.floor(Math.random() * 100);
+      numeralRows.push({
+        id: newId,
+        numeral: String(nextNum),
+        mode: 'rango',
+        desde: 'A',
+        hasta: 'C',
+        especificos: '',
+        etiqueta: '',
+      });
+      renderNumeralRows();
+    });
+
+    // Alternar visibilidad del panel
+    function toggleNumeralBuilderPanel(show?: boolean) {
+      if (!panelNumeralBuilder) return;
+      const willShow = typeof show === 'boolean' ? show : panelNumeralBuilder.style.display === 'none';
+      panelNumeralBuilder.style.display = willShow ? 'flex' : 'none';
+      if (willShow) {
+        renderNumeralRows();
+        panelNumeralBuilder.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+
+    btnToggleNumeralBuilder?.addEventListener('click', () => toggleNumeralBuilderPanel());
+    btnFooterNumeralBuilder?.addEventListener('click', () => toggleNumeralBuilderPanel());
+    btnCloseNumeralBuilder?.addEventListener('click', () => toggleNumeralBuilderPanel(false));
+    btnCancelNumeralBuilder?.addEventListener('click', () => toggleNumeralBuilderPanel(false));
+
+    // Generar subcarpetas en subcarpetasState
+    btnGenerateSubcarpetas?.addEventListener('click', () => {
+      const { items, error } = computeGeneratedNames();
+      if (error || items.length === 0) return;
+
+      syncCurrentInputsToState();
+
+      // Si reemplazar vacías está activo, descartar subcarpetas que no tengan nombre ni oficina
+      if (numeralReplaceEmpty && numeralReplaceEmpty.checked) {
+        subcarpetasState = subcarpetasState.filter((s) => {
+          const hasName = Boolean((s.nombre || '').trim());
+          const hasDesc = Boolean((s.descripcion || '').trim());
+          const hasOffices = s.selectedOffices.length > 0;
+          return hasName || hasDesc || hasOffices;
+        });
+      }
+
+      const baseNow = Date.now();
+      items.forEach((it, idx) => {
+        subcarpetasState.push({
+          uid: baseNow + idx + Math.floor(Math.random() * 100),
+          nombre: it.fullName,
+          descripcion: '',
+          selectedOffices: [],
+          collapsed: items.length > 4, // si se generan más de 4, colapsar por comodidad visual
+        });
+      });
+
+      renderSubcarpetas();
+      toggleNumeralBuilderPanel(false);
+
+      if (typeof (window as any).showToast === 'function') {
+        (window as any).showToast(`Se generaron ${items.length} subcarpetas por numerales con éxito.`, 'success');
+      }
+
+      // Scroll hacia la primera subcarpeta creada
+      subcarpetasContainer?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
 
     // Render inicial de subcarpetas (campo nombre 100% limpio y vacío)

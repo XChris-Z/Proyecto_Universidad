@@ -79,29 +79,41 @@ const dbLogs = (rawDbLogs || [])
     return { ...l, actor_name: aName, action: cleanAction, entity: cleanEntity };
   });
 
-const mappedDbLogs = dbLogs.map((l: any) => ({
-  id: l.id,
-  timestamp: formatBogotaTimestamp(l.raw_timestamp || Date.now()),
-  rawTimestamp: l.raw_timestamp,
-  actor: normalizeAuditActor({
-    id: l.actor_id || 'usr-root',
-    name: l.actor_name,
-    role: l.actor_role,
-  }),
-  action: l.action,
-  actionType: l.action_type || 'ACCESO',
-  entity: l.entity || 'Sistema',
-  entityId: l.entity_id,
-  details: l.details || '',
-  before: l.before_state,
-  after: l.after_state,
-  severity: l.severity || 'INFO',
-  previousHash: l.previous_hash || '0'.repeat(64),
-  integrityHash: l.integrity_hash || '0'.repeat(64),
-  ip: sanitizeAuditDisplayIp(l.ip_address),
-  device: (l.after_state?.device_info || 'Win11-Chrome [T-84A1]'),
-  cipher: l.cipher || 'AES-256-GCM / SHA-256',
-}));
+const mappedDbLogs = dbLogs
+  .map((l: any) => ({
+    id: l.id,
+    timestamp: formatBogotaTimestamp(l.raw_timestamp || Date.now()),
+    rawTimestamp: l.raw_timestamp,
+    actor: normalizeAuditActor({
+      id: l.actor_id || 'usr-root',
+      name: l.actor_name,
+      role: l.actor_role,
+    }),
+    action: l.action,
+    actionType: l.action_type || 'ACCESO',
+    entity: l.entity || 'Sistema',
+    entityId: l.entity_id,
+    details: l.details || '',
+    before: l.before_state,
+    after: l.after_state,
+    severity: l.severity || 'INFO',
+    previousHash: l.previous_hash || '0'.repeat(64),
+    integrityHash: l.integrity_hash || '0'.repeat(64),
+    ip: sanitizeAuditDisplayIp(l.ip_address),
+    device: (l.after_state?.device_info || 'Win11-Chrome [T-84A1]'),
+    cipher: l.cipher || 'AES-256-GCM / SHA-256',
+  }))
+  .sort((a, b) => {
+    const parseTime = (val?: string | number | null) => {
+      if (!val) return 0;
+      if (typeof val === 'number') return val;
+      const t = String(val).trim();
+      if (/^\d{10,14}$/.test(t)) return Number(t);
+      const ms = new Date(t).getTime();
+      return Number.isNaN(ms) ? 0 : ms;
+    };
+    return parseTime(b.rawTimestamp) - parseTime(a.rawTimestamp);
+  });
 
 const totalLogs = dbLogs.length;
 const totalRadicaciones = dbLogs.filter(l => l.action_type === 'SUBIDA_ARCHIVO' || l.action_type === 'RADICACION').length;
