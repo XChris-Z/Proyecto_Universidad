@@ -3,10 +3,13 @@
 export const prerender = false;
 
 // No almacenar en caché para reflejar auditoría multi-usuario al instante
-Astro.response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+Astro.response.headers.set(
+  "Cache-Control",
+  "no-store, no-cache, must-revalidate, proxy-revalidate",
+);
 
-import AppLayout from '@layouts/AppLayout.astro';
-import { supabase, supabaseAdmin } from '@lib/supabase';
+import AppLayout from "@layouts/AppLayout.astro";
+import { supabase, supabaseAdmin } from "@lib/supabase";
 import {
   isRelevantAuditLog,
   formatBogotaTimestamp,
@@ -14,7 +17,7 @@ import {
   sanitizeAuditDisplayIp,
   cleanAuditActionTitle,
   esEventoDeExpediente,
-} from '@lib/audit';
+} from "@lib/audit";
 
 const db = supabaseAdmin || supabase;
 
@@ -22,64 +25,71 @@ const db = supabaseAdmin || supabase;
 let rawDbLogs: any[] = [];
 try {
   const q = await db
-    .from('audit_logs')
-    .select('*')
-    .or('entity.is.null,entity.neq.rbac_state_snapshot')
-    .order('raw_timestamp', { ascending: false });
+    .from("audit_logs")
+    .select("*")
+    .or("entity.is.null,entity.neq.rbac_state_snapshot")
+    .order("raw_timestamp", { ascending: false });
   if (q.data && q.data.length > 0) {
     rawDbLogs = q.data;
   } else if (db !== supabase) {
     const fallbackQ = await supabase
-      .from('audit_logs')
-      .select('*')
-      .or('entity.is.null,entity.neq.rbac_state_snapshot')
-      .order('raw_timestamp', { ascending: false });
+      .from("audit_logs")
+      .select("*")
+      .or("entity.is.null,entity.neq.rbac_state_snapshot")
+      .order("raw_timestamp", { ascending: false });
     rawDbLogs = fallbackQ.data || [];
   }
 } catch {
   const fallbackQ = await supabase
-    .from('audit_logs')
-    .select('*')
-    .or('entity.is.null,entity.neq.rbac_state_snapshot')
-    .order('raw_timestamp', { ascending: false });
+    .from("audit_logs")
+    .select("*")
+    .or("entity.is.null,entity.neq.rbac_state_snapshot")
+    .order("raw_timestamp", { ascending: false });
   rawDbLogs = fallbackQ.data || [];
 }
 
 // Consultar funcionarios y usuarios registrados para el filtro dinámico
 const { data: rawProfiles } = await db
-  .from('profiles')
-  .select('id, full_name, role, email')
-  .order('full_name', { ascending: true });
+  .from("profiles")
+  .select("id, full_name, role, email")
+  .order("full_name", { ascending: true });
 
-const registeredUsers = (rawProfiles || []).filter((p: any) => p.full_name && String(p.full_name).trim());
+const registeredUsers = (rawProfiles || []).filter(
+  (p: any) => p.full_name && String(p.full_name).trim(),
+);
 
 // Consultar radicados activos para identificar expedientes eliminados en la pista histórica
 const { data: rawPets } = await db
-  .from('peticiones')
-  .select('id, numero_radicado');
+  .from("peticiones")
+  .select("id, numero_radicado");
 
 const activeRadicados = (rawPets || [])
-  .map((p: any) => String(p.numero_radicado || '').trim().toUpperCase())
+  .map((p: any) =>
+    String(p.numero_radicado || "")
+      .trim()
+      .toUpperCase(),
+  )
   .filter(Boolean);
 
-const dbLogs = (rawDbLogs || [])
-  .filter(isRelevantAuditLog)
-  .map(l => {
-    let aName = l.actor_name;
-    let cleanAction = (l.action || '')
-      .replace(/(?:ACTUALIZACIÓN|ACTUALIZACION|CREACIÓN|CREACION|ELIMINACIÓN|ELIMINACION)\s+DE\s+ROL\s+RBAC/gi, (match: string) => {
+const dbLogs = (rawDbLogs || []).filter(isRelevantAuditLog).map((l) => {
+  let aName = l.actor_name;
+  let cleanAction = (l.action || "")
+    .replace(
+      /(?:ACTUALIZACIÓN|ACTUALIZACION|CREACIÓN|CREACION|ELIMINACIÓN|ELIMINACION)\s+DE\s+ROL\s+RBAC/gi,
+      (match: string) => {
         const verb = match.split(/\s+/)[0];
         return `${verb} de Rol del Sistema`;
-      })
-      .replace(/Catálogo de Roles RBAC/gi, 'Configuración de Roles')
-      .replace(/Roles RBAC/gi, 'Roles del Sistema')
-      .replace(/\bRBAC\b/g, 'del Sistema');
-    let cleanEntity = (l.entity || '')
-      .replace(/Catálogo de Roles RBAC/gi, 'Configuración de Roles')
-      .replace(/Roles RBAC/gi, 'Roles del Sistema')
-      .replace(/\bRBAC\b/g, 'del Sistema');
-    return { ...l, actor_name: aName, action: cleanAction, entity: cleanEntity };
-  });
+      },
+    )
+    .replace(/Catálogo de Roles RBAC/gi, "Configuración de Roles")
+    .replace(/Roles RBAC/gi, "Roles del Sistema")
+    .replace(/\bRBAC\b/g, "del Sistema");
+  let cleanEntity = (l.entity || "")
+    .replace(/Catálogo de Roles RBAC/gi, "Configuración de Roles")
+    .replace(/Roles RBAC/gi, "Roles del Sistema")
+    .replace(/\bRBAC\b/g, "del Sistema");
+  return { ...l, actor_name: aName, action: cleanAction, entity: cleanEntity };
+});
 
 const mappedDbLogs = dbLogs
   .map((l: any) => ({
@@ -87,28 +97,28 @@ const mappedDbLogs = dbLogs
     timestamp: formatBogotaTimestamp(l.raw_timestamp || Date.now()),
     rawTimestamp: l.raw_timestamp,
     actor: normalizeAuditActor({
-      id: l.actor_id || 'usr-root',
+      id: l.actor_id || "usr-root",
       name: l.actor_name,
       role: l.actor_role,
     }),
     action: l.action,
-    actionType: l.action_type || 'ACCESO',
-    entity: l.entity || 'Sistema',
+    actionType: l.action_type || "ACCESO",
+    entity: l.entity || "Sistema",
     entityId: l.entity_id,
-    details: l.details || '',
+    details: l.details || "",
     before: l.before_state,
     after: l.after_state,
-    severity: l.severity || 'INFO',
-    previousHash: l.previous_hash || '0'.repeat(64),
-    integrityHash: l.integrity_hash || '0'.repeat(64),
+    severity: l.severity || "INFO",
+    previousHash: l.previous_hash || "0".repeat(64),
+    integrityHash: l.integrity_hash || "0".repeat(64),
     ip: sanitizeAuditDisplayIp(l.ip_address),
-    device: (l.after_state?.device_info || 'Win11-Chrome [T-84A1]'),
-    cipher: l.cipher || 'AES-256-GCM / SHA-256',
+    device: l.after_state?.device_info || "Win11-Chrome [T-84A1]",
+    cipher: l.cipher || "AES-256-GCM / SHA-256",
   }))
   .sort((a, b) => {
     const parseTime = (val?: string | number | null) => {
       if (!val) return 0;
-      if (typeof val === 'number') return val;
+      if (typeof val === "number") return val;
       const t = String(val).trim();
       if (/^\d{10,14}$/.test(t)) return Number(t);
       const ms = new Date(t).getTime();
@@ -118,55 +128,90 @@ const mappedDbLogs = dbLogs
   });
 
 const totalLogs = dbLogs.length;
-const totalRadicaciones = dbLogs.filter(l => l.action_type === 'SUBIDA_ARCHIVO' || l.action_type === 'RADICACION').length;
-const totalCierresYValidaciones = dbLogs.filter(l => {
-  const act = (l.action || '').toLowerCase();
-  const actType = (l.action_type || '').toUpperCase();
-  const details = (l.details || '').toLowerCase();
+const totalRadicaciones = dbLogs.filter(
+  (l) => l.action_type === "SUBIDA_ARCHIVO" || l.action_type === "RADICACION",
+).length;
+const totalCierresYValidaciones = dbLogs.filter((l) => {
+  const act = (l.action || "").toLowerCase();
+  const actType = (l.action_type || "").toUpperCase();
+  const details = (l.details || "").toLowerCase();
   return (
-    actType === 'APROBACION' ||
-    actType === 'RECHAZO' ||
-    actType === 'CIERRE' ||
-    act.includes('cierre') ||
-    act.includes('aprob') ||
-    act.includes('rechaz') ||
-    act.includes('dictamen') ||
-    act.includes('aporte') ||
-    act.includes('revis') ||
-    act.includes('drive') ||
-    act.includes('validac') ||
-    details.includes('cierre') ||
-    details.includes('dictamen') ||
-    details.includes('google drive')
+    actType === "APROBACION" ||
+    actType === "RECHAZO" ||
+    actType === "CIERRE" ||
+    act.includes("cierre") ||
+    act.includes("aprob") ||
+    act.includes("rechaz") ||
+    act.includes("dictamen") ||
+    act.includes("aporte") ||
+    act.includes("revis") ||
+    act.includes("drive") ||
+    act.includes("validac") ||
+    details.includes("cierre") ||
+    details.includes("dictamen") ||
+    details.includes("google drive")
   );
 }).length;
 ---
 
 <AppLayout title="Registro de Auditoría y Trazabilidad" activeNav="auditoria">
   <div class="auditoria-container">
-    
     <!-- Contenedor Maestro Blanco Anti-Saturación de Fondo Halftone -->
     <div class="module-board-card">
-
       <!-- Cabecera Sobria y Ejecutiva (Bento Pro Max) -->
       <div style="background: #F8FAFB; border: 1px solid #E2E8F0; border-top: 4px solid #00594E; border-radius: 16px; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; width: 100%; box-sizing: border-box;">
         <div style="min-width: 0; flex: 1;">
           <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-            <h1 style="font-size: 1.55rem; font-weight: 800; color: #111827; margin: 0; letter-spacing: -0.01em;">Registro de Auditoría y Trazabilidad</h1>
-            <span style="font-size: 0.72rem; font-weight: 800; background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; padding: 3px 10px; border-radius: 999px;">Trazabilidad Oficial</span>
+            <h1 style="font-size: 1.55rem; font-weight: 800; color: #111827; margin: 0; letter-spacing: -0.01em;">
+              Registro de Auditoría y Trazabilidad
+            </h1>
+            <span style="font-size: 0.72rem; font-weight: 800; background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; padding: 3px 10px; border-radius: 999px;">
+              Trazabilidad Oficial
+            </span>
           </div>
           <p style="font-size: 0.86rem; color: #52606D; margin: 6px 0 0 0;">
-            Historial cronológico de acciones, radicaciones y despachos del sistema.
+            Historial cronológico de acciones, radicaciones y despachos del
+            sistema.
           </p>
         </div>
 
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-          <button class="btn btn-secondary" id="btn-verify-audit-chain" title="Verificar que ningún registro del log haya sido manipulado o adulterado" style="border: 1.5px solid #B2CFCB; color: #00594E; background: #FFFFFF; font-weight: 750; font-size: 0.82rem; border-radius: 10px; padding: 9px 16px; cursor: pointer;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="20 6 9 17 4 12"/></svg>
+          <button
+            class="btn btn-secondary"
+            id="btn-verify-audit-chain"
+            title="Verificar que ningún registro del log haya sido manipulado o adulterado"
+            style="border: 1.5px solid #B2CFCB; color: #00594E; background: #FFFFFF; font-weight: 750; font-size: 0.82rem; border-radius: 10px; padding: 9px 16px; cursor: pointer;"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+            >
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
             <span>Verificar Integridad SHA-256</span>
           </button>
-          <button class="btn btn-primary" id="btn-export-audit-json" title="Descargar bitácora oficial en Microsoft Excel (.xlsx)" style="background: #00594E; border: 1.5px solid #00594E; color: #ffffff; font-weight: 800; font-size: 0.82rem; border-radius: 10px; padding: 9px 18px; box-shadow: 0 2px 8px rgba(0, 89, 78, 0.25); cursor: pointer;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <button
+            class="btn btn-primary"
+            id="btn-export-audit-json"
+            title="Descargar bitácora oficial en Microsoft Excel (.xlsx)"
+            style="background: #00594E; border: 1.5px solid #00594E; color: #ffffff; font-weight: 800; font-size: 0.82rem; border-radius: 10px; padding: 9px 18px; box-shadow: 0 2px 8px rgba(0, 89, 78, 0.25); cursor: pointer;"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
             <span>Exportar Pista de Auditoría (.xlsx)</span>
           </button>
         </div>
@@ -174,71 +219,161 @@ const totalCierresYValidaciones = dbLogs.filter(l => {
 
       <!-- Resumen Operativo Real (3 KPIs Integrados en Fondo #F8FAFB / Borde #E2E8F0) -->
       <div class="auditoria-kpi-row">
-        
         <!-- KPI 1: Total de Eventos Registrados -->
         <div style="background: #F8FAFB; border: 1px solid #E2E8F0; border-radius: 14px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.02);">
           <div>
-            <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #52606D; letter-spacing: 0.5px; display: block;">Total de Eventos Registrados</span>
-            <div style="font-size: 1.9rem; font-weight: 800; color: #00594E; margin-top: 4px; line-height: 1;" id="audit-kpi-total">{totalLogs}</div>
-            <span style="font-size: 0.74rem; font-weight: 600; color: #00594E; margin-top: 6px; display: inline-block;">Bitácora cronológica activa</span>
+            <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #52606D; letter-spacing: 0.5px; display: block;">
+              Total de Eventos Registrados
+            </span>
+            <div
+              style="font-size: 1.9rem; font-weight: 800; color: #00594E; margin-top: 4px; line-height: 1;"
+              id="audit-kpi-total"
+            >
+              {totalLogs}
+            </div>
+            <span style="font-size: 0.74rem; font-weight: 600; color: #00594E; margin-top: 6px; display: inline-block;">
+              Bitácora cronológica activa
+            </span>
           </div>
           <div style="width: 44px; height: 44px; border-radius: 12px; background: #FFFFFF; border: 1.5px solid #B2CFCB; display: flex; align-items: center; justify-content: center; color: #00594E; flex-shrink: 0;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+            >
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+              <polyline points="10 9 9 9 8 9" />
+            </svg>
           </div>
         </div>
 
         <!-- KPI 2: Radicaciones y Aportes -->
         <div style="background: #F8FAFB; border: 1px solid #E2E8F0; border-radius: 14px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.02);">
           <div>
-            <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #52606D; letter-spacing: 0.5px; display: block;">Radicaciones y Aportes</span>
-            <div style="font-size: 1.9rem; font-weight: 800; color: #00594E; margin-top: 4px; line-height: 1;" id="audit-kpi-radicaciones">{totalRadicaciones}</div>
-            <span style="font-size: 0.74rem; font-weight: 600; color: #00594E; margin-top: 6px; display: inline-block;">Archivos y anexos incorporados</span>
+            <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #52606D; letter-spacing: 0.5px; display: block;">
+              Radicaciones y Aportes
+            </span>
+            <div
+              style="font-size: 1.9rem; font-weight: 800; color: #00594E; margin-top: 4px; line-height: 1;"
+              id="audit-kpi-radicaciones"
+            >
+              {totalRadicaciones}
+            </div>
+            <span style="font-size: 0.74rem; font-weight: 600; color: #00594E; margin-top: 6px; display: inline-block;">
+              Archivos y anexos incorporados
+            </span>
           </div>
           <div style="width: 44px; height: 44px; border-radius: 12px; background: #FFFFFF; border: 1.5px solid #B2CFCB; display: flex; align-items: center; justify-content: center; color: #00594E; flex-shrink: 0;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+            >
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
           </div>
         </div>
 
         <!-- KPI 3: Cierres y Validaciones de Aportes -->
         <div style="background: #F8FAFB; border: 1px solid #E2E8F0; border-radius: 14px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.02);">
           <div>
-            <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #786832; letter-spacing: 0.5px; display: block;">CIERRES Y VALIDACIONES DE APORTES</span>
-            <div style="font-size: 1.9rem; font-weight: 800; color: #786832; margin-top: 4px; line-height: 1;" id="audit-kpi-cierres">{totalCierresYValidaciones}</div>
-            <span style="font-size: 0.74rem; font-weight: 600; color: #786832; margin-top: 6px; display: inline-block;">Aportes dictaminados y expedientes cerrados</span>
+            <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #786832; letter-spacing: 0.5px; display: block;">
+              CIERRES Y VALIDACIONES DE APORTES
+            </span>
+            <div
+              style="font-size: 1.9rem; font-weight: 800; color: #786832; margin-top: 4px; line-height: 1;"
+              id="audit-kpi-cierres"
+            >
+              {totalCierresYValidaciones}
+            </div>
+            <span style="font-size: 0.74rem; font-weight: 600; color: #786832; margin-top: 6px; display: inline-block;">
+              Aportes dictaminados y expedientes cerrados
+            </span>
           </div>
           <div style="width: 44px; height: 44px; border-radius: 12px; background: #FFFFFF; border: 1.5px solid #DBD2B0; display: flex; align-items: center; justify-content: center; color: #786832; flex-shrink: 0;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-              <polyline points="9 12 11 14 15 10"/>
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+            >
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              <polyline points="9 12 11 14 15 10" />
             </svg>
           </div>
         </div>
-
       </div>
 
       <!-- Barra de Filtros y Búsqueda de Logs -->
       <div style="background: #F8FAFB; border: 1px solid #E2E8F0; border-radius: 14px; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
         <div style="position: relative; flex: 1; max-width: 440px; min-width: 240px;">
-          <input type="text" id="audit-search-input" placeholder="Buscar por radicado, usuario, acción o hash..." class="form-input" style="padding-left: 38px; border-radius: 10px; border: 1.5px solid #DCE4E3; font-size: 0.85rem; height: 42px; width: 100%; box-sizing: border-box;" />
+          <input
+            type="text"
+            id="audit-search-input"
+            placeholder="Buscar por radicado, usuario, acción o hash..."
+            class="form-input"
+            style="padding-left: 38px; border-radius: 10px; border: 1.5px solid #DCE4E3; font-size: 0.85rem; height: 42px; width: 100%; box-sizing: border-box;"
+          />
           <div style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #64748B; display: flex; align-items: center; pointer-events: none;">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <svg
+              width="17"
+              height="17"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path d="M21 21l-4.35-4.35" />
+            </svg>
           </div>
         </div>
 
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
           <div style="display: flex; align-items: center; gap: 6px;">
-            <label for="audit-filter-user" style="font-size: 0.76rem; font-weight: 700; color: #52606D;">Funcionario:</label>
-            <select id="audit-filter-user" style="padding: 7px 12px; border-radius: 8px; border: 1.5px solid #DCE4E3; font-size: 0.78rem; background: #FFFFFF; color: #111827; font-weight: 600; max-width: 200px;">
+            <label
+              for="audit-filter-user"
+              style="font-size: 0.76rem; font-weight: 700; color: #52606D;"
+            >
+              Funcionario:
+            </label>
+            <select
+              id="audit-filter-user"
+              style="padding: 7px 12px; border-radius: 8px; border: 1.5px solid #DCE4E3; font-size: 0.78rem; background: #FFFFFF; color: #111827; font-weight: 600; max-width: 200px;"
+            >
               <option value="ALL">Todos los Usuarios</option>
               {registeredUsers.map((u: any) => (
-                <option value={u.id || u.full_name}>{u.full_name} ({u.role || 'Funcionario'})</option>
+                <option value={u.id || u.full_name}>
+                  {u.full_name} ({u.role || "Funcionario"})
+                </option>
               ))}
             </select>
           </div>
 
           <div style="display: flex; align-items: center; gap: 6px;">
-            <label for="audit-filter-action" style="font-size: 0.76rem; font-weight: 700; color: #52606D;">Acción:</label>
-            <select id="audit-filter-action" style="padding: 7px 12px; border-radius: 8px; border: 1.5px solid #DCE4E3; font-size: 0.78rem; background: #FFFFFF; color: #111827; font-weight: 600;">
+            <label
+              for="audit-filter-action"
+              style="font-size: 0.76rem; font-weight: 700; color: #52606D;"
+            >
+              Acción:
+            </label>
+            <select
+              id="audit-filter-action"
+              style="padding: 7px 12px; border-radius: 8px; border: 1.5px solid #DCE4E3; font-size: 0.78rem; background: #FFFFFF; color: #111827; font-weight: 600;"
+            >
               <option value="ALL">Todas las Acciones</option>
               <option value="SUBIDA_ARCHIVO">Subida y Radicación</option>
               <option value="ELIMINACION">Eliminación / Baja</option>
@@ -251,8 +386,16 @@ const totalCierresYValidaciones = dbLogs.filter(l => {
           </div>
 
           <div style="display: flex; align-items: center; gap: 6px;">
-            <label for="audit-filter-severity" style="font-size: 0.76rem; font-weight: 700; color: #52606D;">Criticidad:</label>
-            <select id="audit-filter-severity" style="padding: 7px 12px; border-radius: 8px; border: 1.5px solid #DCE4E3; font-size: 0.78rem; background: #FFFFFF; color: #111827; font-weight: 600;">
+            <label
+              for="audit-filter-severity"
+              style="font-size: 0.76rem; font-weight: 700; color: #52606D;"
+            >
+              Criticidad:
+            </label>
+            <select
+              id="audit-filter-severity"
+              style="padding: 7px 12px; border-radius: 8px; border: 1.5px solid #DCE4E3; font-size: 0.78rem; background: #FFFFFF; color: #111827; font-weight: 600;"
+            >
               <option value="ALL">Todas</option>
               <option value="CRITICAL">Crítico</option>
               <option value="WARN">Advertencia</option>
@@ -260,88 +403,158 @@ const totalCierresYValidaciones = dbLogs.filter(l => {
             </select>
           </div>
 
-          <button type="button" class="btn btn-ghost btn-sm" id="btn-reset-audit-filters" title="Restablecer filtros" style="font-size: 0.76rem; font-weight: 700; color: #52606D; border: 1px solid #DCE4E3; border-radius: 8px; padding: 6px 12px; cursor: pointer; background: #FFFFFF;">
+          <button
+            type="button"
+            class="btn btn-ghost btn-sm"
+            id="btn-reset-audit-filters"
+            title="Restablecer filtros"
+            style="font-size: 0.76rem; font-weight: 700; color: #52606D; border: 1px solid #DCE4E3; border-radius: 8px; padding: 6px 12px; cursor: pointer; background: #FFFFFF;"
+          >
             Limpiar
           </button>
         </div>
       </div>
 
       <!-- Tabla Ejecutiva de Trazabilidad y Logs -->
-      <div class="auditoria-table-card" style="border: 1px solid #E2E8F0; border-radius: 14px; overflow: hidden; background: #FFFFFF;">
+      <div
+        class="auditoria-table-card"
+        style="border: 1px solid #E2E8F0; border-radius: 14px; overflow: hidden; background: #FFFFFF;"
+      >
         <div class="auditoria-table-wrapper pro-scroll-container audit-log-container audit-table-wrapper">
           <table class="auditoria-table doc-table audit-table">
             <thead>
               <tr style="background: #F8FAFC; border-bottom: 2px solid #DCE4E3; text-align: left; color: #52606D; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.5px;">
                 <th style="padding: 13px 18px; width: 16%;">Fecha y Hora</th>
-                <th style="padding: 13px 18px; width: 20%;">Funcionario Responsable</th>
+                <th style="padding: 13px 18px; width: 20%;">
+                  Funcionario Responsable
+                </th>
                 <th style="padding: 13px 18px; width: 25%;">Acción / Evento</th>
-                <th style="padding: 13px 18px; width: 39%;">Expediente / Detalle de Trazabilidad</th>
+                <th style="padding: 13px 18px; width: 39%;">
+                  Expediente / Detalle de Trazabilidad
+                </th>
               </tr>
             </thead>
             <tbody id="audit-logs-tbody">
               {mappedDbLogs.map((log: any) => {
-                let actionBadgeClass = 'subida';
-                if (log.actionType === 'ELIMINACION' || log.severity === 'CRITICAL') actionBadgeClass = 'eliminacion';
-                else if (log.actionType === 'MODIFICACION' || log.actionType === 'GESTION') actionBadgeClass = 'modificacion';
-                else if (log.actionType === 'RESPUESTA') actionBadgeClass = 'respuesta';
-                else if (log.actionType === 'SEGURIDAD') actionBadgeClass = 'seguridad';
+                let actionBadgeClass = "subida";
+                if (
+                  log.actionType === "ELIMINACION" ||
+                  log.severity === "CRITICAL"
+                )
+                  actionBadgeClass = "eliminacion";
+                else if (
+                  log.actionType === "MODIFICACION" ||
+                  log.actionType === "GESTION"
+                )
+                  actionBadgeClass = "modificacion";
+                else if (log.actionType === "RESPUESTA")
+                  actionBadgeClass = "respuesta";
+                else if (log.actionType === "SEGURIDAD")
+                  actionBadgeClass = "seguridad";
 
                 const cleanActor = log.actor;
                 const cleanAction = cleanAuditActionTitle(log.action);
                 const cleanTimestamp = log.timestamp;
-                const entityIdStr = String(log.entityId || '').trim();
-                const entityStr = String(log.entity || 'Sistema').trim();
+                const entityIdStr = String(log.entityId || "").trim();
+                const entityStr = String(log.entity || "Sistema").trim();
                 const esExp = esEventoDeExpediente(log);
 
                 const radPattern = /RAD-\d{4}-\d+/i;
-                const radicadoFromObj = (log.after as any)?.numero_radicado || (log.before as any)?.numero_radicado;
-                let radText = '';
-                if (radicadoFromObj && typeof radicadoFromObj === 'string' && radPattern.test(radicadoFromObj)) {
+                const radicadoFromObj =
+                  (log.after as any)?.numero_radicado ||
+                  (log.before as any)?.numero_radicado;
+                let radText = "";
+                if (
+                  radicadoFromObj &&
+                  typeof radicadoFromObj === "string" &&
+                  radPattern.test(radicadoFromObj)
+                ) {
                   radText = radicadoFromObj.toUpperCase();
                 } else if (radPattern.test(entityIdStr)) {
-                  radText = (entityIdStr.match(radPattern)?.[0] || entityIdStr).toUpperCase();
+                  radText = (
+                    entityIdStr.match(radPattern)?.[0] || entityIdStr
+                  ).toUpperCase();
                 } else if (esExp) {
-                  const match = String(log.action || '').match(radPattern) || String(log.details || '').match(radPattern);
+                  const match =
+                    String(log.action || "").match(radPattern) ||
+                    String(log.details || "").match(radPattern);
                   if (match) radText = match[0].toUpperCase();
                 }
 
-                const isDeleted = esExp && radText ? (
-                  log.actionType === 'ELIMINACION' ||
-                  (log.action && log.action.toLowerCase().includes('eliminac')) ||
-                  (activeRadicados.length > 0 && !activeRadicados.includes(radText))
-                ) : false;
+                const isDeleted =
+                  esExp && radText
+                    ? log.actionType === "ELIMINACION" ||
+                      (log.action &&
+                        log.action.toLowerCase().includes("eliminac")) ||
+                      (activeRadicados.length > 0 &&
+                        !activeRadicados.includes(radText))
+                    : false;
 
                 let displayRef = entityIdStr;
-                if (!displayRef || /^[0-9a-f-]{16,}$/i.test(displayRef) || /^(usr|cal|alog|doc|pet|sec|config|role|perm|dep|ofi)-/i.test(displayRef)) {
-                  displayRef = (log.after as any)?.name || (log.before as any)?.name || entityStr;
+                if (
+                  !displayRef ||
+                  /^[0-9a-f-]{16,}$/i.test(displayRef) ||
+                  /^(usr|cal|alog|doc|pet|sec|config|role|perm|dep|ofi)-/i.test(
+                    displayRef,
+                  )
+                ) {
+                  displayRef =
+                    (log.after as any)?.name ||
+                    (log.before as any)?.name ||
+                    entityStr;
                 } else {
-                  displayRef = displayRef.replace(/^(?:rol_|role_|usr_)/i, '').replace(/_/g, ' ');
+                  displayRef = displayRef
+                    .replace(/^(?:rol_|role_|usr_)/i, "")
+                    .replace(/_/g, " ");
                 }
 
-                const cleanDetails = String(log.details || '')
-                  .replace(/an[oó]nimo\s*·\s*funcionario/gi, 'Funcionario Registrado')
-                  .replace(/por\s*an[oó]nimo/gi, 'por Funcionario Registrado');
+                const cleanDetails = String(log.details || "")
+                  .replace(
+                    /an[oó]nimo\s*·\s*funcionario/gi,
+                    "Funcionario Registrado",
+                  )
+                  .replace(/por\s*an[oó]nimo/gi, "por Funcionario Registrado");
 
                 return (
                   <tr>
                     <td style="vertical-align: top; padding: 14px 18px; width: 16%; word-break: break-word;">
-                      <div style="font-weight: 700; color: var(--text-main); font-size: 0.84rem;">{cleanTimestamp}</div>
+                      <div style="font-weight: 700; color: var(--text-main); font-size: 0.84rem;">
+                        {cleanTimestamp}
+                      </div>
                     </td>
                     <td style="vertical-align: top; padding: 14px 18px; width: 20%; word-break: break-word;">
-                      <div class="audit-user-cell" style="display: flex; align-items: center; gap: 10px;">
-                        <div class="audit-user-avatar" style={`background: ${cleanActor.avatarColor}; width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.75rem; color: #ffffff; flex-shrink: 0;`}>
+                      <div
+                        class="audit-user-cell"
+                        style="display: flex; align-items: center; gap: 10px;"
+                      >
+                        <div
+                          class="audit-user-avatar"
+                          style={`background: ${cleanActor.avatarColor}; width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.75rem; color: #ffffff; flex-shrink: 0;`}
+                        >
                           {cleanActor.initials}
                         </div>
                         <div style="min-width: 0; overflow-wrap: break-word; word-wrap: break-word;">
-                          <div class="audit-user-name" style="font-weight: 750; color: #111827; font-size: 0.84rem; line-height: 1.25;">{cleanActor.name}</div>
-                          <div class="audit-user-role" style="font-size: 0.72rem; color: #52606D; margin-top: 2px; font-weight: 600;">{cleanActor.role}</div>
+                          <div
+                            class="audit-user-name"
+                            style="font-weight: 750; color: #111827; font-size: 0.84rem; line-height: 1.25;"
+                          >
+                            {cleanActor.name}
+                          </div>
+                          <div
+                            class="audit-user-role"
+                            style="font-size: 0.72rem; color: #52606D; margin-top: 2px; font-weight: 600;"
+                          >
+                            {cleanActor.role}
+                          </div>
                         </div>
                       </div>
                     </td>
                     <td style="vertical-align: top; padding: 14px 18px; width: 25%; word-break: break-word;">
                       <div class={`audit-action-badge ${actionBadgeClass}`}>
                         <span class="audit-badge-dot"></span>
-                        <span style="overflow-wrap: break-word; word-wrap: break-word; white-space: normal;">{cleanAction}</span>
+                        <span style="overflow-wrap: break-word; word-wrap: break-word; white-space: normal;">
+                          {cleanAction}
+                        </span>
                       </div>
                     </td>
                     <td style="vertical-align: top; padding: 14px 18px; width: 39%; word-break: break-word;">
@@ -351,21 +564,32 @@ const totalCierresYValidaciones = dbLogs.filter(l => {
                             <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
                               <span class="auditoria-ref-code">{radText}</span>
                               {isDeleted && (
-                                <span style="display: inline-block; font-size: 0.68rem; font-weight: 750; background: #FEE2E2; color: #991B1B; border: 1px solid #FCA5A5; padding: 1px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle;">Expediente eliminado</span>
+                                <span style="display: inline-block; font-size: 0.68rem; font-weight: 750; background: #FEE2E2; color: #991B1B; border: 1px solid #FCA5A5; padding: 1px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle;">
+                                  Expediente eliminado
+                                </span>
                               )}
                             </div>
-                            <div style="font-size: 0.74rem; color: #64748B; margin-top: 2px;">{entityStr}</div>
+                            <div style="font-size: 0.74rem; color: #64748B; margin-top: 2px;">
+                              {entityStr}
+                            </div>
                           </>
                         ) : (
                           <>
                             <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
-                              <span class="auditoria-ref-code">{displayRef.toUpperCase()}</span>
+                              <span class="auditoria-ref-code">
+                                {displayRef.toUpperCase()}
+                              </span>
                             </div>
-                            <div style="font-size: 0.74rem; color: #64748B; margin-top: 2px;">{entityStr}</div>
+                            <div style="font-size: 0.74rem; color: #64748B; margin-top: 2px;">
+                              {entityStr}
+                            </div>
                           </>
                         )}
                         {cleanDetails && (
-                          <div class="audit-details-text" style="font-size: 0.76rem; color: #52606D; margin-top: 5px; line-height: 1.45; word-break: break-word; overflow-wrap: break-word; white-space: normal;">
+                          <div
+                            class="audit-details-text"
+                            style="font-size: 0.76rem; color: #52606D; margin-top: 5px; line-height: 1.45; word-break: break-word; overflow-wrap: break-word; white-space: normal;"
+                          >
                             {cleanDetails}
                           </div>
                         )}
@@ -379,32 +603,92 @@ const totalCierresYValidaciones = dbLogs.filter(l => {
         </div>
 
         <!-- Estado Vacío -->
-        <div class="audit-empty-state" id="audit-empty-state" style="display: none; padding: 48px 24px; text-align: center;">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="1.5" style="margin: 0 auto 14px auto; display: block;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="8"/></svg>
-          <h4 style="font-size: 1.05rem; font-weight: 800; color: #111827; margin: 0 0 6px 0;">No hay registros de auditoría disponibles</h4>
-          <p style="font-size: 0.84rem; color: #52606D; margin: 0; max-width: 500px; margin: 0 auto;">Cualquier radicación, consulta, despacho o modificación se registrará automáticamente en tiempo real en la bitácora oficial.</p>
+        <div
+          class="audit-empty-state"
+          id="audit-empty-state"
+          style="display: none; padding: 48px 24px; text-align: center;"
+        >
+          <svg
+            width="48"
+            height="48"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#64748B"
+            stroke-width="1.5"
+            style="margin: 0 auto 14px auto; display: block;"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            <line x1="11" y1="8" x2="11" y2="8" />
+          </svg>
+          <h4 style="font-size: 1.05rem; font-weight: 800; color: #111827; margin: 0 0 6px 0;">
+            No hay registros de auditoría disponibles
+          </h4>
+          <p style="font-size: 0.84rem; color: #52606D; margin: 0; max-width: 500px; margin: 0 auto;">
+            Cualquier radicación, consulta, despacho o modificación se
+            registrará automáticamente en tiempo real en la bitácora oficial.
+          </p>
         </div>
       </div>
-
-    </div> <!-- Fin .module-board-card -->
-
+    </div>
+    <!-- Fin .module-board-card -->
   </div>
 
   <!-- Modal: Verificación Criptográfica de la Cadena de Logs -->
-  <div class="modal-backdrop" id="audit-verify-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
-    <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 620px; border-radius: 16px; box-shadow: 0 20px 45px rgba(0,0,0,0.2); overflow: hidden; border-top: 4px solid #00594E;">
-      <div class="modal-header" style="padding: 20px 24px; border-bottom: 1.5px solid #DCE4E3; display: flex; justify-content: space-between; align-items: center;">
+  <div
+    class="modal-backdrop"
+    id="audit-verify-modal"
+    style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 20px;"
+  >
+    <div
+      class="modal-card"
+      style="background: #ffffff; width: 100%; max-width: 620px; border-radius: 16px; box-shadow: 0 20px 45px rgba(0,0,0,0.2); overflow: hidden; border-top: 4px solid #00594E;"
+    >
+      <div
+        class="modal-header"
+        style="padding: 20px 24px; border-bottom: 1.5px solid #DCE4E3; display: flex; justify-content: space-between; align-items: center;"
+      >
         <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #00594E; display: flex; align-items: center; gap: 8px;">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+          >
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            <polyline points="9 12 11 14 15 10" />
+          </svg>
           <span>Certificado de Integridad y Trazabilidad</span>
         </h3>
-        <button class="btn-close-modal" id="btn-close-audit-verify-modal" style="background: none; border: none; font-size: 1.4rem; color: #64748B; cursor: pointer; line-height: 1;">&times;</button>
+        <button
+          class="btn-close-modal"
+          id="btn-close-audit-verify-modal"
+          style="background: none; border: none; font-size: 1.4rem; color: #64748B; cursor: pointer; line-height: 1;"
+        >
+          &times;
+        </button>
       </div>
-      <div class="modal-body" id="audit-verify-modal-body" style="padding: 24px; max-height: 60vh; overflow-y: auto;">
+      <div
+        class="modal-body"
+        id="audit-verify-modal-body"
+        style="padding: 24px; max-height: 60vh; overflow-y: auto;"
+      >
         <!-- Generado dinámicamente desde JS -->
       </div>
-      <div class="modal-footer" style="padding: 16px 24px; background: #F8FAFC; border-top: 1.5px solid #DCE4E3; display: flex; justify-content: flex-end;">
-        <button type="button" class="btn btn-primary" id="btn-close-audit-verify-btn" style="background: #00594E; border: none; border-radius: 10px; color: #ffffff; font-weight: 800; padding: 10px 22px; cursor: pointer;">Entendido y Conforme</button>
+      <div
+        class="modal-footer"
+        style="padding: 16px 24px; background: #F8FAFC; border-top: 1.5px solid #DCE4E3; display: flex; justify-content: flex-end;"
+      >
+        <button
+          type="button"
+          class="btn btn-primary"
+          id="btn-close-audit-verify-btn"
+          style="background: #00594E; border: none; border-radius: 10px; color: #ffffff; font-weight: 800; padding: 10px 22px; cursor: pointer;"
+        >
+          Entendido y Conforme
+        </button>
       </div>
     </div>
   </div>
@@ -433,7 +717,7 @@ const totalCierresYValidaciones = dbLogs.filter(l => {
 
   .auditoria-table-card {
     background: #ffffff;
-    border: 1.5px solid #DCE4E3;
+    border: 1.5px solid #dce4e3;
     border-radius: 14px;
     overflow: hidden;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
@@ -452,7 +736,7 @@ const totalCierresYValidaciones = dbLogs.filter(l => {
     border: none;
     border-radius: 0;
     box-shadow: none;
-    background: #FFFFFF;
+    background: #ffffff;
   }
 
   .auditoria-table-card .audit-table,
@@ -466,10 +750,10 @@ const totalCierresYValidaciones = dbLogs.filter(l => {
   .auditoria-table-card .audit-table thead th,
   .auditoria-table thead th {
     padding: 13px 16px;
-    background: #F2F7F6;
-    border-bottom: 2px solid #DCE4E3;
+    background: #f2f7f6;
+    border-bottom: 2px solid #dce4e3;
     text-align: left;
-    color: #52606D;
+    color: #52606d;
     font-size: 0.74rem;
     font-weight: 800;
     text-transform: uppercase;
@@ -477,7 +761,7 @@ const totalCierresYValidaciones = dbLogs.filter(l => {
     position: sticky;
     top: 0;
     z-index: 10;
-    box-shadow: 0 1px 0 #DCE4E3;
+    box-shadow: 0 1px 0 #dce4e3;
     overflow-wrap: break-word;
     word-wrap: break-word;
   }
@@ -486,7 +770,7 @@ const totalCierresYValidaciones = dbLogs.filter(l => {
   .auditoria-table tbody td {
     padding: 14px 16px;
     vertical-align: top;
-    border-bottom: 1px solid #E2E8F0;
+    border-bottom: 1px solid #e2e8f0;
     overflow-wrap: break-word;
     word-wrap: break-word;
   }
@@ -525,11 +809,18 @@ const totalCierresYValidaciones = dbLogs.filter(l => {
   }
 </style>
 
-<script id="audit-initial-data" type="application/json" is:inline set:html={JSON.stringify({ activeRadicados, initialLogs: mappedDbLogs })}></script>
+<script
+  id="audit-initial-data"
+  type="application/json"
+  is:inline
+  set:html={JSON.stringify({ activeRadicados, initialLogs: mappedDbLogs })}
+></script>
 <script is:inline>
   (() => {
     try {
-      const parsed = JSON.parse(document.getElementById('audit-initial-data')?.textContent || '{}');
+      const parsed = JSON.parse(
+        document.getElementById("audit-initial-data")?.textContent || "{}",
+      );
       window.__SGD_ACTIVE_RADICADOS__ = parsed.activeRadicados || [];
       window.__SGD_INITIAL_LOGS__ = parsed.initialLogs || [];
     } catch {}
@@ -537,6 +828,6 @@ const totalCierresYValidaciones = dbLogs.filter(l => {
 </script>
 
 <script>
-  import { initAuditoria } from '@scripts/auditoria';
+  import { initAuditoria } from "@scripts/auditoria";
   initAuditoria();
 </script>

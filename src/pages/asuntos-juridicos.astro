@@ -764,8 +764,7 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
 
   <script id="juridico-bootstrap-data" type="application/json" is:inline set:html={JSON.stringify({ carpetas, documentos })}></script>
 
-  <script is:inline>
-    // @ts-nocheck
+  <script>
     const __juridicoBootstrap = (() => {
       try {
         return JSON.parse(document.getElementById('juridico-bootstrap-data')?.textContent || '{}');
@@ -773,44 +772,44 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
         return {};
       }
     })();
-    const carpetas = Array.isArray(__juridicoBootstrap.carpetas) ? __juridicoBootstrap.carpetas : [];
-    const documentos = Array.isArray(__juridicoBootstrap.documentos) ? __juridicoBootstrap.documentos : [];
+    const carpetas: any[] = Array.isArray(__juridicoBootstrap.carpetas) ? __juridicoBootstrap.carpetas : [];
+    const documentos: any[] = Array.isArray(__juridicoBootstrap.documentos) ? __juridicoBootstrap.documentos : [];
 
     // Estado reactivo en memoria
-    let currentCategoria = 'conceptos_internos';
-    let currentFolderId = null;
-    let currentSearchScope = 'section';
-    let currentYearFilter = 'todos';
-    let currentTemaFilter = 'todos';
-    let currentViewMode = 'carpetas';
-    let isSearchActive = false;
+    let currentCategoria: string = 'conceptos_internos';
+    let currentFolderId: string | null = null;
+    let currentSearchScope: string = 'section';
+    let currentYearFilter: string = 'todos';
+    let currentTemaFilter: string = 'todos';
+    let currentViewMode: string = 'carpetas';
+    let isSearchActive: boolean = false;
 
-    const catLabels = {
+    const catLabels: Record<string, string> = {
       conceptos_internos: 'Conceptos Internos',
       litigios_judiciales: 'Litigios y Asuntos Judiciales',
       auditoria_entes_control: 'Auditoría de Entes de Control',
     };
 
     // Referencias al DOM
-    const catCards = document.querySelectorAll('.root-cat-card');
-    const searchInput = document.getElementById('juridico-deep-search-input');
-    const scopeBtns = document.querySelectorAll('.scope-btn');
-    const yearChips = document.querySelectorAll('#year-filter-chips .year-chip');
-    const temaSelect = document.getElementById('select-filter-tema');
-    const modeBtns = document.querySelectorAll('#view-mode-selector .mode-btn');
+    const catCards = document.querySelectorAll<HTMLElement>('.root-cat-card');
+    const searchInput = document.getElementById('juridico-deep-search-input') as HTMLInputElement | null;
+    const scopeBtns = document.querySelectorAll<HTMLElement>('.scope-btn');
+    const yearChips = document.querySelectorAll<HTMLElement>('#year-filter-chips .year-chip');
+    const temaSelect = document.getElementById('select-filter-tema') as HTMLSelectElement | null;
+    const modeBtns = document.querySelectorAll<HTMLElement>('#view-mode-selector .mode-btn');
 
-    const breadcrumbsNav = document.getElementById('juridico-breadcrumbs');
-    const normalPanel = document.getElementById('normal-explorer-panel');
-    const searchPanel = document.getElementById('search-results-panel');
-    const resultsContainer = document.getElementById('results-cards-container');
-    const resultsCountLabel = document.getElementById('results-count-label');
-    const resultsQueryLabel = document.getElementById('results-query-label');
-    const clearSearchBtn = document.getElementById('btn-clear-search');
+    const breadcrumbsNav = document.getElementById('juridico-breadcrumbs') as HTMLElement | null;
+    const normalPanel = document.getElementById('normal-explorer-panel') as HTMLElement | null;
+    const searchPanel = document.getElementById('search-results-panel') as HTMLElement | null;
+    const resultsContainer = document.getElementById('results-cards-container') as HTMLElement | null;
+    const resultsCountLabel = document.getElementById('results-count-label') as HTMLElement | null;
+    const resultsQueryLabel = document.getElementById('results-query-label') as HTMLElement | null;
+    const clearSearchBtn = document.getElementById('btn-clear-search') as HTMLElement | null;
 
-    const subfoldersGrid = document.getElementById('subfolders-grid');
-    const subfoldersCountPill = document.getElementById('subfolders-count-pill');
-    const documentsList = document.getElementById('documents-list-container');
-    const documentsCountPill = document.getElementById('documents-count-pill');
+    const subfoldersGrid = document.getElementById('subfolders-grid') as HTMLElement | null;
+    const subfoldersCountPill = document.getElementById('subfolders-count-pill') as HTMLElement | null;
+    const documentsList = document.getElementById('documents-list-container') as HTMLElement | null;
+    const documentsCountPill = document.getElementById('documents-count-pill') as HTMLElement | null;
 
     // Cambiar Categoría Raíz
     catCards.forEach((card) => {
@@ -849,7 +848,7 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
 
     // Filtro por Tema
     temaSelect?.addEventListener('change', () => {
-      currentTemaFilter = temaSelect.value;
+      if (temaSelect) currentTemaFilter = temaSelect.value;
       if (searchInput && searchInput.value.trim().length > 0) {
         triggerDeepSearch();
       } else {
@@ -868,7 +867,7 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
     });
 
     // Búsqueda en tiempo real con debounce
-    let searchDebounceTimer = null;
+    let searchDebounceTimer: any = null;
     searchInput?.addEventListener('input', () => {
       clearTimeout(searchDebounceTimer);
       searchDebounceTimer = setTimeout(() => {
@@ -928,9 +927,9 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
     }
 
     // Renderizar Resultados de Búsqueda
-    function renderSearchResults(data) {
-      const docs = data.documentos || [];
-      const carps = data.carpetas || [];
+    function renderSearchResults(data: any) {
+      const docs: any[] = data.documentos || [];
+      const carps: any[] = data.carpetas || [];
       const totalCount = docs.length + carps.length;
 
       if (resultsCountLabel) resultsCountLabel.textContent = `${totalCount} resultado${totalCount === 1 ? '' : 's'} encontrado${totalCount === 1 ? '' : 's'}`;
@@ -956,7 +955,7 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
       let html = '';
 
       // Carpetas encontradas
-      carps.forEach((c) => {
+      carps.forEach((c: any) => {
         html += `
           <div class="result-search-card" style="border-left: 4px solid #00594E;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
@@ -978,7 +977,7 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
       });
 
       // Documentos encontrados con snippets
-      docs.forEach((d) => {
+      docs.forEach((d: any) => {
         const ext = (d.archivo_nombre || '').split('.').pop()?.toUpperCase() || 'DOC';
         html += `
           <div class="result-search-card">
@@ -1037,7 +1036,7 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
     }
 
     function attachJumpEvents() {
-      document.querySelectorAll('.btn-jump-folder').forEach((btn) => {
+      document.querySelectorAll<HTMLElement>('.btn-jump-folder').forEach((btn) => {
         btn.addEventListener('click', () => {
           const cat = btn.getAttribute('data-cat');
           const folderId = btn.getAttribute('data-id') || null;
@@ -1060,7 +1059,7 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
       renderBreadcrumbs();
 
       // Filtrar subcarpetas del nivel actual
-      const currentSubfolders = carpetas.filter((c) => {
+      const currentSubfolders = carpetas.filter((c: any) => {
         if (c.categoria_raiz !== currentCategoria) return false;
         if (currentFolderId === null) {
           return !c.parent_id;
@@ -1069,7 +1068,7 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
       });
 
       // Filtrar documentos del nivel actual
-      const currentDocs = documentos.filter((d) => {
+      const currentDocs = documentos.filter((d: any) => {
         if (d.categoria_raiz !== currentCategoria) return false;
         if (currentFolderId === null) {
           return !d.carpeta_id;
@@ -1093,9 +1092,9 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
             </div>
           `;
         } else {
-          subfoldersGrid.innerHTML = currentSubfolders.map((c) => {
-            const childFoldersCount = carpetas.filter((sub) => sub.parent_id === c.id).length;
-            const childDocsCount = documentos.filter((d) => d.carpeta_id === c.id).length;
+          subfoldersGrid.innerHTML = currentSubfolders.map((c: any) => {
+            const childFoldersCount = carpetas.filter((sub: any) => sub.parent_id === c.id).length;
+            const childDocsCount = documentos.filter((d: any) => d.carpeta_id === c.id).length;
 
             return `
               <div class="folder-card" data-folder-id="${c.id}">
@@ -1122,10 +1121,10 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
           }).join('');
 
           // Listeners para abrir subcarpeta al hacer clic
-          subfoldersGrid.querySelectorAll('.folder-card').forEach((card) => {
-            card.addEventListener('click', (e) => {
-              const target = e.target;
-              if (target.closest('.btn-delete-folder')) return;
+          subfoldersGrid.querySelectorAll<HTMLElement>('.folder-card').forEach((card) => {
+            card.addEventListener('click', (e: MouseEvent) => {
+              const target = e.target as HTMLElement | null;
+              if (target?.closest('.btn-delete-folder')) return;
               const fId = card.getAttribute('data-folder-id');
               if (fId) {
                 currentFolderId = fId;
@@ -1135,8 +1134,8 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
           });
 
           // Eliminar subcarpeta
-          subfoldersGrid.querySelectorAll('.btn-delete-folder').forEach((btn) => {
-            btn.addEventListener('click', async (e) => {
+          subfoldersGrid.querySelectorAll<HTMLElement>('.btn-delete-folder').forEach((btn) => {
+            btn.addEventListener('click', async (e: MouseEvent) => {
               e.stopPropagation();
               const id = btn.getAttribute('data-id');
               const name = btn.getAttribute('data-name');
@@ -1175,7 +1174,7 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
             </div>
           `;
         } else {
-          documentsList.innerHTML = currentDocs.map((d) => {
+          documentsList.innerHTML = currentDocs.map((d: any) => {
             const ext = (d.archivo_nombre || '').split('.').pop()?.toUpperCase() || 'DOC';
             const sizeKb = d.archivo_tamano ? (d.archivo_tamano / 1024).toFixed(1) : '0';
             const hasText = Boolean(d.contenido_extraido && d.contenido_extraido.length > 0);
@@ -1217,7 +1216,7 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
           }).join('');
 
           // Eliminar documento
-          documentsList.querySelectorAll('.btn-delete-doc').forEach((btn) => {
+          documentsList.querySelectorAll<HTMLElement>('.btn-delete-doc').forEach((btn) => {
             btn.addEventListener('click', async () => {
               const id = btn.getAttribute('data-id');
               const name = btn.getAttribute('data-name');
@@ -1245,24 +1244,24 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
     function renderBreadcrumbs() {
       if (!breadcrumbsNav) return;
 
-      const segments = [
+      const segments: string[] = [
         `<button type="button" class="breadcrumb-btn breadcrumb-item root-link" data-level="root">Asuntos Jurídicos</button>`,
         `<span class="breadcrumb-sep">&rsaquo;</span>`,
         `<button type="button" class="breadcrumb-btn breadcrumb-item ${currentFolderId === null ? 'is-current active' : ''}" data-level="cat">${catLabels[currentCategoria] || currentCategoria}</button>`,
       ];
 
       if (currentFolderId) {
-        const folderChain = [];
-        let curr = carpetas.find((c) => c.id === currentFolderId);
+        const folderChain: any[] = [];
+        let curr = carpetas.find((c: any) => c.id === currentFolderId);
         let depth = 0;
 
         while (curr && depth < 8) {
           folderChain.unshift(curr);
-          curr = carpetas.find((c) => c.id === curr.parent_id);
+          curr = carpetas.find((c: any) => c.id === curr.parent_id);
           depth++;
         }
 
-        folderChain.forEach((f, idx) => {
+        folderChain.forEach((f: any, idx: number) => {
           segments.push(`<span class="breadcrumb-sep">&rsaquo;</span>`);
           const isLast = idx === folderChain.length - 1;
           segments.push(`
@@ -1275,7 +1274,7 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
 
       breadcrumbsNav.innerHTML = segments.join('');
 
-      breadcrumbsNav.querySelectorAll('.breadcrumb-btn, .breadcrumb-item').forEach((item) => {
+      breadcrumbsNav.querySelectorAll<HTMLElement>('.breadcrumb-btn, .breadcrumb-item').forEach((item) => {
         item.addEventListener('click', () => {
           const level = item.getAttribute('data-level');
           if (level === 'root' || level === 'cat') {
@@ -1293,16 +1292,16 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
     }
 
     // Modal: Nueva Subcarpeta
-    const folderModal = document.getElementById('modal-new-folder');
-    const openFolderModalBtn = document.getElementById('btn-open-new-folder-modal');
-    const closeFolderModalBtn = document.getElementById('btn-close-new-folder');
-    const cancelFolderModalBtn = document.getElementById('btn-cancel-new-folder');
-    const folderForm = document.getElementById('form-new-folder');
-    const folderNombreInput = document.getElementById('folder-input-nombre');
-    const folderTemaInput = document.getElementById('folder-input-tema');
-    const folderAnioInput = document.getElementById('folder-input-anio');
-    const folderDescInput = document.getElementById('folder-input-desc');
-    const submitFolderBtn = document.getElementById('btn-submit-new-folder');
+    const folderModal = document.getElementById('modal-new-folder') as HTMLElement | null;
+    const openFolderModalBtn = document.getElementById('btn-open-new-folder-modal') as HTMLElement | null;
+    const closeFolderModalBtn = document.getElementById('btn-close-new-folder') as HTMLElement | null;
+    const cancelFolderModalBtn = document.getElementById('btn-cancel-new-folder') as HTMLElement | null;
+    const folderForm = document.getElementById('form-new-folder') as HTMLFormElement | null;
+    const folderNombreInput = document.getElementById('folder-input-nombre') as HTMLInputElement | null;
+    const folderTemaInput = document.getElementById('folder-input-tema') as HTMLInputElement | null;
+    const folderAnioInput = document.getElementById('folder-input-anio') as HTMLInputElement | null;
+    const folderDescInput = document.getElementById('folder-input-desc') as HTMLTextAreaElement | null;
+    const submitFolderBtn = document.getElementById('btn-submit-new-folder') as HTMLButtonElement | null;
 
     openFolderModalBtn?.addEventListener('click', () => {
       if (folderForm) folderForm.reset();
@@ -1314,11 +1313,11 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
     };
     closeFolderModalBtn?.addEventListener('click', closeFolderModal);
     cancelFolderModalBtn?.addEventListener('click', closeFolderModal);
-    folderModal?.addEventListener('click', (e) => {
+    folderModal?.addEventListener('click', (e: MouseEvent) => {
       if (e.target === folderModal) closeFolderModal();
     });
 
-    folderForm?.addEventListener('submit', async (e) => {
+    folderForm?.addEventListener('submit', async (e: Event) => {
       e.preventDefault();
       if (!folderNombreInput?.value.trim()) return;
       if (submitFolderBtn) {
@@ -1359,24 +1358,24 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
     });
 
     // Modal: Subir Documento
-    const docModal = document.getElementById('modal-upload-doc');
-    const openDocModalBtn = document.getElementById('btn-open-upload-modal');
-    const closeDocModalBtn = document.getElementById('btn-close-upload-doc');
-    const cancelDocModalBtn = document.getElementById('btn-cancel-upload-doc');
-    const docForm = document.getElementById('form-upload-doc');
-    const docFileInput = document.getElementById('doc-file-input');
-    const browseDocFileBtn = document.getElementById('btn-browse-doc-file');
-    const docFileLabel = document.getElementById('doc-file-label');
-    const docTituloInput = document.getElementById('doc-input-titulo');
-    const docAnioInput = document.getElementById('doc-input-anio');
-    const docTemaInput = document.getElementById('doc-input-tema');
-    const docPalabrasInput = document.getElementById('doc-input-palabras');
-    const docDescInput = document.getElementById('doc-input-desc');
-    const submitDocBtn = document.getElementById('btn-submit-upload-doc');
+    const docModal = document.getElementById('modal-upload-doc') as HTMLElement | null;
+    const openDocModalBtn = document.getElementById('btn-open-upload-modal') as HTMLElement | null;
+    const closeDocModalBtn = document.getElementById('btn-close-upload-doc') as HTMLElement | null;
+    const cancelDocModalBtn = document.getElementById('btn-cancel-upload-doc') as HTMLElement | null;
+    const docForm = document.getElementById('form-upload-doc') as HTMLFormElement | null;
+    const docFileInput = document.getElementById('doc-file-input') as HTMLInputElement | null;
+    const browseDocFileBtn = document.getElementById('btn-browse-doc-file') as HTMLElement | null;
+    const docFileLabel = document.getElementById('doc-file-label') as HTMLElement | null;
+    const docTituloInput = document.getElementById('doc-input-titulo') as HTMLInputElement | null;
+    const docAnioInput = document.getElementById('doc-input-anio') as HTMLInputElement | null;
+    const docTemaInput = document.getElementById('doc-input-tema') as HTMLInputElement | null;
+    const docPalabrasInput = document.getElementById('doc-input-palabras') as HTMLInputElement | null;
+    const docDescInput = document.getElementById('doc-input-desc') as HTMLTextAreaElement | null;
+    const submitDocBtn = document.getElementById('btn-submit-upload-doc') as HTMLButtonElement | null;
 
-    browseDocFileBtn?.addEventListener('click', async (e) => {
+    browseDocFileBtn?.addEventListener('click', async (e: MouseEvent) => {
       e.preventDefault();
-      const modalOpener = window['abrirModalSubida'];
+      const modalOpener = (window as any)['abrirModalSubida'];
       if (typeof modalOpener === 'function') {
         const files = await modalOpener({
           titulo: 'Cargar Documento Jurídico',
@@ -1418,11 +1417,11 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
     };
     closeDocModalBtn?.addEventListener('click', closeDocModal);
     cancelDocModalBtn?.addEventListener('click', closeDocModal);
-    docModal?.addEventListener('click', (e) => {
+    docModal?.addEventListener('click', (e: MouseEvent) => {
       if (e.target === docModal) closeDocModal();
     });
 
-    docForm?.addEventListener('submit', async (e) => {
+    docForm?.addEventListener('submit', async (e: Event) => {
       e.preventDefault();
       if (!docFileInput?.files || !docFileInput.files[0]) {
         alert('Por favor seleccione un archivo para subir.');

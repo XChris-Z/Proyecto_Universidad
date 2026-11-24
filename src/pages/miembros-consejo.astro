@@ -473,13 +473,13 @@ const archivadosReemplazados = miembrosView.filter((m) => m.statusInfo.type === 
             </select>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
-            <div>
-              <label class="form-label" style="font-size: 0.76rem; font-weight: 700; color: #0F172A; text-transform: uppercase; margin-bottom: 5px; display: block;">Nombre Completo *</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; align-items: end;">
+            <div style="display: flex; flex-direction: column; justify-content: flex-end;">
+              <label class="form-label" style="font-size: 0.76rem; font-weight: 700; color: #0F172A; text-transform: uppercase; margin-bottom: 5px; min-height: 2.2em; display: flex; align-items: flex-end;">Nombre Completo *</label>
               <input type="text" id="member-form-nombre" class="form-input" placeholder="Ej: Dr. Juan Carlos Pérez" required style="width: 100%; height: 38px; border-radius: 8px; border: 1.5px solid #DCE4E3; font-size: 0.85rem;" />
             </div>
-            <div>
-              <label class="form-label" style="font-size: 0.76rem; font-weight: 700; color: #0F172A; text-transform: uppercase; margin-bottom: 5px; display: block;">Cargo / Calidad de Representación *</label>
+            <div style="display: flex; flex-direction: column; justify-content: flex-end;">
+              <label class="form-label" style="font-size: 0.76rem; font-weight: 700; color: #0F172A; text-transform: uppercase; margin-bottom: 5px; min-height: 2.2em; display: flex; align-items: flex-end;">Cargo / Calidad de Representación *</label>
               <input type="text" id="member-form-cargo" class="form-input" placeholder="Ej: Representante de los Docentes" required style="width: 100%; height: 38px; border-radius: 8px; border: 1.5px solid #DCE4E3; font-size: 0.85rem;" />
             </div>
           </div>
