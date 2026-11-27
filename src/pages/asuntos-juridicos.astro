@@ -43,142 +43,97 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
 <AppLayout title="Asuntos Jurídicos — Explorador Inteligente" activeNav="juridicos">
   <section class="module-board-card juridicos-shell">
     
-    <!-- Cabecera Institucional Bento -->
+    <!-- Cabecera Limpia -->
     <header class="juridicos-hero-header">
       <div style="min-width: 0; flex: 1;">
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-          <h1 style="font-size: 1.55rem; font-weight: 800; color: #111827; margin: 0; letter-spacing: -0.01em;">
+          <h1 style="font-size: 1.5rem; font-weight: 800; color: #0F172A; margin: 0; letter-spacing: -0.015em;">
             Asuntos Jurídicos
           </h1>
-          <span style="font-size: 0.72rem; font-weight: 800; background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; padding: 3px 10px; border-radius: 999px;">
+          <span style="font-size: 0.71rem; font-weight: 800; background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; padding: 3px 10px; border-radius: 999px;">
             Oficina Asesora Jurídica
           </span>
-          <span style="font-size: 0.72rem; font-weight: 700; background: #F7F5EE; color: #786832; border: 1px solid #DBD2B0; padding: 3px 10px; border-radius: 999px;">
+          <span style="font-size: 0.71rem; font-weight: 700; background: #F7F5EE; color: #786832; border: 1px solid #DBD2B0; padding: 3px 10px; border-radius: 999px;">
             Búsqueda Profunda Indexada
           </span>
         </div>
-        <p style="font-size: 0.86rem; color: #52606D; margin: 6px 0 0 0;">
-          Explorador documental jerárquico de conceptos jurídicos internos, litigios judiciales y auditorías de entes de control con indexación de contenido plano.
+        <p style="font-size: 0.84rem; color: #52606D; margin: 5px 0 0 0;">
+          Explorador documental jerárquico de conceptos internos, litigios judiciales y auditorías de entes de control.
         </p>
       </div>
     </header>
 
-    <!-- FILA 1: Selector de las 3 Carpetas Raíz (Tarjetas Ejecutivas Bento) -->
-    <section class="root-categories-grid" aria-label="Carpetas Raíz Principales">
-      <div class="root-cat-card active" data-cat="conceptos_internos" id="cat-card-conceptos">
-        <div class="root-cat-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-        </div>
-        <div style="flex: 1; min-width: 0;">
-          <h3 class="root-cat-title">Conceptos Internos</h3>
-          <div class="root-cat-meta">
-            <span>{countConceptosCarpetas} subcarpetas</span>
-            <span>&middot;</span>
-            <strong>{countConceptosDocs} documentos</strong>
-          </div>
-        </div>
-        <div class="root-cat-arrow">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-        </div>
-      </div>
-
-      <div class="root-cat-card" data-cat="litigios_judiciales" id="cat-card-litigios">
-        <div class="root-cat-icon dorado">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
-        </div>
-        <div style="flex: 1; min-width: 0;">
-          <h3 class="root-cat-title">Litigios y Asuntos Judiciales</h3>
-          <div class="root-cat-meta">
-            <span>{countLitigiosCarpetas} subcarpetas</span>
-            <span>&middot;</span>
-            <strong>{countLitigiosDocs} expedientes</strong>
-          </div>
-        </div>
-        <div class="root-cat-arrow">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-        </div>
-      </div>
-
-      <div class="root-cat-card" data-cat="auditoria_entes_control" id="cat-card-auditorias">
-        <div class="root-cat-icon slate">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 14 2 2 4-4"/></svg>
-        </div>
-        <div style="flex: 1; min-width: 0;">
-          <h3 class="root-cat-title">Auditoría de Entes de Control</h3>
-          <div class="root-cat-meta">
-            <span>{countAuditoriasCarpetas} subcarpetas</span>
-            <span>&middot;</span>
-            <strong>{countAuditoriasDocs} actuaciones</strong>
-          </div>
-        </div>
-        <div class="root-cat-arrow">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-        </div>
-      </div>
-    </section>
-
-    <!-- FILA 2: Barra de Búsqueda Profunda, Filtros de Año/Tema y Modos de Vista -->
-    <section class="juridicos-toolbar-panel">
-      <!-- Input de búsqueda universal profunda -->
+    <!-- BLOQUE 1: Barra Superior Unificada de Búsqueda y Filtros Compactos -->
+    <section class="juridicos-toolbar-panel" aria-label="Búsqueda y filtros documentales">
+      <!-- Fila única de búsqueda -->
       <div class="deep-search-bar-wrap">
-        <div style="position: relative; flex: 1;">
+        <div class="search-input-box">
+          <span class="search-input-icon" aria-hidden="true">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          </span>
           <input
             type="text"
             id="juridico-deep-search-input"
             class="form-input juridico-search-input"
-            placeholder="Buscar por cualquier palabra dentro del archivo, tema, año, número de proceso o carpeta..."
-            style="width: 100%; height: 44px; padding-left: 42px; padding-right: 12px; border-radius: 10px; border: 1px solid #CBD5E1; font-size: 0.86rem; background: #FFFFFF;"
+            placeholder="Buscar por palabra dentro del archivo, título, tema, radicado o carpeta..."
+            autocomplete="off"
           />
-          <div style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #00594E; display: flex; align-items: center; pointer-events: none;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-          </div>
+          <button
+            type="button"
+            id="btn-quick-clear-search"
+            class="search-quick-clear"
+            title="Limpiar texto de búsqueda"
+            aria-label="Limpiar búsqueda"
+            style="display: none;"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
         </div>
 
-        <!-- Scope switch: En esta carpeta / Todo el módulo -->
-        <div class="search-scope-toggle">
-          <button type="button" class="scope-btn active" data-scope="section">Esta categoría</button>
-          <button type="button" class="scope-btn" data-scope="all">Todo Jurídico</button>
+        <div class="search-scope-toggle" role="group" aria-label="Ámbito de búsqueda">
+          <button type="button" class="scope-btn" data-scope="section">Carpeta actual</button>
+          <button type="button" class="scope-btn active" data-scope="all">Todo Jurídico</button>
         </div>
       </div>
 
-      <!-- Filtros de Año, Tema y Modo de Vista -->
+      <!-- Fila compacta de filtros y modo de vista -->
       <div class="filters-and-modes-bar">
-        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-          <!-- Selector de Año -->
-          <span style="font-size: 0.72rem; font-weight: 700; color: #64748B; text-transform: uppercase; white-space: nowrap; flex-shrink: 0;">Año:</span>
-          <div class="year-chips-wrap" id="year-filter-chips">
-            <button type="button" class="year-chip active" data-year="todos">Todos</button>
-            {yearsList.map((y) => (
-              <button type="button" class="year-chip" data-year={y}>{y}</button>
-            ))}
+        <div class="compact-selects-group">
+          <div class="compact-filter-field">
+            <label for="select-filter-anio" class="compact-filter-label">Año:</label>
+            <div class="compact-select-wrap">
+              <select id="select-filter-anio" class="form-input compact-filter-select">
+                <option value="todos">Todos los años</option>
+                {yearsList.map((y) => (
+                  <option value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          <!-- Divisor vertical sutil entre Año y Tema -->
-          <div style="width: 1px; height: 20px; background: #E2E8F0; margin: 0 4px; flex-shrink: 0;"></div>
-
-          <!-- Selector de Tema -->
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <span style="font-size: 0.72rem; font-weight: 700; color: #64748B; text-transform: uppercase; white-space: nowrap; flex-shrink: 0;">Tema:</span>
-            <select id="select-filter-tema" class="form-input" style="height: 32px; min-width: 170px; border-radius: 8px; font-size: 0.76rem; font-weight: 600; padding: 2px 10px; border: 1px solid #DCE4E3; background: #FFFFFF; white-space: nowrap; flex-shrink: 0;">
-              <option value="todos">Todos los Temas</option>
-              {allTemas.map((t) => (
-                <option value={t}>{t}</option>
-              ))}
-            </select>
+          <div class="compact-filter-field">
+            <label for="select-filter-tema" class="compact-filter-label">Tema:</label>
+            <div class="compact-select-wrap compact-select-tema">
+              <select id="select-filter-tema" class="form-input compact-filter-select">
+                <option value="todos">Todos los Temas</option>
+                {allTemas.map((t) => (
+                  <option value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
-        <!-- Selector de Modo de Visualización -->
-        <div class="view-mode-toggle" id="view-mode-selector">
+        <div class="view-mode-toggle" id="view-mode-selector" role="group" aria-label="Modo de visualización">
           <button type="button" class="mode-btn active" data-mode="carpetas" title="Explorador jerárquico de carpetas">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-            <span>Carpetas</span>
+            <span>Explorador</span>
           </button>
-          <button type="button" class="mode-btn" data-mode="anio" title="Agrupar por Año">
+          <button type="button" class="mode-btn" data-mode="anio" title="Agrupar documentos por Año">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             <span>Por Año</span>
           </button>
-          <button type="button" class="mode-btn" data-mode="tema" title="Agrupar por Tema">
+          <button type="button" class="mode-btn" data-mode="tema" title="Agrupar documentos por Tema">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
             <span>Por Tema</span>
           </button>
@@ -186,88 +141,128 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
       </div>
     </section>
 
-    <!-- FILA 3: Barra de Ruta (Breadcrumbs) y Botones de Acción del Nivel Actual -->
-    <section class="breadcrumbs-actions-bar">
-      <!-- Breadcrumbs dinámicos -->
-      <nav class="juridico-breadcrumbs" id="juridico-breadcrumbs" aria-label="Ruta de carpetas">
-        <button type="button" class="breadcrumb-btn breadcrumb-item root-link" data-folder-id="">
-          Asuntos Jurídicos
-        </button>
-        <span class="breadcrumb-sep">&rsaquo;</span>
-        <button type="button" class="breadcrumb-btn breadcrumb-item is-current active" id="breadcrumb-current-cat" data-folder-id="">
-          Conceptos Internos
-        </button>
-      </nav>
+    <!-- Botón desplegable móvil (< 960px) -->
+    <div class="mobile-tree-toggle-bar">
+      <button type="button" id="btn-toggle-tree-mobile" class="btn-mobile-tree-toggle" aria-expanded="false">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        <span>Ver árbol de carpetas</span>
+        <svg class="mobile-tree-chevron" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+    </div>
 
-      <!-- Botones de Acción del nivel actual -->
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <button type="button" id="btn-open-new-folder-modal" class="btn btn-secondary btn-sm" style="height: 34px; padding: 6px 14px; font-size: 0.78rem; font-weight: 700; border-radius: 8px; background: #FFFFFF; border: 1.5px solid #00594E; color: #00594E; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
-          <span>Nueva Subcarpeta</span>
-        </button>
-
-        <button type="button" id="btn-open-upload-modal" class="btn btn-primary btn-sm" style="height: 34px; padding: 6px 16px; font-size: 0.78rem; font-weight: 800; border-radius: 8px; background: #00594E; border: 1.5px solid #00594E; color: #FFFFFF; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(0, 89, 78, 0.2);">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          <span>Subir Archivo Aquí</span>
-        </button>
-      </div>
-    </section>
-
-    <!-- ÁREA DE CONTENIDO: 2 Estados (Resultados de Búsqueda Profunda vs Explorador Normal) -->
-    <div class="content-viewport" id="juridico-content-viewport">
-      
-      <!-- ESTADO A: Resultados de Búsqueda Profunda (cuando hay query o filtro de año/tema activo) -->
-      <section id="search-results-panel" style="display: none;">
-        <div class="results-header-bar">
-          <div>
-            <strong id="results-count-label" style="font-size: 0.95rem; color: #111827;">0 resultados encontrados</strong>
-            <span id="results-query-label" style="font-size: 0.80rem; color: #64748B; margin-left: 6px;"></span>
-          </div>
-          <button type="button" id="btn-clear-search" class="btn btn-ghost btn-sm" style="font-size: 0.74rem; color: #00594E; font-weight: 700;">
-            Limpiar búsqueda &times;
+    <!-- BLOQUE 2: Layout de 2 Paneles (Árbol Lateral Izquierdo + Área de Trabajo Derecha) -->
+    <div class="juridico-workspace-grid">
+      <!-- PANEL IZQUIERDO: Árbol Jerárquico de Carpetas -->
+      <aside class="juridico-tree-panel" id="juridico-tree-panel" aria-label="Estructura documental">
+        <div class="tree-panel-header">
+          <span class="tree-panel-title">ESTRUCTURA DOCUMENTAL</span>
+          <button type="button" id="btn-tree-toggle-all" class="tree-header-btn" title="Expandir o contraer árbol">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="7 13 12 18 17 13"/><polyline points="7 6 12 11 17 6"/></svg>
           </button>
         </div>
-
-        <div id="results-cards-container" class="results-grid" style="margin-top: 14px; display: flex; flex-direction: column; gap: 12px;">
-          <!-- Inyectado dinámicamente desde JS -->
+        <div class="juridico-tree-root" id="juridico-tree-root">
+          <!-- Renderizado dinámico jerárquico desde JS -->
         </div>
-      </section>
+      </aside>
 
-      <!-- ESTADO B: Explorador Normal de Carpetas y Documentos -->
-      <section id="normal-explorer-panel">
-        <!-- Subsección 1: Subcarpetas del nivel actual -->
-        <div class="subfolders-section">
-          <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid #EEF2F5; margin-bottom: 12px;">
-            <div style="font-size: 0.84rem; font-weight: 800; color: #111827; text-transform: uppercase; letter-spacing: 0.03em;">
-              Subcarpetas en este nivel
+      <!-- PANEL DERECHO: Área de Trabajo de la Carpeta Activa / Resultados -->
+      <main class="juridico-content-panel" id="juridico-content-viewport">
+        <!-- ESTADO A: Resultados de Búsqueda Profunda -->
+        <section id="search-results-panel" style="display: none;">
+          <div class="results-header-bar">
+            <div style="min-width: 0; flex: 1;">
+              <strong id="results-count-label" style="font-size: 0.94rem; color: #0F172A;">0 coincidencias</strong>
+              <span id="results-query-label" style="font-size: 0.82rem; color: #475569; margin-left: 6px;"></span>
             </div>
-            <span id="subfolders-count-pill" style="font-size: 0.72rem; font-weight: 700; color: #00594E; background: #F0F7F5; border: 1px solid #B2CFCB; padding: 2px 8px; border-radius: 999px;">
-              0 carpetas
-            </span>
+            <button type="button" id="btn-clear-search" class="btn-clear-search-pill">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              <span>Limpiar búsqueda</span>
+            </button>
           </div>
 
-          <div id="subfolders-grid" class="subfolders-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 12px;">
+          <div id="results-cards-container" class="results-grid">
             <!-- Inyectado dinámicamente desde JS -->
           </div>
-        </div>
+        </section>
 
-        <!-- Subsección 2: Documentos en esta carpeta -->
-        <div class="documents-section" style="margin-top: 26px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid #EEF2F5; margin-bottom: 12px;">
-            <div style="font-size: 0.84rem; font-weight: 800; color: #111827; text-transform: uppercase; letter-spacing: 0.03em;">
-              Documentos en esta carpeta
+        <!-- ESTADO B: Explorador Normal de la Carpeta Activa -->
+        <section id="normal-explorer-panel">
+          <!-- Cabecera de ubicación clara -->
+          <div class="workspace-location-header">
+            <div class="location-row-top">
+              <nav class="juridico-breadcrumbs" id="juridico-breadcrumbs" aria-label="Ruta de carpetas">
+                <button type="button" class="breadcrumb-btn breadcrumb-item root-link" data-level="root">Asuntos Jurídicos</button>
+                <span class="breadcrumb-sep">&rsaquo;</span>
+                <button type="button" class="breadcrumb-btn breadcrumb-item is-current active" data-level="cat">Conceptos Internos</button>
+              </nav>
+
+              <button type="button" id="btn-folder-back" class="btn-folder-back" style="display: none;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                <span>Volver</span>
+              </button>
             </div>
-            <span id="documents-count-pill" style="font-size: 0.72rem; font-weight: 700; color: #786832; background: #F7F5EE; border: 1px solid #DBD2B0; padding: 2px 8px; border-radius: 999px;">
-              0 documentos
-            </span>
+
+            <div class="location-row-title-actions">
+              <div class="location-title-block">
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                  <h2 id="active-folder-title" class="active-folder-title">Conceptos Internos</h2>
+                  <span id="active-folder-badge" class="active-folder-badge">0 ítems</span>
+                </div>
+                <p id="active-folder-meta" class="active-folder-meta" style="display: none;"></p>
+              </div>
+
+              <div class="location-actions-group">
+                <button type="button" id="btn-open-new-folder-modal" class="btn-juridico-secondary">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+                  <span>Nueva Subcarpeta</span>
+                </button>
+
+                <button type="button" id="btn-open-upload-modal" class="btn-juridico-primary">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  <span>Subir Archivo Aquí</span>
+                </button>
+              </div>
+            </div>
           </div>
 
-          <div id="documents-list-container" class="documents-list" style="display: flex; flex-direction: column; gap: 10px;">
-            <!-- Inyectado dinámicamente desde JS -->
+          <!-- Subsección 1: Subcarpetas (solo visible cuando subcarpetas.length > 0) -->
+          <div class="subfolders-section" id="subfolders-section" style="display: none;">
+            <div class="section-heading-row">
+              <span class="section-heading-label">SUBCARPETAS</span>
+              <span id="subfolders-count-pill" class="section-count-pill verde">0 subcarpetas</span>
+            </div>
+            <div id="subfolders-grid" class="subfolders-grid"></div>
           </div>
-        </div>
-      </section>
 
+          <!-- Subsección 2: Documentos -->
+          <div class="documents-section" id="documents-section" style="display: none;">
+            <div class="section-heading-row">
+              <span class="section-heading-label" id="documents-section-heading">DOCUMENTOS</span>
+              <span id="documents-count-pill" class="section-count-pill dorado">0 documentos</span>
+            </div>
+            <div id="documents-list-container" class="documents-list"></div>
+          </div>
+
+          <!-- Estado vacío único (solo cuando 0 subcarpetas y 0 documentos) -->
+          <div id="juridico-combined-empty" class="juridico-combined-empty" style="display: none;">
+            <div class="juridico-empty-icon-lg">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            </div>
+            <h3 class="empty-combined-title">Esta carpeta aún no tiene subcarpetas ni documentos</h3>
+            <p class="empty-combined-desc">Organice la estructura creando una subcarpeta o suba el primer archivo PDF, DOCX o TXT para indexar su contenido.</p>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 14px;">
+              <button type="button" class="btn-juridico-secondary empty-quick-folder">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+                <span>Nueva Subcarpeta</span>
+              </button>
+              <button type="button" class="btn-juridico-primary empty-quick-upload">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <span>Subir Archivo Aquí</span>
+              </button>
+            </div>
+          </div>
+        </section>
+      </main>
     </div>
   </section>
 
@@ -396,129 +391,91 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
   <style>
     .juridicos-shell {
       padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
     }
 
     .juridicos-hero-header {
-      padding-bottom: 18px;
+      padding-bottom: 14px;
       border-bottom: 1px solid #EEF2F5;
     }
 
-    /* FILA 1: 3 Carpetas Raíz */
-    .root-categories-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
-      margin-top: 18px;
-    }
-
-    @media (max-width: 900px) {
-      .root-categories-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .root-cat-card {
-      background: #FFFFFF;
-      border: 1.5px solid #E2E8F0;
-      border-radius: 14px;
-      padding: 16px 18px;
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      cursor: pointer;
-      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-      user-select: none;
-    }
-
-    .root-cat-card:hover {
-      border-color: #00594E;
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(0, 89, 78, 0.08);
-    }
-
-    .root-cat-card.active {
-      border-color: #00594E;
-      background: #F0F7F5;
-      box-shadow: 0 4px 14px rgba(0, 89, 78, 0.12);
-    }
-
-    .root-cat-icon {
-      width: 44px;
-      height: 44px;
-      border-radius: 10px;
-      background: #E6EFEF;
-      color: #00594E;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .root-cat-icon.dorado {
-      background: #F7F5EE;
-      color: #786832;
-    }
-
-    .root-cat-icon.slate {
-      background: #F1F5F9;
-      color: #334155;
-    }
-
-    .root-cat-title {
-      margin: 0;
-      font-size: 0.96rem;
-      font-weight: 800;
-      color: #111827;
-      line-height: 1.25;
-    }
-
-    .root-cat-meta {
-      font-size: 0.73rem;
-      color: #64748B;
-      margin-top: 3px;
-      display: flex;
-      gap: 5px;
-      align-items: center;
-    }
-
-    .root-cat-arrow {
-      color: #94A3B8;
-      display: flex;
-      align-items: center;
-    }
-    .root-cat-card.active .root-cat-arrow {
-      color: #00594E;
-    }
-
-    /* FILA 2: Toolbar de Búsqueda y Filtros */
+    /* BLOQUE 1: Barra Superior Unificada */
     .juridicos-toolbar-panel {
-      margin-top: 18px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 10px;
       background: #F8FAFB;
-      border: 1px solid #DCE4E3;
+      border: 1px solid #E2E8F0;
       border-radius: 14px;
-      padding: 14px 16px;
+      padding: 12px 14px;
     }
 
     .deep-search-bar-wrap {
       display: flex;
-      gap: 12px;
+      gap: 10px;
       align-items: center;
       flex-wrap: wrap;
     }
 
-    .juridico-search-input {
-      border: 1px solid #CBD5E1 !important;
-      transition: all 0.16s ease !important;
+    .search-input-box {
+      position: relative;
+      flex: 1;
+      min-width: 240px;
     }
 
-    .juridico-search-input:focus,
-    .deep-search-bar-wrap:focus-within .juridico-search-input {
+    .search-input-icon {
+      position: absolute;
+      left: 13px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #00594E;
+      display: flex;
+      align-items: center;
+      pointer-events: none;
+    }
+
+    .juridico-search-input {
+      width: 100%;
+      height: 42px;
+      padding: 0 38px 0 40px;
+      border-radius: 10px;
+      border: 1px solid #CBD5E1 !important;
+      font-size: 0.85rem;
+      background: #FFFFFF;
+      color: #0F172A;
+      box-sizing: border-box;
+      transition: border-color 0.16s ease, box-shadow 0.16s ease;
+    }
+
+    .juridico-search-input:focus {
       outline: none !important;
       border-color: #00594E !important;
       box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.10) !important;
+    }
+
+    .search-quick-clear {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 24px;
+      height: 24px;
+      border-radius: 999px;
+      border: none;
+      background: #EEF2F5;
+      color: #475569;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .search-quick-clear:hover {
+      background: #DCE4E3;
+      color: #0F172A;
     }
 
     .search-scope-toggle,
@@ -530,6 +487,7 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
       display: inline-flex !important;
       gap: 2px !important;
       align-items: center !important;
+      flex-shrink: 0;
     }
 
     .scope-btn,
@@ -539,7 +497,7 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
       display: inline-flex;
       align-items: center;
       gap: 5px;
-      padding: 5px 12px;
+      padding: 6px 12px;
       font-size: 0.74rem;
       font-weight: 700;
       color: #475569;
@@ -569,66 +527,294 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
-      gap: 12px 16px;
+      gap: 10px 14px;
     }
 
-    .year-chips-wrap {
-      display: inline-flex;
-      gap: 4px;
-      flex-wrap: wrap;
+    .compact-selects-group {
+      display: flex;
       align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
     }
 
-    .year-chip {
-      all: unset;
-      box-sizing: border-box;
-      padding: 3px 9px;
+    .compact-filter-field {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .compact-filter-label {
       font-size: 0.72rem;
-      font-weight: 700;
+      font-weight: 800;
       color: #64748B;
-      background: #FFFFFF;
-      border: 1px solid #DCE4E3;
-      border-radius: 999px;
-      cursor: pointer;
-      transition: all 0.14s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
       white-space: nowrap;
     }
 
-    .year-chip:hover:not(.active) {
-      background: #F0F7F5;
+    .compact-select-wrap {
+      min-width: 148px;
+    }
+
+    .compact-select-wrap.compact-select-tema {
+      min-width: 190px;
+    }
+
+    .compact-select-wrap :global(.u-select-trigger),
+    .compact-filter-select {
+      height: 34px !important;
+      min-height: 34px !important;
+      border-radius: 8px !important;
+      font-size: 0.78rem !important;
+      font-weight: 600 !important;
+      padding: 4px 10px !important;
+      border: 1px solid #DCE4E3 !important;
+      background: #FFFFFF !important;
+    }
+
+    /* Botón toggle móvil */
+    .mobile-tree-toggle-bar {
+      display: none;
+    }
+
+    .btn-mobile-tree-toggle {
+      width: 100%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid #CBD5E1;
+      background: #F8FAFB;
+      color: #00594E;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn-mobile-tree-toggle .mobile-tree-chevron {
+      transition: transform 0.2s ease;
+    }
+
+    .btn-mobile-tree-toggle[aria-expanded="true"] .mobile-tree-chevron {
+      transform: rotate(180deg);
+    }
+
+    /* BLOQUE 2: Layout 2 Paneles */
+    .juridico-workspace-grid {
+      display: grid;
+      grid-template-columns: 270px minmax(0, 1fr);
+      gap: 20px;
+      align-items: start;
+    }
+
+    /* Panel Izquierdo: Árbol Jerárquico */
+    .juridico-tree-panel {
+      background: #F8FAFB;
+      border: 1px solid #E2E8F0;
+      border-radius: 14px;
+      padding: 14px;
+      position: sticky;
+      top: 14px;
+      max-height: calc(100vh - 140px);
+      overflow-y: auto;
+    }
+
+    .tree-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 10px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #E2E8F0;
+    }
+
+    .tree-panel-title {
+      font-size: 0.70rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      color: #475569;
+      text-transform: uppercase;
+    }
+
+    .tree-header-btn {
+      all: unset;
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #64748B;
+      cursor: pointer;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .tree-header-btn:hover {
+      background: #E2E8F0;
+      color: #00594E;
+    }
+
+    .juridico-tree-root {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    :global(.tree-node-group) {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    :global(.tree-node-row) {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 7px 9px;
+      border-radius: 8px;
+      border-left: 3px solid transparent;
+      cursor: pointer;
+      transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+      user-select: none;
+    }
+
+    :global(.tree-node-row:hover) {
+      background: #EEF2F5;
+    }
+
+    :global(.tree-node-row.is-active) {
+      background: #E6F2EF !important;
+      color: #00594E !important;
+      border-left-color: #00594E !important;
+      font-weight: 700;
+    }
+
+    :global(.tree-chevron-btn) {
+      all: unset;
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #64748B;
+      flex-shrink: 0;
+      cursor: pointer;
+      transition: transform 0.15s ease, background-color 0.15s ease;
+    }
+
+    :global(.tree-chevron-btn:hover) {
+      background: rgba(0, 89, 78, 0.1);
+      color: #00594E;
+    }
+
+    :global(.tree-chevron-spacer) {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+
+    :global(.tree-node-icon) {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #00594E;
+      flex-shrink: 0;
+    }
+
+    :global(.tree-node-icon.dorado) {
+      color: #786832;
+    }
+
+    :global(.tree-node-icon.slate) {
+      color: #475569;
+    }
+
+    :global(.tree-node-label) {
+      flex: 1;
+      min-width: 0;
+      font-size: 0.80rem;
+      color: #1E293B;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.3;
+    }
+
+    :global(.tree-node-row.is-active .tree-node-label) {
+      color: #00594E;
+      font-weight: 800;
+    }
+
+    :global(.tree-node-count) {
+      font-size: 0.69rem;
+      font-weight: 700;
+      color: #64748B;
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      padding: 1px 6px;
+      border-radius: 999px;
+      flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
+    }
+
+    :global(.tree-node-row.is-active .tree-node-count) {
+      background: #FFFFFF;
       color: #00594E;
       border-color: #B2CFCB;
     }
 
-    .year-chip.active {
-      background: #00594E;
-      color: #FFFFFF;
-      border-color: #00594E;
-    }
-
-    /* FILA 3: Breadcrumbs y Acciones */
-    .breadcrumbs-actions-bar {
-      margin-top: 16px;
+    :global(.tree-children-list) {
+      border-left: 1.5px solid #CBD5E1;
+      margin-left: 14px;
+      padding-left: 10px;
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid #EEF2F5;
+      flex-direction: column;
+      gap: 2px;
+      margin-top: 2px;
+      margin-bottom: 4px;
     }
 
-    :global(.juridico-breadcrumbs),
-    :global(.breadcrumbs-bar) {
+    /* Panel Derecho: Área de Trabajo */
+    .juridico-content-panel {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .workspace-location-header {
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 14px;
+      padding: 14px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .location-row-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    :global(.juridico-breadcrumbs) {
       display: flex !important;
       flex-wrap: wrap !important;
       align-items: center !important;
-      gap: 6px !important;
+      gap: 4px !important;
       background-color: #F8FAFB !important;
       border: 1px solid #E2E8F0 !important;
-      border-radius: 10px !important;
-      padding: 5px 10px !important;
-      min-height: 36px !important;
+      border-radius: 9px !important;
+      padding: 4px 8px !important;
+      min-height: 32px !important;
     }
 
     :global(.juridico-breadcrumbs button),
@@ -638,11 +824,11 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
       box-sizing: border-box;
       display: inline-flex;
       align-items: center;
-      gap: 5px;
-      padding: 4px 10px;
-      border-radius: 7px;
+      gap: 4px;
+      padding: 3px 9px;
+      border-radius: 6px;
       font-family: inherit;
-      font-size: 0.80rem;
+      font-size: 0.77rem;
       font-weight: 600;
       color: #475569;
       background-color: transparent;
@@ -650,63 +836,203 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
       transition: all 0.15s ease;
     }
 
-    :global(.juridico-breadcrumbs button:hover),
-    :global(.breadcrumb-btn:hover),
-    :global(.breadcrumb-item:hover:not(.is-current):not(.active)) {
+    :global(.juridico-breadcrumbs button:hover:not(.is-current)),
+    :global(.breadcrumb-btn:hover:not(.is-current)) {
       background-color: #E6F0EE !important;
       color: #00594E !important;
     }
 
-    :global(.juridico-breadcrumbs button:last-of-type),
     :global(.breadcrumb-btn.is-current),
-    :global(.breadcrumb-btn.active),
-    :global(.breadcrumb-item.is-current),
-    :global(.breadcrumb-item.active) {
+    :global(.breadcrumb-btn.active) {
       background-color: #FFFFFF !important;
       color: #00594E !important;
       font-weight: 700 !important;
-      border: 1px solid rgba(0, 89, 78, 0.16) !important;
+      border: 1px solid rgba(0, 89, 78, 0.18) !important;
       box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
       cursor: default !important;
     }
 
     :global(.breadcrumb-sep) {
       color: #94A3B8 !important;
-      font-size: 0.85rem !important;
+      font-size: 0.82rem !important;
       user-select: none !important;
     }
 
-    :global(.juridico-empty-state) {
-      display: flex !important;
-      align-items: center !important;
-      gap: 12px !important;
-      padding: 16px 20px !important;
-      background-color: #F8FAFB !important;
-      border: 1.5px dashed #CBD5E1 !important;
-      border-radius: 12px !important;
-      color: #64748B !important;
-      font-size: 0.83rem !important;
-      font-style: normal !important;
+    .btn-folder-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 32px;
+      padding: 0 12px;
+      border-radius: 8px;
+      border: 1px solid #CBD5E1;
+      background: #FFFFFF;
+      color: #334155;
+      font-size: 0.76rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
     }
 
-    :global(.juridico-empty-icon) {
-      width: 34px !important;
-      height: 34px !important;
-      border-radius: 9px !important;
-      background-color: #EEF2F5 !important;
-      color: #00594E !important;
-      display: inline-flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      flex-shrink: 0 !important;
+    .btn-folder-back:hover {
+      border-color: #00594E;
+      color: #00594E;
+      background: #F2F7F6;
+    }
+
+    .location-row-title-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      padding-top: 4px;
+      border-top: 1px solid #F1F5F9;
+    }
+
+    .location-title-block {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .active-folder-title {
+      margin: 0;
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #0F172A;
+      line-height: 1.25;
+      word-break: break-word;
+    }
+
+    .active-folder-badge {
+      font-size: 0.71rem;
+      font-weight: 700;
+      color: #00594E;
+      background: #E6F2EF;
+      border: 1px solid #B2CFCB;
+      padding: 2px 9px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .active-folder-meta {
+      margin: 4px 0 0 0;
+      font-size: 0.78rem;
+      color: #64748B;
+      line-height: 1.4;
+    }
+
+    .location-actions-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn-juridico-secondary {
+      height: 36px;
+      padding: 0 14px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      border-radius: 9px;
+      background: #FFFFFF;
+      border: 1.5px solid #00594E;
+      color: #00594E;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      white-space: nowrap;
+      transition: all 0.16s ease;
+    }
+
+    .btn-juridico-secondary:hover {
+      background: #F0F7F5;
+    }
+
+    .btn-juridico-primary {
+      height: 36px;
+      padding: 0 16px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      border-radius: 9px;
+      background: #00594E;
+      border: 1.5px solid #00594E;
+      color: #FFFFFF;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      white-space: nowrap;
+      box-shadow: 0 2px 6px rgba(0, 89, 78, 0.2);
+      transition: all 0.16s ease;
+    }
+
+    .btn-juridico-primary:hover {
+      background: #00443B;
+      border-color: #00443B;
+    }
+
+    .subfolders-section,
+    .documents-section {
+      margin-top: 16px;
+    }
+
+    .section-heading-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #EEF2F5;
+      margin-bottom: 12px;
+    }
+
+    .section-heading-label {
+      font-size: 0.74rem;
+      font-weight: 800;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .section-count-pill {
+      font-size: 0.71rem;
+      font-weight: 700;
+      padding: 2px 9px;
+      border-radius: 999px;
+    }
+
+    .section-count-pill.verde {
+      color: #00594E;
+      background: #F0F7F5;
+      border: 1px solid #B2CFCB;
+    }
+
+    .section-count-pill.dorado {
+      color: #786832;
+      background: #F7F5EE;
+      border: 1px solid #DBD2B0;
+    }
+
+    .subfolders-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 12px;
+    }
+
+    .documents-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
 
     /* Tarjetas de Subcarpeta */
     :global(.folder-card) {
       background: #FFFFFF !important;
-      border: 1px solid #DCE4E3 !important;
+      border: 1px solid #E2E8F0 !important;
       border-left: 4px solid #00594E !important;
-      border-radius: 10px !important;
+      border-radius: 11px !important;
       padding: 12px 14px !important;
       display: flex !important;
       justify-content: space-between !important;
@@ -714,20 +1040,43 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
       gap: 10px !important;
       cursor: pointer !important;
       transition: all 0.18s ease !important;
+      min-width: 0;
     }
 
     :global(.folder-card:hover) {
       border-color: #00594E !important;
       transform: translateY(-2px) !important;
-      box-shadow: 0 4px 12px rgba(0, 89, 78, 0.08) !important;
+      box-shadow: 0 5px 14px rgba(0, 89, 78, 0.09) !important;
+    }
+
+    :global(.btn-delete-folder) {
+      all: unset;
+      width: 28px;
+      height: 28px;
+      border-radius: 7px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #94A3B8;
+      cursor: pointer;
+      flex-shrink: 0;
+      opacity: 0.75;
+      transition: background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+    }
+
+    :global(.folder-card:hover .btn-delete-folder),
+    :global(.btn-delete-folder:hover) {
+      opacity: 1;
+      color: #DC2626;
+      background: #FEF2F2;
     }
 
     /* Tarjetas de Documento */
     :global(.document-row-card) {
       background: #FFFFFF !important;
       border: 1px solid #E2E8F0 !important;
-      border-radius: 10px !important;
-      padding: 12px 16px !important;
+      border-radius: 12px !important;
+      padding: 13px 16px !important;
       display: flex !important;
       justify-content: space-between !important;
       align-items: center !important;
@@ -738,32 +1087,377 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
 
     :global(.document-row-card:hover) {
       border-color: #00594E !important;
-      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05) !important;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05) !important;
     }
 
-    /* Resaltado de Búsqueda */
-    :global(mark.juridico-mark) {
-      background-color: #FEF08A !important;
-      color: #854D0E !important;
-      font-weight: 800 !important;
-      padding: 1px 3px !important;
-      border-radius: 3px !important;
+    :global(.doc-ext-badge) {
+      width: 38px;
+      height: 38px;
+      border-radius: 9px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.70rem;
+      font-weight: 800;
+      flex-shrink: 0;
+      letter-spacing: 0.02em;
+    }
+
+    :global(.doc-ext-badge.ext-pdf) {
+      background: #FEF2F2;
+      border: 1px solid #FECACA;
+      color: #DC2626;
+    }
+
+    :global(.doc-ext-badge.ext-docx) {
+      background: #EFF6FF;
+      border: 1px solid #BFDBFE;
+      color: #2563EB;
+    }
+
+    :global(.doc-ext-badge.ext-txt) {
+      background: #F1F5F9;
+      border: 1px solid #CBD5E1;
+      color: #475569;
+    }
+
+    :global(.doc-title-main) {
+      margin: 0;
+      font-size: 0.92rem;
+      font-weight: 800;
+      color: #0F172A;
+      line-height: 1.3;
+      word-break: break-word;
+    }
+
+    :global(.doc-meta-line) {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
+      color: #64748B;
+      margin-top: 4px;
+      flex-wrap: wrap;
+    }
+
+    :global(.doc-chip-year) {
+      background: #F7F5EE;
+      color: #786832;
+      border: 1px solid #DBD2B0;
+      padding: 1px 7px;
+      border-radius: 5px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    :global(.doc-chip-tema) {
+      background: #F1F5F9;
+      color: #334155;
+      border: 1px solid #CBD5E1;
+      padding: 1px 7px;
+      border-radius: 5px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    :global(.doc-chip-indexed) {
+      color: #047857;
+      font-weight: 700;
+      background: #ECFDF5;
+      border: 1px solid #A7F3D0;
+      padding: 1px 7px;
+      border-radius: 5px;
+      white-space: nowrap;
+    }
+
+    :global(.doc-actions-inline) {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    :global(.btn-doc-view) {
+      all: unset;
+      box-sizing: border-box;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      height: 30px;
+      padding: 0 11px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      border-radius: 7px;
+      background: #F0F7F5;
+      border: 1px solid #00594E;
+      color: #00594E;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background-color 0.15s ease;
+    }
+
+    :global(.btn-doc-view:hover) {
+      background: #DCEEE9;
+    }
+
+    :global(.btn-doc-download) {
+      all: unset;
+      box-sizing: border-box;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      height: 30px;
+      padding: 0 11px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      border-radius: 7px;
+      background: #FFFFFF;
+      border: 1px solid #CBD5E1;
+      color: #334155;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background-color 0.15s ease, border-color 0.15s ease;
+    }
+
+    :global(.btn-doc-download:hover) {
+      background: #F8FAFC;
+      border-color: #94A3B8;
+    }
+
+    :global(.btn-delete-doc) {
+      all: unset;
+      box-sizing: border-box;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 7px;
+      background: #FEF2F2;
+      border: 1px solid #FECACA;
+      color: #DC2626;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background-color 0.15s ease, border-color 0.15s ease;
+    }
+
+    :global(.btn-delete-doc:hover) {
+      background: #FEE2E2;
+      border-color: #F87171;
+    }
+
+    /* Agrupaciones Por Año / Por Tema */
+    :global(.juridico-group-block) {
+      margin-bottom: 16px;
+    }
+
+    :global(.juridico-group-title) {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.80rem;
+      font-weight: 800;
+      color: #00594E;
+      background: #F2F7F6;
+      border: 1px solid #B2CFCB;
+      border-radius: 8px;
+      padding: 7px 12px;
+      margin-bottom: 8px;
+    }
+
+    /* Estado vacío único */
+    .juridico-combined-empty {
+      margin-top: 16px;
+      background: #F8FAFB;
+      border: 1.5px dashed #CBD5E1;
+      border-radius: 14px;
+      padding: 36px 20px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .juridico-empty-icon-lg {
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      background: #E6F2EF;
+      color: #00594E;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+    }
+
+    .empty-combined-title {
+      margin: 0;
+      font-size: 0.98rem;
+      font-weight: 800;
+      color: #0F172A;
+    }
+
+    .empty-combined-desc {
+      margin: 5px 0 0 0;
+      font-size: 0.80rem;
+      color: #64748B;
+      max-width: 460px;
+      line-height: 1.45;
+    }
+
+    /* BLOQUE 3: Resultados de Búsqueda */
+    .results-header-bar {
+      background: #F8FAFB;
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn-clear-search-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid #B2CFCB;
+      background: #FFFFFF;
+      color: #00594E;
+      font-size: 0.76rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+
+    .btn-clear-search-pill:hover {
+      background: #E6F2EF;
+    }
+
+    .results-grid {
+      margin-top: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    :global(.search-group-label) {
+      font-size: 0.73rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #475569;
+      margin: 4px 0 2px 0;
     }
 
     :global(.result-search-card) {
       background: #FFFFFF !important;
       border: 1.5px solid #E2E8F0 !important;
       border-radius: 12px !important;
-      padding: 14px 18px !important;
+      padding: 14px 16px !important;
       display: flex !important;
       flex-direction: column !important;
-      gap: 8px !important;
+      gap: 9px !important;
       transition: all 0.18s ease !important;
     }
 
     :global(.result-search-card:hover) {
       border-color: #00594E !important;
       box-shadow: 0 4px 14px rgba(0, 89, 78, 0.08) !important;
+    }
+
+    :global(.result-path-chip) {
+      all: unset;
+      box-sizing: border-box;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      width: fit-content;
+      max-width: 100%;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #F0F7F5;
+      border: 1px solid #B2CFCB;
+      color: #00594E;
+      font-size: 0.73rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+    }
+
+    :global(.result-path-chip:hover) {
+      background: #DCEEE9;
+    }
+
+    :global(.result-snippet-box) {
+      background: #F8FAFB;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.77rem;
+      color: #334155;
+      line-height: 1.45;
+      border-left: 3px solid #B5A160;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    :global(mark.juridico-mark) {
+      background-color: #FEF08A !important;
+      color: #00443B !important;
+      font-weight: 800 !important;
+      padding: 1px 4px !important;
+      border-radius: 3px !important;
+    }
+
+    :global(.juridico-empty-state) {
+      display: flex !important;
+      align-items: center !important;
+      gap: 12px !important;
+      padding: 20px !important;
+      background-color: #F8FAFB !important;
+      border: 1.5px dashed #CBD5E1 !important;
+      border-radius: 12px !important;
+      color: #64748B !important;
+      font-size: 0.83rem !important;
+    }
+
+    :global(.juridico-empty-icon) {
+      width: 36px !important;
+      height: 36px !important;
+      border-radius: 9px !important;
+      background-color: #E6F2EF !important;
+      color: #00594E !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      flex-shrink: 0 !important;
+    }
+
+    @media (max-width: 959px) {
+      .mobile-tree-toggle-bar {
+        display: block;
+      }
+
+      .juridico-workspace-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+
+      .juridico-tree-panel {
+        display: none;
+        position: static;
+        max-height: 360px;
+      }
+
+      .juridico-tree-panel.is-open {
+        display: block;
+      }
     }
   </style>
 
@@ -777,17 +1471,29 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
         return {};
       }
     })();
-    const carpetas: any[] = Array.isArray(__juridicoBootstrap.carpetas) ? __juridicoBootstrap.carpetas : [];
-    const documentos: any[] = Array.isArray(__juridicoBootstrap.documentos) ? __juridicoBootstrap.documentos : [];
+    let carpetas: any[] = Array.isArray(__juridicoBootstrap.carpetas) ? __juridicoBootstrap.carpetas : [];
+    let documentos: any[] = Array.isArray(__juridicoBootstrap.documentos) ? __juridicoBootstrap.documentos : [];
 
     // Estado reactivo en memoria
     let currentCategoria: string = 'conceptos_internos';
     let currentFolderId: string | null = null;
-    let currentSearchScope: string = 'section';
+    let currentSearchScope: string = 'all';
+    let userSelectedScope: boolean = false;
     let currentYearFilter: string = 'todos';
     let currentTemaFilter: string = 'todos';
     let currentViewMode: string = 'carpetas';
     let isSearchActive: boolean = false;
+    const expandedTreeNodes = new Set<string>([
+      'cat:conceptos_internos',
+      'cat:litigios_judiciales',
+      'cat:auditoria_entes_control',
+    ]);
+
+    const rootCategories = [
+      { key: 'conceptos_internos', label: 'Conceptos Internos', iconClass: '', unit: 'documentos' },
+      { key: 'litigios_judiciales', label: 'Litigios y Asuntos Judiciales', iconClass: 'dorado', unit: 'expedientes' },
+      { key: 'auditoria_entes_control', label: 'Auditoría de Entes de Control', iconClass: 'slate', unit: 'actuaciones' },
+    ];
 
     const catLabels: Record<string, string> = {
       conceptos_internos: 'Conceptos Internos',
@@ -795,15 +1501,64 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
       auditoria_entes_control: 'Auditoría de Entes de Control',
     };
 
+    function escapeHtml(raw: unknown): string {
+      return String(raw ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function sanitizeSnippetHtml(raw: unknown): string {
+      const escaped = escapeHtml(raw);
+      return escaped
+        .replace(/&lt;mark class=&quot;juridico-mark&quot;&gt;/gi, '<mark class="juridico-mark">')
+        .replace(/&lt;\/mark&gt;/gi, '</mark>');
+    }
+
+    const TRASH_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>`;
+    const VIEW_SVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+    const DOWNLOAD_SVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
+    const CHEVRON_DOWN_SVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="6 9 12 15 18 9"/></svg>`;
+    const CHEVRON_RIGHT_SVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="9 18 15 12 9 6"/></svg>`;
+
+    function getRootIconSvg(catKey: string): string {
+      if (catKey === 'litigios_judiciales') {
+        return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>`;
+      }
+      if (catKey === 'auditoria_entes_control') {
+        return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 14 2 2 4-4"/></svg>`;
+      }
+      return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`;
+    }
+
+    function getExtBadgeClass(ext: string): string {
+      const up = ext.toUpperCase();
+      if (up === 'PDF') return 'ext-pdf';
+      if (up === 'DOCX' || up === 'DOC') return 'ext-docx';
+      return 'ext-txt';
+    }
+
     // Referencias al DOM
-    const catCards = document.querySelectorAll<HTMLElement>('.root-cat-card');
     const searchInput = document.getElementById('juridico-deep-search-input') as HTMLInputElement | null;
+    const quickClearBtn = document.getElementById('btn-quick-clear-search') as HTMLButtonElement | null;
     const scopeBtns = document.querySelectorAll<HTMLElement>('.scope-btn');
-    const yearChips = document.querySelectorAll<HTMLElement>('#year-filter-chips .year-chip');
+    const anioSelect = document.getElementById('select-filter-anio') as HTMLSelectElement | null;
     const temaSelect = document.getElementById('select-filter-tema') as HTMLSelectElement | null;
     const modeBtns = document.querySelectorAll<HTMLElement>('#view-mode-selector .mode-btn');
 
+    const treePanel = document.getElementById('juridico-tree-panel') as HTMLElement | null;
+    const treeRootEl = document.getElementById('juridico-tree-root') as HTMLElement | null;
+    const treeToggleAllBtn = document.getElementById('btn-tree-toggle-all') as HTMLButtonElement | null;
+    const mobileTreeToggleBtn = document.getElementById('btn-toggle-tree-mobile') as HTMLButtonElement | null;
+
     const breadcrumbsNav = document.getElementById('juridico-breadcrumbs') as HTMLElement | null;
+    const folderBackBtn = document.getElementById('btn-folder-back') as HTMLButtonElement | null;
+    const activeFolderTitleEl = document.getElementById('active-folder-title') as HTMLElement | null;
+    const activeFolderBadgeEl = document.getElementById('active-folder-badge') as HTMLElement | null;
+    const activeFolderMetaEl = document.getElementById('active-folder-meta') as HTMLElement | null;
+
     const normalPanel = document.getElementById('normal-explorer-panel') as HTMLElement | null;
     const searchPanel = document.getElementById('search-results-panel') as HTMLElement | null;
     const resultsContainer = document.getElementById('results-cards-container') as HTMLElement | null;
@@ -811,54 +1566,211 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
     const resultsQueryLabel = document.getElementById('results-query-label') as HTMLElement | null;
     const clearSearchBtn = document.getElementById('btn-clear-search') as HTMLElement | null;
 
+    const subfoldersSection = document.getElementById('subfolders-section') as HTMLElement | null;
     const subfoldersGrid = document.getElementById('subfolders-grid') as HTMLElement | null;
     const subfoldersCountPill = document.getElementById('subfolders-count-pill') as HTMLElement | null;
+    const documentsSection = document.getElementById('documents-section') as HTMLElement | null;
+    const documentsHeadingEl = document.getElementById('documents-section-heading') as HTMLElement | null;
     const documentsList = document.getElementById('documents-list-container') as HTMLElement | null;
     const documentsCountPill = document.getElementById('documents-count-pill') as HTMLElement | null;
+    const combinedEmptyEl = document.getElementById('juridico-combined-empty') as HTMLElement | null;
 
-    // Cambiar Categoría Raíz
-    catCards.forEach((card) => {
-      card.addEventListener('click', () => {
-        catCards.forEach((c) => c.classList.remove('active'));
-        card.classList.add('active');
-        currentCategoria = card.getAttribute('data-cat') || 'conceptos_internos';
-        currentFolderId = null; // Volver a raíz de la categoría
-        renderExplorer();
+    function syncScopeButtonsUI() {
+      scopeBtns.forEach((b) => {
+        b.classList.toggle('active', b.getAttribute('data-scope') === currentSearchScope);
       });
+    }
+
+    function syncQuickClearVisibility() {
+      if (!quickClearBtn || !searchInput) return;
+      quickClearBtn.style.display = searchInput.value.length > 0 ? 'inline-flex' : 'none';
+    }
+
+    function ensureFolderAncestorsExpanded(folderId: string | null) {
+      expandedTreeNodes.add(`cat:${currentCategoria}`);
+      let currId = folderId;
+      let depth = 0;
+      while (currId && depth < 10) {
+        const f = carpetas.find((c: any) => c.id === currId);
+        if (!f) break;
+        expandedTreeNodes.add(`folder:${f.id}`);
+        currId = f.parent_id || null;
+        depth++;
+      }
+    }
+
+    function countFolderSubtreeDocs(folderId: string): number {
+      let count = documentos.filter((d: any) => d.carpeta_id === folderId).length;
+      const children = carpetas.filter((c: any) => c.parent_id === folderId);
+      children.forEach((child: any) => {
+        count += countFolderSubtreeDocs(child.id);
+      });
+      return count;
+    }
+
+    // Renderizar árbol jerárquico en el panel izquierdo
+    function renderTree() {
+      if (!treeRootEl) return;
+
+      function renderFolderBranch(folder: any): string {
+        const childFolders = carpetas.filter((c: any) => c.parent_id === folder.id);
+        const hasChildren = childFolders.length > 0;
+        const nodeKey = `folder:${folder.id}`;
+        const isExpanded = expandedTreeNodes.has(nodeKey);
+        const isActive = !isSearchActive && currentFolderId === folder.id;
+        const docsInSubtree = countFolderSubtreeDocs(folder.id);
+
+        const chevronHtml = hasChildren
+          ? `<button type="button" class="tree-chevron-btn" data-toggle-node="${nodeKey}" title="${isExpanded ? 'Contraer' : 'Expandir'}" aria-label="${isExpanded ? 'Contraer' : 'Expandir'}">${isExpanded ? CHEVRON_DOWN_SVG : CHEVRON_RIGHT_SVG}</button>`
+          : `<span class="tree-chevron-spacer"></span>`;
+
+        const childrenHtml = hasChildren && isExpanded
+          ? `<div class="tree-children-list">${childFolders.map((cf: any) => renderFolderBranch(cf)).join('')}</div>`
+          : '';
+
+        return `
+          <div class="tree-node-group">
+            <div class="tree-node-row ${isActive ? 'is-active' : ''}" data-tree-cat="${escapeHtml(folder.categoria_raiz)}" data-tree-folder="${escapeHtml(folder.id)}">
+              ${chevronHtml}
+              <span class="tree-node-icon">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg>
+              </span>
+              <span class="tree-node-label" title="${escapeHtml(folder.nombre)}">${escapeHtml(folder.nombre)}</span>
+              <span class="tree-node-count">${docsInSubtree}</span>
+            </div>
+            ${childrenHtml}
+          </div>
+        `;
+      }
+
+      treeRootEl.innerHTML = rootCategories.map((cat) => {
+        const catNodeKey = `cat:${cat.key}`;
+        const rootFolders = carpetas.filter((c: any) => c.categoria_raiz === cat.key && !c.parent_id);
+        const hasChildren = rootFolders.length > 0;
+        const isExpanded = expandedTreeNodes.has(catNodeKey);
+        const isActive = !isSearchActive && currentCategoria === cat.key && currentFolderId === null;
+        const totalDocsCat = documentos.filter((d: any) => d.categoria_raiz === cat.key).length;
+
+        const chevronHtml = hasChildren
+          ? `<button type="button" class="tree-chevron-btn" data-toggle-node="${catNodeKey}" title="${isExpanded ? 'Contraer' : 'Expandir'}" aria-label="${isExpanded ? 'Contraer' : 'Expandir'}">${isExpanded ? CHEVRON_DOWN_SVG : CHEVRON_RIGHT_SVG}</button>`
+          : `<span class="tree-chevron-spacer"></span>`;
+
+        const childrenHtml = hasChildren && isExpanded
+          ? `<div class="tree-children-list">${rootFolders.map((rf: any) => renderFolderBranch(rf)).join('')}</div>`
+          : '';
+
+        return `
+          <div class="tree-node-group">
+            <div class="tree-node-row ${isActive ? 'is-active' : ''}" data-tree-cat="${cat.key}" data-tree-folder="">
+              ${chevronHtml}
+              <span class="tree-node-icon ${cat.iconClass}">${getRootIconSvg(cat.key)}</span>
+              <span class="tree-node-label" title="${cat.label}">${cat.label}</span>
+              <span class="tree-node-count">${totalDocsCat}</span>
+            </div>
+            ${childrenHtml}
+          </div>
+        `;
+      }).join('');
+
+      treeRootEl.querySelectorAll<HTMLElement>('.tree-chevron-btn').forEach((btn) => {
+        btn.addEventListener('click', (e: MouseEvent) => {
+          e.stopPropagation();
+          const key = btn.getAttribute('data-toggle-node');
+          if (!key) return;
+          if (expandedTreeNodes.has(key)) expandedTreeNodes.delete(key);
+          else expandedTreeNodes.add(key);
+          renderTree();
+        });
+      });
+
+      treeRootEl.querySelectorAll<HTMLElement>('.tree-node-row').forEach((row) => {
+        row.addEventListener('click', (e: MouseEvent) => {
+          const target = e.target as HTMLElement | null;
+          if (target?.closest('.tree-chevron-btn')) return;
+
+          const cat = row.getAttribute('data-tree-cat') || 'conceptos_internos';
+          const fId = row.getAttribute('data-tree-folder') || null;
+          currentCategoria = cat;
+          currentFolderId = fId;
+          ensureFolderAncestorsExpanded(fId);
+
+          if (isSearchActive) {
+            if (searchInput) searchInput.value = '';
+            currentYearFilter = 'todos';
+            currentTemaFilter = 'todos';
+            if (anioSelect) {
+              anioSelect.value = 'todos';
+              (window as any).refrescarSelectPersonalizado?.(anioSelect);
+            }
+            if (temaSelect) {
+              temaSelect.value = 'todos';
+              (window as any).refrescarSelectPersonalizado?.(temaSelect);
+            }
+            isSearchActive = false;
+            syncQuickClearVisibility();
+            if (searchPanel) searchPanel.style.display = 'none';
+            if (normalPanel) normalPanel.style.display = 'block';
+          }
+
+          if (window.innerWidth < 960 && treePanel?.classList.contains('is-open')) {
+            treePanel.classList.remove('is-open');
+            mobileTreeToggleBtn?.setAttribute('aria-expanded', 'false');
+          }
+
+          renderTree();
+          renderExplorer();
+        });
+      });
+    }
+
+    // Colapsar / expandir árbol desde encabezado izquierdo
+    treeToggleAllBtn?.addEventListener('click', () => {
+      const anyFolderExpanded = carpetas.some((c: any) => expandedTreeNodes.has(`folder:${c.id}`));
+      if (anyFolderExpanded) {
+        carpetas.forEach((c: any) => expandedTreeNodes.delete(`folder:${c.id}`));
+      } else {
+        rootCategories.forEach((c) => expandedTreeNodes.add(`cat:${c.key}`));
+        carpetas.forEach((c: any) => expandedTreeNodes.add(`folder:${c.id}`));
+      }
+      renderTree();
+    });
+
+    // Toggle árbol móvil (< 960px)
+    mobileTreeToggleBtn?.addEventListener('click', () => {
+      if (!treePanel) return;
+      const openNow = treePanel.classList.toggle('is-open');
+      mobileTreeToggleBtn.setAttribute('aria-expanded', openNow ? 'true' : 'false');
+    });
+
+    // Botón "← Volver" al nivel superior
+    folderBackBtn?.addEventListener('click', () => {
+      if (!currentFolderId) return;
+      const activeFolder = carpetas.find((c: any) => c.id === currentFolderId);
+      currentFolderId = activeFolder?.parent_id || null;
+      renderTree();
+      renderExplorer();
     });
 
     // Cambiar Ámbito de Búsqueda
     scopeBtns.forEach((btn) => {
       btn.addEventListener('click', () => {
-        scopeBtns.forEach((b) => b.classList.remove('active'));
-        btn.classList.add('active');
-        currentSearchScope = btn.getAttribute('data-scope') || 'section';
+        userSelectedScope = true;
+        currentSearchScope = btn.getAttribute('data-scope') || 'all';
+        syncScopeButtonsUI();
         triggerDeepSearch();
       });
     });
 
-    // Filtro por Año
-    yearChips.forEach((chip) => {
-      chip.addEventListener('click', () => {
-        yearChips.forEach((c) => c.classList.remove('active'));
-        chip.classList.add('active');
-        currentYearFilter = chip.getAttribute('data-year') || 'todos';
-        if (searchInput && searchInput.value.trim().length > 0) {
-          triggerDeepSearch();
-        } else {
-          renderExplorer();
-        }
-      });
+    // Filtro por Año (Select)
+    anioSelect?.addEventListener('change', () => {
+      currentYearFilter = anioSelect.value || 'todos';
+      triggerDeepSearch();
     });
 
-    // Filtro por Tema
+    // Filtro por Tema (Select)
     temaSelect?.addEventListener('change', () => {
-      if (temaSelect) currentTemaFilter = temaSelect.value;
-      if (searchInput && searchInput.value.trim().length > 0) {
-        triggerDeepSearch();
-      } else {
-        renderExplorer();
-      }
+      currentTemaFilter = temaSelect.value || 'todos';
+      triggerDeepSearch();
     });
 
     // Modos de Visualización
@@ -867,30 +1779,66 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
         modeBtns.forEach((b) => b.classList.remove('active'));
         btn.classList.add('active');
         currentViewMode = btn.getAttribute('data-mode') || 'carpetas';
+        if (isSearchActive) {
+          // Si estaba filtrando por año/tema únicamente, volver a modo normal en esa vista
+          if (!searchInput?.value.trim()) {
+            isSearchActive = false;
+            if (searchPanel) searchPanel.style.display = 'none';
+            if (normalPanel) normalPanel.style.display = 'block';
+          }
+        }
         renderExplorer();
       });
     });
 
-    // Búsqueda en tiempo real con debounce
+    // Búsqueda en tiempo real con debounce + botón X rápido
     let searchDebounceTimer: any = null;
     searchInput?.addEventListener('input', () => {
+      syncQuickClearVisibility();
+      if (searchInput.value.trim().length > 0 && !userSelectedScope && currentSearchScope !== 'all') {
+        currentSearchScope = 'all';
+        syncScopeButtonsUI();
+      }
       clearTimeout(searchDebounceTimer);
       searchDebounceTimer = setTimeout(() => {
         triggerDeepSearch();
-      }, 250);
+      }, 240);
     });
 
-    clearSearchBtn?.addEventListener('click', () => {
+    quickClearBtn?.addEventListener('click', () => {
+      if (searchInput) {
+        searchInput.value = '';
+        searchInput.focus();
+      }
+      syncQuickClearVisibility();
+      triggerDeepSearch();
+    });
+
+    function resetAllSearchAndFilters() {
       if (searchInput) searchInput.value = '';
       currentYearFilter = 'todos';
       currentTemaFilter = 'todos';
-      yearChips.forEach((c) => c.classList.toggle('active', c.getAttribute('data-year') === 'todos'));
-      if (temaSelect) temaSelect.value = 'todos';
+      userSelectedScope = false;
+      currentSearchScope = 'all';
+      syncScopeButtonsUI();
+      syncQuickClearVisibility();
+
+      if (anioSelect) {
+        anioSelect.value = 'todos';
+        (window as any).refrescarSelectPersonalizado?.(anioSelect);
+      }
+      if (temaSelect) {
+        temaSelect.value = 'todos';
+        (window as any).refrescarSelectPersonalizado?.(temaSelect);
+      }
       isSearchActive = false;
       if (searchPanel) searchPanel.style.display = 'none';
       if (normalPanel) normalPanel.style.display = 'block';
+      renderTree();
       renderExplorer();
-    });
+    }
+
+    clearSearchBtn?.addEventListener('click', resetAllSearchAndFilters);
 
     // Disparar Búsqueda Profunda Universal
     async function triggerDeepSearch() {
@@ -901,26 +1849,32 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
         isSearchActive = false;
         if (searchPanel) searchPanel.style.display = 'none';
         if (normalPanel) normalPanel.style.display = 'block';
+        renderTree();
         renderExplorer();
         return;
       }
 
       isSearchActive = true;
+      renderTree();
       if (normalPanel) normalPanel.style.display = 'none';
       if (searchPanel) searchPanel.style.display = 'block';
 
       if (resultsContainer) {
-        resultsContainer.innerHTML = '<div style="text-align: center; padding: 24px; color: #64748B;">Buscando profundamente en metadatos y contenido de archivos...</div>';
+        resultsContainer.innerHTML = '<div style="text-align: center; padding: 28px; color: #64748B; font-size: 0.85rem;">Buscando en metadatos y contenido indexado...</div>';
       }
 
       try {
         const catParam = currentSearchScope === 'all' ? 'todas' : currentCategoria;
-        const url = `/api/juridico/buscar?q=${encodeURIComponent(q)}&categoria=${catParam}&anio=${currentYearFilter}&tema=${encodeURIComponent(currentTemaFilter)}`;
-        const res = await fetch(url);
+        let url = `/api/juridico/buscar?q=${encodeURIComponent(q)}&categoria=${catParam}&anio=${encodeURIComponent(currentYearFilter)}&tema=${encodeURIComponent(currentTemaFilter)}`;
+        if (currentSearchScope === 'section' && currentFolderId) {
+          url += `&carpeta_id=${encodeURIComponent(currentFolderId)}`;
+        }
+
+        const res = await fetch(url, { credentials: 'same-origin' });
         const data = await res.json();
 
         if (!data.success) {
-          if (resultsContainer) resultsContainer.innerHTML = `<div style="color: #DC2626; padding: 18px;">Error: ${data.error || 'No se pudo realizar la búsqueda.'}</div>`;
+          if (resultsContainer) resultsContainer.innerHTML = `<div style="color: #DC2626; padding: 18px;">Error: ${escapeHtml(data.error || 'No se pudo realizar la búsqueda.')}</div>`;
           return;
         }
 
@@ -931,25 +1885,43 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
       }
     }
 
-    // Renderizar Resultados de Búsqueda
+    // BLOQUE 3: Renderizar Resultados de Búsqueda claros con ruta clicable y snippet
     function renderSearchResults(data: any) {
       const docs: any[] = data.documentos || [];
       const carps: any[] = data.carpetas || [];
       const totalCount = docs.length + carps.length;
 
-      if (resultsCountLabel) resultsCountLabel.textContent = `${totalCount} resultado${totalCount === 1 ? '' : 's'} encontrado${totalCount === 1 ? '' : 's'}`;
-      if (resultsQueryLabel) resultsQueryLabel.textContent = data.query ? `para "${data.query}"` : '';
+      if (resultsCountLabel) {
+        resultsCountLabel.textContent = data.query
+          ? `Resultados para "${data.query}" (${totalCount} coincidencia${totalCount === 1 ? '' : 's'})`
+          : `Resultados filtrados (${totalCount} coincidencia${totalCount === 1 ? '' : 's'})`;
+      }
+
+      if (resultsQueryLabel) {
+        const activeFilterTags: string[] = [];
+        if (currentSearchScope === 'section') {
+          const activeLabel = currentFolderId
+            ? (carpetas.find((c: any) => c.id === currentFolderId)?.nombre || 'Carpeta actual')
+            : (catLabels[currentCategoria] || currentCategoria);
+          activeFilterTags.push(`En: ${activeLabel}`);
+        } else {
+          activeFilterTags.push('Todo Jurídico');
+        }
+        if (currentYearFilter !== 'todos') activeFilterTags.push(`Año ${currentYearFilter}`);
+        if (currentTemaFilter !== 'todos') activeFilterTags.push(`Tema: ${currentTemaFilter}`);
+        resultsQueryLabel.textContent = activeFilterTags.length ? `· ${activeFilterTags.join(' · ')}` : '';
+      }
 
       if (totalCount === 0) {
         if (resultsContainer) {
           resultsContainer.innerHTML = `
-            <div class="juridico-empty-state" style="justify-content: center; text-align: center; padding: 32px 20px;">
-              <div class="juridico-empty-icon" style="width: 40px; height: 40px;">
+            <div class="juridico-empty-state" style="justify-content: center; text-align: center; padding: 34px 20px; flex-direction: column;">
+              <div class="juridico-empty-icon" style="width: 44px; height: 44px;">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
               </div>
               <div>
-                <strong style="display: block; font-weight: 700; font-size: 0.95rem; color: #111827;">No se encontraron coincidencias</strong>
-                <span style="font-size: 0.78rem; color: #64748B;">Intente con otras palabras clave, amplíe el ámbito de búsqueda o verifique la ortografía.</span>
+                <strong style="display: block; font-weight: 800; font-size: 0.95rem; color: #0F172A;">No se encontraron coincidencias</strong>
+                <span style="font-size: 0.79rem; color: #64748B;">Pruebe con otro término, amplíe a "Todo Jurídico" o limpie los filtros de año/tema.</span>
               </div>
             </div>
           `;
@@ -959,80 +1931,84 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
 
       let html = '';
 
-      // Carpetas encontradas
-      carps.forEach((c: any) => {
-        html += `
-          <div class="result-search-card" style="border-left: 4px solid #00594E;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="color: #00594E;">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                </span>
-                <strong style="font-size: 0.95rem; color: #111827;">${c.nombre}</strong>
-                <span style="font-size: 0.68rem; background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; padding: 1px 7px; border-radius: 999px;">Subcarpeta</span>
-              </div>
-              <button type="button" class="btn-jump-folder" data-cat="${c.categoria_raiz}" data-id="${c.id}" style="font-size: 0.74rem; font-weight: 700; color: #00594E; background: none; border: none; cursor: pointer;">
-                Ir a la carpeta &rarr;
-              </button>
-            </div>
-            <div style="font-size: 0.74rem; color: #64748B;">Ruta: ${c.breadcrumb}</div>
-            ${c.descripcion ? `<div style="font-size: 0.76rem; color: #334155;">${c.descripcion}</div>` : ''}
-          </div>
-        `;
-      });
-
-      // Documentos encontrados con snippets
-      docs.forEach((d: any) => {
-        const ext = (d.archivo_nombre || '').split('.').pop()?.toUpperCase() || 'DOC';
-        html += `
-          <div class="result-search-card">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px;">
-              <div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1;">
-                <span style="width: 32px; height: 32px; border-radius: 8px; background: #F0F7F5; border: 1px solid #B2CFCB; color: #00594E; display: inline-flex; align-items: center; justify-content: center; font-size: 0.70rem; font-weight: 800; flex-shrink: 0;">
-                  ${ext}
-                </span>
-                <div style="min-width: 0;">
-                  <h4 style="margin: 0; font-size: 0.94rem; font-weight: 800; color: #111827; line-height: 1.25;">
-                    ${d.titulo}
-                  </h4>
-                  <div style="display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: #64748B; margin-top: 2px; flex-wrap: wrap;">
-                    <span style="background: #F7F5EE; color: #786832; border: 1px solid #DBD2B0; padding: 1px 6px; border-radius: 4px; font-weight: 700;">Año ${d.anio}</span>
-                    ${d.tema ? `<span style="background: #F1F5F9; color: #475569; border: 1px solid #CBD5E1; padding: 1px 6px; border-radius: 4px; font-weight: 600;">${d.tema}</span>` : ''}
-                    ${d.isContentMatch ? `<span style="background: #FEF9C3; color: #854D0E; border: 1px solid #FDE047; padding: 1px 6px; border-radius: 4px; font-weight: 700;">Coincidencia en texto del archivo</span>` : ''}
+      // Grupo superior: Carpetas coincidentes
+      if (carps.length > 0) {
+        html += `<div class="search-group-label">Carpetas coincidentes (${carps.length})</div>`;
+        carps.forEach((c: any) => {
+          html += `
+            <div class="result-search-card" style="border-left: 4px solid #00594E !important;">
+              <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1;">
+                  <span style="color: #00594E; display: inline-flex; flex-shrink: 0;">
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg>
+                  </span>
+                  <div style="min-width: 0;">
+                    <strong style="font-size: 0.94rem; color: #0F172A;">${escapeHtml(c.nombre)}</strong>
+                    <div style="font-size: 0.73rem; color: #64748B; margin-top: 2px;">Ubicación padre: ${escapeHtml(c.breadcrumb)}</div>
                   </div>
+                </div>
+                <button type="button" class="result-path-chip btn-jump-folder" data-cat="${escapeHtml(c.categoria_raiz)}" data-id="${escapeHtml(c.id)}">
+                  <span>Abrir carpeta &rarr;</span>
+                </button>
+              </div>
+              ${c.descripcion ? `<div style="font-size: 0.76rem; color: #475569;">${escapeHtml(c.descripcion)}</div>` : ''}
+            </div>
+          `;
+        });
+      }
+
+      // Documentos encontrados con ruta clicable y snippet
+      if (docs.length > 0) {
+        if (carps.length > 0) {
+          html += `<div class="search-group-label" style="margin-top: 6px;">Documentos encontrados (${docs.length})</div>`;
+        }
+        docs.forEach((d: any) => {
+          const ext = (d.archivo_nombre || '').split('.').pop()?.toUpperCase() || 'DOC';
+          const sizeKb = d.archivo_tamano ? (d.archivo_tamano / 1024).toFixed(1) : '0';
+          const safeSnippet = d.snippet ? sanitizeSnippetHtml(d.snippet) : '';
+
+          html += `
+            <div class="result-search-card">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; align-items: flex-start; gap: 11px; min-width: 0; flex: 1;">
+                  <span class="doc-ext-badge ${getExtBadgeClass(ext)}">${escapeHtml(ext)}</span>
+                  <div style="min-width: 0; flex: 1;">
+                    <h4 class="doc-title-main">${escapeHtml(d.titulo)}</h4>
+                    <div class="doc-meta-line">
+                      <span class="doc-chip-year">Año ${escapeHtml(d.anio)}</span>
+                      ${d.tema ? `<span class="doc-chip-tema">${escapeHtml(d.tema)}</span>` : ''}
+                      <span>${sizeKb} KB</span>
+                      ${d.isContentMatch ? `<span class="doc-chip-indexed">&check; Coincidencia en texto indexado</span>` : ''}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="doc-actions-inline">
+                  <a href="${escapeHtml(d.archivo_url)}" target="_blank" rel="noopener noreferrer" class="btn-doc-view">
+                    ${VIEW_SVG}
+                    <span>Ver</span>
+                  </a>
+                  <a href="${escapeHtml(d.archivo_url)}" download="${escapeHtml(d.archivo_nombre || 'documento')}" class="btn-doc-download">
+                    ${DOWNLOAD_SVG}
+                    <span>Descargar</span>
+                  </a>
                 </div>
               </div>
 
-              <!-- Botones de Acción de Documento -->
-              <div style="display: flex; align-items: center; gap: 6px;">
-                <a href="${d.archivo_url}" target="_blank" rel="noopener noreferrer" style="all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 4px 10px; font-size: 0.72rem; font-weight: 700; border-radius: 6px; background: #F0F7F5; border: 1px solid #00594E; color: #00594E; cursor: pointer;">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                  <span>Ver</span>
-                </a>
-                <a href="${d.archivo_url}" download="${d.archivo_nombre || 'documento'}" style="all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 4px 10px; font-size: 0.72rem; font-weight: 700; border-radius: 6px; background: #FFFFFF; border: 1px solid #DCE4E3; color: #334155; cursor: pointer;">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                  <span>Descargar</span>
-                </a>
+              <div>
+                <button type="button" class="result-path-chip btn-jump-folder" data-cat="${escapeHtml(d.categoria_raiz)}" data-id="${escapeHtml(d.carpeta_id || '')}" title="Abrir esta carpeta en el explorador">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg>
+                  <span>${escapeHtml(d.breadcrumb)}</span>
+                </button>
               </div>
-            </div>
 
-            <!-- Snippet con <mark> -->
-            ${d.snippet ? `
-              <div style="background: #F8FAFB; border-radius: 6px; padding: 8px 12px; font-size: 0.76rem; color: #334155; line-height: 1.4; border-left: 3px solid #B5A160;">
-                <span style="font-weight: 700; color: #64748B; font-size: 0.70rem;">Fragmento:</span> ${d.snippet}
-              </div>
-            ` : ''}
-
-            <!-- Breadcrumb clickeable -->
-            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.71rem; color: #64748B; margin-top: 2px;">
-              <span>Ruta: <strong>${d.breadcrumb}</strong></span>
-              <button type="button" class="btn-jump-folder" data-cat="${d.categoria_raiz}" data-id="${d.carpeta_id || ''}" style="all: unset; font-weight: 700; color: #00594E; cursor: pointer;">
-                Abrir en carpeta &rarr;
-              </button>
+              ${safeSnippet ? `
+                <div class="result-snippet-box">${safeSnippet}</div>
+              ` : ''}
             </div>
-          </div>
-        `;
-      });
+          `;
+        });
+      }
 
       if (resultsContainer) {
         resultsContainer.innerHTML = html;
@@ -1045,202 +2021,303 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
         btn.addEventListener('click', () => {
           const cat = btn.getAttribute('data-cat');
           const folderId = btn.getAttribute('data-id') || null;
-          if (cat) {
-            currentCategoria = cat;
-            catCards.forEach((c) => c.classList.toggle('active', c.getAttribute('data-cat') === cat));
-          }
+          if (cat) currentCategoria = cat;
           currentFolderId = folderId;
-          if (searchInput) searchInput.value = '';
-          isSearchActive = false;
-          if (searchPanel) searchPanel.style.display = 'none';
-          if (normalPanel) normalPanel.style.display = 'block';
-          renderExplorer();
+          ensureFolderAncestorsExpanded(folderId);
+          resetAllSearchAndFilters();
         });
       });
     }
 
-    // Renderizar Explorador Normal
-    function renderExplorer() {
-      renderBreadcrumbs();
+    function renderDocumentRowHtml(d: any): string {
+      const ext = (d.archivo_nombre || '').split('.').pop()?.toUpperCase() || 'DOC';
+      const sizeKb = d.archivo_tamano ? (d.archivo_tamano / 1024).toFixed(1) : '0';
+      const hasText = Boolean(d.contenido_extraido && d.contenido_extraido.length > 0);
 
-      // Filtrar subcarpetas del nivel actual
-      const currentSubfolders = carpetas.filter((c: any) => {
-        if (c.categoria_raiz !== currentCategoria) return false;
-        if (currentFolderId === null) {
-          return !c.parent_id;
-        }
-        return c.parent_id === currentFolderId;
-      });
-
-      // Filtrar documentos del nivel actual
-      const currentDocs = documentos.filter((d: any) => {
-        if (d.categoria_raiz !== currentCategoria) return false;
-        if (currentFolderId === null) {
-          return !d.carpeta_id;
-        }
-        return d.carpeta_id === currentFolderId;
-      });
-
-      // Renderizar Subcarpetas
-      if (subfoldersCountPill) subfoldersCountPill.textContent = `${currentSubfolders.length} subcarpeta${currentSubfolders.length === 1 ? '' : 's'}`;
-      if (subfoldersGrid) {
-        if (currentSubfolders.length === 0) {
-          subfoldersGrid.innerHTML = `
-            <div class="juridico-empty-state" style="grid-column: 1 / -1;">
-              <div class="juridico-empty-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-              </div>
-              <div>
-                <strong style="display: block; font-size: 0.86rem; color: #1E293B; font-weight: 700;">No hay subcarpetas creadas en este nivel.</strong>
-                <span style="font-size: 0.76rem; color: #64748B;">Haga clic en "Nueva Subcarpeta" para organizar expedientes o actuaciones en este nivel.</span>
+      return `
+        <div class="document-row-card">
+          <div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1;">
+            <span class="doc-ext-badge ${getExtBadgeClass(ext)}">${escapeHtml(ext)}</span>
+            <div style="min-width: 0; flex: 1;">
+              <h4 class="doc-title-main">${escapeHtml(d.titulo)}</h4>
+              <div class="doc-meta-line">
+                <span class="doc-chip-year">Año ${escapeHtml(d.anio)}</span>
+                ${d.tema ? `<span class="doc-chip-tema">${escapeHtml(d.tema)}</span>` : ''}
+                <span>${sizeKb} KB</span>
+                ${hasText ? `<span class="doc-chip-indexed">&check; Texto indexado</span>` : `<span style="color: #64748B; font-style: italic;">Sin texto extraíble</span>`}
               </div>
             </div>
-          `;
-        } else {
-          subfoldersGrid.innerHTML = currentSubfolders.map((c: any) => {
-            const childFoldersCount = carpetas.filter((sub: any) => sub.parent_id === c.id).length;
-            const childDocsCount = documentos.filter((d: any) => d.carpeta_id === c.id).length;
+          </div>
 
-            return `
-              <div class="folder-card" data-folder-id="${c.id}">
-                <div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1;">
-                  <span style="color: #00594E; display: flex; align-items: center; flex-shrink: 0;">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg>
-                  </span>
-                  <div style="min-width: 0;">
-                    <strong style="font-size: 0.86rem; color: #111827; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                      ${c.nombre}
-                    </strong>
-                    <div style="font-size: 0.70rem; color: #64748B; margin-top: 1px;">
-                      ${c.anio ? `<span style="background: #F7F5EE; color: #786832; border: 1px solid #DBD2B0; padding: 1px 4px; border-radius: 3px; font-weight: 700; margin-right: 4px;">${c.anio}</span>` : ''}
-                      ${c.tema ? `<span style="margin-right: 4px; color: #475569;">${c.tema} &middot;</span>` : ''}
-                      <span>${childFoldersCount} carpetas &middot; ${childDocsCount} docs</span>
-                    </div>
+          <div class="doc-actions-inline">
+            <a href="${escapeHtml(d.archivo_url)}" target="_blank" rel="noopener noreferrer" class="btn-doc-view">
+              ${VIEW_SVG}
+              <span>Ver</span>
+            </a>
+            <a href="${escapeHtml(d.archivo_url)}" download="${escapeHtml(d.archivo_nombre || 'documento')}" class="btn-doc-download">
+              ${DOWNLOAD_SVG}
+              <span>Descargar</span>
+            </a>
+            <button type="button" class="btn-delete-doc" data-id="${escapeHtml(d.id)}" data-name="${escapeHtml(d.titulo)}" title="Eliminar documento" aria-label="Eliminar documento">
+              ${TRASH_SVG}
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function attachDocumentDeleteListeners() {
+      documentsList?.querySelectorAll<HTMLElement>('.btn-delete-doc').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const id = btn.getAttribute('data-id');
+          const name = btn.getAttribute('data-name') || 'este documento';
+          if (!id) return;
+
+          const confirmed = typeof (window as any).showConfirm === 'function'
+            ? await (window as any).showConfirm(`¿Eliminar el documento "${name}"?`, 'Confirmar Eliminación')
+            : confirm(`¿Eliminar el documento "${name}"?`);
+          if (!confirmed) return;
+
+          try {
+            const res = await fetch('/api/juridico/eliminar', {
+              method: 'POST',
+              credentials: 'same-origin',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tipo: 'documento', id }),
+            });
+            const data = await res.json();
+            if (data.success) {
+              documentos = documentos.filter((doc: any) => doc.id !== id);
+              (window as any).showToast?.(`Documento "${name}" eliminado.`, 'success');
+              renderTree();
+              renderExplorer();
+            } else {
+              (window as any).showToast?.('Error al eliminar: ' + (data.error || 'Error'), 'error');
+            }
+          } catch {
+            (window as any).showToast?.('Error de conexión al eliminar el documento.', 'error');
+          }
+        });
+      });
+    }
+
+    // Renderizar Explorador Normal en Panel Derecho
+    function renderExplorer() {
+      renderBreadcrumbs();
+      updateLocationHeader();
+
+      const currentSubfolders = carpetas.filter((c: any) => {
+        if (c.categoria_raiz !== currentCategoria) return false;
+        return currentFolderId === null ? !c.parent_id : c.parent_id === currentFolderId;
+      });
+
+      const currentDocs = documentos.filter((d: any) => {
+        if (d.categoria_raiz !== currentCategoria) return false;
+        if (currentViewMode === 'carpetas') {
+          return currentFolderId === null ? !d.carpeta_id : d.carpeta_id === currentFolderId;
+        }
+        // En modos "Por Año" / "Por Tema": mostrar todos los de la subcarpeta actual (o toda la categoría si está en raíz)
+        return currentFolderId === null ? true : d.carpeta_id === currentFolderId;
+      });
+
+      const showSubfoldersSection = currentViewMode === 'carpetas' && currentSubfolders.length > 0;
+      const showDocumentsSection = currentDocs.length > 0;
+
+      // Subsección 1: Subcarpetas (OCULTAR completamente cuando length === 0)
+      if (subfoldersSection) {
+        subfoldersSection.style.display = showSubfoldersSection ? 'block' : 'none';
+      }
+      if (subfoldersCountPill) {
+        subfoldersCountPill.textContent = `${currentSubfolders.length} subcarpeta${currentSubfolders.length === 1 ? '' : 's'}`;
+      }
+      if (subfoldersGrid && showSubfoldersSection) {
+        subfoldersGrid.innerHTML = currentSubfolders.map((c: any) => {
+          const directDocsCount = documentos.filter((d: any) => d.carpeta_id === c.id).length;
+          const totalSubDocs = countFolderSubtreeDocs(c.id);
+          const countLabel = totalSubDocs === directDocsCount
+            ? `${directDocsCount} archivo${directDocsCount === 1 ? '' : 's'}`
+            : `${totalSubDocs} archivo${totalSubDocs === 1 ? '' : 's'}`;
+
+          return `
+            <div class="folder-card" data-folder-id="${escapeHtml(c.id)}">
+              <div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1;">
+                <span style="color: #00594E; display: flex; align-items: center; flex-shrink: 0;">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg>
+                </span>
+                <div style="min-width: 0; flex: 1;">
+                  <strong style="font-size: 0.86rem; color: #0F172A; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(c.nombre)}">
+                    ${escapeHtml(c.nombre)}
+                  </strong>
+                  <div style="font-size: 0.71rem; color: #64748B; margin-top: 2px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap;">
+                    ${c.anio ? `<span class="doc-chip-year">${escapeHtml(c.anio)}</span>` : ''}
+                    <span>${countLabel}</span>
                   </div>
                 </div>
-                <button type="button" class="btn-delete-folder" data-id="${c.id}" data-name="${c.nombre}" title="Eliminar subcarpeta" style="all: unset; color: #94A3B8; cursor: pointer; padding: 4px; border-radius: 4px;">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
-                </button>
               </div>
-            `;
-          }).join('');
+              <button type="button" class="btn-delete-folder" data-id="${escapeHtml(c.id)}" data-name="${escapeHtml(c.nombre)}" title="Eliminar subcarpeta" aria-label="Eliminar subcarpeta">
+                ${TRASH_SVG}
+              </button>
+            </div>
+          `;
+        }).join('');
 
-          // Listeners para abrir subcarpeta al hacer clic
-          subfoldersGrid.querySelectorAll<HTMLElement>('.folder-card').forEach((card) => {
-            card.addEventListener('click', (e: MouseEvent) => {
-              const target = e.target as HTMLElement | null;
-              if (target?.closest('.btn-delete-folder')) return;
-              const fId = card.getAttribute('data-folder-id');
-              if (fId) {
-                currentFolderId = fId;
-                renderExplorer();
-              }
-            });
+        subfoldersGrid.querySelectorAll<HTMLElement>('.folder-card').forEach((card) => {
+          card.addEventListener('click', (e: MouseEvent) => {
+            const target = e.target as HTMLElement | null;
+            if (target?.closest('.btn-delete-folder')) return;
+            const fId = card.getAttribute('data-folder-id');
+            if (fId) {
+              currentFolderId = fId;
+              ensureFolderAncestorsExpanded(fId);
+              renderTree();
+              renderExplorer();
+            }
           });
+        });
 
-          // Eliminar subcarpeta
-          subfoldersGrid.querySelectorAll<HTMLElement>('.btn-delete-folder').forEach((btn) => {
-            btn.addEventListener('click', async (e: MouseEvent) => {
-              e.stopPropagation();
-              const id = btn.getAttribute('data-id');
-              const name = btn.getAttribute('data-name');
-              if (!id) return;
-              if (!confirm(`¿Eliminar la subcarpeta "${name}" y todos sus documentos contenidos?`)) return;
+        subfoldersGrid.querySelectorAll<HTMLElement>('.btn-delete-folder').forEach((btn) => {
+          btn.addEventListener('click', async (e: MouseEvent) => {
+            e.stopPropagation();
+            const id = btn.getAttribute('data-id');
+            const name = btn.getAttribute('data-name') || 'esta subcarpeta';
+            if (!id) return;
 
+            const confirmed = typeof (window as any).showConfirm === 'function'
+              ? await (window as any).showConfirm(`¿Eliminar la subcarpeta "${name}" y todos sus documentos contenidos?`, 'Confirmar Eliminación')
+              : confirm(`¿Eliminar la subcarpeta "${name}" y todos sus documentos contenidos?`);
+            if (!confirmed) return;
+
+            try {
               const res = await fetch('/api/juridico/eliminar', {
                 method: 'POST',
+                credentials: 'same-origin',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tipo: 'carpeta', id }),
               });
               const data = await res.json();
               if (data.success) {
-                window.location.reload();
+                carpetas = carpetas.filter((c: any) => c.id !== id);
+                documentos = documentos.filter((d: any) => d.carpeta_id !== id);
+                if (currentFolderId === id) currentFolderId = null;
+                (window as any).showToast?.(`Subcarpeta "${name}" eliminada.`, 'success');
+                renderTree();
+                renderExplorer();
               } else {
-                alert('Error al eliminar: ' + (data.error || 'Error'));
+                (window as any).showToast?.('Error al eliminar: ' + (data.error || 'Error'), 'error');
               }
-            });
+            } catch {
+              (window as any).showToast?.('Error de conexión al eliminar la subcarpeta.', 'error');
+            }
           });
-        }
+        });
       }
 
-      // Renderizar Documentos
-      if (documentsCountPill) documentsCountPill.textContent = `${currentDocs.length} documento${currentDocs.length === 1 ? '' : 's'}`;
-      if (documentsList) {
-        if (currentDocs.length === 0) {
-          documentsList.innerHTML = `
-            <div class="juridico-empty-state">
-              <div class="juridico-empty-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-              </div>
-              <div>
-                <strong style="display: block; font-size: 0.86rem; color: #1E293B; font-weight: 700;">No hay documentos alojados directamente en esta carpeta.</strong>
-                <span style="font-size: 0.76rem; color: #64748B;">Utilice el botón "Subir Archivo Aquí" para anexar pronunciamientos o expedientes.</span>
-              </div>
-            </div>
-          `;
-        } else {
-          documentsList.innerHTML = currentDocs.map((d: any) => {
-            const ext = (d.archivo_nombre || '').split('.').pop()?.toUpperCase() || 'DOC';
-            const sizeKb = d.archivo_tamano ? (d.archivo_tamano / 1024).toFixed(1) : '0';
-            const hasText = Boolean(d.contenido_extraido && d.contenido_extraido.length > 0);
+      // Subsección 2: Documentos (o agrupados Por Año / Por Tema)
+      if (documentsSection) {
+        documentsSection.style.display = showDocumentsSection ? 'block' : 'none';
+      }
+      if (documentsHeadingEl) {
+        documentsHeadingEl.textContent = currentViewMode === 'anio'
+          ? 'DOCUMENTOS AGRUPADOS POR AÑO'
+          : currentViewMode === 'tema'
+            ? 'DOCUMENTOS AGRUPADOS POR TEMA'
+            : 'DOCUMENTOS';
+      }
+      if (documentsCountPill) {
+        documentsCountPill.textContent = `${currentDocs.length} documento${currentDocs.length === 1 ? '' : 's'}`;
+      }
 
+      if (documentsList && showDocumentsSection) {
+        if (currentViewMode === 'anio') {
+          const groups = new Map<string, any[]>();
+          currentDocs.forEach((d: any) => {
+            const k = d.anio ? `Año ${d.anio}` : 'Sin año';
+            if (!groups.has(k)) groups.set(k, []);
+            groups.get(k)!.push(d);
+          });
+          const sortedKeys = Array.from(groups.keys()).sort((a, b) => b.localeCompare(a));
+          documentsList.innerHTML = sortedKeys.map((gKey) => {
+            const items = groups.get(gKey) || [];
             return `
-              <div class="document-row-card">
-                <div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1;">
-                  <span style="width: 36px; height: 36px; border-radius: 8px; background: #F0F7F5; border: 1px solid #B2CFCB; color: #00594E; display: inline-flex; align-items: center; justify-content: center; font-size: 0.74rem; font-weight: 800; flex-shrink: 0;">
-                    ${ext}
-                  </span>
-                  <div style="min-width: 0;">
-                    <h4 style="margin: 0; font-size: 0.90rem; font-weight: 800; color: #111827; line-height: 1.25;">
-                      ${d.titulo}
-                    </h4>
-                    <div style="display: flex; align-items: center; gap: 6px; font-size: 0.70rem; color: #64748B; margin-top: 2px; flex-wrap: wrap;">
-                      <span style="background: #F7F5EE; color: #786832; border: 1px solid #DBD2B0; padding: 1px 5px; border-radius: 3px; font-weight: 700;">Año ${d.anio}</span>
-                      ${d.tema ? `<span style="background: #F1F5F9; color: #475569; border: 1px solid #CBD5E1; padding: 1px 5px; border-radius: 3px; font-weight: 600;">${d.tema}</span>` : ''}
-                      <span>${sizeKb} KB</span>
-                      ${hasText ? `<span style="color: #047857; font-weight: 700; background: #ECFDF5; border: 1px solid #A7F3D0; padding: 1px 5px; border-radius: 3px;">Texto indexado &check;</span>` : `<span style="color: #64748B; font-style: italic;">Sin texto extraíble</span>`}
-                    </div>
-                  </div>
+              <div class="juridico-group-block">
+                <div class="juridico-group-title">
+                  <span>${escapeHtml(gKey)}</span>
+                  <span style="font-size: 0.72rem; font-weight: 700;">${items.length} archivo${items.length === 1 ? '' : 's'}</span>
                 </div>
-
-                <div style="display: flex; align-items: center; gap: 6px;">
-                  <a href="${d.archivo_url}" target="_blank" rel="noopener noreferrer" style="all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 4px 10px; font-size: 0.74rem; font-weight: 700; border-radius: 6px; background: #F0F7F5; border: 1px solid #00594E; color: #00594E; cursor: pointer;">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                    <span>Ver</span>
-                  </a>
-                  <a href="${d.archivo_url}" download="${d.archivo_nombre || 'documento'}" style="all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 4px 10px; font-size: 0.74rem; font-weight: 700; border-radius: 6px; background: #FFFFFF; border: 1px solid #DCE4E3; color: #334155; cursor: pointer;">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    <span>Descargar</span>
-                  </a>
-                  <button type="button" class="btn-delete-doc" data-id="${d.id}" data-name="${d.titulo}" title="Eliminar documento" style="all: unset; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 6px; background: #FFFFFF; border: 1px solid #FECACA; color: #DC2626; cursor: pointer;">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
-                  </button>
-                </div>
+                <div class="documents-list">${items.map(renderDocumentRowHtml).join('')}</div>
               </div>
             `;
           }).join('');
-
-          // Eliminar documento
-          documentsList.querySelectorAll<HTMLElement>('.btn-delete-doc').forEach((btn) => {
-            btn.addEventListener('click', async () => {
-              const id = btn.getAttribute('data-id');
-              const name = btn.getAttribute('data-name');
-              if (!id) return;
-              if (!confirm(`¿Eliminar el documento "${name}"?`)) return;
-
-              const res = await fetch('/api/juridico/eliminar', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tipo: 'documento', id }),
-              });
-              const data = await res.json();
-              if (data.success) {
-                window.location.reload();
-              } else {
-                alert('Error al eliminar: ' + (data.error || 'Error'));
-              }
-            });
+        } else if (currentViewMode === 'tema') {
+          const groups = new Map<string, any[]>();
+          currentDocs.forEach((d: any) => {
+            const k = d.tema ? String(d.tema).trim() : 'Sin tema asignado';
+            if (!groups.has(k)) groups.set(k, []);
+            groups.get(k)!.push(d);
           });
+          const sortedKeys = Array.from(groups.keys()).sort((a, b) => a.localeCompare(b, 'es'));
+          documentsList.innerHTML = sortedKeys.map((gKey) => {
+            const items = groups.get(gKey) || [];
+            return `
+              <div class="juridico-group-block">
+                <div class="juridico-group-title">
+                  <span>${escapeHtml(gKey)}</span>
+                  <span style="font-size: 0.72rem; font-weight: 700;">${items.length} archivo${items.length === 1 ? '' : 's'}</span>
+                </div>
+                <div class="documents-list">${items.map(renderDocumentRowHtml).join('')}</div>
+              </div>
+            `;
+          }).join('');
+        } else {
+          documentsList.innerHTML = currentDocs.map(renderDocumentRowHtml).join('');
+        }
+        attachDocumentDeleteListeners();
+      }
+
+      // Estado vacío único (solo cuando no hay ni subcarpetas visibles ni documentos)
+      if (combinedEmptyEl) {
+        combinedEmptyEl.style.display = !showSubfoldersSection && !showDocumentsSection ? 'flex' : 'none';
+      }
+    }
+
+    function updateLocationHeader() {
+      const activeFolder = currentFolderId ? carpetas.find((c: any) => c.id === currentFolderId) : null;
+      const currentSubfoldersCount = carpetas.filter((c: any) =>
+        c.categoria_raiz === currentCategoria && (currentFolderId === null ? !c.parent_id : c.parent_id === currentFolderId)
+      ).length;
+      const currentDocsCount = documentos.filter((d: any) =>
+        d.categoria_raiz === currentCategoria && (currentFolderId === null ? !d.carpeta_id : d.carpeta_id === currentFolderId)
+      ).length;
+      const totalItems = currentSubfoldersCount + currentDocsCount;
+
+      if (folderBackBtn) {
+        folderBackBtn.style.display = currentFolderId ? 'inline-flex' : 'none';
+      }
+
+      if (activeFolderTitleEl) {
+        activeFolderTitleEl.textContent = activeFolder
+          ? activeFolder.nombre
+          : (catLabels[currentCategoria] || currentCategoria);
+      }
+
+      if (activeFolderBadgeEl) {
+        activeFolderBadgeEl.textContent = `${totalItems} ítem${totalItems === 1 ? '' : 's'}`;
+      }
+
+      if (activeFolderMetaEl) {
+        if (activeFolder) {
+          const metaParts: string[] = [];
+          if (activeFolder.anio) metaParts.push(`Año ${activeFolder.anio}`);
+          if (activeFolder.tema) metaParts.push(`Tema: ${activeFolder.tema}`);
+          if (activeFolder.descripcion) metaParts.push(activeFolder.descripcion);
+          if (metaParts.length > 0) {
+            activeFolderMetaEl.textContent = metaParts.join(' · ');
+            activeFolderMetaEl.style.display = 'block';
+          } else {
+            activeFolderMetaEl.style.display = 'none';
+          }
+        } else {
+          activeFolderMetaEl.style.display = 'none';
         }
       }
     }
@@ -1252,7 +2329,7 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
       const segments: string[] = [
         `<button type="button" class="breadcrumb-btn breadcrumb-item root-link" data-level="root">Asuntos Jurídicos</button>`,
         `<span class="breadcrumb-sep">&rsaquo;</span>`,
-        `<button type="button" class="breadcrumb-btn breadcrumb-item ${currentFolderId === null ? 'is-current active' : ''}" data-level="cat">${catLabels[currentCategoria] || currentCategoria}</button>`,
+        `<button type="button" class="breadcrumb-btn breadcrumb-item ${currentFolderId === null ? 'is-current active' : ''}" data-level="cat">${escapeHtml(catLabels[currentCategoria] || currentCategoria)}</button>`,
       ];
 
       if (currentFolderId) {
@@ -1270,8 +2347,8 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
           segments.push(`<span class="breadcrumb-sep">&rsaquo;</span>`);
           const isLast = idx === folderChain.length - 1;
           segments.push(`
-            <button type="button" class="breadcrumb-btn breadcrumb-item ${isLast ? 'is-current active' : ''}" data-level="folder" data-folder-id="${f.id}">
-              ${f.nombre}
+            <button type="button" class="breadcrumb-btn breadcrumb-item ${isLast ? 'is-current active' : ''}" data-level="folder" data-folder-id="${escapeHtml(f.id)}">
+              ${escapeHtml(f.nombre)}
             </button>
           `);
         });
@@ -1284,11 +2361,13 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
           const level = item.getAttribute('data-level');
           if (level === 'root' || level === 'cat') {
             currentFolderId = null;
+            renderTree();
             renderExplorer();
           } else if (level === 'folder') {
             const fId = item.getAttribute('data-folder-id');
             if (fId) {
               currentFolderId = fId;
+              renderTree();
               renderExplorer();
             }
           }
@@ -1308,9 +2387,15 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
     const folderDescInput = document.getElementById('folder-input-desc') as HTMLTextAreaElement | null;
     const submitFolderBtn = document.getElementById('btn-submit-new-folder') as HTMLButtonElement | null;
 
-    openFolderModalBtn?.addEventListener('click', () => {
+    const openNewFolderModal = () => {
       if (folderForm) folderForm.reset();
+      if (folderAnioInput) (window as any).refrescarSelectPersonalizado?.(folderAnioInput);
       if (folderModal) folderModal.style.display = 'flex';
+    };
+
+    openFolderModalBtn?.addEventListener('click', openNewFolderModal);
+    document.querySelectorAll('.empty-quick-folder').forEach((btn) => {
+      btn.addEventListener('click', openNewFolderModal);
     });
 
     const closeFolderModal = () => {
@@ -1348,13 +2433,31 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
         });
 
         const data = await res.json();
-        if (data.success) {
+        if (data.success && data.carpeta) {
+          carpetas.push(data.carpeta);
+          ensureFolderAncestorsExpanded(currentFolderId);
+          if (data.carpeta.tema && temaSelect) {
+            const existsOpt = Array.from(temaSelect.options).some((opt) => opt.value === data.carpeta.tema);
+            if (!existsOpt) {
+              const newOpt = document.createElement('option');
+              newOpt.value = data.carpeta.tema;
+              newOpt.textContent = data.carpeta.tema;
+              temaSelect.appendChild(newOpt);
+              (window as any).refrescarSelectPersonalizado?.(temaSelect);
+            }
+          }
+          closeFolderModal();
+          (window as any).showToast?.(`Subcarpeta "${data.carpeta.nombre}" creada.`, 'success');
+          renderTree();
+          renderExplorer();
+        } else if (data.success) {
           window.location.reload();
         } else {
-          alert('Error creando carpeta: ' + (data.error || 'Error'));
+          (window as any).showToast?.('Error creando subcarpeta: ' + (data.error || 'Error'), 'error');
         }
       } catch (err) {
         console.error('Error:', err);
+        (window as any).showToast?.('Error de conexión al crear subcarpeta.', 'error');
       } finally {
         if (submitFolderBtn) {
           submitFolderBtn.disabled = false;
@@ -1363,7 +2466,7 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
       }
     });
 
-    // Modal: Subir Documento
+    // Modal: Subir Documento (CONSERVADO INTACTO)
     const docModal = document.getElementById('modal-upload-doc') as HTMLElement | null;
     const openDocModalBtn = document.getElementById('btn-open-upload-modal') as HTMLElement | null;
     const closeDocModalBtn = document.getElementById('btn-close-upload-doc') as HTMLElement | null;
@@ -1394,39 +2497,6 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
     function clearDocUploadError() {
       if (docErrorBanner) docErrorBanner.style.display = 'none';
       if (docErrorText) docErrorText.textContent = '';
-    }
-
-    function updateRootCategoryCounters() {
-      const countsMap: Record<string, { folders: number; docs: number; elId: string; unit: string }> = {
-        conceptos_internos: {
-          folders: carpetas.filter((c: any) => c.categoria_raiz === 'conceptos_internos').length,
-          docs: documentos.filter((d: any) => d.categoria_raiz === 'conceptos_internos').length,
-          elId: 'cat-card-conceptos',
-          unit: 'documentos',
-        },
-        litigios_judiciales: {
-          folders: carpetas.filter((c: any) => c.categoria_raiz === 'litigios_judiciales').length,
-          docs: documentos.filter((d: any) => d.categoria_raiz === 'litigios_judiciales').length,
-          elId: 'cat-card-litigios',
-          unit: 'expedientes',
-        },
-        auditoria_entes_control: {
-          folders: carpetas.filter((c: any) => c.categoria_raiz === 'auditoria_entes_control').length,
-          docs: documentos.filter((d: any) => d.categoria_raiz === 'auditoria_entes_control').length,
-          elId: 'cat-card-auditorias',
-          unit: 'actuaciones',
-        },
-      };
-      Object.values(countsMap).forEach((info) => {
-        const card = document.getElementById(info.elId);
-        const meta = card?.querySelector('.root-cat-meta');
-        if (meta) {
-          const span = meta.querySelector('span');
-          const strong = meta.querySelector('strong');
-          if (span) span.textContent = `${info.folders} subcarpetas`;
-          if (strong) strong.textContent = `${info.docs} ${info.unit}`;
-        }
-      });
     }
 
     function applySelectedFile(file: File | null) {
@@ -1489,7 +2559,7 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
       }
     });
 
-    openDocModalBtn?.addEventListener('click', () => {
+    const openUploadModal = () => {
       selectedUploadFile = null;
       clearDocUploadError();
       if (docForm) docForm.reset();
@@ -1498,6 +2568,11 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
       }
       if (docFileLabel) docFileLabel.textContent = 'Ningún archivo seleccionado *';
       if (docModal) docModal.style.display = 'flex';
+    };
+
+    openDocModalBtn?.addEventListener('click', openUploadModal);
+    document.querySelectorAll('.empty-quick-upload').forEach((btn) => {
+      btn.addEventListener('click', openUploadModal);
     });
 
     const closeDocModal = () => {
@@ -1589,7 +2664,6 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
           }
         }
 
-        updateRootCategoryCounters();
         closeDocModal();
         if (docForm) docForm.reset();
 
@@ -1600,6 +2674,7 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
           'success'
         );
 
+        renderTree();
         if (isSearchActive) {
           await triggerDeepSearch();
         } else {
@@ -1616,7 +2691,8 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
       }
     });
 
-    // Inicializar vista
+    // Inicializar vista de 2 paneles
+    renderTree();
     renderExplorer();
   </script>
 </AppLayout>
