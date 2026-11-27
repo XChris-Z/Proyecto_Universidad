@@ -333,11 +333,16 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
         </button>
       </div>
       <div class="modal-body" style="padding: 22px; max-height: calc(85vh - 120px); overflow-y: auto;">
-        <form id="form-upload-doc">
-          
+        <form id="form-upload-doc" novalidate>
+          <!-- Alerta de error clara dentro del modal -->
+          <div id="doc-upload-error-banner" role="alert" style="display: none; align-items: flex-start; gap: 10px; background: #FEF2F2; border: 1.5px solid #FECACA; border-left: 4px solid #DC2626; border-radius: 10px; padding: 11px 14px; color: #991B1B; font-size: 0.80rem; font-weight: 600; margin-bottom: 14px; line-height: 1.4;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" style="flex-shrink: 0; margin-top: 1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span id="doc-upload-error-text" style="flex: 1;"></span>
+          </div>
+
           <!-- Dropzone para Archivo -->
           <div style="border: 2px dashed #00594E; border-radius: 10px; padding: 18px; text-align: center; background: #F0F7F5; margin-bottom: 16px;">
-            <input type="file" id="doc-file-input" accept=".pdf,.docx,.txt,.csv" required style="display: none;" />
+            <input type="file" id="doc-file-input" accept=".pdf,.docx,.txt,.csv" style="display: none;" />
             <button type="button" id="btn-browse-doc-file" class="btn btn-secondary btn-sm" style="background: #FFFFFF; border: 1.5px solid #00594E; color: #00594E; font-weight: 700; padding: 6px 14px; border-radius: 8px; cursor: pointer;">
               Seleccionar Documento (PDF, DOCX, TXT)
             </button>
@@ -1363,18 +1368,83 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
     const closeDocModalBtn = document.getElementById('btn-close-upload-doc') as HTMLElement | null;
     const cancelDocModalBtn = document.getElementById('btn-cancel-upload-doc') as HTMLElement | null;
     const docForm = document.getElementById('form-upload-doc') as HTMLFormElement | null;
+    const docErrorBanner = document.getElementById('doc-upload-error-banner') as HTMLElement | null;
+    const docErrorText = document.getElementById('doc-upload-error-text') as HTMLElement | null;
     const docFileInput = document.getElementById('doc-file-input') as HTMLInputElement | null;
     const browseDocFileBtn = document.getElementById('btn-browse-doc-file') as HTMLElement | null;
     const docFileLabel = document.getElementById('doc-file-label') as HTMLElement | null;
     const docTituloInput = document.getElementById('doc-input-titulo') as HTMLInputElement | null;
-    const docAnioInput = document.getElementById('doc-input-anio') as HTMLInputElement | null;
+    const docAnioInput = document.getElementById('doc-input-anio') as HTMLSelectElement | null;
     const docTemaInput = document.getElementById('doc-input-tema') as HTMLInputElement | null;
     const docPalabrasInput = document.getElementById('doc-input-palabras') as HTMLInputElement | null;
     const docDescInput = document.getElementById('doc-input-desc') as HTMLTextAreaElement | null;
     const submitDocBtn = document.getElementById('btn-submit-upload-doc') as HTMLButtonElement | null;
+    let selectedUploadFile: File | null = null;
+
+    function showDocUploadError(msg: string) {
+      if (docErrorBanner && docErrorText) {
+        docErrorText.textContent = msg;
+        docErrorBanner.style.display = 'flex';
+        docErrorBanner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+      (window as any).showToast?.(msg, 'error');
+    }
+
+    function clearDocUploadError() {
+      if (docErrorBanner) docErrorBanner.style.display = 'none';
+      if (docErrorText) docErrorText.textContent = '';
+    }
+
+    function updateRootCategoryCounters() {
+      const countsMap: Record<string, { folders: number; docs: number; elId: string; unit: string }> = {
+        conceptos_internos: {
+          folders: carpetas.filter((c: any) => c.categoria_raiz === 'conceptos_internos').length,
+          docs: documentos.filter((d: any) => d.categoria_raiz === 'conceptos_internos').length,
+          elId: 'cat-card-conceptos',
+          unit: 'documentos',
+        },
+        litigios_judiciales: {
+          folders: carpetas.filter((c: any) => c.categoria_raiz === 'litigios_judiciales').length,
+          docs: documentos.filter((d: any) => d.categoria_raiz === 'litigios_judiciales').length,
+          elId: 'cat-card-litigios',
+          unit: 'expedientes',
+        },
+        auditoria_entes_control: {
+          folders: carpetas.filter((c: any) => c.categoria_raiz === 'auditoria_entes_control').length,
+          docs: documentos.filter((d: any) => d.categoria_raiz === 'auditoria_entes_control').length,
+          elId: 'cat-card-auditorias',
+          unit: 'actuaciones',
+        },
+      };
+      Object.values(countsMap).forEach((info) => {
+        const card = document.getElementById(info.elId);
+        const meta = card?.querySelector('.root-cat-meta');
+        if (meta) {
+          const span = meta.querySelector('span');
+          const strong = meta.querySelector('strong');
+          if (span) span.textContent = `${info.folders} subcarpetas`;
+          if (strong) strong.textContent = `${info.docs} ${info.unit}`;
+        }
+      });
+    }
+
+    function applySelectedFile(file: File | null) {
+      selectedUploadFile = file;
+      clearDocUploadError();
+      if (file && docFileLabel) {
+        docFileLabel.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+        if (docTituloInput && !docTituloInput.value.trim()) {
+          const cleanName = file.name.replace(/\.[^/.]+$/, '');
+          docTituloInput.value = cleanName;
+        }
+      } else if (docFileLabel) {
+        docFileLabel.textContent = 'Ningún archivo seleccionado *';
+      }
+    }
 
     browseDocFileBtn?.addEventListener('click', async (e: MouseEvent) => {
       e.preventDefault();
+      clearDocUploadError();
       const modalOpener = (window as any)['abrirModalSubida'];
       if (typeof modalOpener === 'function') {
         const files = await modalOpener({
@@ -1384,35 +1454,43 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
           multiple: false,
           textoConfirmar: 'Seleccionar Documento',
         });
-        if (files && files[0] && docFileInput) {
-          const dt = new DataTransfer();
-          dt.items.add(files[0]);
-          docFileInput.files = dt.files;
-          docFileInput.dispatchEvent(new Event('change', { bubbles: true }));
+        if (files && files[0]) {
+          applySelectedFile(files[0]);
+          if (docFileInput) {
+            try {
+              const dt = new DataTransfer();
+              dt.items.add(files[0]);
+              docFileInput.files = dt.files;
+            } catch {
+              // selectedUploadFile conserva el archivo aun si el navegador restringe asignar FileList
+            }
+          }
         }
       } else {
         docFileInput?.click();
       }
     });
+
     docFileInput?.addEventListener('change', () => {
-      if (docFileInput.files && docFileInput.files[0] && docFileLabel) {
-        const f = docFileInput.files[0];
-        docFileLabel.textContent = `${f.name} (${(f.size / 1024).toFixed(1)} KB)`;
-        if (docTituloInput && !docTituloInput.value.trim()) {
-          // Autollenar título con el nombre limpio sin extensión
-          const cleanName = f.name.replace(/\.[^/.]+$/, '');
-          docTituloInput.value = cleanName;
-        }
+      if (docFileInput.files && docFileInput.files[0]) {
+        applySelectedFile(docFileInput.files[0]);
       }
     });
 
     openDocModalBtn?.addEventListener('click', () => {
+      selectedUploadFile = null;
+      clearDocUploadError();
       if (docForm) docForm.reset();
+      if (docAnioInput) {
+        (window as any).refrescarSelectPersonalizado?.(docAnioInput);
+      }
       if (docFileLabel) docFileLabel.textContent = 'Ningún archivo seleccionado *';
       if (docModal) docModal.style.display = 'flex';
     });
 
     const closeDocModal = () => {
+      selectedUploadFile = null;
+      clearDocUploadError();
       if (docModal) docModal.style.display = 'none';
     };
     closeDocModalBtn?.addEventListener('click', closeDocModal);
@@ -1423,10 +1501,27 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
 
     docForm?.addEventListener('submit', async (e: Event) => {
       e.preventDefault();
-      if (!docFileInput?.files || !docFileInput.files[0]) {
-        alert('Por favor seleccione un archivo para subir.');
+      clearDocUploadError();
+
+      const fileToUpload = selectedUploadFile || (docFileInput?.files && docFileInput.files[0]) || null;
+      if (!fileToUpload) {
+        showDocUploadError('Por favor seleccione un archivo (.pdf, .docx, .txt o .csv) antes de subir e indexar.');
         return;
       }
+
+      const tituloVal = (docTituloInput?.value || '').trim();
+      if (!tituloVal) {
+        showDocUploadError('El título del documento es obligatorio.');
+        docTituloInput?.focus();
+        return;
+      }
+
+      const anioVal = (docAnioInput?.value || '').trim();
+      if (!anioVal) {
+        showDocUploadError('Debe seleccionar el año del documento.');
+        return;
+      }
+
       if (submitDocBtn) {
         submitDocBtn.disabled = true;
         submitDocBtn.textContent = 'Subiendo e indexando...';
@@ -1434,13 +1529,13 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
 
       try {
         const formData = new FormData();
-        formData.append('file', docFileInput.files[0]);
+        formData.append('file', fileToUpload);
         formData.append('categoria_raiz', currentCategoria);
         if (currentFolderId) {
           formData.append('carpeta_id', currentFolderId);
         }
-        formData.append('titulo', docTituloInput?.value.trim() || docFileInput.files[0].name);
-        formData.append('anio', docAnioInput?.value || '2026');
+        formData.append('titulo', tituloVal);
+        formData.append('anio', anioVal);
         if (docTemaInput?.value.trim()) formData.append('tema', docTemaInput.value.trim());
         if (docPalabrasInput?.value.trim()) formData.append('palabras_clave', docPalabrasInput.value.trim());
         if (docDescInput?.value.trim()) formData.append('descripcion', docDescInput.value.trim());
@@ -1450,14 +1545,56 @@ const yearsList = ['2026', '2025', '2024', '2023', '2022', '2021'];
           body: formData,
         });
 
-        const data = await res.json();
-        if (data.success) {
-          window.location.reload();
-        } else {
-          alert('Error al subir: ' + (data.error || 'Error'));
+        const rawText = await res.text();
+        let data: any = {};
+        try {
+          data = rawText ? JSON.parse(rawText) : {};
+        } catch {
+          data = {};
         }
-      } catch (err) {
-        console.error('Error:', err);
+
+        if (!res.ok || !data.success) {
+          const fallbackHttpMsg = res.status === 413
+            ? 'El archivo supera el límite máximo permitido por el servidor (413).'
+            : (rawText && !rawText.trim().startsWith('<') ? rawText.slice(0, 220) : `Error HTTP ${res.status} al subir el documento.`);
+          const errorMsg = data.error || data.message || fallbackHttpMsg;
+          showDocUploadError(errorMsg);
+          return;
+        }
+
+        if (data.documento) {
+          documentos.unshift(data.documento);
+          if (data.documento.tema && temaSelect) {
+            const existsOpt = Array.from(temaSelect.options).some((opt) => opt.value === data.documento.tema);
+            if (!existsOpt) {
+              const newOpt = document.createElement('option');
+              newOpt.value = data.documento.tema;
+              newOpt.textContent = data.documento.tema;
+              temaSelect.appendChild(newOpt);
+              (window as any).refrescarSelectPersonalizado?.(temaSelect);
+            }
+          }
+        }
+
+        updateRootCategoryCounters();
+        closeDocModal();
+        if (docForm) docForm.reset();
+
+        (window as any).showToast?.(
+          data.hasText
+            ? `Documento "${tituloVal}" subido e indexado (${data.indexedChars || 0} caracteres).`
+            : `Documento "${tituloVal}" subido exitosamente.`,
+          'success'
+        );
+
+        if (isSearchActive) {
+          await triggerDeepSearch();
+        } else {
+          renderExplorer();
+        }
+      } catch (err: any) {
+        console.error('Error subiendo documento jurídico:', err);
+        showDocUploadError(err?.message || 'Error de conexión al intentar subir e indexar el documento.');
       } finally {
         if (submitDocBtn) {
           submitDocBtn.disabled = false;

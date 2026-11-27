@@ -84,7 +84,7 @@ export function initNormas() {
   document.querySelectorAll('.btn-norma-download').forEach((btn) => {
     btn.addEventListener('click', () => {
       const label = btn.getAttribute('data-norma-label') || 'acto administrativo';
-      (window as any).showToast?.(`Consultando ${label}...`);
+      (window as any).showToast?.(`Consultando ${label}...`, 'info');
     });
   });
 
@@ -314,13 +314,14 @@ export function initNormas() {
         entityId: `${tipo} ${numero}`,
         details: `Se radicó el acto administrativo "${tipo} ${numero}" para ${organo} (Año ${anioNum}).`,
         severity: 'INFO',
-      });
+      }).catch(() => {});
 
-      (window as any).showToast?.(`Acto "${tipo} ${numero}" radicado exitosamente.`);
+      (window as any).showToast?.(`Acto "${tipo} ${numero}" radicado exitosamente.`, 'success');
       window.location.reload();
     } catch (err: any) {
       console.error('Error guardando norma:', err);
-      (window as any).showToast?.('Error al guardar acto: ' + (err.message || 'Error en el servidor'));
+      const errMsg = err?.message || err?.error_description || 'Error en el servidor al guardar el acto.';
+      (window as any).showToast?.(`Error al guardar acto: ${errMsg}`, 'error');
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;
