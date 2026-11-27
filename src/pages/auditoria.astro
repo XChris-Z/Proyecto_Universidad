@@ -97,7 +97,7 @@ const mappedDbLogs = dbLogs
     timestamp: formatBogotaTimestamp(l.raw_timestamp || Date.now()),
     rawTimestamp: l.raw_timestamp,
     actor: normalizeAuditActor({
-      id: l.actor_id || "usr-root",
+      id: l.actor_id || "",
       name: l.actor_name,
       role: l.actor_role,
     }),
@@ -418,7 +418,7 @@ const totalCierresYValidaciones = dbLogs.filter((l) => {
       <!-- Tabla Ejecutiva de Trazabilidad y Logs -->
       <div
         class="auditoria-table-card"
-        style="border: 1px solid #E2E8F0; border-radius: 14px; overflow: hidden; background: #FFFFFF;"
+        style="border: 1px solid #E2E8F0; border-radius: 14px; overflow: visible; background: #FFFFFF;"
       >
         <div class="auditoria-table-wrapper pro-scroll-container audit-log-container audit-table-wrapper">
           <table class="auditoria-table doc-table audit-table">
@@ -587,8 +587,8 @@ const totalCierresYValidaciones = dbLogs.filter((l) => {
                         )}
                         {cleanDetails && (
                           <div
-                            class="audit-details-text"
-                            style="font-size: 0.76rem; color: #52606D; margin-top: 5px; line-height: 1.45; word-break: break-word; overflow-wrap: break-word; white-space: normal;"
+                            class="audit-details-text auditoria-detalle-texto"
+                            style="font-size: 0.76rem; color: #52606D; margin-top: 5px; line-height: 1.45; white-space: normal; overflow-wrap: anywhere; word-break: break-word; min-width: 0;"
                           >
                             {cleanDetails}
                           </div>
@@ -719,7 +719,7 @@ const totalCierresYValidaciones = dbLogs.filter((l) => {
     background: #ffffff;
     border: 1.5px solid #dce4e3;
     border-radius: 14px;
-    overflow: hidden;
+    overflow: visible;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
     width: 100%;
     max-width: 100%;
@@ -791,8 +791,25 @@ const totalCierresYValidaciones = dbLogs.filter((l) => {
   }
 
   .auditoria-table th:nth-child(4),
-  .auditoria-table td:nth-child(4) {
+  .auditoria-table td:nth-child(4),
+  .auditoria-table-card .auditoria-table :global(td:last-child),
+  .auditoria-table-card .auditoria-table :global(th:last-child) {
     width: 39% !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    overflow: visible !important;
+  }
+
+  .auditoria-table-card .auditoria-table :global(.audit-details-cell),
+  .auditoria-table-card .auditoria-table :global(.audit-details-text),
+  .auditoria-table-card .auditoria-table :global(.auditoria-detalle-texto) {
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    overflow: visible !important;
+    min-width: 0 !important;
+    max-width: 100%;
   }
 
   @media (max-width: 1024px) {

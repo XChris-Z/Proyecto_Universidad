@@ -165,10 +165,10 @@ export async function initAuditoria() {
 
       const cleanActor = normalizeAuditActor(log.actor);
       if (!cleanActor.name || /an[oó]nimo/i.test(cleanActor.name) || /usuario\s*del\s*sistema/i.test(cleanActor.name)) {
-        cleanActor.name = 'Funcionario Registrado — Secretaría General';
-        cleanActor.role = 'Funcionario';
+        cleanActor.name = 'Usuario no registrado';
+        cleanActor.role = 'Registro Histórico';
       }
-      cleanActor.initials = obtenerIniciales(cleanActor.name);
+      cleanActor.initials = cleanActor.name === 'Usuario no registrado' ? 'NR' : obtenerIniciales(cleanActor.name);
 
       const cleanAction = cleanAuditActionTitle(log.action)
         .replace(/(?:ACTUALIZACIÓN|ACTUALIZACION|CREACIÓN|CREACION|ELIMINACIÓN|ELIMINACION)\s+DE\s+ROL\s+RBAC/gi, (match) => {
@@ -269,10 +269,10 @@ export async function initAuditoria() {
               ${log.actionType === 'ELIMINACION' ? '&times;' : '&bull;'} ${cleanAction}
             </span>
           </td>
-          <td style="vertical-align: top; padding: 14px 18px; width: 39%; word-break: break-word;">
-            <div style="display: flex; flex-direction: column; gap: 4px; overflow-wrap: break-word; word-wrap: break-word;">
+          <td style="vertical-align: top; padding: 14px 18px; width: 39%; white-space: normal; overflow-wrap: anywhere; word-break: break-word;">
+            <div class="audit-details-cell" style="display: flex; flex-direction: column; gap: 4px; min-width: 0; white-space: normal; overflow-wrap: anywhere; word-break: break-word;">
               ${entityHtml}
-              <div class="auditoria-detalle-texto" style="line-height: 1.45; color: #334155; font-size: 0.82rem; margin-top: 4px; overflow-wrap: break-word; word-wrap: break-word;">
+              <div class="audit-details-text auditoria-detalle-texto" style="line-height: 1.45; color: #334155; font-size: 0.82rem; margin-top: 4px; white-space: normal; overflow-wrap: anywhere; word-break: break-word; min-width: 0;">
                 ${cleanDetails}
               </div>
             </div>

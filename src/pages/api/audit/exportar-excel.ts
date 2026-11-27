@@ -21,7 +21,7 @@ function resolveExportActorName(rawName?: string | null): string {
       cleaned
     )
   ) {
-    return 'ING. Christian Lemus';
+    return 'Usuario no registrado';
   }
   return cleaned;
 }
@@ -50,7 +50,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
 
     const mapped = visibleRows.map((d: any) => {
       const normalizedActor = normalizeAuditActor({
-        id: d.actor_id || 'usr-root',
+        id: d.actor_id || '',
         name: d.actor_name,
         role: d.actor_role,
       });

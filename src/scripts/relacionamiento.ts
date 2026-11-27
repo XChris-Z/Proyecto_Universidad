@@ -2,7 +2,7 @@
 // Lógica de cliente para Relacionamiento Institucional y Convenios con Supabase
 
 import { supabase } from '@lib/supabase';
-import { logSystemActivity } from '@lib/audit';
+import { logSystemActivity, getClientAuditActor } from '@lib/audit';
 
 export function initRelacionamiento() {
   const modal = document.getElementById('new-convenio-modal');
@@ -139,7 +139,7 @@ export function initRelacionamiento() {
       }
 
       await logSystemActivity({
-        actor: { id: 'usr-root', name: 'ING. Christian Lemus', role: 'admin' },
+        actor: getClientAuditActor(),
         action: 'Registro de Convenio Institucional',
         actionType: 'GESTION',
         entity: 'Convenios y Cooperación',

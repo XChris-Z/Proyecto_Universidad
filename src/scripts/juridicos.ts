@@ -2,7 +2,7 @@
 // Lógica de cliente para Asuntos Jurídicos y Normativos en Supabase
 
 import { supabase } from '@lib/supabase';
-import { logSystemActivity } from '@lib/audit';
+import { logSystemActivity, getClientAuditActor } from '@lib/audit';
 
 let activeTab = 'brechas';
 let casosList: any[] = [];
@@ -187,7 +187,7 @@ export async function initJuridicos() {
       if (error) throw error;
 
       await logSystemActivity({
-        actor: { id: 'usr-root', name: 'ING. Christian Lemus', role: 'admin' },
+        actor: getClientAuditActor(),
         action: 'Registro de Asunto Jurídico',
         actionType: 'GESTION',
         entity: 'Oficina Asesora Jurídica',

@@ -7,7 +7,7 @@ import {
   createGoogleCalendarEvent,
   connectGoogleCalendar,
 } from '@lib/calendar';
-import { logSystemActivity } from '@lib/audit';
+import { logSystemActivity, getClientAuditActor } from '@lib/audit';
 import type { CalendarioEvent, CalendarioEventType, EventUrgency } from '@lib/types';
 
 // Estado global de la vista
@@ -1269,7 +1269,7 @@ function setupCreateEventModal() {
 
       // 2. Registrar en auditoría
       const userStr = localStorage.getItem('sgd_current_user');
-      const currentUser = userStr ? JSON.parse(userStr) : { id: 'usr-root', name: 'ING. Christian Lemus', role: 'admin' };
+      const currentUser = userStr ? JSON.parse(userStr) : getClientAuditActor();
 
       await logSystemActivity({
         actor: currentUser,

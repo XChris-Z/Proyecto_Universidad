@@ -2,7 +2,7 @@
 // Lógica de cliente para Planeación y Gestión CSU en Supabase
 
 import { supabase } from '@lib/supabase';
-import { logSystemActivity } from '@lib/audit';
+import { logSystemActivity, getClientAuditActor } from '@lib/audit';
 
 let currentPlanTab = 'financieros';
 let informesList: any[] = [];
@@ -116,7 +116,7 @@ export async function initPlaneacion() {
       if (error) throw error;
 
       await logSystemActivity({
-        actor: { id: 'usr-root', name: 'Funcionario Planeación', role: 'admin' },
+        actor: getClientAuditActor(),
         action: `Eliminación de Informe CSU — ${nombre}`,
         actionType: 'ELIMINACION',
         entity: 'Planeación Estratégica',
@@ -438,7 +438,7 @@ export async function initPlaneacion() {
       if (error) throw error;
 
       await logSystemActivity({
-        actor: { id: 'usr-root', name: 'Funcionario Planeación', role: 'admin' },
+        actor: getClientAuditActor(),
         action: 'Radicación de Informe de Planeación CSU',
         actionType: 'GESTION',
         entity: 'Planeación Estratégica',

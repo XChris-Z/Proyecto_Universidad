@@ -59,9 +59,26 @@ Astro.response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate
         localStorage.setItem('unitropico_device_info', deviceInfo);
         document.cookie = 'unitropico_device_info=' + encodeURIComponent(deviceInfo) + '; path=/; max-age=31536000; SameSite=Lax';
 
-        // 2. Cookie prioritaria de sesión institucional para trazabilidad
-        var activeEmail = localStorage.getItem('unitropico_active_user_email') || 'christianlemus.es@unitropico.edu.co';
-        document.cookie = 'unitropico_active_user_email=' + encodeURIComponent(activeEmail) + '; path=/; max-age=31536000; SameSite=Lax';
+        // 2. Sincronizar cookie de correo solo con el usuario realmente autenticado (nunca asignar un usuario fijo por defecto)
+        var currentUserRaw = localStorage.getItem('sgd_current_user');
+        var activeEmail = '';
+        if (currentUserRaw) {
+          try {
+            var parsedActiveUser = JSON.parse(currentUserRaw);
+            if (parsedActiveUser && parsedActiveUser.email) {
+              activeEmail = String(parsedActiveUser.email).trim().toLowerCase();
+            }
+          } catch (errParse) {}
+        }
+        if (!activeEmail) {
+          activeEmail = (localStorage.getItem('unitropico_active_user_email') || '').trim().toLowerCase();
+        }
+        if (activeEmail) {
+          localStorage.setItem('unitropico_active_user_email', activeEmail);
+          document.cookie = 'unitropico_active_user_email=' + encodeURIComponent(activeEmail) + '; path=/; max-age=604800; SameSite=Lax';
+        } else {
+          document.cookie = 'unitropico_active_user_email=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT;';
+        }
       } catch (e) {}
     })();
   </script>

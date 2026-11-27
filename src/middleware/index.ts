@@ -25,6 +25,7 @@ function isStaticAssetPath(pathname: string): boolean {
   return (
     pathname.startsWith('/_astro/') ||
     pathname.startsWith('/_image') ||
+    pathname === '/favicon.png' ||
     pathname === '/favicon.ico' ||
     /\.(png|jpg|jpeg|svg|webp|gif|ico|css|js|woff2?|ttf|map)$/i.test(pathname)
   );

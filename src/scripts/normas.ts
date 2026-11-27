@@ -2,7 +2,7 @@
 // Lógica de cliente para Cuerpos Colegiados y Normativa Institucional en Supabase
 
 import { supabase } from '@lib/supabase';
-import { logSystemActivity } from '@lib/audit';
+import { logSystemActivity, getClientAuditActor } from '@lib/audit';
 
 export function initNormas() {
   const rows = document.querySelectorAll('.norma-row, .colegiado-card') as NodeListOf<HTMLElement>;
@@ -307,7 +307,7 @@ export function initNormas() {
       if (error) throw error;
 
       await logSystemActivity({
-        actor: { id: 'usr-root', name: 'ING. Christian Lemus', role: 'admin' },
+        actor: getClientAuditActor(),
         action: 'Radicación de Acto / Norma Colegiada',
         actionType: 'SUBIDA_ARCHIVO',
         entity: 'Cuerpos Colegiados',

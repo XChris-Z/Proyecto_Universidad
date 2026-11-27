@@ -953,21 +953,35 @@ import AuthLayout from "@layouts/AuthLayout.astro";
         return;
       }
 
-      // 2. Consultar perfil institucional del usuario en PostgreSQL
+      // 2. Consultar perfil institucional del usuario en PostgreSQL (profiles y users como respaldo)
       const { data: profile } = await supabase
         .from("profiles")
         .select("*")
         .or(`email.eq.${email},id.eq.${authData.user.id}`)
         .maybeSingle();
 
+      let userRecord: any = null;
+      if (!profile) {
+        const { data: usrRow } = await supabase
+          .from("users")
+          .select("id, name, email, role_id, role_title")
+          .eq("email", email)
+          .maybeSingle();
+        userRecord = usrRow;
+      }
+
       const fullName =
         profile?.full_name ||
+        userRecord?.name ||
         authData.user.user_metadata?.full_name ||
-        "Funcionario Institucional";
+        email;
       const roleCode =
-        profile?.role || authData.user.user_metadata?.role || "funcionario";
+        profile?.role ||
+        userRecord?.role_id ||
+        authData.user.user_metadata?.role ||
+        "funcionario";
       const isAdmin = roleCode === "admin";
-      const userId = profile?.id || "usr-root";
+      const userId = profile?.id || userRecord?.id || authData.user.id;
 
       const sessionUser = {
         id: userId,
@@ -1010,8 +1024,12 @@ import AuthLayout from "@layouts/AuthLayout.astro";
 
       // Cookie de sesión que verifica el middleware (max-age 7 días si remember, o 1 día)
       const maxAge = remember ? 7 * 24 * 3600 : 24 * 3600;
+      localStorage.setItem("unitropico_active_user_email", email);
+      localStorage.setItem("unitropico_user_name", fullName);
+      localStorage.setItem("unitropico_user_id", sessionUser.id);
       document.cookie = `${SESSION_COOKIE_KEY}=${sessionUser.id}; path=/; max-age=${maxAge}; SameSite=Lax`;
       document.cookie = `sgd_session_email=${encodeURIComponent(email)}; path=/; max-age=${maxAge}; SameSite=Lax`;
+      document.cookie = `unitropico_active_user_email=${encodeURIComponent(email)}; path=/; max-age=${maxAge}; SameSite=Lax`;
 
       // 4. Registro oficial de trazabilidad en auditoría
       try {

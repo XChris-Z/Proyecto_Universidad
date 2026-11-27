@@ -3408,10 +3408,10 @@ const oficinas = [...rawList].sort((a: any, b: any) => {
           if (raw) loggedUser = JSON.parse(raw);
         } catch (e) {}
 
-        const funcNombre = loggedUser?.name || loggedUser?.full_name || localStorage.getItem('unitropico_user_name') || 'ING. Christian Lemus';
-        const funcEmail = loggedUser?.email || localStorage.getItem('unitropico_active_user_email') || 'christianlemus.es@unitropico.edu.co';
-        const funcId = loggedUser?.id || localStorage.getItem('unitropico_user_id') || 'usr-root';
-        const funcRol = loggedUser?.role || 'Administrador';
+        const funcNombre = loggedUser?.name || loggedUser?.full_name || localStorage.getItem('unitropico_user_name') || '';
+        const funcEmail = loggedUser?.email || localStorage.getItem('unitropico_active_user_email') || '';
+        const funcId = loggedUser?.id || localStorage.getItem('unitropico_user_id') || '';
+        const funcRol = loggedUser?.role || 'Funcionario';
 
         const payload = {
           numero_radicado: inputRadicado?.value.trim() || '',

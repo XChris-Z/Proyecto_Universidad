@@ -72,113 +72,144 @@ export function normalizeInstitutionalRole(rawRole?: string | null): string {
   return r;
 }
 
+const GENERIC_ACTOR_PATTERN =
+  /^(an[oó]nimo|an[oó]nima|usuario|usuario no registrado|desconocido|solicitante|ciudadano|admin|admin general|administrador|administrador general|administrador del sistema|administrador documental|sistema sgd|funcionario|funcionario institucional|funcionario acad[eé]mico|funcionario planeaci[oó]n|funcionario de despacho)$/i;
+
+async function findActorInDbById(userId: string): Promise<ResolvedActor | null> {
+  const cleanId = userId.trim();
+  if (!cleanId || cleanId === 'anonymous' || cleanId === 'usr-unauthorized') {
+    return null;
+  }
+
+  try {
+    const { data: prof } = await (db
+      .from('profiles' as any)
+      .select('id, full_name, role, cargo')
+      .eq('id', cleanId)
+      .maybeSingle() as any);
+
+    if (prof?.full_name) {
+      return {
+        id: String(prof.id),
+        name: String(prof.full_name).trim(),
+        role: normalizeInstitutionalRole(prof.role),
+      };
+    }
+  } catch {}
+
+  try {
+    const { data: usr } = await (db
+      .from('users' as any)
+      .select('id, name, role_id, role_title')
+      .eq('id', cleanId)
+      .maybeSingle() as any);
+
+    if (usr?.name) {
+      return {
+        id: String(usr.id),
+        name: String(usr.name).trim(),
+        role: normalizeInstitutionalRole(usr.role_id || usr.role_title),
+      };
+    }
+  } catch {}
+
+  return null;
+}
+
+async function findActorInDbByEmail(email: string): Promise<ResolvedActor | null> {
+  const cleanEmail = email.trim().toLowerCase();
+  if (!cleanEmail) return null;
+
+  try {
+    const { data: prof } = await (db
+      .from('profiles' as any)
+      .select('id, full_name, role')
+      .eq('email', cleanEmail)
+      .maybeSingle() as any);
+
+    if (prof?.full_name) {
+      return {
+        id: String(prof.id),
+        name: String(prof.full_name).trim(),
+        role: normalizeInstitutionalRole(prof.role),
+      };
+    }
+  } catch {}
+
+  try {
+    const { data: usr } = await (db
+      .from('users' as any)
+      .select('id, name, role_id, role_title')
+      .eq('email', cleanEmail)
+      .maybeSingle() as any);
+
+    if (usr?.name) {
+      return {
+        id: String(usr.id),
+        name: String(usr.name).trim(),
+        role: normalizeInstitutionalRole(usr.role_id || usr.role_title),
+      };
+    }
+  } catch {}
+
+  return null;
+}
+
 /**
- * Resuelve el actor real autenticado desde la cookie de sesión institucional y tablas profiles/users.
- * Conserva la identidad verídica de cada funcionario sin reasignaciones arbitrarias.
+ * Resuelve el actor real autenticado desde la cookie de sesión institucional (sgd_session)
+ * y tablas profiles/users. Nunca reasigna acciones a un administrador fijo por defecto.
  */
 export async function resolveSessionActor(
   cookies?: AstroCookies | null,
   fallbackActor?: Partial<ResolvedActor> | null
 ): Promise<ResolvedActor> {
+  const sessionId = cookies?.get(SESSION_COOKIE_KEY)?.value?.trim() || '';
+  if (sessionId) {
+    const bySessionId = await findActorInDbById(sessionId);
+    if (bySessionId) return bySessionId;
+  }
+
   let activeEmailCookie = '';
   try {
-    const rawCookie = cookies?.get('unitropico_active_user_email')?.value ||
+    const rawCookie =
       cookies?.get('sgd_session_email')?.value ||
+      cookies?.get('unitropico_active_user_email')?.value ||
       '';
     activeEmailCookie = rawCookie ? decodeURIComponent(rawCookie).trim().toLowerCase() : '';
   } catch {
-    activeEmailCookie = (cookies?.get('unitropico_active_user_email')?.value || cookies?.get('sgd_session_email')?.value || '').trim().toLowerCase();
+    activeEmailCookie = (
+      cookies?.get('sgd_session_email')?.value ||
+      cookies?.get('unitropico_active_user_email')?.value ||
+      ''
+    )
+      .trim()
+      .toLowerCase();
   }
 
   if (activeEmailCookie) {
-    if (activeEmailCookie === 'christianlemus.es@unitropico.edu.co') {
-      return {
-        id: 'usr-root',
-        name: 'ING. Christian Lemus',
-        role: 'Administrador',
-      };
-    }
-    try {
-      const { data: emailProf } = await (db
-        .from('profiles' as any)
-        .select('id, full_name, role')
-        .eq('email', activeEmailCookie)
-        .maybeSingle() as any);
-      if (emailProf?.full_name) {
-        const name = String(emailProf.full_name).trim();
-        return {
-          id: emailProf.id || 'usr-root',
-          name,
-          role: normalizeInstitutionalRole(emailProf.role),
-        };
-      }
-    } catch {}
+    const byEmail = await findActorInDbByEmail(activeEmailCookie);
+    if (byEmail) return byEmail;
   }
 
-  const sessionId = cookies?.get(SESSION_COOKIE_KEY)?.value?.trim() || fallbackActor?.id || '';
-
-  if (sessionId && sessionId !== 'usr-root' && sessionId !== 'anonymous') {
-    try {
-      const { data: prof } = await (db
-        .from('profiles' as any)
-        .select('id, full_name, role, cargo')
-        .eq('id', sessionId)
-        .maybeSingle() as any);
-
-      if (prof?.full_name) {
-        const name = String(prof.full_name).trim();
-        return {
-          id: prof.id,
-          name,
-          role: normalizeInstitutionalRole(prof.role),
-        };
-      }
-    } catch {}
-
-    try {
-      const { data: usr } = await (db
-        .from('users' as any)
-        .select('id, name, role_id, role_title')
-        .eq('id', sessionId)
-        .maybeSingle() as any);
-
-      if (usr?.name) {
-        const name = String(usr.name).trim();
-        return {
-          id: usr.id,
-          name,
-          role: normalizeInstitutionalRole(usr.role_id || usr.role_title),
-        };
-      }
-    } catch {}
-  }
-
-  if (sessionId === 'usr-root' || !sessionId) {
-    try {
-      const { data: rootProf } = await (db
-        .from('profiles' as any)
-        .select('id, full_name, role')
-        .or('id.eq.usr-root,email.eq.christianlemus.es@unitropico.edu.co')
-        .limit(1)
-        .maybeSingle() as any);
-      if (rootProf?.full_name) {
-        const name = String(rootProf.full_name).trim();
-        return {
-          id: rootProf.id || 'usr-root',
-          name,
-          role: normalizeInstitutionalRole(rootProf.role || 'Administrador'),
-        };
-      }
-    } catch {}
+  const fbId = String(fallbackActor?.id || '').trim();
+  if (fbId && fbId !== 'usr-root') {
+    const byFallbackId = await findActorInDbById(fbId);
+    if (byFallbackId) return byFallbackId;
   }
 
   const fbName = String(fallbackActor?.name || '').trim();
   const fbRole = normalizeInstitutionalRole(fallbackActor?.role);
-  const isGenericFb = /^(admin|admin general|administrador|administrador general|administrador del sistema|administrador documental|sistema sgd)$/i.test(fbName);
+  if (fbName && !GENERIC_ACTOR_PATTERN.test(fbName) && fbId !== 'usr-root') {
+    return {
+      id: fbId,
+      name: fbName,
+      role: fbRole || 'Funcionario',
+    };
+  }
 
   return {
-    id: sessionId || 'usr-root',
-    name: fbName && !isGenericFb ? fbName : 'ING. Christian Lemus',
-    role: fbRole || 'Administrador',
+    id: '',
+    name: 'Usuario no registrado',
+    role: 'Funcionario',
   };
 }

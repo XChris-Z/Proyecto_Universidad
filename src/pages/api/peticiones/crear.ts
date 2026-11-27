@@ -639,23 +639,18 @@ export const POST: APIRoute = async ({ request, url, clientAddress, cookies }) =
     await Promise.allSettled(emailNotifications);
     console.log(`[PETICIÓN CREADA] Radicado: ${peticionData.numero_radicado} - Subcarpetas: ${(subcarpetas || []).length} - Dependencias únicas: ${(oficinasData || []).length} - Notificaciones a oficinas: ${emailNotifications.length}`);
 
-    // Registrar en auditoría con el funcionario autenticado (sin anónimos)
+    // Registrar en auditoría con el funcionario autenticado (nunca asignar admin fijo por defecto)
     const fallbackName = funcionario_nombre && !/an[oó]nimo/i.test(funcionario_nombre)
       ? funcionario_nombre.trim()
-      : 'ING. Christian Lemus';
-    const fallbackId = funcionario_id || 'usr-root';
-    const fallbackRole = funcionario_rol || 'Administrador';
+      : '';
+    const fallbackId = funcionario_id || '';
+    const fallbackRole = funcionario_rol || 'Funcionario';
 
     const actor = await resolveSessionActor(cookies, {
       id: fallbackId,
       name: fallbackName,
       role: fallbackRole,
     });
-
-    if (!actor.name || /an[oó]nimo/i.test(actor.name) || /desconocido/i.test(actor.name) || actor.name.toLowerCase() === 'funcionario') {
-      actor.name = fallbackName;
-      actor.role = fallbackRole;
-    }
 
     const solicitanteLabel = solicitante_nombre && solicitante_nombre.trim()
       ? solicitante_nombre.trim()

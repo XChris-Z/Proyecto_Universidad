@@ -244,6 +244,33 @@ export function obtenerIniciales(nombreCompleto?: string | null): string {
   return ((p0[0] || '') + (p1[0] || '')).toUpperCase() || 'SG';
 }
 
+export function getClientAuditActor(): { id: string; name: string; role: string } {
+  if (typeof window !== 'undefined') {
+    try {
+      const winUser = (window as any).currentLoggedUser;
+      if (winUser?.id && winUser?.name && winUser.name !== 'Usuario no registrado') {
+        return {
+          id: String(winUser.id),
+          name: String(winUser.name).trim(),
+          role: String(winUser.role || 'Funcionario').trim(),
+        };
+      }
+      const raw = localStorage.getItem('sgd_current_user');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.id && parsed?.name) {
+          return {
+            id: String(parsed.id),
+            name: String(parsed.name).trim(),
+            role: String(parsed.role || 'Funcionario').trim(),
+          };
+        }
+      }
+    } catch {}
+  }
+  return { id: '', name: '', role: '' };
+}
+
 export function normalizeAuditActor(actor: {
   id?: string | null;
   name?: string | null;
@@ -257,40 +284,40 @@ export function normalizeAuditActor(actor: {
   initials: string;
   avatarColor: string;
 } {
-  let cleanName = String(actor?.name || '').trim();
-
-  // PROHIBICIÓN ESTRICTA: NUNCA "Anónimo", "Anonimo" ni fallbacks genéricos de ciudadano
-  if (!cleanName || /^(anónimo|anonimo|anónima|anonima|usuario|desconocido|solicitante|ciudadano)$/i.test(cleanName)) {
-    cleanName = 'Funcionario Registrado — Secretaría General';
-  }
-
-  cleanName = cleanName
+  let cleanName = String(actor?.name || '')
     .replace(/\s*-\s*(Oficina|Dependencia|Superadministrador|Administrador General)\s*$/i, '')
     .trim();
 
-  if (!cleanName || /^administrador general$/i.test(cleanName)) {
-    cleanName = 'ING. Christian Lemus';
+  // Si no hay autor guardado o es un marcador genérico, mostrar "Usuario no registrado" (nunca currentUser ni admin por defecto)
+  if (
+    !cleanName ||
+    /^(an[oó]nimo|an[oó]nima|usuario|usuario no registrado|desconocido|solicitante|ciudadano|administrador general|admin general|administrador del sistema|funcionario registrado(?:\s*[—-]\s*secretar[ií]a general)?)$/i.test(
+      cleanName
+    )
+  ) {
+    cleanName = 'Usuario no registrado';
   }
 
   const rawRole = String(actor?.role || '').trim();
   const lowerRole = rawRole.toLowerCase();
 
   let roleLabel = '';
-  if (lowerRole.includes('oficina') || lowerRole.includes('dependencia') || lowerRole === 'external') {
+  if (cleanName === 'Usuario no registrado') {
+    roleLabel = rawRole ? normalizeInstitutionalRole(rawRole) : 'Registro Histórico';
+  } else if (lowerRole.includes('oficina') || lowerRole.includes('dependencia') || lowerRole === 'external') {
     roleLabel = 'Dependencia Asignada';
   } else if (lowerRole.includes('automat') || lowerRole === 'cron' || lowerRole === 'sistema') {
     roleLabel = 'Automatización SGD';
   } else if (
-    !rawRole ||
     lowerRole === 'admin' ||
     lowerRole === 'superadmin' ||
     lowerRole === 'superadministrador' ||
     lowerRole === 'administrador general' ||
-    lowerRole === 'administrador' ||
-    cleanName === 'ING. Christian Lemus'
+    lowerRole === 'administrador'
   ) {
     roleLabel = 'Administrador';
   } else if (
+    !rawRole ||
     lowerRole === 'funcionario' ||
     lowerRole === 'despacho' ||
     lowerRole === 'colaborador' ||
@@ -303,14 +330,15 @@ export function normalizeAuditActor(actor: {
 
   let initials = actor?.initials?.trim();
   if (!initials || initials === 'IC' || initials === 'IO' || /^[A-Z]{3,}$/.test(initials)) {
-    initials = obtenerIniciales(cleanName);
+    initials = cleanName === 'Usuario no registrado' ? 'NR' : obtenerIniciales(cleanName);
   }
 
   const avatarColor =
-    actor?.avatarColor || (roleLabel === 'Administrador' ? '#00594E' : '#B5A160');
+    actor?.avatarColor ||
+    (cleanName === 'Usuario no registrado' ? '#64748B' : roleLabel === 'Administrador' ? '#00594E' : '#B5A160');
 
   return {
-    id: String(actor?.id || 'usr-root'),
+    id: String(actor?.id || ''),
     name: cleanName,
     role: roleLabel,
     initials,
@@ -338,8 +366,17 @@ export interface LogSystemActivityParams {
 
 /** Registra una acción del sistema en Supabase y caché local con IP real y hora Colombia */
 export async function logSystemActivity(params: LogSystemActivityParams): Promise<AuditLog> {
-  // En llamadas desde navegador sin Request de servidor, delegar al endpoint /api/audit/log para capturar la IP real del cliente
+  // En llamadas desde navegador sin Request de servidor, completar actor desde sesión cliente y delegar al endpoint /api/audit/log
   if (typeof window !== 'undefined' && !params.request) {
+    const clientActor = getClientAuditActor();
+    const incomingName = String(params.actor?.name || '').trim();
+    const isGenericIncoming =
+      !params.actor?.id ||
+      params.actor.id === 'usr-root' ||
+      !incomingName ||
+      /^(administrador del sistema|funcionario acad[eé]mico|funcionario planeaci[oó]n)$/i.test(incomingName);
+    const actorPayload = isGenericIncoming && clientActor.id ? clientActor : params.actor;
+
     try {
       const res = await fetch('/api/audit/log', {
         method: 'POST',
@@ -347,7 +384,7 @@ export async function logSystemActivity(params: LogSystemActivityParams): Promis
         headers: { 'Content-Type': 'application/json' },
         keepalive: true,
         body: JSON.stringify({
-          actor: params.actor,
+          actor: actorPayload,
           action: params.action,
           actionType: params.actionType,
           entity: params.entity,
@@ -372,16 +409,23 @@ export async function logSystemActivity(params: LogSystemActivityParams): Promis
     }
   }
 
-  // En servidor con cookies de sesión, resolver el actor real de BD salvo actores externos/automatización
+  // En servidor con cookies de sesión, resolver el actor real de BD salvo actores externos/automatización o eventos explícitos de login
   let baseActor = params.actor;
   const rawRoleLower = String(params.actor?.role || '').toLowerCase();
   const isExternalOrAutomation =
     rawRoleLower.includes('oficina') ||
     rawRoleLower.includes('dependencia') ||
     rawRoleLower.includes('automat') ||
-    rawRoleLower === 'external';
+    rawRoleLower === 'external' ||
+    rawRoleLower === 'externo';
 
-  if (typeof window === 'undefined' && params.cookies && !isExternalOrAutomation) {
+  const isExplicitLoginEvent =
+    params.actionType === 'ACCESO' &&
+    /control de acceso/i.test(String(params.entity || '')) &&
+    Boolean(params.actor?.id && params.actor?.name) &&
+    params.actor.id !== 'usr-unauthorized';
+
+  if (typeof window === 'undefined' && params.cookies && !isExternalOrAutomation && !isExplicitLoginEvent) {
     try {
       const resolved = await resolveSessionActor(params.cookies, params.actor);
       baseActor = {
@@ -568,7 +612,7 @@ export async function fetchAuditLogsFromSupabase(): Promise<AuditLog[]> {
         const actorName = d.actor_name;
 
         const normalizedActor = normalizeAuditActor({
-          id: d.actor_id || 'usr-root',
+          id: d.actor_id || '',
           name: actorName,
           role: d.actor_role,
         });

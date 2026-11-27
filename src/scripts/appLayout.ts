@@ -44,8 +44,19 @@ declare global {
 }
 
 export function initAppLayout() {
-  // 1. Resolver usuario activo desde storage o defecto
-  let activeUser: InstitutionalUser = { ...INSTITUTIONAL_USERS[0]! };
+  // 1. Resolver usuario activo desde storage sin asignar un funcionario fijo por defecto
+  let activeUser: InstitutionalUser = {
+    id: '',
+    name: 'Usuario no registrado',
+    email: '',
+    role: 'Funcionario',
+    roleId: 'funcionario',
+    initials: 'NR',
+    avatarColor: '#64748B',
+    avatar_url: null,
+    avatarUrl: null,
+    password: ''
+  };
   try {
     const rawUser = localStorage.getItem('sgd_current_user');
     if (rawUser) {
@@ -53,15 +64,15 @@ export function initAppLayout() {
       if (parsed && parsed.name) {
         const normalizedRoleId = parsed.roleId || (isAdminRoleCode(parsed.role) ? 'admin' : 'funcionario');
         activeUser = {
-          id: parsed.id || 'usr-root',
+          id: parsed.id || '',
           name: parsed.name,
-          email: parsed.email || 'christianlemus.es@unitropico.edu.co',
+          email: parsed.email || '',
           role: getRoleDisplayName(normalizedRoleId),
           roleId: normalizedRoleId,
-          initials: parsed.initials || 'CL',
+          initials: parsed.initials || 'US',
           avatarColor: parsed.avatarColor || (isAdminRoleCode(normalizedRoleId) ? '#00594E' : '#B5A160'),
-          avatar_url: parsed.avatar_url || parsed.avatarUrl || localStorage.getItem(`sgd_avatar_${parsed.id}`) || null,
-          avatarUrl: parsed.avatar_url || parsed.avatarUrl || localStorage.getItem(`sgd_avatar_${parsed.id}`) || null,
+          avatar_url: parsed.avatar_url || parsed.avatarUrl || (parsed.id ? localStorage.getItem(`sgd_avatar_${parsed.id}`) : null) || null,
+          avatarUrl: parsed.avatar_url || parsed.avatarUrl || (parsed.id ? localStorage.getItem(`sgd_avatar_${parsed.id}`) : null) || null,
           password: ''
         };
       }
@@ -966,6 +977,9 @@ export function initAppLayout() {
     localStorage.removeItem(SESSION_STORAGE_KEY);
     localStorage.removeItem('sgd_current_user');
     localStorage.removeItem('sgd_user_avatar');
+    localStorage.removeItem('unitropico_active_user_email');
+    localStorage.removeItem('unitropico_user_name');
+    localStorage.removeItem('unitropico_user_id');
     sessionStorage.clear();
 
     const cookiesToPurge = [
@@ -973,7 +987,8 @@ export function initAppLayout() {
       'sb-access-token',
       'sb-refresh-token',
       'sgd_session_user',
-      'sgd_session_email'
+      'sgd_session_email',
+      'unitropico_active_user_email'
     ];
     cookiesToPurge.forEach(name => {
       document.cookie = `${name}=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
@@ -1043,7 +1058,9 @@ export function initAppLayout() {
         localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(payload));
         document.cookie = `${SESSION_COOKIE_KEY}=${u.id}; path=/; max-age=${7 * 24 * 3600}; SameSite=Lax`;
         if (u.email) {
+          localStorage.setItem('unitropico_active_user_email', u.email.toLowerCase());
           document.cookie = `sgd_session_email=${encodeURIComponent(u.email)}; path=/; max-age=${7 * 24 * 3600}; SameSite=Lax`;
+          document.cookie = `unitropico_active_user_email=${encodeURIComponent(u.email.toLowerCase())}; path=/; max-age=${7 * 24 * 3600}; SameSite=Lax`;
         }
         window.updateUserProfileUI();
         if (switchUserModal) switchUserModal.style.display = 'none';

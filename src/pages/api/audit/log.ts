@@ -15,7 +15,7 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
     }
 
     const entry = await logSystemActivity({
-      actor: body.actor || { id: 'usr-root', name: 'Administrador del Sistema', role: 'Administrador' },
+      actor: body.actor || { id: '', name: '', role: '' },
       action: String(body.action),
       actionType: body.actionType || 'GESTION',
       entity: String(body.entity),

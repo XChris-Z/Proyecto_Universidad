@@ -20,6 +20,8 @@ export const SESSION_STORAGE_KEY = 'sgd_unitropico_session';
 export const PUBLIC_ROUTES = [
   '/login',
   '/404',
+  '/favicon.png',
+  '/favicon.ico',
   '/portal-responsable',
   '/api/portal',
   '/api/auth',

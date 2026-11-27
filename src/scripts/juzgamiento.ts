@@ -2,7 +2,7 @@
 // Lógica de cliente para la Fase de Juzgamiento Disciplinario en Supabase
 
 import { supabase } from '@lib/supabase';
-import { logSystemActivity } from '@lib/audit';
+import { logSystemActivity, getClientAuditActor } from '@lib/audit';
 
 let currentStageFilter = 'all';
 let procesosList: any[] = [];
@@ -193,7 +193,7 @@ export async function initJuzgamiento() {
       if (error) throw error;
 
       await logSystemActivity({
-        actor: { id: 'usr-root', name: 'ING. Christian Lemus', role: 'admin' },
+        actor: getClientAuditActor(),
         action: 'Radicación de Auto Disciplinario',
         actionType: 'GESTION',
         entity: 'Control Disciplinario',

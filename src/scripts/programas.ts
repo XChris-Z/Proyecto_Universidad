@@ -2,7 +2,7 @@
 // Lógica de cliente para Gestión Académica y Acreditación Institucional en Supabase
 
 import { supabase } from '@lib/supabase';
-import { logSystemActivity } from '@lib/audit';
+import { logSystemActivity, getClientAuditActor } from '@lib/audit';
 
 let currentProgramasTab = 'historial';
 let programasList: any[] = [];
@@ -363,7 +363,7 @@ export async function initProgramas() {
       }
 
       await logSystemActivity({
-        actor: { id: 'usr-root', name: 'Funcionario Académico', role: 'admin' },
+        actor: getClientAuditActor(),
         action: `Carga de soporte documental — ${selectedProgram.nombre}`,
         actionType: 'SUBIDA_ARCHIVO',
         entity: 'Gestión Académica',
@@ -418,7 +418,7 @@ export async function initProgramas() {
       if (delErr) throw delErr;
 
       await logSystemActivity({
-        actor: { id: 'usr-root', name: 'Funcionario Académico', role: 'admin' },
+        actor: getClientAuditActor(),
         action: `Eliminación de Programa Académico — ${selectedProgram.nombre}`,
         actionType: 'ELIMINACION',
         entity: 'Gestión Académica',
@@ -549,7 +549,7 @@ export async function initProgramas() {
       }
 
       await logSystemActivity({
-        actor: { id: 'usr-root', name: 'Funcionario Académico', role: 'admin' },
+        actor: getClientAuditActor(),
         action: 'Registro de Programa Académico / MEN',
         actionType: 'GESTION',
         entity: 'Gestión Académica',

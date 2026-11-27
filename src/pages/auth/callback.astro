@@ -99,7 +99,10 @@ import AuthLayout from '@layouts/AuthLayout.astro';
       await supabase.auth.signOut();
       localStorage.removeItem(SESSION_STORAGE_KEY);
       localStorage.removeItem('sgd_current_user');
+      localStorage.removeItem('unitropico_active_user_email');
       document.cookie = `${SESSION_COOKIE_KEY}=; path=/; max-age=0`;
+      document.cookie = 'sgd_session_email=; path=/; max-age=0';
+      document.cookie = 'unitropico_active_user_email=; path=/; max-age=0';
 
       // Redirigir a pantalla de acceso denegado
       window.location.href = `/auth/denegado?email=${encodeURIComponent(normalizedEmail)}`;
@@ -118,12 +121,17 @@ import AuthLayout from '@layouts/AuthLayout.astro';
     };
 
     localStorage.setItem('sgd_current_user', JSON.stringify(currentUser));
+    localStorage.setItem('unitropico_active_user_email', normalizedEmail);
+    localStorage.setItem('unitropico_user_name', profile.full_name);
+    localStorage.setItem('unitropico_user_id', profile.id);
     localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
       userId: profile.id,
       email: profile.email,
       loggedAt: new Date().toISOString()
     }));
     document.cookie = `${SESSION_COOKIE_KEY}=${profile.id}; path=/; max-age=${7 * 24 * 3600}; SameSite=Lax`;
+    document.cookie = `sgd_session_email=${encodeURIComponent(normalizedEmail)}; path=/; max-age=${7 * 24 * 3600}; SameSite=Lax`;
+    document.cookie = `unitropico_active_user_email=${encodeURIComponent(normalizedEmail)}; path=/; max-age=${7 * 24 * 3600}; SameSite=Lax`;
 
     // Guardar tokens de Google para Google Calendar en FASE 5
     if (session.provider_token) {
