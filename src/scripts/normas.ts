@@ -1,8 +1,5 @@
 // src/scripts/normas.ts
-// Lógica de cliente para Cuerpos Colegiados y Normativa Institucional en Supabase
-
-import { supabase } from '@lib/supabase';
-import { logSystemActivity, getClientAuditActor } from '@lib/audit';
+// Lógica de cliente para Cuerpos Colegiados en Supabase
 
 export function initNormas() {
   const rows = document.querySelectorAll('.norma-row') as NodeListOf<HTMLElement>;
@@ -12,7 +9,21 @@ export function initNormas() {
   const vigenciaSelect = document.getElementById('normas-filter-vigencia') as HTMLSelectElement | null;
   const scrollContainer = document.getElementById('normas-scroll-container');
   const visibleCountEl = document.getElementById('normas-visible-count');
-  const filterEmptyEl = document.getElementById('normas-filter-empty');
+  const filterEmptyRow = document.getElementById('normas-filter-empty-row') as HTMLTableRowElement | null;
+
+  // Mapa de registros cargados desde el DOM para edición directa
+  const normasById = new Map<string, any>();
+  try {
+    const jsonEl = document.getElementById('normas-data-json');
+    if (jsonEl?.textContent) {
+      const parsed = JSON.parse(jsonEl.textContent);
+      if (Array.isArray(parsed)) {
+        parsed.forEach((n: any) => {
+          if (n?.id) normasById.set(String(n.id), n);
+        });
+      }
+    }
+  } catch {}
 
   let currentOrg = 'all';
   let currentYear = 'all';
@@ -26,22 +37,24 @@ export function initNormas() {
 
   function filterNormas(animate = false) {
     const q = (searchInput?.value || '').toLowerCase().trim();
-    const vig = (vigenciaSelect?.value || 'all').toLowerCase();
+    const vig = (vigenciaSelect?.value || 'all').toLowerCase().trim();
 
     let visibleCount = 0;
 
     rows.forEach((row) => {
-      const org = (row.getAttribute('data-org') || '').toLowerCase();
-      const rowVig = (row.getAttribute('data-vigencia') || '').toLowerCase();
+      const org = (row.getAttribute('data-org') || '').toLowerCase().trim();
+      const rowVig = (row.getAttribute('data-vigencia') || '').toLowerCase().trim();
       const rowYear = (row.getAttribute('data-year') || '').trim();
-      const text = (row.textContent || '').toLowerCase();
+      const searchable = (row.getAttribute('data-search') || row.textContent || '').toLowerCase();
 
       const matchesOrg = currentOrg === 'all' || org === currentOrg;
       const matchesVig = vig === 'all' || rowVig === vig;
       const matchesYear = currentYear === 'all' || rowYear === currentYear;
-      const matchesQ = !q || text.includes(q);
+      const matchesQ = !q || searchable.includes(q);
       const show = matchesOrg && matchesVig && matchesYear && matchesQ;
 
+      row.hidden = !show;
+      row.classList.toggle('is-hidden-row', !show);
       row.style.display = show ? '' : 'none';
       if (show) visibleCount += 1;
     });
@@ -50,8 +63,10 @@ export function initNormas() {
       visibleCountEl.textContent = String(visibleCount);
     }
 
-    if (filterEmptyEl && rows.length > 0) {
-      filterEmptyEl.style.display = visibleCount === 0 ? 'block' : 'none';
+    if (filterEmptyRow && rows.length > 0) {
+      const showEmpty = visibleCount === 0;
+      filterEmptyRow.hidden = !showEmpty;
+      filterEmptyRow.classList.toggle('is-hidden-row', !showEmpty);
     }
 
     if (animate) {
@@ -63,7 +78,7 @@ export function initNormas() {
     tab.addEventListener('click', () => {
       orgTabs.forEach((t) => t.classList.remove('active'));
       tab.classList.add('active');
-      currentOrg = (tab.getAttribute('data-org') || 'all').toLowerCase();
+      currentOrg = (tab.getAttribute('data-org') || 'all').toLowerCase().trim();
       filterNormas(true);
     });
   });
@@ -72,37 +87,118 @@ export function initNormas() {
     pill.addEventListener('click', () => {
       yearPills.forEach((p) => p.classList.remove('active'));
       pill.classList.add('active');
-      currentYear = (pill.getAttribute('data-year') || 'all').toLowerCase();
+      currentYear = (pill.getAttribute('data-year') || 'all').toLowerCase().trim();
       filterNormas(true);
     });
   });
 
   searchInput?.addEventListener('input', () => filterNormas(false));
   vigenciaSelect?.addEventListener('change', () => filterNormas(true));
+  vigenciaSelect?.addEventListener('input', () => filterNormas(true));
 
-  // Botones de descarga PDF por delegación limpia
-  document.querySelectorAll('.btn-norma-download').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const label = btn.getAttribute('data-norma-label') || 'acto administrativo';
-      (window as any).showToast?.(`Consultando ${label}...`, 'info');
-    });
-  });
-
-  // Modal para nueva norma
+  // Modal unificado Radicar / Editar Acto
   const modal = document.getElementById('new-norma-modal');
+  const modalTitle = document.getElementById('norma-modal-title');
   const openBtn = document.getElementById('btn-open-new-norma-modal');
   const closeBtn = document.getElementById('btn-close-new-norma-modal');
   const cancelBtn = document.getElementById('btn-cancel-norma');
   const form = document.getElementById('form-new-norma') as HTMLFormElement | null;
   const submitBtn = document.getElementById('btn-submit-norma') as HTMLButtonElement | null;
 
-  const fechaInput = document.getElementById('new-norma-fecha') as HTMLInputElement | null;
+  const editIdInput = document.getElementById('norma-edit-id') as HTMLInputElement | null;
+  const organoSelect = document.getElementById('new-norma-organo') as HTMLSelectElement | null;
   const yearSelect = document.getElementById('new-norma-year') as HTMLSelectElement | null;
+  const tipoInput = document.getElementById('new-norma-tipo') as HTMLInputElement | null;
+  const numeroInput = document.getElementById('new-norma-numero') as HTMLInputElement | null;
+  const tituloInput = document.getElementById('new-norma-titulo') as HTMLTextAreaElement | null;
+  const fechaInput = document.getElementById('new-norma-fecha') as HTMLInputElement | null;
+  const fechaFinInput = document.getElementById('new-norma-fecha-fin') as HTMLInputElement | null;
+  const vigenciaFormSelect = document.getElementById('new-norma-vigencia') as HTMLSelectElement | null;
+  const descriptorInput = document.getElementById('new-norma-descriptor') as HTMLInputElement | null;
   const fileInput = document.getElementById('new-norma-archivo') as HTMLInputElement | null;
   const browseFileBtn = document.getElementById('btn-browse-norma-archivo');
   const fileLabel = document.getElementById('norma-archivo-label');
 
-  // Autocalcular año al cambiar la fecha
+  function syncSelectUi(sel: HTMLSelectElement | null) {
+    if (sel && typeof (window as any).refrescarSelectPersonalizado === 'function') {
+      (window as any).refrescarSelectPersonalizado(sel);
+    }
+  }
+
+  function mapStoredVigenciaToOption(rawVig?: string | null): string {
+    const lower = String(rawVig || 'Vigente').toLowerCase().trim();
+    if (lower.includes('derogad') || lower.includes('modificad')) {
+      return 'Derogado / Modificado';
+    }
+    if (lower === 'no_vigente' || lower === 'no vigente' || lower === 'vencido') {
+      return 'No Vigente';
+    }
+    return 'Vigente';
+  }
+
+  function openCreateModal() {
+    form?.reset();
+    if (editIdInput) editIdInput.value = '';
+    if (modalTitle) modalTitle.textContent = 'Radicar Nuevo Acto / Norma';
+    if (submitBtn) submitBtn.textContent = 'Guardar Acto';
+    if (organoSelect) organoSelect.value = 'csu';
+    if (yearSelect) yearSelect.value = '2026';
+    if (vigenciaFormSelect) vigenciaFormSelect.value = 'Vigente';
+    if (fechaFinInput) fechaFinInput.value = '';
+    if (fileLabel) {
+      fileLabel.textContent = 'Ningún documento adjunto (opcional)';
+      fileLabel.style.color = '#64748B';
+      fileLabel.style.fontWeight = 'normal';
+    }
+    syncSelectUi(organoSelect);
+    syncSelectUi(yearSelect);
+    syncSelectUi(vigenciaFormSelect);
+
+    if (modal) {
+      modal.classList.add('open');
+      modal.style.display = 'flex';
+    }
+  }
+
+  function openEditModal(norma: any) {
+    form?.reset();
+    if (editIdInput) editIdInput.value = String(norma.id || '');
+    if (modalTitle) modalTitle.textContent = `Editar Acto · ${norma.tipo || ''} ${norma.numero || ''}`.trim();
+    if (submitBtn) submitBtn.textContent = 'Guardar Cambios';
+
+    if (organoSelect) organoSelect.value = norma.organo_code || 'csu';
+    if (yearSelect) yearSelect.value = String(norma.year || norma.anio || '2026');
+    if (tipoInput) tipoInput.value = norma.tipo || '';
+    if (numeroInput) numeroInput.value = norma.numero || '';
+    if (tituloInput) tituloInput.value = norma.titulo || '';
+    if (fechaInput) fechaInput.value = norma.fecha ? String(norma.fecha).slice(0, 10) : '';
+    if (fechaFinInput) fechaFinInput.value = norma.fecha_fin_vigencia ? String(norma.fecha_fin_vigencia).slice(0, 10) : '';
+    if (vigenciaFormSelect) vigenciaFormSelect.value = mapStoredVigenciaToOption(norma.vigencia);
+    if (descriptorInput) descriptorInput.value = norma.descriptor || '';
+
+    if (fileLabel) {
+      if (norma.archivo_nombre || norma.archivo_url) {
+        fileLabel.textContent = `Documento actual: ${norma.archivo_nombre || 'Adjunto registrado'} (seleccione otro para reemplazar)`;
+        fileLabel.style.color = '#00594E';
+        fileLabel.style.fontWeight = '600';
+      } else {
+        fileLabel.textContent = 'Ningún documento adjunto (opcional)';
+        fileLabel.style.color = '#64748B';
+        fileLabel.style.fontWeight = 'normal';
+      }
+    }
+
+    syncSelectUi(organoSelect);
+    syncSelectUi(yearSelect);
+    syncSelectUi(vigenciaFormSelect);
+
+    if (modal) {
+      modal.classList.add('open');
+      modal.style.display = 'flex';
+    }
+  }
+
+  // Autocalcular año al cambiar la fecha de expedición
   fechaInput?.addEventListener('change', () => {
     if (fechaInput.value && yearSelect) {
       const parts = fechaInput.value.split('-');
@@ -111,6 +207,7 @@ export function initNormas() {
         const matchingOpt = Array.from(yearSelect.options).find((opt) => opt.value === yearFromDate);
         if (matchingOpt) {
           yearSelect.value = yearFromDate;
+          syncSelectUi(yearSelect);
         }
       }
     }
@@ -136,23 +233,32 @@ export function initNormas() {
       fileInput?.click();
     }
   });
+
   fileInput?.addEventListener('change', () => {
     if (fileInput.files && fileInput.files[0] && fileLabel) {
       fileLabel.textContent = `Archivo seleccionado: ${fileInput.files[0].name} (${(fileInput.files[0].size / 1024).toFixed(1)} KB)`;
       fileLabel.style.color = '#00594E';
       fileLabel.style.fontWeight = '700';
-    } else if (fileLabel) {
+    } else if (fileLabel && !editIdInput?.value) {
       fileLabel.textContent = 'Ningún documento adjunto (opcional)';
       fileLabel.style.color = '#64748B';
       fileLabel.style.fontWeight = 'normal';
     }
   });
 
-  openBtn?.addEventListener('click', () => {
-    if (modal) {
-      modal.classList.add('open');
-      modal.style.display = 'flex';
-    }
+  openBtn?.addEventListener('click', openCreateModal);
+
+  // Botón Editar por fila
+  document.querySelectorAll('.btn-norma-edit').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-id') || '';
+      const norma = normasById.get(id);
+      if (!norma) {
+        (window as any).showToast?.('No se encontró la información del acto seleccionado.', 'error');
+        return;
+      }
+      openEditModal(norma);
+    });
   });
 
   const closeModal = () => {
@@ -179,15 +285,11 @@ export function initNormas() {
   const submitExcelBtn = document.getElementById('btn-submit-excel');
 
   openExcelBtn?.addEventListener('click', () => {
-    if (excelModal) {
-      excelModal.style.display = 'flex';
-    }
+    if (excelModal) excelModal.style.display = 'flex';
   });
 
   const closeExcelModal = () => {
-    if (excelModal) {
-      excelModal.style.display = 'none';
-    }
+    if (excelModal) excelModal.style.display = 'none';
   };
 
   closeExcelBtn?.addEventListener('click', closeExcelModal);
@@ -216,6 +318,7 @@ export function initNormas() {
       excelFileInput?.click();
     }
   });
+
   excelFileInput?.addEventListener('change', () => {
     if (excelFileInput.files && excelFileInput.files[0] && excelFileName) {
       excelFileName.textContent = `Archivo seleccionado: ${excelFileInput.files[0].name}`;
@@ -232,100 +335,72 @@ export function initNormas() {
     closeExcelModal();
   });
 
-  // Conectar envío del formulario de nueva norma a Supabase (DB + Storage)
+  // Guardar nuevo acto o actualización a través de /api/normas/guardar
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const organoCode = (document.getElementById('new-norma-organo') as HTMLSelectElement).value;
-    const organoNameMap: Record<string, string> = {
-      csu: 'Consejo Superior Universitario',
-      ca: 'Consejo Académico',
-      rectoria: 'Rectoría',
-    };
-    const organo = organoNameMap[organoCode] || 'Consejo Superior Universitario';
-    const tipo = (document.getElementById('new-norma-tipo') as HTMLInputElement).value.trim();
-    const numero = (document.getElementById('new-norma-numero') as HTMLInputElement).value.trim();
-    const titulo = (document.getElementById('new-norma-titulo') as HTMLTextAreaElement).value.trim();
-    const fecha = (document.getElementById('new-norma-fecha') as HTMLInputElement).value;
-    const descriptor = (document.getElementById('new-norma-descriptor') as HTMLInputElement).value.trim();
-    const splitYear = fecha ? fecha.split('-')[0] : '2026';
-    const yearVal = (document.getElementById('new-norma-year') as HTMLSelectElement)?.value || splitYear || '2026';
-    const anioNum = parseInt(yearVal, 10) || new Date().getFullYear();
 
-    const newId = `norma-${Date.now().toString(36)}`;
+    const editId = (editIdInput?.value || '').trim();
+    const organoCode = organoSelect?.value || 'csu';
+    const yearVal = yearSelect?.value || '2026';
+    const tipo = (tipoInput?.value || '').trim();
+    const numero = (numeroInput?.value || '').trim();
+    const titulo = (tituloInput?.value || '').trim();
+    const fecha = (fechaInput?.value || '').trim();
+    const fechaFin = (fechaFinInput?.value || '').trim();
+    const vigencia = vigenciaFormSelect?.value || 'Vigente';
+    const descriptor = (descriptorInput?.value || '').trim();
+
+    if (fechaFin && fecha && fechaFin < fecha) {
+      (window as any).showToast?.('La fecha fin de vigencia no puede ser anterior a la fecha de expedición.', 'warning');
+      return;
+    }
+
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Guardando Acto...';
+      submitBtn.textContent = editId ? 'Guardando cambios...' : 'Guardando Acto...';
     }
 
     try {
-      let uploadedUrl: string | null = null;
-      let uploadedName: string | null = null;
+      const formData = new FormData();
+      if (editId) formData.append('id', editId);
+      formData.append('organo_code', organoCode);
+      formData.append('year', yearVal);
+      formData.append('tipo', tipo);
+      formData.append('numero', numero);
+      formData.append('titulo', titulo);
+      formData.append('fecha_expedicion', fecha);
+      formData.append('fecha_fin_vigencia', fechaFin);
+      formData.append('vigencia', vigencia);
+      formData.append('descriptor', descriptor);
 
-      // Carga a Supabase Storage (bucket peticiones con prefijo colegiados/ o bucket colegiados)
       if (fileInput?.files && fileInput.files[0]) {
-        const file = fileInput.files[0];
-        uploadedName = file.name;
-        const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-        const storagePath = `colegiados/${anioNum}/${Date.now()}_${cleanName}`;
-
-        const { error: uploadErr } = await supabase.storage
-          .from('peticiones')
-          .upload(storagePath, file, { contentType: file.type || 'application/pdf', upsert: true });
-
-        if (!uploadErr) {
-          const { data: publicData } = supabase.storage.from('peticiones').getPublicUrl(storagePath);
-          uploadedUrl = publicData?.publicUrl || null;
-        } else {
-          console.warn('[Normas] Aviso subiendo archivo a storage:', uploadErr.message);
-        }
+        formData.append('archivo', fileInput.files[0]);
       }
 
-      const { error } = await supabase.from('colegiados_normas' as any).insert([{
-        id: newId,
-        anio: anioNum,
-        year: String(anioNum),
-        cuerpo_colegiado: organo,
-        organo,
-        organo_code: organoCode,
-        tipo_acto: tipo,
-        tipo,
-        numero_acto: numero,
-        numero,
-        fecha_expedicion: fecha,
-        fecha,
-        asunto: titulo,
-        titulo,
-        descriptor: descriptor || 'General',
-        vigencia: 'Vigente',
-        resumen: titulo,
-        signatarios: 'Secretaría General / Rectoría',
-        archivo_url: uploadedUrl,
-        archivo_nombre: uploadedName,
-        created_at: new Date().toISOString(),
-      }] as any);
+      const res = await fetch('/api/normas/guardar', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.error || 'Error en el servidor al guardar el acto.');
+      }
 
-      if (error) throw error;
-
-      await logSystemActivity({
-        actor: getClientAuditActor(),
-        action: 'Radicación de Acto / Norma Colegiada',
-        actionType: 'SUBIDA_ARCHIVO',
-        entity: 'Cuerpos Colegiados',
-        entityId: `${tipo} ${numero}`,
-        details: `Se radicó el acto administrativo "${tipo} ${numero}" para ${organo} (Año ${anioNum}).`,
-        severity: 'INFO',
-      }).catch(() => {});
-
-      (window as any).showToast?.(`Acto "${tipo} ${numero}" radicado exitosamente.`, 'success');
+      (window as any).showToast?.(
+        editId
+          ? `Acto "${tipo} ${numero}" actualizado exitosamente.`
+          : `Acto "${tipo} ${numero}" radicado exitosamente.`,
+        'success'
+      );
       window.location.reload();
     } catch (err: any) {
       console.error('Error guardando norma:', err);
-      const errMsg = err?.message || err?.error_description || 'Error en el servidor al guardar el acto.';
+      const errMsg = err?.message || 'Error en el servidor al guardar el acto.';
       (window as any).showToast?.(`Error al guardar acto: ${errMsg}`, 'error');
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Guardar Acto';
+        submitBtn.textContent = editId ? 'Guardar Cambios' : 'Guardar Acto';
       }
     }
   });

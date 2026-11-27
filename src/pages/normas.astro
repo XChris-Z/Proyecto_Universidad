@@ -1,31 +1,36 @@
 ---
 // src/pages/normas.astro
+export const prerender = false;
+
 import AppLayout from '@layouts/AppLayout.astro';
-import { supabase } from '@lib/supabase';
+import { supabase, supabaseAdmin } from '@lib/supabase';
+
+Astro.response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+
+const db = (supabaseAdmin || supabase) as any;
 
 // Consultar normas oficiales reales desde Supabase
-const { data: dbNormas } = await (supabase
-  .from('colegiados_normas' as any)
+const { data: dbNormas } = await db
+  .from('colegiados_normas')
   .select('*')
-  .order('created_at', { ascending: false }) as any);
+  .order('created_at', { ascending: false });
 
 const rawNormas = Array.isArray(dbNormas) ? dbNormas : [];
-const total = rawNormas.length;
-const csuCount = rawNormas.filter((n: any) => n.organo_code === 'csu').length;
-const caCount = rawNormas.filter((n: any) => n.organo_code === 'ca').length;
-const recCount = rawNormas.filter((n: any) => n.organo_code === 'rectoria').length;
-const eleCount = rawNormas.filter((n: any) => n.organo_code === 'electoral').length;
+const todayBogotaYmd = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/Bogota',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+}).format(new Date());
 
-const vigentesCount = rawNormas.filter((n: any) => String(n.vigencia || '').toLowerCase() === 'vigente').length;
-const vigentesPct = total > 0 ? Math.round((vigentesCount / total) * 100) : 0;
-const csuPct = total > 0 ? Math.round((csuCount / total) * 100) : 0;
-const caPct = total > 0 ? Math.round((caCount / total) * 100) : 0;
-const otrosCount = recCount + eleCount;
-const recPct = total > 0 ? Math.round((recCount / total) * 100) : 0;
-const elePct = total > 0 ? Math.round((eleCount / total) * 100) : 0;
+function normalizeYmd(raw: string | null | undefined): string {
+  if (!raw) return '';
+  const m = String(raw).trim().match(/^(\d{4}-\d{2}-\d{2})/);
+  return m?.[1] || '';
+}
 
 function getOrganStyle(code: string) {
-  switch (code) {
+  switch (String(code || '').toLowerCase()) {
     case 'csu':
       return {
         label: 'CSU',
@@ -64,26 +69,33 @@ function getOrganStyle(code: string) {
   }
 }
 
-function getVigenciaStyle(vig: string) {
+function getVigenciaStyle(vig: string | null | undefined, fechaFin?: string | null) {
   const lower = String(vig || 'vigente').toLowerCase().trim();
-  if (lower === 'derogado') {
+  const finYmd = normalizeYmd(fechaFin);
+
+  if (lower.includes('derogad') || lower.includes('modificad')) {
     return {
       key: 'derogado',
       label: 'Derogado',
-      bg: '#F1F5F9',
-      text: '#475569',
-      border: '#CBD5E1',
-      dot: '#64748B',
+      bg: '#FFFBEB',
+      text: '#B45309',
+      border: '#FDE68A',
+      dot: '#D97706',
     };
   }
-  if (lower === 'modificado') {
+  if (
+    lower === 'no_vigente' ||
+    lower === 'no vigente' ||
+    lower === 'vencido' ||
+    (finYmd !== '' && finYmd < todayBogotaYmd)
+  ) {
     return {
-      key: 'modificado',
-      label: 'Modificado',
-      bg: '#F7F5EE',
-      text: '#786832',
-      border: '#DBD2B0',
-      dot: '#B5A160',
+      key: 'no_vigente',
+      label: 'No Vigente',
+      bg: '#FEF2F2',
+      text: '#B91C1C',
+      border: '#FECACA',
+      dot: '#DC2626',
     };
   }
   return {
@@ -97,22 +109,48 @@ function getVigenciaStyle(vig: string) {
 }
 
 const normasView = rawNormas.map((norma: any) => {
-  const anioCalculado = norma.anio || norma.year || (norma.fecha ? String(norma.fecha).split('-')[0] : '2026');
+  const fechaVal = normalizeYmd(norma.fecha_expedicion || norma.fecha);
+  const fechaFinVal = normalizeYmd(norma.fecha_fin_vigencia);
+  const anioCalculado =
+    norma.anio || norma.year || (fechaVal ? fechaVal.split('-')[0] : '2026');
+  const organoCode = String(norma.organo_code || '').toLowerCase().trim();
+  const organo = String(norma.cuerpo_colegiado || norma.organo || '').trim();
+  const tipo = String(norma.tipo_acto || norma.tipo || '').trim();
+  const numero = String(norma.numero_acto || norma.numero || '').trim();
+  const titulo = String(norma.asunto || norma.titulo || '').trim();
+  const vigStyle = getVigenciaStyle(norma.vigencia, fechaFinVal);
+
   return {
     ...norma,
+    id: String(norma.id),
+    organo_code: organoCode,
     year: String(anioCalculado),
-    organo: norma.cuerpo_colegiado || norma.organo,
-    tipo: norma.tipo_acto || norma.tipo,
-    numero: norma.numero_acto || norma.numero,
-    titulo: norma.asunto || norma.titulo,
-    fecha: norma.fecha_expedicion || norma.fecha,
-    organStyle: getOrganStyle(norma.organo_code),
-    vigStyle: getVigenciaStyle(norma.vigencia),
+    organo,
+    tipo,
+    numero,
+    titulo,
+    fecha: fechaVal || String(norma.fecha_expedicion || norma.fecha || ''),
+    fecha_fin_vigencia: fechaFinVal,
+    organStyle: getOrganStyle(organoCode),
+    vigStyle,
   };
 });
+
+const total = normasView.length;
+const csuCount = normasView.filter((n: any) => n.organo_code === 'csu').length;
+const caCount = normasView.filter((n: any) => n.organo_code === 'ca').length;
+const recCount = normasView.filter((n: any) => n.organo_code === 'rectoria').length;
+
+const vigentesCount = normasView.filter((n: any) => n.vigStyle.key === 'vigente').length;
+const vigentesPct = total > 0 ? Math.round((vigentesCount / total) * 100) : 0;
+const csuPct = total > 0 ? Math.round((csuCount / total) * 100) : 0;
+const caPct = total > 0 ? Math.round((caCount / total) * 100) : 0;
+const recPct = total > 0 ? Math.round((recCount / total) * 100) : 0;
+
+const normasJson = JSON.stringify(normasView);
 ---
 
-<AppLayout title="Cuerpos Colegiados y Normativa" activeNav="normas">
+<AppLayout title="Cuerpos Colegiados" activeNav="normas">
   <section class="module-board-card normas-bento-shell">
     <!-- Cabecera Ejecutiva Bento -->
     <header class="normas-hero-bento">
@@ -121,7 +159,7 @@ const normasView = rawNormas.map((norma: any) => {
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           <span>COMPENDIO NORMATIVO INSTITUCIONAL</span>
         </div>
-        <h2 class="normas-hero-title">Sistematización de Actos y Cuerpos Colegiados</h2>
+        <h2 class="normas-hero-title">Cuerpos Colegiados</h2>
         <p class="normas-hero-subtitle">
           Repositorio oficial de acuerdos y resoluciones expedidos por el Consejo Superior Universitario, Consejo Académico y Rectoría.
         </p>
@@ -148,14 +186,14 @@ const normasView = rawNormas.map((norma: any) => {
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
           </span>
         </div>
-        <div class="normas-kpi-value">{total}</div>
+        <div class="normas-kpi-value" id="normas-kpi-total">{total}</div>
         <div class="normas-chart-block">
           <div class="normas-chart-meta">
             <span>Estado vigente</span>
-            <strong style="color: #00594E;">{vigentesCount} ({vigentesPct}%)</strong>
+            <strong id="normas-kpi-vigentes-text" style="color: #00594E;">{vigentesCount} ({vigentesPct}%)</strong>
           </div>
           <div class="normas-chart-track">
-            <div class="normas-chart-fill" style={`width: ${vigentesPct}%; background: #00594E;`}></div>
+            <div class="normas-chart-fill" id="normas-kpi-vigentes-bar" style={`width: ${vigentesPct}%; background: #00594E;`}></div>
           </div>
         </div>
       </article>
@@ -241,7 +279,7 @@ const normasView = rawNormas.map((norma: any) => {
       </div>
 
       <!-- Filtro Histórico por Año (desde 2021 en adelante) -->
-      <div class="normas-year-pills" id="normas-year-tabs" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 14px; margin-bottom: 8px; padding: 4px 2px;">
+      <div class="normas-year-pills" id="normas-year-tabs" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 4px; margin-bottom: 4px; padding: 4px 2px;">
         <span style="font-size: 0.74rem; font-weight: 700; color: #64748B; text-transform: uppercase; margin-right: 2px;">Año:</span>
         <button type="button" class="normas-year-pill active" data-year="all">Todos</button>
         <button type="button" class="normas-year-pill" data-year="2026">2026</button>
@@ -266,9 +304,9 @@ const normasView = rawNormas.map((norma: any) => {
         <div class="normas-toolbar-right">
           <select class="normas-select-vigencia" id="normas-filter-vigencia" aria-label="Filtrar por vigencia">
             <option value="all" selected>Todas las Vigencias</option>
-            <option value="vigente">Solo Vigentes</option>
-            <option value="modificado">Modificados</option>
-            <option value="derogado">Derogados</option>
+            <option value="vigente">Vigente</option>
+            <option value="no_vigente">No Vigente / Vencido</option>
+            <option value="derogado">Derogado / Modificado</option>
           </select>
 
           <div class="normas-visible-badge">
@@ -285,21 +323,23 @@ const normasView = rawNormas.map((norma: any) => {
           <table class="normas-pro-table">
             <thead>
               <tr>
-                <th style="width: 19%;">Órgano Colegiado</th>
-                <th style="width: 13%;">Acto / Consecutivo</th>
-                <th style="width: 25%;">Título Oficial y Descriptor Temático</th>
-                <th style="width: 17%;">Expedición y Signatarios</th>
-                <th style="width: 10%;">Vigencia</th>
-                <th style="width: 16%; text-align: right;">Documento</th>
+                <th style="width: 17%;">Órgano Colegiado</th>
+                <th style="width: 12%;">Acto / Consecutivo</th>
+                <th style="width: 24%;">Título Oficial y Descriptor Temático</th>
+                <th style="width: 16%;">Expedición y Signatarios</th>
+                <th style="width: 12%;">Vigencia</th>
+                <th style="width: 19%; text-align: right;">Documento</th>
               </tr>
             </thead>
             <tbody id="normas-table-body">
               {normasView.map((norma: any) => (
                 <tr
                   class="norma-row"
+                  data-id={norma.id}
                   data-org={norma.organo_code}
                   data-vigencia={norma.vigStyle.key}
                   data-year={norma.year}
+                  data-search={`${norma.numero} ${norma.tipo} ${norma.titulo} ${norma.descriptor || ''} ${norma.resumen || ''} ${norma.organo || ''} ${norma.signatarios || ''} ${norma.year}`.toLowerCase()}
                 >
                   <td>
                     <span
@@ -337,54 +377,70 @@ const normasView = rawNormas.map((norma: any) => {
                     <div class="norma-signatario-line">{norma.signatarios || 'Secretaría General'}</div>
                   </td>
                   <td>
-                    <span
-                      class="norma-vigencia-badge"
-                      style={`background: ${norma.vigStyle.bg}; color: ${norma.vigStyle.text}; border: 1px solid ${norma.vigStyle.border};`}
-                    >
-                      <span class="norma-vig-dot" style={`background: ${norma.vigStyle.dot};`}></span>
-                      <span>{norma.vigStyle.label}</span>
-                    </span>
+                    <div class="norma-vig-cell">
+                      <span
+                        class="norma-vigencia-badge"
+                        style={`background: ${norma.vigStyle.bg}; color: ${norma.vigStyle.text}; border: 1px solid ${norma.vigStyle.border};`}
+                      >
+                        <span class="norma-vig-dot" style={`background: ${norma.vigStyle.dot};`}></span>
+                        <span>{norma.vigStyle.label}</span>
+                      </span>
+                      {norma.fecha_fin_vigencia && (
+                        <span class="norma-vig-fin-sub">Hasta: {norma.fecha_fin_vigencia}</span>
+                      )}
+                    </div>
                   </td>
                   <td style="text-align: right;">
-                    {norma.archivo_url ? (
-                      <div class="norma-doc-actions">
-                        <a
-                          href={norma.archivo_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          class="btn-norma-download"
-                          title={`Ver documento: ${norma.archivo_nombre || 'PDF'}`}
-                          style="text-decoration: none;"
-                        >
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                          <span>Ver</span>
-                        </a>
-                        <a
-                          href={norma.archivo_url}
-                          download={norma.archivo_nombre || `${norma.tipo}_${norma.numero}.pdf`}
-                          class="btn-norma-download"
-                          title="Descargar documento"
-                          style="text-decoration: none;"
-                        >
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                          <span>Descargar</span>
-                        </a>
-                      </div>
-                    ) : (
-                      <div class="norma-doc-actions">
-                        <button
-                          type="button"
-                          class="btn-norma-download"
-                          data-norma-label={`${norma.tipo} ${norma.numero}`}
-                        >
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                          <span>PDF</span>
-                        </button>
-                      </div>
-                    )}
+                    <div class="norma-doc-actions">
+                      {norma.archivo_url ? (
+                        <>
+                          <a
+                            href={norma.archivo_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="btn-norma-download"
+                            title={`Ver documento: ${norma.archivo_nombre || 'PDF'}`}
+                            style="text-decoration: none;"
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            <span>Ver</span>
+                          </a>
+                          <a
+                            href={norma.archivo_url}
+                            download={norma.archivo_nombre || `${norma.tipo}_${norma.numero}.pdf`}
+                            class="btn-norma-download"
+                            title="Descargar documento"
+                            style="text-decoration: none;"
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            <span>Descargar</span>
+                          </a>
+                        </>
+                      ) : null}
+                      <button
+                        type="button"
+                        class="btn-norma-download btn-norma-edit"
+                        data-id={norma.id}
+                        title={`Editar acto y vigencia: ${norma.tipo} ${norma.numero}`}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        <span>Editar</span>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
+              <tr id="normas-filter-empty-row" class="normas-filter-empty-row is-hidden-row">
+                <td colspan="6">
+                  <div class="normas-empty-state" style="padding: 36px 16px;">
+                    <div class="normas-empty-icon">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                    </div>
+                    <div class="normas-empty-title">No hay actos que coincidan con los filtros seleccionados</div>
+                    <p class="normas-empty-desc">Ajuste el órgano colegiado, año, vigencia o términos de búsqueda.</p>
+                  </div>
+                </td>
+              </tr>
             </tbody>
           </table>
         ) : (
@@ -396,27 +452,19 @@ const normasView = rawNormas.map((norma: any) => {
             <p class="normas-empty-desc">Utilice el botón superior para radicar el primer acto administrativo oficial.</p>
           </div>
         )}
-
-        <div id="normas-filter-empty" class="normas-empty-state" style="display: none;">
-          <div class="normas-empty-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-          </div>
-          <div class="normas-empty-title">Sin coincidencias para este filtro</div>
-          <p class="normas-empty-desc">Ajuste el órgano colegiado, la vigencia o las palabras clave de búsqueda.</p>
-        </div>
       </div>
     </section>
   </section>
 
-  <!-- Modal para radicar nuevo acto administrativo -->
+  <!-- Modal Unificado: Radicar Nuevo Acto / Editar Acto y Vigencia -->
   <div class="modal-backdrop" id="new-norma-modal" style="display: none;">
-    <div class="modal-card normas-modal-card" style="max-width: 600px;">
+    <div class="modal-card normas-modal-card" style="max-width: 620px;">
       <div class="modal-header" style="border-bottom: 1px solid #DCE4E3; background: #F2F7F6;">
         <div style="display: flex; align-items: center; gap: 10px;">
           <div style="width: 34px; height: 34px; border-radius: 9px; background: #00594E; color: #FFFFFF; display: flex; align-items: center; justify-content: center;">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
           </div>
-          <h3 style="margin: 0; font-size: 1.02rem; font-weight: 800; color: #111827;">Radicar Nuevo Acto / Norma</h3>
+          <h3 id="norma-modal-title" style="margin: 0; font-size: 1.02rem; font-weight: 800; color: #111827;">Radicar Nuevo Acto / Norma</h3>
         </div>
         <button type="button" class="btn-close-modal" id="btn-close-new-norma-modal" aria-label="Cerrar modal">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -424,6 +472,8 @@ const normasView = rawNormas.map((norma: any) => {
       </div>
       <div class="modal-body">
         <form id="form-new-norma">
+          <input type="hidden" id="norma-edit-id" value="" />
+
           <div class="form-row-2">
             <div class="form-group">
               <label class="form-label">Cuerpo Colegiado *</label>
@@ -445,6 +495,7 @@ const normasView = rawNormas.map((norma: any) => {
               </select>
             </div>
           </div>
+
           <div class="form-row-2">
             <div class="form-group">
               <label class="form-label">Tipo de Acto *</label>
@@ -455,20 +506,38 @@ const normasView = rawNormas.map((norma: any) => {
               <input type="text" class="form-input normas-input" id="new-norma-numero" placeholder="Ej: Acuerdo 015" required />
             </div>
           </div>
+
           <div class="form-group">
             <label class="form-label">Título Oficial / Asunto *</label>
             <textarea class="form-textarea normas-input" id="new-norma-titulo" rows="2" placeholder="Por el cual se adopta..." required></textarea>
           </div>
+
           <div class="form-row-2">
             <div class="form-group">
               <label class="form-label">Fecha de Expedición *</label>
               <input type="date" class="form-input normas-input" id="new-norma-fecha" required />
             </div>
             <div class="form-group">
+              <label class="form-label">Fecha Fin de Vigencia (Opcional)</label>
+              <input type="date" class="form-input normas-input" id="new-norma-fecha-fin" />
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Estado de Vigencia *</label>
+              <select class="form-select normas-input" id="new-norma-vigencia" required>
+                <option value="Vigente">Vigente</option>
+                <option value="No Vigente">No Vigente</option>
+                <option value="Derogado / Modificado">Derogado / Modificado</option>
+              </select>
+            </div>
+            <div class="form-group">
               <label class="form-label">Descriptor Temático</label>
               <input type="text" class="form-input normas-input" id="new-norma-descriptor" placeholder="Ej: Régimen Profesoral" />
             </div>
           </div>
+
           <div class="form-group">
             <label class="form-label">Documento Soporte Oficial (PDF o DOCX)</label>
             <div style="border: 1.5px dashed #B2CFCB; border-radius: 10px; padding: 14px; background: #F8FAFB; text-align: center;">
@@ -481,6 +550,7 @@ const normasView = rawNormas.map((norma: any) => {
               </div>
             </div>
           </div>
+
           <div class="modal-footer" style="padding: 14px 0 0 0; border-top: 1px solid #DCE4E3; margin-top: 6px;">
             <button type="button" class="btn btn-ghost" id="btn-cancel-norma">Cancelar</button>
             <button type="submit" class="btn-normas-primary" id="btn-submit-norma">Guardar Acto</button>
@@ -489,6 +559,9 @@ const normasView = rawNormas.map((norma: any) => {
       </div>
     </div>
   </div>
+
+  <!-- Datos de Normas serializados para edición instantánea -->
+  <script id="normas-data-json" type="application/json" is:inline set:html={normasJson}></script>
 
   <!-- Modal para Importar Excel (.XLSX) -->
   <div class="modal-backdrop" id="excel-import-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(2px);">
@@ -969,8 +1042,8 @@ const normasView = rawNormas.map((norma: any) => {
         overflow-x: hidden;
       }
 
-      .normas-scroll-box :global(.normas-pro-table tbody tr) {
-        display: table-row !important;
+      .normas-scroll-box :global(.normas-pro-table tbody tr:not([hidden]):not(.is-hidden-row):not(.hidden)) {
+        display: table-row;
       }
 
       .normas-scroll-box :global(.normas-pro-table tbody td) {
@@ -979,6 +1052,38 @@ const normasView = rawNormas.map((norma: any) => {
         padding: 14px 16px;
         border-bottom: 1px solid #EEF2F5;
       }
+    }
+
+    .normas-scroll-box :global(.normas-pro-table tbody tr[hidden]),
+    .normas-scroll-box :global(.normas-pro-table tbody tr.is-hidden-row),
+    .normas-scroll-box :global(.normas-pro-table tbody tr.hidden) {
+      display: none !important;
+    }
+
+    .normas-scroll-box :global(.norma-vig-cell) {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
+
+    .normas-scroll-box :global(.norma-vig-fin-sub) {
+      font-size: 0.69rem;
+      color: #64748B;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .normas-scroll-box :global(.norma-doc-actions .btn-norma-edit) {
+      border-color: #DBD2B0;
+      background: #F7F5EE;
+      color: #786832;
+    }
+
+    .normas-scroll-box :global(.norma-doc-actions .btn-norma-edit:hover) {
+      background: #B5A160;
+      border-color: #B5A160;
+      color: #FFFFFF;
     }
 
     @media (max-width: 1023px) {
