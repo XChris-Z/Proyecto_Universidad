@@ -48,7 +48,6 @@ const canExportExcel = currentRbac.isAdmin || canPeticiones || canAuditoria;
 // 2. Consultar snapshot consolidado en vivo desde Supabase (cada tabla protegida por try/catch independiente)
 const dashSnap = await getDashboardSnapshotData();
 
-const totalPeticiones = dashSnap.totalPeticiones;
 const totalRespondidas = dashSnap.totalRespondidas;
 const totalPendientes = dashSnap.totalPendientes;
 const responseRate = dashSnap.responseRate;
@@ -1043,19 +1042,22 @@ const categoryLabelsMap: Record<string, string> = {
                                 <span class="inst-block-pill teal tabular-nums">{dashSnap.conveniosCuantiaFormateada}</span>
                               </div>
                               {
-                                dashSnap.conveniosAlertas.length > 0 ? (
-                                  <>
-                                    <div class="inst-block-title">
-                                      {dashSnap.conveniosAlertas[0].entidad} (#{dashSnap.conveniosAlertas[0].numero})
-                                    </div>
-                                    <div class="inst-block-meta">
-                                      {dashSnap.conveniosAlertas[0].tipo_label} &bull; Fin: {dashSnap.conveniosAlertas[0].fin}
-                                      {dashSnap.conveniosProximosVencerCount > 0 && ` • ${dashSnap.conveniosProximosVencerCount} próx. vencer`}
-                                    </div>
-                                  </>
-                                ) : (
-                                  <div class="inst-block-meta">Sin convenios activos registrados.</div>
-                                )
+                                (() => {
+                                  const topConv = dashSnap.conveniosAlertas[0];
+                                  return topConv ? (
+                                    <>
+                                      <div class="inst-block-title">
+                                        {topConv.entidad} (#{topConv.numero})
+                                      </div>
+                                      <div class="inst-block-meta">
+                                        {topConv.tipo_label} &bull; Fin: {topConv.fin}
+                                        {dashSnap.conveniosProximosVencerCount > 0 && ` • ${dashSnap.conveniosProximosVencerCount} próx. vencer`}
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <div class="inst-block-meta">Sin convenios activos registrados.</div>
+                                  );
+                                })()
                               }
                             </a>
                           )

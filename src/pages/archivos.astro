@@ -398,7 +398,7 @@ function getCardSlaMeta(prog: any, isResponded: boolean) {
     cardBadgeText = `Vence en ${prog.daysRemaining}d`;
   }
   const cardPct = isResponded ? 100 : prog.percentage;
-  const cardPctText = isResponded ? 'Completado' : `${prog.percentage}% consumido`;
+  const cardPctText = isResponded ? 'Completado' : `${prog.percentage}%`;
   return { filterSla, slaTone, cardBadgeText, cardPct, cardPctText };
 }
 
@@ -449,7 +449,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
           </div>
         </div>
 
-        <!-- Acciones de Cabecera: Buscador, Alternador, Alertas y Nueva Radicación -->
+        <!-- Acciones de Cabecera: Buscador flexible a la izquierda y controles agrupados a la derecha -->
         <div class="archivos-header-actions">
           <!-- Buscador en Vivo -->
           <div class="archivos-search-wrap">
@@ -457,64 +457,65 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="archivos-search-icon"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           </div>
 
-          <!-- Alternador Vista Carpetas / Vista Lista -->
-          <div class="archivos-view-toggle">
-            <button type="button" id="btn-view-grid" class="view-toggle-btn active" title="Vista de Carpetas estilo Drive">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-              <span>Carpetas</span>
+          <!-- Grupo derecho de acciones -->
+          <div class="archivos-actions-right">
+            <!-- Alternador Vista Carpetas / Vista Lista -->
+            <div class="archivos-view-toggle">
+              <button type="button" id="btn-view-grid" class="view-toggle-btn active" title="Vista de Carpetas estilo Drive">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                <span>Carpetas</span>
+              </button>
+              <button type="button" id="btn-view-table" class="view-toggle-btn" title="Vista de Tabla Detallada">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                <span>Lista</span>
+              </button>
+            </div>
+
+            <!-- Botón opcional de verificación manual de recordatorios 3 días -->
+            <button type="button" id="btn-check-reminders" class="btn-archivos-alerts" title="Verificar y enviar recordatorios a dependencias próximas a vencer (3 días o menos)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              <span>Alertar a dependencias</span>
             </button>
-            <button type="button" id="btn-view-table" class="view-toggle-btn" title="Vista de Tabla Detallada">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-              <span>Lista</span>
-            </button>
+
+            <a href="/peticiones/subir" class="btn btn-primary btn-archivos-new">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
+              <span>Nueva Carpeta / Radicación</span>
+            </a>
           </div>
-
-          <!-- Botón opcional de verificación manual de recordatorios 3 días -->
-          <button type="button" id="btn-check-reminders" class="btn-archivos-alerts" title="Verificar y enviar recordatorios a dependencias próximas a vencer (3 días o menos)">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-            <span>Alertar a dependencias</span>
-          </button>
-
-          <a href="/peticiones/subir" class="btn btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 0.82rem; height: 38px; border-radius: 10px;">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
-            <span>Nueva Carpeta / Radicación</span>
-          </a>
         </div>
       </div>
 
-      <!-- Pestañas de Filtro Rápido en Barra Bento -->
-      <div class="archivos-filter-toolbar">
-        <div class="filter-tabs" id="archivos-filter-tabs">
-          <button class="filter-tab active" data-filter="all">
-            <span>Todas las Carpetas</span>
-            <span class="filter-count" id="count-all">{totalCount}</span>
-          </button>
-          <button class="filter-tab" data-filter="pending">
-            <span class="dist-dot" style="background: #786832;"></span>
-            <span>En Trámite</span>
-            <span class="filter-count" id="count-pending">{pendingCount}</span>
-          </button>
-          <button class="filter-tab" data-filter="responded">
-            <span class="dist-dot" style="background: #00594E;"></span>
-            <span>Completadas / Respondidas</span>
-            <span class="filter-count" id="count-responded">{respondedCount}</span>
-          </button>
-          <button class="filter-tab" data-filter="safe">
-            <span class="dist-dot" style="background: #00594E;"></span>
-            <span>Plazo Saludable</span>
-            <span class="filter-count" id="count-safe">{safeCount}</span>
-          </button>
-          <button class="filter-tab" data-filter="warn">
-            <span class="dist-dot" style="background: #B5A160;"></span>
-            <span>Próximo a Vencer</span>
-            <span class="filter-count" id="count-warn">{warnCount}</span>
-          </button>
-          <button class="filter-tab" data-filter="critical">
-            <span class="dist-dot" style="background: #DC2626;"></span>
-            <span>Crítico / Vencido</span>
-            <span class="filter-count" id="count-critical">{criticalCount}</span>
-          </button>
-        </div>
+      <!-- Pestañas de Filtro Rápido (una sola barra limpia sin caja duplicada) -->
+      <div class="archivos-filter-toolbar" id="archivos-filter-tabs">
+        <button class="filter-tab active" data-filter="all">
+          <span>Todas las Carpetas</span>
+          <span class="filter-count" id="count-all">{totalCount}</span>
+        </button>
+        <button class="filter-tab" data-filter="pending">
+          <span class="dist-dot" style="background: #786832;"></span>
+          <span>En Trámite</span>
+          <span class="filter-count" id="count-pending">{pendingCount}</span>
+        </button>
+        <button class="filter-tab" data-filter="responded">
+          <span class="dist-dot" style="background: #00594E;"></span>
+          <span>Completadas / Respondidas</span>
+          <span class="filter-count" id="count-responded">{respondedCount}</span>
+        </button>
+        <button class="filter-tab" data-filter="safe">
+          <span class="dist-dot" style="background: #00594E;"></span>
+          <span>Plazo Saludable</span>
+          <span class="filter-count" id="count-safe">{safeCount}</span>
+        </button>
+        <button class="filter-tab" data-filter="warn">
+          <span class="dist-dot" style="background: #B5A160;"></span>
+          <span>Próximo a Vencer</span>
+          <span class="filter-count" id="count-warn">{warnCount}</span>
+        </button>
+        <button class="filter-tab" data-filter="critical">
+          <span class="dist-dot" style="background: #DC2626;"></span>
+          <span>Crítico / Vencido</span>
+          <span class="filter-count" id="count-critical">{criticalCount}</span>
+        </button>
       </div>
 
       <!-- SECCIÓN A: MODO CUADRÍCULA DE CARPETAS (BENTO GRID PRO MAX) -->
@@ -528,8 +529,8 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
             const { filterSla, slaTone, cardBadgeText, cardPct, cardPctText } = getCardSlaMeta(prog, isResponded);
 
             return (
-              <div 
-                class="drive-folder-card" 
+              <div
+                class="drive-folder-card"
                 id={`card-folder-${doc.id}`}
                 data-folder-id={doc.id}
                 data-id={doc.id}
@@ -537,122 +538,121 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
                 data-pin={doc.pin_acceso || '849201'}
                 data-asunto={doc.asunto}
                 data-solicitante={doc.solicitante_nombre}
-                data-status={isResponded ? 'responded' : 'pending'} 
+                data-status={isResponded ? 'responded' : 'pending'}
                 data-sla={filterSla}
               >
-                <!-- Cabecera de Carpeta -->
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; gap: 10px;">
-                  <div style="display: flex; align-items: flex-start; gap: 10px; min-width: 0;">
+                <!-- Cabecera de Carpeta sin colisión entre código y estado -->
+                <div class="folder-card-head">
+                  <div class="folder-card-id-group">
                     <div class="folder-svg-icon">
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg>
                     </div>
-                    <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+                    <div class="folder-rad-meta">
                       <span class="radicado-chip">{doc.numero_radicado}</span>
-                      <div style="font-size: 0.73rem; color: #64748B; white-space: nowrap; font-weight: 500;">
+                      <div class="folder-rad-date">
                         Radicado: {doc.fecha_radicacion || 'Reciente'}
                       </div>
                     </div>
                   </div>
 
-                  <span class="folder-sla-badge" style={`font-size: 0.68rem; font-weight: 800; padding: 3px 9px; border-radius: 999px; background: ${slaTone.badgeBg}; color: ${slaTone.badgeText}; border: 1px solid ${slaTone.badgeBorder}; white-space: nowrap; flex-shrink: 0;`}>
+                  <span class="folder-sla-badge" style={`background: ${slaTone.badgeBg}; color: ${slaTone.badgeText}; border-color: ${slaTone.badgeBorder};`}>
                     {cardBadgeText}
                   </span>
                 </div>
 
-                <!-- Título de la Carpeta (Asunto) -->
-                <h4 class="folder-title" title={doc.asunto}>{doc.asunto}</h4>
-
-                <!-- Solicitante -->
-                <div style="font-size: 0.76rem; color: #64748B; margin-bottom: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                  <span style="font-weight: 700; color: #111827;">{doc.solicitante_nombre}</span> ({doc.solicitante_tipo === 'Docente' ? 'Profesor' : (doc.solicitante_tipo || 'Ciudadano')})
-                </div>
-
-                <!-- Bloque Chart Element: Fecha de Expiración -->
-                <div class="sla-chart-card">
-                  <div class="sla-chart-header">
-                    <span class="sla-chart-label">Fecha de Expiración ({doc.fecha_limite_entrega || '--'}):</span>
-                    <span class="sla-chart-pct" style={`color: ${slaTone.text};`}>{cardPctText}</span>
-                  </div>
-                  <div class="sla-chart-track">
-                    <div class="sla-chart-fill" style={`width: ${cardPct}%; background: ${slaTone.bar};`}></div>
+                <!-- Cuerpo central con altura consistente -->
+                <div class="folder-card-info">
+                  <h4 class="folder-title" title={doc.asunto}>{doc.asunto}</h4>
+                  <div class="folder-requester">
+                    <span class="folder-requester-name">{doc.solicitante_nombre}</span> ({doc.solicitante_tipo === 'Docente' ? 'Profesor' : (doc.solicitante_tipo || 'Ciudadano')})
                   </div>
                 </div>
 
-                <!-- Cápsula Bento Pro Max: ÚNICAMENTE PIN de Acceso en una sola línea -->
-                <div class="pin-acceso-row">
-                  <span class="pin-acceso-label">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#786832" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                    <span>PIN Acceso:</span>
-                  </span>
-                  <span class="pin-acceso-code">{doc.pin_acceso || '849201'}</span>
-                  <button
-                    type="button"
-                    class="btn-copy-pin pin-copy-btn"
-                    data-pin={doc.pin_acceso || '849201'}
-                    title="Copiar PIN de 6 dígitos"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                    <span>Copiar</span>
-                  </button>
-                </div>
+                <!-- Bloque inferior nivelado horizontalmente en todas las tarjetas -->
+                <div class="folder-card-bottom">
+                  <!-- Bloque Chart Element: Vencimiento en 1 línea -->
+                  <div class="sla-chart-card">
+                    <div class="sla-chart-header">
+                      <span class="sla-chart-label">Vence: {doc.fecha_limite_entrega || '--'}</span>
+                      <span class="sla-chart-pct" style={`color: ${slaTone.text};`}>{cardPctText}</span>
+                    </div>
+                    <div class="sla-chart-track">
+                      <div class="sla-chart-fill" style={`width: ${cardPct}%; background: ${slaTone.bar};`}></div>
+                    </div>
+                  </div>
 
-                <!-- Barra de Acciones de la Carpeta -->
-                <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px; border-top: 1px solid #E2E8F0; padding-top: 10px;">
-                  <button 
-                    type="button" 
-                    class="btn-open-folder btn-abrir-carpeta btn btn-primary btn-sm" 
-                    style="flex: 1; justify-content: center; gap: 6px; font-weight: 800; font-size: 0.8rem; cursor: pointer;" 
-                    data-folder-id={doc.id} 
-                    data-radicado={doc.numero_radicado}
-                    onclick={`window.openFolderDetail && window.openFolderDetail('${doc.id || doc.numero_radicado}')`}
-                  >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                    <span>Abrir Carpeta</span>
-                  </button>
-
-                  {anexoPrincipal && (
-                    <a 
-                      href={getDownloadUrl(anexoPrincipal.storage_path)} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      class="btn-icon-action" 
-                      title="Descargar documento principal" 
-                      style="width: 32px; height: 32px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: #ffffff; color: var(--text-muted); display: flex; align-items: center; justify-content: center;"
+                  <!-- Cápsula Bento Pro Max: PIN de Acceso con botón Copiar aireado -->
+                  <div class="pin-acceso-row">
+                    <span class="pin-acceso-label">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#786832" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                      <span>PIN Acceso:</span>
+                    </span>
+                    <span class="pin-acceso-code">{doc.pin_acceso || '849201'}</span>
+                    <button
+                      type="button"
+                      class="btn-copy-pin pin-copy-btn"
+                      data-pin={doc.pin_acceso || '849201'}
+                      title="Copiar PIN de 6 dígitos"
                     >
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    </a>
-                  )}
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                      <span>Copiar</span>
+                    </button>
+                  </div>
 
-                  <button 
-                    type="button" 
-                    class="btn-icon-action btn-edit-pet" 
-                    data-id={doc.id} 
-                    data-radicado={doc.numero_radicado}
-                    data-asunto={doc.asunto}
-                    data-solicitante={doc.solicitante_nombre}
-                    data-email={doc.solicitante_email || ''}
-                    data-tipo={doc.solicitante_tipo || 'Ciudadano'}
-                    data-categoria={doc.categoria || doc.clasificacion_peticion || ''}
-                    data-prioridad={doc.prioridad || 'Media'}
-                    data-entrega={doc.fecha_limite_entrega ? String(doc.fecha_limite_entrega).slice(0, 10) : ''}
-                    data-responsable={doc.fecha_limite_responsable ? String(doc.fecha_limite_responsable).slice(0, 10) : ''}
-                    data-estado={doc.estado || 'en_tramite'}
-                    title="Editar Expediente"
-                    style="width: 32px; height: 32px; border-radius: var(--radius-sm); border: 1px solid var(--dorado-borde); background: var(--dorado-suave-bg); color: var(--dorado-oscuro); display: flex; align-items: center; justify-content: center; cursor: pointer;"
-                  >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                  </button>
+                  <!-- Barra de Acciones nivelada (Abrir Carpeta + 3 botones de 36px) -->
+                  <div class="folder-card-actions">
+                    <button
+                      type="button"
+                      class="btn-open-folder btn-abrir-carpeta btn btn-primary btn-sm"
+                      data-folder-id={doc.id}
+                      data-radicado={doc.numero_radicado}
+                      onclick={`window.openFolderDetail && window.openFolderDetail('${doc.id || doc.numero_radicado}')`}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                      <span>Abrir Carpeta</span>
+                    </button>
 
-                  <button 
-                    type="button" 
-                    class="btn-icon-action btn-delete-pet" 
-                    data-id={doc.id} 
-                    data-radicado={doc.numero_radicado}
-                    title="Eliminar Carpeta y Radicado"
-                    style="width: 32px; height: 32px; border-radius: var(--radius-sm); border: 1px solid #FECACA; background: #FEF2F2; color: #DC2626; display: flex; align-items: center; justify-content: center; cursor: pointer;"
-                  >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                  </button>
+                    {anexoPrincipal && (
+                      <a
+                        href={getDownloadUrl(anexoPrincipal.storage_path)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="btn-icon-action btn-folder-download"
+                        title="Descargar documento principal"
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                      </a>
+                    )}
+
+                    <button
+                      type="button"
+                      class="btn-icon-action btn-edit-pet"
+                      data-id={doc.id}
+                      data-radicado={doc.numero_radicado}
+                      data-asunto={doc.asunto}
+                      data-solicitante={doc.solicitante_nombre}
+                      data-email={doc.solicitante_email || ''}
+                      data-tipo={doc.solicitante_tipo || 'Ciudadano'}
+                      data-categoria={doc.categoria || doc.clasificacion_peticion || ''}
+                      data-prioridad={doc.prioridad || 'Media'}
+                      data-entrega={doc.fecha_limite_entrega ? String(doc.fecha_limite_entrega).slice(0, 10) : ''}
+                      data-responsable={doc.fecha_limite_responsable ? String(doc.fecha_limite_responsable).slice(0, 10) : ''}
+                      data-estado={doc.estado || 'en_tramite'}
+                      title="Editar Expediente"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+
+                    <button
+                      type="button"
+                      class="btn-icon-action btn-delete-pet"
+                      data-id={doc.id}
+                      data-radicado={doc.numero_radicado}
+                      title="Eliminar Carpeta y Radicado"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -1508,10 +1508,9 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       border-radius: 0;
       box-shadow: none;
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 16px;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 14px;
     }
 
     .archivos-header-brand {
@@ -1598,25 +1597,33 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       font-weight: 600;
     }
 
+    /* BLOQUE 1: Toolbar equilibrada con buscador flexible a la izquierda y acciones a la derecha */
     .archivos-header-actions {
       display: flex;
       align-items: center;
-      gap: 10px;
+      justify-content: space-between;
+      gap: 12px;
       flex-wrap: wrap;
+      width: 100%;
     }
 
     .archivos-search-wrap {
       position: relative;
-      width: 255px;
+      flex: 1 1 320px;
+      min-width: 260px;
+      max-width: 520px;
     }
 
     .archivos-search-input {
-      padding-left: 34px;
+      width: 100%;
+      padding-left: 36px;
+      padding-right: 12px;
       height: 38px;
-      font-size: 0.82rem;
+      font-size: 0.83rem;
       border-radius: 10px;
       border: 1px solid #DCE4E3;
       background: #F8FAFC;
+      box-sizing: border-box;
       transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
     }
 
@@ -1629,9 +1636,17 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
     .archivos-search-icon {
       position: absolute;
       left: 11px;
-      top: 12px;
+      top: 11px;
       color: #64748B;
       pointer-events: none;
+    }
+
+    .archivos-actions-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-left: auto;
     }
 
     .archivos-view-toggle {
@@ -1655,6 +1670,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       color: #00594E;
       font-size: 0.8rem;
       font-weight: 700;
+      white-space: nowrap;
       cursor: pointer;
       transition: all 0.2s ease;
     }
@@ -1669,19 +1685,69 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       cursor: wait;
     }
 
-    .archivos-filter-toolbar {
-      background: #FFFFFF;
-      border: 1px solid #DCE4E3;
-      border-radius: 14px;
-      padding: 10px 14px;
-      box-shadow: 0 2px 8px rgba(17, 24, 39, 0.03);
+    .btn-archivos-new {
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 700;
+      font-size: 0.82rem;
+      height: 38px;
+      padding: 0 14px;
+      border-radius: 10px;
+      white-space: nowrap;
     }
 
+    /* BLOQUE 2: Barra de filtros única sin doble caja */
+    .archivos-filter-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      width: 100%;
+      padding: 10px 14px;
+      background: #F8FAFB;
+      border: 1px solid #E2E8F0;
+      border-radius: 14px;
+      box-sizing: border-box;
+    }
+
+    .archivos-filter-toolbar :global(.filter-tab) {
+      height: 34px !important;
+      padding: 0 12px !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 6px !important;
+      white-space: nowrap !important;
+      font-size: 0.8rem !important;
+      border-radius: 9px !important;
+    }
+
+    /* BLOQUE 3: Cuadrícula de 4 columnas e igualación vertical de tarjetas */
     .archivos-bento-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
-      gap: 18px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      align-items: stretch;
+      gap: 16px;
       transition: opacity 0.18s ease, transform 0.22s ease;
+    }
+
+    @media (max-width: 1220px) {
+      .archivos-bento-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 900px) {
+      .archivos-bento-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 580px) {
+      .archivos-bento-grid {
+        grid-template-columns: 1fr;
+      }
     }
 
     .archivos-bento-grid.grid-crossfade-leave {
@@ -1693,11 +1759,12 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       animation: proMaxCrossfade 0.26s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    .drive-folder-card {
+    :global(.drive-folder-card) {
       background: #FFFFFF;
       border: 1px solid #DCE4E3;
-      border-radius: 14px;
-      padding: 18px;
+      border-radius: 16px;
+      padding: 16px;
+      height: 100%;
       transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
       display: flex;
       flex-direction: column;
@@ -1706,15 +1773,32 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       box-sizing: border-box;
       min-width: 0;
     }
-    .drive-folder-card:hover {
+    :global(.drive-folder-card:hover) {
       border-color: #00594E;
       box-shadow: 0 10px 24px -6px rgba(0, 89, 78, 0.14);
       transform: translateY(-2px);
     }
 
-    .folder-svg-icon {
-      width: 38px;
-      height: 38px;
+    /* BLOQUE 4.1: Cabecera de tarjeta sin colisión entre código y estado */
+    :global(.folder-card-head) {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    :global(.folder-card-id-group) {
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      min-width: 0;
+    }
+
+    :global(.folder-svg-icon) {
+      width: 36px;
+      height: 36px;
       border-radius: 10px;
       background: #F2F7F6;
       color: #00594E;
@@ -1726,8 +1810,53 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       margin-top: 0;
     }
 
-    .folder-title {
-      font-size: 0.96rem;
+    :global(.folder-rad-meta) {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      min-width: 0;
+    }
+
+    :global(.folder-rad-date) {
+      font-size: 0.71rem;
+      color: #64748B;
+      white-space: nowrap;
+      font-weight: 500;
+    }
+
+    :global(.radicado-chip) {
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: #00594E;
+      background: #F2F7F6;
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid #B2CFCB;
+      display: inline-block;
+      width: fit-content;
+      white-space: nowrap;
+      line-height: 1.25;
+    }
+
+    :global(.folder-sla-badge) {
+      font-size: 0.72rem;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      white-space: nowrap;
+      flex-shrink: 0;
+      line-height: 1.25;
+    }
+
+    :global(.folder-card-info) {
+      min-height: 66px;
+      margin-bottom: 10px;
+    }
+
+    :global(.folder-title) {
+      font-size: 0.94rem;
       font-weight: 800;
       color: #111827;
       letter-spacing: -0.015em;
@@ -1738,66 +1867,72 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
-    .radicado-chip {
-      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
-      font-size: 0.78rem;
-      font-weight: 800;
-      color: #00594E;
-      background: #F2F7F6;
-      padding: 3px 9px;
-      border-radius: 6px;
-      border: 1px solid #B2CFCB;
-      display: inline-block;
-      width: fit-content;
+
+    :global(.folder-requester) {
+      font-size: 0.75rem;
+      color: #64748B;
       white-space: nowrap;
-      line-height: 1.25;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    /* Bloque Chart Element: Fecha de Expiración */
-    .sla-chart-card {
+    :global(.folder-requester-name) {
+      font-weight: 700;
+      color: #111827;
+    }
+
+    :global(.folder-card-bottom) {
       margin-top: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* BLOQUE 4.2: Bloque Chart Element en 1 línea uniforme */
+    :global(.sla-chart-card) {
       background: #F8FAFC;
-      padding: 10px 12px;
+      padding: 10px 11px;
       border-radius: 10px;
       border: 1px solid #DCE4E3;
     }
 
-    .sla-chart-header {
+    :global(.sla-chart-header) {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 8px;
-      font-size: 0.72rem;
+      gap: 6px;
       margin-bottom: 6px;
     }
 
-    .sla-chart-label {
+    :global(.sla-chart-label) {
       color: #475569;
+      font-size: 0.74rem;
       font-weight: 600;
+      white-space: nowrap;
     }
 
-    .sla-chart-pct {
+    :global(.sla-chart-pct) {
+      font-size: 0.74rem;
       font-weight: 800;
       white-space: nowrap;
       font-variant-numeric: tabular-nums;
     }
 
-    .sla-chart-track {
+    :global(.sla-chart-track) {
       width: 100%;
-      height: 7px;
+      height: 6px;
       background: #E2E8F0;
       border-radius: 9999px;
       overflow: hidden;
     }
 
-    .sla-chart-fill {
+    :global(.sla-chart-fill) {
       height: 100%;
       border-radius: 9999px;
       transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    /* Fila de PIN de Acceso en una sola línea (nunca desborda) */
-    .pin-acceso-row {
+    /* BLOQUE 4.3: Fila de PIN de Acceso y botón Copiar con aire */
+    :global(.pin-acceso-row) {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -1806,7 +1941,7 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       width: 100%;
       box-sizing: border-box;
       padding: 7px 10px;
-      margin: 10px 0 14px 0;
+      margin: 10px 0 0 0;
       background: #FBF9F5;
       border: 1px solid #E6DEC3;
       border-radius: 10px;
@@ -1814,43 +1949,43 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       min-width: 0;
     }
 
-    .pin-acceso-label {
+    :global(.pin-acceso-label) {
       display: inline-flex;
       align-items: center;
-      gap: 5px;
-      font-size: 0.74rem;
+      gap: 4px;
+      font-size: 0.72rem;
       font-weight: 700;
       color: #786832;
       white-space: nowrap;
       flex-shrink: 0;
     }
 
-    .pin-acceso-code {
+    :global(.pin-acceso-code) {
       font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       font-weight: 800;
       color: #00594E;
       background: #FFFFFF;
       border: 1px solid #B2CFCB;
-      padding: 2px 8px;
+      padding: 2px 7px;
       border-radius: 6px;
-      letter-spacing: 0.4px;
+      letter-spacing: 0.3px;
       white-space: nowrap;
       flex-shrink: 0;
     }
 
-    .pin-copy-btn {
+    :global(.pin-copy-btn) {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 4px;
-      padding: 4px 9px;
-      height: 26px;
+      gap: 5px;
+      padding: 4px 8px;
+      height: 28px;
       background: #FFFFFF;
       color: #111827;
       border: 1px solid #CBD5E1;
       border-radius: 6px;
-      font-size: 0.72rem;
+      font-size: 0.75rem;
       font-weight: 700;
       white-space: nowrap;
       flex-shrink: 0;
@@ -1858,10 +1993,66 @@ const peticionesBase64 = Buffer.from(peticionesJson, 'utf-8').toString('base64')
       transition: all 0.18s ease;
     }
 
-    .pin-copy-btn:hover {
+    :global(.pin-copy-btn:hover) {
       background: #00594E;
       color: #FFFFFF;
       border-color: #00594E;
+    }
+
+    /* BLOQUE 4.4: Fila inferior nivelada (Abrir Carpeta + botones de ícono de 36px) */
+    :global(.folder-card-actions) {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid #E2E8F0;
+    }
+
+    :global(.folder-card-actions .btn-abrir-carpeta) {
+      flex: 1;
+      height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      white-space: nowrap;
+      font-size: 0.8rem;
+      font-weight: 800;
+      padding: 0 10px;
+      border-radius: 9px;
+      cursor: pointer;
+    }
+
+    :global(.folder-card-actions .btn-icon-action) {
+      width: 36px;
+      height: 36px;
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 9px;
+      padding: 0;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    :global(.folder-card-actions .btn-folder-download) {
+      border: 1px solid var(--border-color);
+      background: #ffffff;
+      color: var(--text-muted);
+    }
+
+    :global(.folder-card-actions .btn-edit-pet) {
+      border: 1px solid var(--dorado-borde);
+      background: var(--dorado-suave-bg);
+      color: var(--dorado-oscuro);
+    }
+
+    :global(.folder-card-actions .btn-delete-pet) {
+      border: 1px solid #FECACA;
+      background: #FEF2F2;
+      color: #DC2626;
     }
 
     .view-toggle-btn {
