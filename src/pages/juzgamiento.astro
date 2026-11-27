@@ -16,7 +16,7 @@ const apelCount = procesosList.filter((p: any) => p.tipo_acto && (p.tipo_acto.to
 ---
 
 <AppLayout title="Fase de Juzgamiento Disciplinario" activeNav="juzgamiento">
-  <section class="module-board-card" style="max-width: 1280px; margin: 0 auto;">
+  <section class="module-board-card juzgamiento-board" style="max-width: 1280px; margin: 0 auto;">
     
     <!-- Cabecera Sobria y Ejecutiva (Bento Pro Max) -->
     <div class="module-board-header">
@@ -64,20 +64,19 @@ const apelCount = procesosList.filter((p: any) => p.tipo_acto && (p.tipo_acto.to
       </div>
     </div>
 
-    <!-- Tarjeta Principal de Expedientes con Scrollbar Interna Propia y Sticky Header -->
-    <div class="table-wrapper data-table-container" style="overflow: hidden;">
-      <div class="pro-scroll-container table-scroll-wrapper" style="max-height: 540px; overflow-y: auto; overflow-x: auto; width: 100%; position: relative;">
-        <table class="doc-table" style="width: 100%; border-collapse: collapse; font-size: 0.86rem;">
-          <thead style="position: sticky; top: 0; z-index: 10;">
-            <tr style="background: #F2F7F6; border-bottom: 2px solid #DCE4E3; text-align: left; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.5px; color: #52606D;">
-              <th style="padding: 14px 16px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3; white-space: nowrap;">Expediente / Implicado</th>
-              <th style="padding: 14px 16px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Tipo de Acto / Auto</th>
-              <th style="padding: 14px 16px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Conducta / Causal Investigada</th>
-              <th style="padding: 14px 16px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Etapa Procesal</th>
-              <th style="padding: 14px 16px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Fecha Notificación</th>
-              <th style="padding: 14px 16px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Segunda Instancia</th>
-              <th style="padding: 14px 16px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3;">Estado de Términos</th>
-              <th style="padding: 14px 16px; position: sticky; top: 0; z-index: 10; background: #F2F7F6; box-shadow: 0 1px 0 #DCE4E3; text-align: right;">Acciones</th>
+    <!-- Tarjeta Principal de Expedientes con Scrollbar Vertical Propia (sin desbordamiento horizontal en escritorio) -->
+    <div class="table-wrapper data-table-container juzg-table-card">
+      <div class="pro-scroll-container table-scroll-wrapper juzg-table-scroll">
+        <table class="doc-table juzg-table">
+          <thead>
+            <tr>
+              <th style="width: 18%;">Expediente / Implicado</th>
+              <th style="width: 16%;">Tipo de Acto / Auto</th>
+              <th style="width: 20%;">Conducta / Causal Investigada</th>
+              <th style="width: 16%;">Etapa / Instancia</th>
+              <th style="width: 10%;">Fecha Notif.</th>
+              <th style="width: 11%;">Estado de Término</th>
+              <th style="width: 9%; text-align: right;">Acciones</th>
             </tr>
           </thead>
           <tbody id="juzgamiento-table-body">
@@ -161,6 +160,190 @@ const apelCount = procesosList.filter((p: any) => p.tipo_acto && (p.tipo_acto.to
     </div>
   </div>
 </AppLayout>
+
+<style>
+  .juzgamiento-board .juzg-table-card {
+    overflow: hidden;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .juzgamiento-board .juzg-table-scroll {
+    max-height: 540px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    width: 100%;
+    position: relative;
+  }
+
+  .juzgamiento-board .juzg-table {
+    width: 100% !important;
+    border-collapse: collapse;
+    table-layout: fixed !important;
+    font-size: 0.84rem;
+  }
+
+  .juzgamiento-board .juzg-table thead th {
+    padding: 12px 10px !important;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #F2F7F6;
+    border-bottom: 2px solid #DCE4E3;
+    box-shadow: 0 1px 0 #DCE4E3;
+    text-align: left;
+    font-size: 0.70rem !important;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #52606D;
+    white-space: normal !important;
+    line-height: 1.25;
+    vertical-align: middle;
+    overflow-wrap: break-word;
+  }
+
+  .juzgamiento-board :global(.juzg-table tbody tr) {
+    border-bottom: 1px solid #E2E8F0;
+    font-size: 0.84rem;
+  }
+
+  .juzgamiento-board :global(.juzg-table tbody td) {
+    padding: 14px 10px !important;
+    vertical-align: middle !important;
+    overflow-wrap: break-word;
+    word-break: normal;
+    min-width: 0;
+  }
+
+  .juzgamiento-board :global(.juzg-table tbody td:last-child) {
+    text-align: right;
+    white-space: nowrap !important;
+  }
+
+  .juzgamiento-board :global(.juzg-implicado-name) {
+    font-weight: 750;
+    font-size: 0.86rem;
+    color: #111827;
+    line-height: 1.3;
+  }
+
+  .juzgamiento-board :global(.juzg-implicado-cargo) {
+    font-size: 0.74rem;
+    color: #52606D;
+    margin-top: 2px;
+    line-height: 1.3;
+  }
+
+  .juzgamiento-board :global(.juzg-radicado-chip) {
+    display: inline-block;
+    margin-top: 4px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.72rem;
+    color: #00594E;
+    font-weight: 800;
+    background: #F2F7F6;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid #B2CFCB;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .juzgamiento-board :global(.juzg-badge),
+  .juzgamiento-board :global(.juzg-term-badge) {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    line-height: 1.25;
+    padding: 5px 10px;
+    border-radius: 8px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    white-space: normal;
+    text-align: left;
+    box-sizing: border-box;
+    overflow-wrap: break-word;
+  }
+
+  .juzgamiento-board :global(.juzg-badge-acto) {
+    background: #F2F7F6;
+    color: #00594E;
+    border: 1px solid #B2CFCB;
+  }
+
+  .juzgamiento-board :global(.juzg-badge-urgent) {
+    background: #FEF2F2;
+    color: #DC2626;
+    border: 1px solid #FECACA;
+    font-weight: 700;
+  }
+
+  .juzgamiento-board :global(.juzg-badge-ok) {
+    background: #F7F5EE;
+    color: #786832;
+    border: 1px solid #DBD2B0;
+    font-weight: 700;
+  }
+
+  .juzgamiento-board :global(.juzg-conducta-text) {
+    font-size: 0.80rem;
+    color: #52606D;
+    line-height: 1.45;
+  }
+
+  .juzgamiento-board :global(.juzg-etapa-title) {
+    font-size: 0.80rem;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1.3;
+  }
+
+  .juzgamiento-board :global(.juzg-instancia-sub) {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #00594E;
+    margin-top: 3px;
+    line-height: 1.3;
+  }
+
+  .juzgamiento-board :global(.juzg-fecha-text) {
+    font-size: 0.78rem;
+    color: #64748B;
+    white-space: nowrap;
+  }
+
+  .juzgamiento-board :global(.btn-view-piezas) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid #B2CFCB;
+    background: #F2F7F6;
+    color: #00594E;
+    font-weight: 750;
+    font-size: 0.75rem;
+    border-radius: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+
+  .juzgamiento-board :global(.btn-view-piezas:hover) {
+    background: #E2EFEA;
+    border-color: #00594E;
+  }
+
+  @media (max-width: 1023px) {
+    .juzgamiento-board .juzg-table-scroll {
+      overflow-x: auto;
+    }
+
+    .juzgamiento-board .juzg-table {
+      min-width: 880px !important;
+    }
+  }
+</style>
 
 <script>
   import { initJuzgamiento } from '@scripts/juzgamiento';

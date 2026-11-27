@@ -62,7 +62,7 @@ export async function initJuzgamiento() {
         matchesStage = Boolean(c.tipo_acto && (c.tipo_acto.toLowerCase().includes('apelación') || (c.etapa_procesal && c.etapa_procesal.toLowerCase().includes('segunda'))));
       }
       
-      const text = (String(c.radicado || '') + ' ' + String(c.implicado_nombre || '') + ' ' + String(c.implicado_cargo || '') + ' ' + String(c.etapa_procesal || '') + ' ' + String(c.tipo_acto || '')).toLowerCase();
+      const text = (String(c.radicado || '') + ' ' + String(c.implicado || c.implicado_nombre || '') + ' ' + String(c.cargo || c.implicado_cargo || '') + ' ' + String(c.conducta || '') + ' ' + String(c.etapa_procesal || '') + ' ' + String(c.tipo_acto || '') + ' ' + String(c.segunda_instancia || '')).toLowerCase();
       const matchesQ = !q || text.includes(q);
 
       return matchesStage && matchesQ;
@@ -71,7 +71,7 @@ export async function initJuzgamiento() {
     if (filtered.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="8" style="text-align: center; padding: 42px 16px; color: var(--text-muted);">
+          <td colspan="7" style="text-align: center; padding: 42px 16px; color: var(--text-muted);">
             <div style="font-weight: 700; color: var(--text-main); font-size: 0.95rem; margin-bottom: 4px;">No se registran expedientes disciplinarios activos</div>
             <p style="font-size: 0.82rem; margin: 0;">Utilice el botón superior para radicar el primer auto o pieza procesal disciplinaria.</p>
           </td>
@@ -82,45 +82,45 @@ export async function initJuzgamiento() {
 
     filtered.forEach(c => {
       const tr = document.createElement('tr');
-      tr.style.borderBottom = '1px solid #E2E8F0';
-      tr.style.fontSize = '0.84rem';
+      const isUrgent = Number(c.dias_restantes) <= 7 && Number(c.dias_restantes) > 0;
+      const termText = Number(c.dias_restantes) > 0 ? `${c.dias_restantes} días restantes` : (c.estado || 'En Términos');
+
       tr.innerHTML = `
-        <td style="padding: 14px 16px;">
-          <div style="font-weight: 750; font-size: 0.88rem; color: #111827;">${c.implicado}</div>
-          <div style="font-size: 0.74rem; color: #52606D;">${c.cargo || 'Funcionario'}</div>
-          <span style="font-family: monospace; font-size: 0.74rem; color: #00594E; font-weight: 800; background: #F2F7F6; padding: 1px 6px; border-radius: 4px; border: 1px solid #B2CFCB;">${c.radicado}</span>
+        <td>
+          <div class="juzg-implicado-name">${c.implicado || ''}</div>
+          <div class="juzg-implicado-cargo">${c.cargo || 'Funcionario'}</div>
+          <span class="juzg-radicado-chip">${c.radicado || ''}</span>
         </td>
-        <td style="padding: 14px 16px;">
-          <span class="badge" style="background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; font-size: 0.74rem; font-weight: 800; padding: 3px 8px; border-radius: 6px;">
-            ${c.tipo_acto}
-          </span>
+        <td>
+          <span class="juzg-badge juzg-badge-acto">${c.tipo_acto || ''}</span>
         </td>
-        <td style="padding: 14px 16px; max-width: 260px; min-width: 0; overflow-wrap: anywhere;">
-          <div style="font-size: 0.80rem; color: #52606D; line-height: 1.45;">
-            ${c.conducta || 'Sin descripción adicional'}
-          </div>
+        <td>
+          <div class="juzg-conducta-text">${c.conducta || 'Sin descripción adicional'}</div>
         </td>
-        <td style="padding: 14px 16px;">
-          <span style="font-size: 0.80rem; font-weight: 700; color: #111827;">${c.etapa_procesal}</span>
+        <td>
+          <div class="juzg-etapa-title">${c.etapa_procesal || ''}</div>
+          <div class="juzg-instancia-sub">${c.segunda_instancia || 'CSU / Rectoría'}</div>
         </td>
-        <td style="padding: 14px 16px;">
-          <span style="font-size: 0.78rem; color: #64748B;">${c.fecha_notificacion || 'Pendiente'}</span>
+        <td>
+          <span class="juzg-fecha-text">${c.fecha_notificacion || 'Pendiente'}</span>
         </td>
-        <td style="padding: 14px 16px;">
-          <span style="font-size: 0.80rem; font-weight: 750; color: #00594E;">${c.segunda_instancia || 'CSU / Rectoría'}</span>
+        <td>
+          <span class="juzg-term-badge ${isUrgent ? 'juzg-badge-urgent' : 'juzg-badge-ok'}">${termText}</span>
         </td>
-        <td style="padding: 14px 16px;">
-          <span class="badge" style="font-size: 0.72rem; font-weight: 800; padding: 3px 8px; border-radius: 6px; ${c.dias_restantes <= 7 && c.dias_restantes > 0 ? 'background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA;' : 'background: #F7F5EE; color: #786832; border: 1px solid #DBD2B0;'}">
-            ${c.dias_restantes > 0 ? `${c.dias_restantes} días restantes` : c.estado || 'En Términos'}
-          </span>
-        </td>
-        <td style="padding: 14px 16px; text-align: right; white-space: nowrap;">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="(window as any).showToast('Expediente confidencial radicado: ${c.radicado}')" style="border: 1.5px solid #B2CFCB; background: #F2F7F6; color: #00594E; font-weight: 750; font-size: 0.76rem; border-radius: 6px; padding: 6px 12px; cursor: pointer;">
+        <td>
+          <button type="button" class="btn-view-piezas" data-radicado="${String(c.radicado || '').replace(/"/g, '&quot;')}">
             Ver Piezas
           </button>
         </td>
       `;
       tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll<HTMLButtonElement>('.btn-view-piezas').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const rad = btn.getAttribute('data-radicado') || '';
+        (window as any).showToast?.(`Expediente confidencial radicado: ${rad}`, 'info');
+      });
     });
   }
 

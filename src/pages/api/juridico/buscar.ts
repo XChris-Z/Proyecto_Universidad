@@ -1,4 +1,6 @@
 // src/pages/api/juridico/buscar.ts
+export const prerender = false;
+
 import type { APIRoute } from 'astro';
 import { supabase, supabaseAdmin } from '@lib/supabase';
 
