@@ -391,7 +391,7 @@ async function runReminderSweep(
           await logSystemActivity({
             request: auditContext?.request,
             clientAddress: auditContext?.clientAddress,
-            actor: { id: 'usr-root', name: 'Automatización SGD', role: 'Automatización SGD' },
+            actor: { id: '', name: 'Automatización SGD', role: 'Automatización SGD' },
             action: `Recordatorio 3 días enviado a ${ofiNombre} (${pet.numero_radicado})`,
             actionType: 'GESTION',
             entity: pet.numero_radicado,

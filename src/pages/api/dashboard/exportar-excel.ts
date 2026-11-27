@@ -258,7 +258,7 @@ export const GET: APIRoute = async () => {
       const actorDisplay =
         !rawName ||
         /^(admin|admin general|administrador general|administrador del sistema|sistema sgd)$/i.test(rawName)
-          ? 'ING. Christian Lemus'
+          ? 'Usuario no registrado'
           : rawName;
       sheet4Rows.push([
         { value: log.action_type || 'EVENTO', style: st },
