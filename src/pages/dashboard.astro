@@ -1,114 +1,90 @@
 ---
 // src/pages/dashboard.astro
-// Panel de Control Rectoral UI/UX Pro Max con Bento Grid, Crossfade y Shared Element Transitions
-import AppLayout from "@layouts/AppLayout.astro";
-import { supabase } from "@lib/supabase";
-import { calculateDeadlineProgress } from "@lib/utils";
-import { isPeticionRespondida, isAuditLogOfficialResponse } from "@lib/subcarpetas";
-import { getDashboardSnapshotData } from "@lib/dashboard-data";
+// Panel de Control Rectoral UI/UX Pro Max con Bento Grid, RBAC Estricto y Sincronización Real Supabase
+export const prerender = false;
 
-// No almacenar en caché para reflejar eliminaciones y cambios al instante
+import AppLayout from "@layouts/AppLayout.astro";
+import { getDashboardSnapshotData } from "@lib/dashboard-data";
+import { SESSION_COOKIE_KEY } from "@lib/constants";
+import { resolveUserRbacServer } from "@lib/rbac-server";
+import { getFirstAllowedPath, tienePermiso } from "@lib/permisos";
+
+// No almacenar en caché para reflejar cambios, permisos y registros al instante
 Astro.response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
 
-// 1. Consultar métricas, auditoría, normas y convenios en paralelo (Promise.all)
-const [dashSnap, auditRespRes, normasRes, conveniosRes] = await Promise.all([
-  getDashboardSnapshotData(),
-  supabase
-    .from("audit_logs" as any)
-    .select("action, entity_id, details")
-    .eq("action_type", "RESPUESTA")
-    .limit(400) as any,
-  supabase
-    .from("colegiados_normas" as any)
-    .select("id, organo, tipo, numero, year, fecha, titulo, descriptor, vigencia")
-    .order("created_at", { ascending: false }) as any,
-  supabase
-    .from("convenios" as any)
-    .select("id, tipo, numero, entidad, estado")
-    .order("created_at", { ascending: false }) as any,
-]);
+// 1. Validación estricta de sesión y matriz RBAC en servidor
+const sessionUserId = Astro.cookies.get(SESSION_COOKIE_KEY)?.value;
+if (!sessionUserId) {
+  return Astro.redirect('/login');
+}
 
-const dbPeticiones = dashSnap?.peticiones || [];
-const auditRespuestas = auditRespRes?.data || [];
-const normas = normasRes?.data || [];
-const convenios = conveniosRes?.data || [];
+const currentRbac = await resolveUserRbacServer(sessionUserId);
+if (!currentRbac.authenticated) {
+  return Astro.redirect('/login');
+}
 
-const peticiones = (dbPeticiones || []).map((p: any) => {
-  const auditMatch = auditRespuestas.some((log: any) => isAuditLogOfficialResponse(log, p));
-  const enriched = {
-    ...p,
-    tiene_respuesta_audit: auditMatch,
-  };
-  return {
-    ...enriched,
-    respondida: isPeticionRespondida(enriched),
-  };
-});
+if (!currentRbac.isAdmin && !tienePermiso(currentRbac, 'dashboard', 'ver')) {
+  const fallback = getFirstAllowedPath(currentRbac.effectivePermissions, false);
+  return Astro.redirect(`${fallback}?denied=1`);
+}
 
-const totalPeticiones = peticiones.length;
-const totalNormas = normas.length;
-const totalConvenios = convenios.length;
+const canSee = (moduleId: string): boolean =>
+  currentRbac.isAdmin || tienePermiso(currentRbac, moduleId, 'ver');
 
-const totalPendientes = peticiones.filter((p: any) => !p.respondida).length;
-const totalRespondidas = peticiones.filter((p: any) => p.respondida).length;
-const responseRate =
-  totalPeticiones > 0
-    ? Math.round((totalRespondidas / totalPeticiones) * 100)
-    : 0;
+const canPeticiones = canSee('peticiones');
+const canArchivos = canSee('archivos');
+const canAgenda = canSee('agenda_vencimientos');
+const canNormas = canSee('cuerpos_colegiados');
+const canMiembros = canSee('miembros_consejo');
+const canJuridicos = canSee('asuntos_juridicos');
+const canJuzgamiento = canSee('fase_juzgamiento');
+const canProgramas = canSee('programas_academicos');
+const canPlaneacion = canSee('planeacion_csu');
+const canConvenios = canSee('relacionamiento_institucional');
+const canAuditoria = canSee('auditoria');
 
-let slaSafe = 0;
-let slaWarn = 0;
-let slaDanger = 0;
+const canExportExcel = currentRbac.isAdmin || canPeticiones || canAuditoria;
 
-peticiones
-  .filter((p: any) => !p.respondida)
-  .forEach((p: any) => {
-    const prog = calculateDeadlineProgress(
-      p.fecha_radicacion,
-      p.fecha_limite_entrega,
-    );
-    if (prog.percentage < 50) slaSafe++;
-    else if (prog.percentage <= 80) slaWarn++;
-    else slaDanger++;
-  });
+// 2. Consultar snapshot consolidado en vivo desde Supabase (cada tabla protegida por try/catch independiente)
+const dashSnap = await getDashboardSnapshotData();
 
-const slaSafePct =
-  totalPendientes > 0 ? Math.round((slaSafe / totalPendientes) * 100) : 100;
-const slaWarnPct =
-  totalPendientes > 0 ? Math.round((slaWarn / totalPendientes) * 100) : 0;
-const slaDangerPct =
-  totalPendientes > 0 ? Math.round((slaDanger / totalPendientes) * 100) : 0;
+const totalPeticiones = dashSnap.totalPeticiones;
+const totalRespondidas = dashSnap.totalRespondidas;
+const totalPendientes = dashSnap.totalPendientes;
+const responseRate = dashSnap.responseRate;
 
-const urgentPeticiones = peticiones
-  .filter((p: any) => !p.respondida)
-  .slice(0, 6)
-  .map((doc: any) => {
-    const progress = calculateDeadlineProgress(
-      doc.fecha_radicacion,
-      doc.fecha_limite_entrega,
-    );
-    let statusCategory = "danger";
-    if (progress.percentage < 50) {
-      statusCategory = "safe";
-    } else if (progress.percentage <= 80) {
-      statusCategory = "warn";
-    }
-    return {
-      ...doc,
-      progress,
-      statusCategory,
-    };
-  });
-const recentNormas = normas.slice(0, 3);
+const canLeftStack = canPeticiones || canMiembros || canNormas || canJuridicos || canJuzgamiento;
+const canRightStack = canPeticiones || canPlaneacion || canConvenios || canAuditoria;
+const isSingleSplit = (canLeftStack && !canRightStack) || (!canLeftStack && canRightStack);
+
+const hasVisibleKpis =
+  canPeticiones ||
+  canNormas ||
+  canMiembros ||
+  canJuridicos ||
+  canJuzgamiento ||
+  canPlaneacion ||
+  canConvenios ||
+  canProgramas;
 
 // Cálculo del medidor circular SVG para tasa de respuesta
 const gaugeRadius = 38;
 const gaugeCircumference = 2 * Math.PI * gaugeRadius;
-const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 100;
+const gaugeOffset = Math.round(gaugeCircumference * (1 - responseRate / 100));
+
+const categoryLabelsMap: Record<string, string> = {
+  conceptos_internos: 'Conceptos Internos',
+  litigios_judiciales: 'Litigios Judiciales',
+  auditoria_entes_control: 'Auditoría Entes de Control',
+};
 ---
 
 <AppLayout title="Dashboard — Panel de Control Rectoral" activeNav="dashboard">
-  <section class="module-board-card dash-promax-workspace" style="padding: 20px 24px !important; gap: 18px !important;">
+  <section
+    class="module-board-card dash-promax-workspace"
+    data-can-peticiones={canPeticiones ? 'true' : 'false'}
+    style="padding: 20px 24px !important; gap: 18px !important;"
+  >
 
     <!-- ================================================================= -->
     <!-- SECCIÓN A: BENTO HERO EJECUTIVO "CENTRO DE MANDO INSTITUCIONAL"  -->
@@ -123,7 +99,7 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
         class="dashboard-heraldic-watermark"
         aria-hidden="true"
       />
-      
+
       <div class="hero-content">
         <div class="hero-live-badge">
           <span class="live-radar-dot"></span>
@@ -133,56 +109,74 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
         </div>
         <div class="hero-title-row">
           <div class="hero-heraldic-badge" title="Escudo Oficial Unitrópico">
-            <img 
-              src="/escudo-fondo-oscuro.png" 
-              alt="Escudo Oficial Unitrópico" 
+            <img
+              src="/escudo-fondo-oscuro.png"
+              alt="Escudo Oficial Unitrópico"
               class="hero-heraldic-img"
             />
           </div>
           <h2 class="hero-title">Centro de Mando Institucional</h2>
         </div>
         <p class="hero-desc">
-          Monitoreo integral de gobierno universitario: cuerpos colegiados, convenios interinstitucionales, radicación oficial de peticiones y control de términos de la Universidad Internacional del Trópico Americano.
+          Monitoreo integral de gobierno universitario: cuerpos colegiados, asuntos jurídicos, convenios interinstitucionales, radicación oficial y control de términos de la Universidad Internacional del Trópico Americano.
         </p>
+
+        <!-- Saludo y Rol RBAC exacto del usuario autenticado -->
+        <div class="hero-user-session-row">
+          <span class="hero-user-welcome">
+            Sesión activa: <strong>{currentRbac.fullName}</strong>
+          </span>
+          <span class="hero-role-badge-exact" id="dashboard-exact-role-badge">
+            {currentRbac.roleName}
+          </span>
+        </div>
       </div>
 
       <div class="hero-actions-container">
-        <!-- Indicador Maestro de Términos en Plazo -->
-        <a
-          href="/calendario"
-          class="hero-pill glass-capsule hero-sla-card"
-          title="Ver términos en plazo en Calendario Institucional"
-          style="display: inline-flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 14px; background: rgba(255, 255, 255, 0.12); border: 1.5px solid rgba(255, 255, 255, 0.22); backdrop-filter: blur(12px); text-decoration: none; color: #ffffff;"
-        >
-          <div class="capsule-icon-wrap mint" style="width: 36px; height: 36px; border-radius: 10px; background: rgba(16, 185, 129, 0.2); color: #34D399; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-          </div>
-          <div>
-            <div class="number tabular-nums" id="quick-sla-compliance" style="font-size: 1.25rem; font-weight: 850; line-height: 1; color: #FFFFFF;">
-              {dashSnap.slaSafePct}%
-            </div>
-            <div class="label" style="font-size: 0.72rem; font-weight: 800; color: #E2E8F0; margin-top: 3px; letter-spacing: 0.03em; text-transform: uppercase;">
-              100% TÉRMINOS EN PLAZO
-            </div>
-          </div>
-        </a>
+        <!-- Indicador Maestro de Términos en Plazo (solo si tiene acceso a Peticiones) -->
+        {
+          canPeticiones && (
+            <a
+              href={canAgenda ? "/calendario" : "/peticiones"}
+              class="hero-pill glass-capsule hero-sla-card"
+              title="Ver términos en plazo en Calendario Institucional"
+              style="display: inline-flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 14px; background: rgba(255, 255, 255, 0.12); border: 1.5px solid rgba(255, 255, 255, 0.22); backdrop-filter: blur(12px); text-decoration: none; color: #ffffff;"
+            >
+              <div class="capsule-icon-wrap mint" style="width: 36px; height: 36px; border-radius: 10px; background: rgba(16, 185, 129, 0.2); color: #34D399; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              </div>
+              <div>
+                <div class="number tabular-nums" id="quick-sla-compliance" style="font-size: 1.25rem; font-weight: 850; line-height: 1; color: #FFFFFF;">
+                  {dashSnap.slaSafePct}%
+                </div>
+                <div class="label" style="font-size: 0.72rem; font-weight: 800; color: #E2E8F0; margin-top: 3px; letter-spacing: 0.03em; text-transform: uppercase;">
+                  TÉRMINOS EN PLAZO
+                </div>
+              </div>
+            </a>
+          )
+        }
 
         <!-- Botón Compacto de Exportación Ejecutiva "Reporte General" -->
-        <a
-          href="/api/dashboard/exportar-excel"
-          download
-          id="btn-export-excel"
-          class="btn-reporte-general"
-          title="Descargar informe general completo en Microsoft Excel (.xlsx)"
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-            <line x1="12" y1="18" x2="12" y2="12"/>
-            <polyline points="9 15 12 18 15 15"/>
-          </svg>
-          <span>Reporte General</span>
-        </a>
+        {
+          canExportExcel && (
+            <a
+              href="/api/dashboard/exportar-excel"
+              download
+              id="btn-export-excel"
+              class="btn-reporte-general"
+              title="Descargar informe general completo en Microsoft Excel (.xlsx)"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="12" y1="18" x2="12" y2="12"/>
+                <polyline points="9 15 12 18 15 15"/>
+              </svg>
+              <span>Reporte General</span>
+            </a>
+          )
+        }
 
         <!-- Preservación segura de IDs DOM sin impacto visual -->
         <div style="display: none;" aria-hidden="true">
@@ -194,567 +188,973 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
     </header>
 
     <!-- ================================================================= -->
-    <!-- SECCIÓN B: GRILLA DE LOS 6 KPIS EJECUTIVOS (BENTO CARDS PRO MAX) -->
+    <!-- SECCIÓN B: GRILLA DE KPIS EJECUTIVOS FILTRADA POR RBAC            -->
     <!-- ================================================================= -->
-    <section class="kpi-grid-6 bento-kpi-grid" aria-label="Indicadores Clave de Gestión">
-      
-      <!-- 1. Peticiones y Radicados -->
-      <a
-        href="/peticiones"
-        class="kpi-card bento-kpi-card gold interactive"
-        title="Ir al módulo de Peticiones y Expedientes"
-      >
-        <div class="kpi-accent-bar gold"></div>
-        <div class="kpi-header">
-          <span class="kpi-title">Peticiones / Expedientes</span>
-          <div class="kpi-icon-wrap gold">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          </div>
-        </div>
-        <div class="kpi-value-row">
-          <div class="kpi-number tabular-nums" id="kpi-total-docs">{dashSnap.totalPeticiones}</div>
-          <span class="kpi-trend-badge warning" id="kpi-pending-docs">
-            {dashSnap.totalPendientes} Pendientes
-          </span>
-        </div>
-        <div class="kpi-footer">
-          <span class="footer-label">Eficacia Institucional</span>
-          <span class="footer-val gold" id="kpi-response-rate">{dashSnap.responseRate}% Resuelto</span>
-        </div>
-      </a>
+    {
+      hasVisibleKpis && (
+        <section class="kpi-grid-6 bento-kpi-grid" aria-label="Indicadores Clave de Gestión">
 
-      <!-- 2. Cuerpos Colegiados -->
-      <a
-        href="/normas"
-        class="kpi-card bento-kpi-card emerald interactive"
-        title="Ir a Cuerpos Colegiados"
-      >
-        <div class="kpi-accent-bar emerald"></div>
-        <div class="kpi-header">
-          <span class="kpi-title">Cuerpos Colegiados</span>
-          <div class="kpi-icon-wrap emerald">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-          </div>
-        </div>
-        <div class="kpi-value-row">
-          <div class="kpi-number tabular-nums" id="kpi-total-normas">{dashSnap.totalNormas}</div>
-          <span class="kpi-trend-badge success">{dashSnap.acuerdosCount} Acuerdos &bull; {dashSnap.resolucionesCount} Resol.</span>
-        </div>
-        <div class="kpi-footer">
-          <span class="footer-label">Actos Sistematizados</span>
-          <span class="footer-val emerald">{dashSnap.actasCount} Actas Vigentes</span>
-        </div>
-      </a>
-
-      <!-- 3. Relacionamiento y Convenios -->
-      <a
-        href="/relacionamiento"
-        class="kpi-card bento-kpi-card teal interactive"
-        title="Ir a Relacionamiento Institucional y Convenios"
-      >
-        <div class="kpi-accent-bar teal"></div>
-        <div class="kpi-header">
-          <span class="kpi-title">Convenios y Cooperación</span>
-          <div class="kpi-icon-wrap teal">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
-          </div>
-        </div>
-        <div class="kpi-value-row">
-          <div class="kpi-number tabular-nums" id="kpi-total-convenios">{dashSnap.totalConvenios}</div>
-          <span class="kpi-trend-badge info">Nal &bull; Int &bull; Guber</span>
-        </div>
-        <div class="kpi-footer">
-          <span class="footer-label">Cooperación Oficial</span>
-          <span class="footer-val teal">En Ejecución</span>
-        </div>
-      </a>
-
-      <!-- 4. Asuntos Jurídicos -->
-      <a
-        href="/juridicos"
-        class="kpi-card bento-kpi-card emerald interactive"
-        title="Ir a Asuntos Jurídicos"
-      >
-        <div class="kpi-accent-bar emerald"></div>
-        <div class="kpi-header">
-          <span class="kpi-title">Asuntos Jurídicos</span>
-          <div class="kpi-icon-wrap emerald">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>
-          </div>
-        </div>
-        <div class="kpi-value-row">
-          <div class="kpi-number tabular-nums" id="kpi-total-juridicos-dash">{dashSnap.totalJuridicos}</div>
-          <span class="kpi-trend-badge success">Expedientes</span>
-        </div>
-        <div class="kpi-footer">
-          <span class="footer-label">Oficina Jurídica</span>
-          <span class="footer-val emerald">Al Día</span>
-        </div>
-      </a>
-
-      <!-- 5. Juzgamiento Disciplinario -->
-      <a
-        href="/juzgamiento"
-        class="kpi-card bento-kpi-card gold interactive"
-        title="Ir a Fase de Juzgamiento Disciplinario"
-      >
-        <div class="kpi-accent-bar gold"></div>
-        <div class="kpi-header">
-          <span class="kpi-title">Juzgamiento Disciplinario</span>
-          <div class="kpi-icon-wrap gold">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          </div>
-        </div>
-        <div class="kpi-value-row">
-          <div class="kpi-number tabular-nums" id="kpi-total-juzgamiento-dash">{dashSnap.totalJuzgamiento}</div>
-          <span class="kpi-trend-badge warning">Procesos</span>
-        </div>
-        <div class="kpi-footer">
-          <span class="footer-label">Régimen Disciplinario</span>
-          <span class="footer-val gold">Control Preventivo</span>
-        </div>
-      </a>
-
-      <!-- 6. Planeación y CSU -->
-      <a
-        href="/planeacion"
-        class="kpi-card bento-kpi-card green interactive"
-        title="Ir a Planeación y Gestión CSU"
-      >
-        <div class="kpi-accent-bar green"></div>
-        <div class="kpi-header">
-          <span class="kpi-title">Planeación y CSU</span>
-          <div class="kpi-icon-wrap green">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-          </div>
-        </div>
-        <div class="kpi-value-row">
-          <div class="kpi-number tabular-nums" id="kpi-total-budget-dash">{dashSnap.totalPlaneacion}</div>
-          <span class="kpi-trend-badge subtle">Informes</span>
-        </div>
-        <div class="kpi-footer">
-          <span class="footer-label">Seguimiento CSU</span>
-          <span class="footer-val green">En Programación</span>
-        </div>
-      </a>
-
-    </section>
-
-    <!-- ================================================================= -->
-    <!-- SECCIÓN C: SPLIT GRID PRINCIPAL EQUILIBRADO (SIN HUECOS VACÍOS)   -->
-    <!-- ================================================================= -->
-    <div class="dashboard-split-grid bento-split-main">
-      
-      <!-- COLUMNA IZQUIERDA (1.65fr): REPARTO PRIORITARIO + CUERPOS COLEGIADOS -->
-      <div class="bento-main-left-stack">
-        <section class="panel-box bento-panel-main" aria-labelledby="reparto-main-heading">
-        
-        <div class="panel-header bento-panel-header">
-          <div class="panel-title-wrap">
-            <div class="panel-title">
-              <div class="panel-icon-wrap gold">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-              </div>
-              <h3 id="reparto-main-heading" class="panel-heading-text">Reparto Prioritario</h3>
-            </div>
-            <p class="panel-subheading-text">Monitoreo y asignación de expedientes oficiales con plazos institucionales</p>
-          </div>
-
-          <div class="panel-header-actions">
-            <!-- Segmented Control con Shared Element Pill Slider -->
-            <div class="dash-segmented-filter" id="dash-sla-segmented-filter">
-              <div class="dash-seg-indicator-pill" id="dash-seg-indicator"></div>
-              <button type="button" class="dash-seg-btn active" data-filter="all">Todos</button>
-              <button type="button" class="dash-seg-btn" data-filter="safe">Óptimos</button>
-              <button type="button" class="dash-seg-btn" data-filter="warn">Alerta</button>
-              <button type="button" class="dash-seg-btn" data-filter="danger">Críticos</button>
-            </div>
-
-            <a href="/archivos" class="panel-link-action" title="Explorar todos los radicados">
-              <span>Ver todos</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-            </a>
-          </div>
-        </div>
-
-        <!-- LISTADO DE EXPEDIENTES PRIORITARIOS CON MINI BARRAS SLA Y CHIPS MONO -->
-        <div
-          id="dashboard-critical-list"
-          class="critical-docs-flow"
-        >
           {
-            dashSnap.urgentPeticiones.length > 0 ? (
-              dashSnap.urgentPeticiones.map((doc: any) => {
-                const { progress, statusCategory } = doc;
-
-                return (
-                  <article
-                    class={`critical-doc-card promax-floating-card sem-${statusCategory}`}
-                    data-status-category={statusCategory}
-                    data-doc-id={doc.id}
-                  >
-                    <div class={`card-sla-edge ${statusCategory}`}></div>
-
-                    <div class="doc-card-body">
-                      <!-- Cabecera de la tarjeta: Badges y Radicado Mono -->
-                      <div class="doc-meta-top">
-                        <div class="doc-badge-group">
-                          <span class={`badge promax-badge ${progress.statusClass}`}>
-                            {progress.statusBadge}
-                          </span>
-                          <span class="doc-rad-mono">
-                            {doc.numero_radicado || `RAD-${doc.id.slice(0, 8)}`}
-                          </span>
-                        </div>
-                        <span class="doc-urgency-label tabular-nums">
-                          {progress.percentage}% tiempo transcurrido
-                        </span>
-                      </div>
-
-                      <!-- Asunto principal -->
-                      <h4 class="doc-subject-title" title={doc.asunto}>
-                        {doc.asunto}
-                      </h4>
-
-                      <!-- Metadatos de procedencia y término -->
-                      <div class="doc-meta-row">
-                        <div class="meta-field">
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                          <span>Solicitante: <strong>{doc.solicitante_nombre}</strong></span>
-                        </div>
-                        <div class="meta-field">
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                          <span>Límite: <strong class="tabular-nums">{doc.fecha_limite_entrega || "En trámite"}</strong></span>
-                        </div>
-                      </div>
-
-                      <!-- Mini Barra de Progreso SLA Pro Max -->
-                      <div class="doc-sla-track">
-                        <div
-                          class={`doc-sla-fill ${statusCategory}`}
-                          style={`width: ${Math.min(100, Math.max(5, progress.percentage))}%;`}
-                        ></div>
-                      </div>
-                    </div>
-
-                    <!-- Botón de acción con micro-animación -->
-                    <div class="doc-action-cell">
-                      <a
-                        href={`/archivos?radicado=${encodeURIComponent(doc.numero_radicado || doc.id)}`}
-                        class="btn-promax-card-action"
-                        title="Abrir expediente del radicado"
-                      >
-                        <span>Ver Carpeta</span>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-                      </a>
-                    </div>
-                  </article>
-                );
-              })
-            ) : (
-              <div class="bento-empty-state">
-                <div class="empty-icon-wrap">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            canPeticiones && (
+              <a
+                href="/peticiones"
+                class="kpi-card bento-kpi-card gold interactive"
+                title="Ir al módulo de Peticiones y Expedientes"
+              >
+                <div class="kpi-accent-bar gold"></div>
+                <div class="kpi-header">
+                  <span class="kpi-title">Peticiones / Expedientes</span>
+                  <div class="kpi-icon-wrap gold">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  </div>
                 </div>
-                <h5 class="empty-title">No hay expedientes prioritarios pendientes</h5>
-                <p class="empty-desc">Todos los términos de peticiones y oficios se encuentran al día en el sistema.</p>
+                <div class="kpi-value-row">
+                  <div class="kpi-number tabular-nums" id="kpi-total-docs">{dashSnap.totalPeticiones}</div>
+                  <span class="kpi-trend-badge warning" id="kpi-pending-docs">
+                    {dashSnap.totalPendientes} Pendientes
+                  </span>
+                </div>
+                <div class="kpi-footer">
+                  <span class="footer-label">Drive: {dashSnap.peticionesConDriveCount}/{dashSnap.totalPeticiones}</span>
+                  <span class="footer-val gold" id="kpi-response-rate">{dashSnap.responseRate}% Resuelto</span>
+                </div>
+              </a>
+            )
+          }
+
+          {
+            canNormas && (
+              <a
+                href="/normas"
+                class="kpi-card bento-kpi-card emerald interactive"
+                title="Ir a Cuerpos Colegiados"
+              >
+                <div class="kpi-accent-bar emerald"></div>
+                <div class="kpi-header">
+                  <span class="kpi-title">Cuerpos Colegiados</span>
+                  <div class="kpi-icon-wrap emerald">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                  </div>
+                </div>
+                <div class="kpi-value-row">
+                  <div class="kpi-number tabular-nums" id="kpi-total-normas">{dashSnap.totalNormas}</div>
+                  <span class="kpi-trend-badge success">{dashSnap.normasVigentesCount} Vigentes</span>
+                </div>
+                <div class="kpi-footer">
+                  <span class="footer-label">CSU {dashSnap.normasPorOrgano.csu} &bull; CA {dashSnap.normasPorOrgano.ca}</span>
+                  <span class="footer-val emerald">Rec. {dashSnap.normasPorOrgano.rectoria}</span>
+                </div>
+              </a>
+            )
+          }
+
+          {
+            canMiembros && (
+              <a
+                href="/miembros-consejo"
+                class="kpi-card bento-kpi-card teal interactive"
+                title="Ir a Miembros de Consejo"
+              >
+                <div class="kpi-accent-bar teal"></div>
+                <div class="kpi-header">
+                  <span class="kpi-title">Miembros de Consejo</span>
+                  <div class="kpi-icon-wrap teal">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  </div>
+                </div>
+                <div class="kpi-value-row">
+                  <div class="kpi-number tabular-nums" id="kpi-total-miembros">{dashSnap.miembrosActivosCount}</div>
+                  <span class={`kpi-trend-badge ${dashSnap.miembrosProximosVencer.length > 0 ? 'warning' : 'success'}`}>
+                    {dashSnap.miembrosProximosVencer.length > 0
+                      ? `${dashSnap.miembrosProximosVencer.length} Próx. Vencer`
+                      : 'Activos Vigentes'}
+                  </span>
+                </div>
+                <div class="kpi-footer">
+                  <span class="footer-label">Archivo histórico</span>
+                  <span class="footer-val teal">{dashSnap.miembrosArchivoCount} en archivo</span>
+                </div>
+              </a>
+            )
+          }
+
+          {
+            canJuridicos && (
+              <a
+                href="/asuntos-juridicos"
+                class="kpi-card bento-kpi-card emerald interactive"
+                title="Ir a Asuntos Jurídicos"
+              >
+                <div class="kpi-accent-bar emerald"></div>
+                <div class="kpi-header">
+                  <span class="kpi-title">Asuntos Jurídicos</span>
+                  <div class="kpi-icon-wrap emerald">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>
+                  </div>
+                </div>
+                <div class="kpi-value-row">
+                  <div class="kpi-number tabular-nums" id="kpi-total-juridicos-dash">{dashSnap.totalJuridicos}</div>
+                  <span class="kpi-trend-badge success">{dashSnap.totalJuridicoCarpetas} Carpetas</span>
+                </div>
+                <div class="kpi-footer">
+                  <span class="footer-label">Concep. {dashSnap.juridicosPorCategoria.conceptos_internos} &bull; Lit. {dashSnap.juridicosPorCategoria.litigios_judiciales}</span>
+                  <span class="footer-val emerald">Aud. {dashSnap.juridicosPorCategoria.auditoria_entes_control}</span>
+                </div>
+              </a>
+            )
+          }
+
+          {
+            canJuzgamiento && (
+              <a
+                href="/juzgamiento"
+                class="kpi-card bento-kpi-card gold interactive"
+                title="Ir a Fase de Juzgamiento Disciplinario"
+              >
+                <div class="kpi-accent-bar gold"></div>
+                <div class="kpi-header">
+                  <span class="kpi-title">Juzgamiento Disciplinario</span>
+                  <div class="kpi-icon-wrap gold">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  </div>
+                </div>
+                <div class="kpi-value-row">
+                  <div class="kpi-number tabular-nums" id="kpi-total-juzgamiento-dash">{dashSnap.juzgamientoActivosCount}</div>
+                  <span class="kpi-trend-badge warning">{dashSnap.juzgamientoSegundaInstanciaCount} en 2da Inst.</span>
+                </div>
+                <div class="kpi-footer">
+                  <span class="footer-label">Total procesos: {dashSnap.totalJuzgamiento}</span>
+                  <span class="footer-val gold">{dashSnap.juzgamientoProximosVencerCount} próx. vencer</span>
+                </div>
+              </a>
+            )
+          }
+
+          {
+            canPlaneacion && (
+              <a
+                href="/planeacion"
+                class="kpi-card bento-kpi-card green interactive"
+                title="Ir a Planeación y Gestión CSU"
+              >
+                <div class="kpi-accent-bar green"></div>
+                <div class="kpi-header">
+                  <span class="kpi-title">Planeación y CSU</span>
+                  <div class="kpi-icon-wrap green">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                  </div>
+                </div>
+                <div class="kpi-value-row">
+                  <div class="kpi-number tabular-nums" id="kpi-total-budget-dash">{dashSnap.totalPlaneacion}</div>
+                  <span class="kpi-trend-badge subtle">
+                    {dashSnap.ultimoInformePlaneacion ? `${dashSnap.ultimoInformePlaneacion.ejecucionFormatted} Ejec.` : '0 Informes'}
+                  </span>
+                </div>
+                <div class="kpi-footer">
+                  <span class="footer-label">Último reporte</span>
+                  <span class="footer-val green">
+                    {dashSnap.ultimoInformePlaneacion ? dashSnap.ultimoInformePlaneacion.estado : 'Sin registros'}
+                  </span>
+                </div>
+              </a>
+            )
+          }
+
+          {
+            canConvenios && (
+              <a
+                href="/relacionamiento"
+                class="kpi-card bento-kpi-card teal interactive"
+                title="Ir a Relacionamiento Institucional y Convenios"
+              >
+                <div class="kpi-accent-bar teal"></div>
+                <div class="kpi-header">
+                  <span class="kpi-title">Convenios Activos</span>
+                  <div class="kpi-icon-wrap teal">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
+                  </div>
+                </div>
+                <div class="kpi-value-row">
+                  <div class="kpi-number tabular-nums" id="kpi-total-convenios">{dashSnap.conveniosActivosCount}</div>
+                  <span class={`kpi-trend-badge ${dashSnap.conveniosProximosVencerCount > 0 ? 'warning' : 'info'}`}>
+                    {dashSnap.conveniosProximosVencerCount > 0
+                      ? `${dashSnap.conveniosProximosVencerCount} Próx. Vencer`
+                      : `Total: ${dashSnap.totalConvenios}`}
+                  </span>
+                </div>
+                <div class="kpi-footer">
+                  <span class="footer-label">Cuantía</span>
+                  <span class="footer-val teal tabular-nums">{dashSnap.conveniosCuantiaFormateada}</span>
+                </div>
+              </a>
+            )
+          }
+
+          {
+            canProgramas && (
+              <a
+                href="/programas"
+                class="kpi-card bento-kpi-card green interactive"
+                title="Ir a Programas Académicos"
+              >
+                <div class="kpi-accent-bar green"></div>
+                <div class="kpi-header">
+                  <span class="kpi-title">Programas Académicos</span>
+                  <div class="kpi-icon-wrap green">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 14l9-5-9-5-9 5 9 5z"/><path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg>
+                  </div>
+                </div>
+                <div class="kpi-value-row">
+                  <div class="kpi-number tabular-nums" id="kpi-total-programas-dash">{dashSnap.totalProgramas}</div>
+                  <span class="kpi-trend-badge success">{dashSnap.programasActivosCount} Activos</span>
+                </div>
+                <div class="kpi-footer">
+                  <span class="footer-label">SACES / MEN</span>
+                  <span class="footer-val green">Oferta Oficial</span>
+                </div>
+              </a>
+            )
+          }
+
+        </section>
+      )
+    }
+
+    <!-- ================================================================= -->
+    <!-- SECCIÓN C: SPLIT GRID PRINCIPAL EQUILIBRADO SEGÚN PERMISOS RBAC   -->
+    <!-- ================================================================= -->
+    {
+      (canLeftStack || canRightStack) && (
+        <div class={`dashboard-split-grid bento-split-main ${isSingleSplit ? 'bento-split-single' : ''}`}>
+
+          <!-- COLUMNA IZQUIERDA -->
+          {
+            canLeftStack && (
+              <div class="bento-main-left-stack">
+
+                {
+                  canPeticiones && (
+                    <section class="panel-box bento-panel-main" aria-labelledby="reparto-main-heading">
+                      <div class="panel-header bento-panel-header">
+                        <div class="panel-title-wrap">
+                          <div class="panel-title">
+                            <div class="panel-icon-wrap gold">
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            </div>
+                            <h3 id="reparto-main-heading" class="panel-heading-text">Reparto Prioritario</h3>
+                          </div>
+                          <p class="panel-subheading-text">
+                            Control dual de vencimientos (responsable y entrega) &bull; Respaldo en Drive: {dashSnap.peticionesConDriveCount}/{dashSnap.totalPeticiones}
+                          </p>
+                          <div class="peticiones-state-pills-row">
+                            <span class="pet-state-chip">En Trámite: {dashSnap.peticionesEstados.enTramite}</span>
+                            <span class="pet-state-chip">Pendiente: {dashSnap.peticionesEstados.pendientes}</span>
+                            <span class="pet-state-chip success">Respondida: {dashSnap.peticionesEstados.respondidas}</span>
+                            <span class="pet-state-chip success">Cerrada: {dashSnap.peticionesEstados.cerradas}</span>
+                            {dashSnap.peticionesEstados.vencidas > 0 && (
+                              <span class="pet-state-chip danger">Vencida: {dashSnap.peticionesEstados.vencidas}</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div class="panel-header-actions">
+                          <!-- Segmented Control con Shared Element Pill Slider -->
+                          <div class="dash-segmented-filter" id="dash-sla-segmented-filter">
+                            <div class="dash-seg-indicator-pill" id="dash-seg-indicator"></div>
+                            <button type="button" class="dash-seg-btn active" data-filter="all">Todos</button>
+                            <button type="button" class="dash-seg-btn" data-filter="safe">Óptimos</button>
+                            <button type="button" class="dash-seg-btn" data-filter="warn">Alerta</button>
+                            <button type="button" class="dash-seg-btn" data-filter="danger">Críticos</button>
+                          </div>
+
+                          <a href={canArchivos ? "/archivos" : "/peticiones"} class="panel-link-action" title="Explorar todos los radicados">
+                            <span>Ver todos</span>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                          </a>
+                        </div>
+                      </div>
+
+                      <!-- LISTADO DE EXPEDIENTES PRIORITARIOS -->
+                      <div id="dashboard-critical-list" class="critical-docs-flow">
+                        {
+                          dashSnap.urgentPeticiones.length > 0 ? (
+                            dashSnap.urgentPeticiones.map((doc) => {
+                              const { progress, statusCategory } = doc;
+                              const targetUrl = canArchivos
+                                ? `/archivos?radicado=${encodeURIComponent(doc.numero_radicado || doc.id)}`
+                                : `/peticiones?radicado=${encodeURIComponent(doc.numero_radicado || doc.id)}`;
+
+                              return (
+                                <article
+                                  class={`critical-doc-card promax-floating-card sem-${statusCategory}`}
+                                  data-status-category={statusCategory}
+                                  data-doc-id={doc.id}
+                                >
+                                  <div class={`card-sla-edge ${statusCategory}`}></div>
+
+                                  <div class="doc-card-body">
+                                    <div class="doc-meta-top">
+                                      <div class="doc-badge-group">
+                                        <span class={`badge promax-badge ${progress.statusClass}`}>
+                                          {progress.statusBadge}
+                                        </span>
+                                        <span class="doc-rad-mono">
+                                          {doc.numero_radicado || `RAD-${doc.id.slice(0, 8)}`}
+                                        </span>
+                                        {doc.responsableAlertBadge && (
+                                          <span class="badge-resp-alert">
+                                            {doc.responsableAlertBadge}
+                                          </span>
+                                        )}
+                                        <span class={`badge-drive-sync ${doc.hasDriveBackup ? 'synced' : 'local'}`}>
+                                          {doc.hasDriveBackup ? 'Drive Respaldado' : 'Solo Repositorio Local'}
+                                        </span>
+                                      </div>
+                                      <span class="doc-urgency-label tabular-nums">
+                                        {progress.percentage}% tiempo transcurrido
+                                      </span>
+                                    </div>
+
+                                    <h4 class="doc-subject-title" title={doc.asunto}>
+                                      {doc.asunto}
+                                    </h4>
+
+                                    <div class="doc-meta-row">
+                                      <div class="meta-field">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                        <span>Solicitante: <strong>{doc.solicitante_nombre}</strong></span>
+                                      </div>
+                                      {doc.fecha_limite_responsable !== '--' && (
+                                        <div class="meta-field">
+                                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                          <span>Límite Resp.: <strong class="tabular-nums">{doc.fecha_limite_responsable}</strong></span>
+                                        </div>
+                                      )}
+                                      <div class="meta-field">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                        <span>Límite Entrega: <strong class="tabular-nums">{doc.fecha_limite_entrega || "En trámite"}</strong></span>
+                                      </div>
+                                    </div>
+
+                                    <div class="doc-sla-track">
+                                      <div
+                                        class={`doc-sla-fill ${statusCategory}`}
+                                        style={`width: ${Math.min(100, Math.max(5, progress.percentage))}%;`}
+                                      ></div>
+                                    </div>
+                                  </div>
+
+                                  <div class="doc-action-cell">
+                                    <a
+                                      href={targetUrl}
+                                      class="btn-promax-card-action"
+                                      title="Abrir expediente del radicado"
+                                    >
+                                      <span>Ver Carpeta</span>
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                                    </a>
+                                  </div>
+                                </article>
+                              );
+                            })
+                          ) : (
+                            <div class="bento-empty-state">
+                              <div class="empty-icon-wrap">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                              </div>
+                              <h5 class="empty-title">No hay expedientes prioritarios pendientes</h5>
+                              <p class="empty-desc">Todos los términos de peticiones y oficios se encuentran al día en el sistema.</p>
+                            </div>
+                          )
+                        }
+
+                        <div id="dash-filter-empty-state" class="bento-empty-state" style="display: none;">
+                          <div class="empty-icon-wrap neutral">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                          </div>
+                          <h5 class="empty-title">Sin expedientes en esta categoría</h5>
+                          <p class="empty-desc">No se encontraron peticiones con el nivel de urgencia seleccionado.</p>
+                        </div>
+                      </div>
+                    </section>
+                  )
+                }
+
+                {/* Alertas de Miembros de Consejo (Solo activos vigentes; archivo histórico secundario) */}
+                {
+                  canMiembros && (
+                    <div class="panel-box bento-feed-card">
+                      <div class="panel-header">
+                        <div class="panel-title">
+                          <div class="panel-icon-wrap emerald">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                          </div>
+                          <span>Miembros de Consejo: Vigencias y Periodos</span>
+                        </div>
+                        <a href="/miembros-consejo" class="panel-link-action" title="Gestionar Miembros de Consejo">
+                          <span>Gestionar ({dashSnap.miembrosActivosCount} activos)</span>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                        </a>
+                      </div>
+
+                      <div class="bento-feed-list">
+                        <div class="module-summary-chips-bar">
+                          <span class="mod-chip emerald">Activos vigentes: <strong>{dashSnap.miembrosActivosCount}</strong></span>
+                          <span class="mod-chip gold">Próximos a vencer (&le;30d): <strong>{dashSnap.miembrosProximosVencer.length}</strong></span>
+                          <span class="mod-chip muted">{dashSnap.miembrosArchivoCount} en archivo histórico</span>
+                        </div>
+
+                        {
+                          dashSnap.miembrosProximosVencer.length > 0 ? (
+                            dashSnap.miembrosProximosVencer.map((m) => (
+                              <div class="promax-feed-item">
+                                <div class="feed-item-main">
+                                  <div class="feed-meta-top">
+                                    <span class="colegiado-badge-tag">
+                                      {m.diasRestantes === 0 ? 'Vence Hoy' : `Faltan ${m.diasRestantes}d`}
+                                    </span>
+                                    <span class="feed-date tabular-nums">Fin: {m.fecha_fin}</span>
+                                    <span class="feed-organo-tag">{m.cuerpo_colegiado}</span>
+                                  </div>
+                                  <div class="feed-title">
+                                    {m.nombre_completo} &mdash; {m.cargo_calidad}
+                                  </div>
+                                </div>
+                                <a href="/miembros-consejo" class="btn-promax-feed-action">
+                                  <span>Revisar</span>
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                                </a>
+                              </div>
+                            ))
+                          ) : (
+                            <div class="bento-empty-state" style="padding: 16px;">
+                              <p class="empty-desc" style="margin: 0;">
+                                Sin miembros activos próximos a vencer en los próximos 30 días.
+                              </p>
+                            </div>
+                          )
+                        }
+                      </div>
+                    </div>
+                  )
+                }
+
+                {/* Panel Cuerpos Colegiados */}
+                {
+                  canNormas && (
+                    <div class="panel-box bento-feed-card">
+                      <div class="panel-header">
+                        <div class="panel-title">
+                          <div class="panel-icon-wrap amber">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                          </div>
+                          <span>Cuerpos Colegiados: Actos y Normativa</span>
+                        </div>
+                        <a href="/normas" class="panel-link-action" title="Explorar todo el catálogo de actos colegiados">
+                          <span>Explorar ({dashSnap.totalNormas})</span>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                        </a>
+                      </div>
+
+                      <div class="module-summary-chips-bar" style="margin-bottom: 12px;">
+                        <span class="mod-chip emerald">CSU: <strong>{dashSnap.normasPorOrgano.csu}</strong></span>
+                        <span class="mod-chip emerald">Consejo Académico: <strong>{dashSnap.normasPorOrgano.ca}</strong></span>
+                        <span class="mod-chip gold">Rectoría: <strong>{dashSnap.normasPorOrgano.rectoria}</strong></span>
+                        <span class="mod-chip muted">Vigentes: <strong>{dashSnap.normasVigentesCount}</strong></span>
+                        {dashSnap.normasPorAnio.map((y) => (
+                          <span class="mod-chip muted">Año {y.anio}: <strong>{y.count}</strong></span>
+                        ))}
+                      </div>
+
+                      <div
+                        class="dashboard-colegiados-mini-list bento-feed-list"
+                        id="dashboard-colegiados-recent-list"
+                      >
+                        {
+                          dashSnap.recentNormas.length > 0 ? (
+                            dashSnap.recentNormas.slice(0, 4).map((norma: any) => (
+                              <div class="colegiado-mini-item promax-feed-item">
+                                <div class="feed-item-main">
+                                  <div class="feed-meta-top">
+                                    <span class="colegiado-badge-tag">
+                                      {norma.tipo} {norma.numero}
+                                    </span>
+                                    <span class="feed-date tabular-nums">{norma.anio || norma.fecha}</span>
+                                    {norma.organo && <span class="feed-organo-tag">{norma.organo}</span>}
+                                    {norma.vigencia && <span class="feed-vigencia-tag">{norma.vigencia}</span>}
+                                  </div>
+                                  <div class="feed-title" title={norma.titulo}>
+                                    {norma.titulo}
+                                  </div>
+                                </div>
+                                <a
+                                  href="/normas"
+                                  class="btn-promax-feed-action"
+                                  title="Ver contenido del acto"
+                                >
+                                  <span>Ver</span>
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                                </a>
+                              </div>
+                            ))
+                          ) : (
+                            <div class="bento-empty-state">
+                              <p class="empty-desc">No hay actos colegiados registrados actualmente.</p>
+                            </div>
+                          )
+                        }
+                      </div>
+                    </div>
+                  )
+                }
+
+                {/* Panel Asuntos Jurídicos + Juzgamiento */}
+                {
+                  (canJuridicos || canJuzgamiento) && (
+                    <div class="bento-dual-subgrid">
+                      {
+                        canJuridicos && (
+                          <div class="panel-box bento-feed-card">
+                            <div class="panel-header">
+                              <div class="panel-title">
+                                <div class="panel-icon-wrap emerald">
+                                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>
+                                </div>
+                                <span>Asuntos Jurídicos</span>
+                              </div>
+                              <a href="/asuntos-juridicos" class="panel-link-action">
+                                <span>Abrir ({dashSnap.totalJuridicos})</span>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                              </a>
+                            </div>
+
+                            <div class="juridico-categories-stack">
+                              <a href="/asuntos-juridicos" class="juridico-cat-row">
+                                <span>Conceptos Internos</span>
+                                <strong class="tabular-nums">{dashSnap.juridicosPorCategoria.conceptos_internos} docs</strong>
+                              </a>
+                              <a href="/asuntos-juridicos" class="juridico-cat-row">
+                                <span>Litigios y Asuntos Judiciales</span>
+                                <strong class="tabular-nums">{dashSnap.juridicosPorCategoria.litigios_judiciales} docs</strong>
+                              </a>
+                              <a href="/asuntos-juridicos" class="juridico-cat-row">
+                                <span>Auditoría de Entes de Control</span>
+                                <strong class="tabular-nums">{dashSnap.juridicosPorCategoria.auditoria_entes_control} docs</strong>
+                              </a>
+                            </div>
+
+                            {dashSnap.recentJuridicoDocs.length > 0 && (
+                              <div class="subcard-recent-note">
+                                <span>Último indexado:</span>
+                                <strong>{dashSnap.recentJuridicoDocs[0]?.titulo}</strong>
+                                <span>({categoryLabelsMap[dashSnap.recentJuridicoDocs[0]?.categoria_raiz || ''] || 'Jurídico'})</span>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      }
+
+                      {
+                        canJuzgamiento && (
+                          <div class="panel-box bento-feed-card">
+                            <div class="panel-header">
+                              <div class="panel-title">
+                                <div class="panel-icon-wrap gold">
+                                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                </div>
+                                <span>Fase de Juzgamiento</span>
+                              </div>
+                              <a href="/juzgamiento" class="panel-link-action">
+                                <span>Ver ({dashSnap.juzgamientoActivosCount})</span>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                              </a>
+                            </div>
+
+                            <div class="module-summary-chips-bar" style="margin-bottom: 10px;">
+                              <span class="mod-chip emerald">Activos: <strong>{dashSnap.juzgamientoActivosCount}</strong></span>
+                              <span class="mod-chip gold">2da Instancia: <strong>{dashSnap.juzgamientoSegundaInstanciaCount}</strong></span>
+                              <span class={`mod-chip ${dashSnap.juzgamientoProximosVencerCount > 0 ? 'danger' : 'muted'}`}>
+                                Próx. vencer (&le;5d): <strong>{dashSnap.juzgamientoProximosVencerCount}</strong>
+                              </span>
+                            </div>
+
+                            {
+                              dashSnap.juzgamientoAlertas.length > 0 ? (
+                                <div class="bento-feed-list">
+                                  {dashSnap.juzgamientoAlertas.slice(0, 2).map((j) => (
+                                    <a href="/juzgamiento" class="promax-feed-item" style="text-decoration: none;">
+                                      <div class="feed-item-main">
+                                        <div class="feed-meta-top">
+                                          <span class="colegiado-badge-tag">Rad. {j.radicado}</span>
+                                          <span class="feed-organo-tag">{j.estado}</span>
+                                          {j.dias_restantes !== null && (
+                                            <span class="feed-date tabular-nums">{j.dias_restantes}d restantes</span>
+                                          )}
+                                        </div>
+                                        <div class="feed-title">{j.implicado} &mdash; {j.etapa_procesal}</div>
+                                      </div>
+                                    </a>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p class="empty-desc" style="margin: 8px 0 0 0;">Sin procesos disciplinarios activos.</p>
+                              )
+                            }
+                          </div>
+                        )
+                      }
+                    </div>
+                  )
+                }
+
               </div>
             )
           }
 
-          <!-- Estado vacío dinámico al filtrar si no hay coincidencias -->
-          <div id="dash-filter-empty-state" class="bento-empty-state" style="display: none;">
-            <div class="empty-icon-wrap neutral">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            </div>
-            <h5 class="empty-title">Sin expedientes en esta categoría</h5>
-            <p class="empty-desc">No se encontraron peticiones con el nivel de urgencia seleccionado.</p>
-          </div>
-        </div>
+          <!-- COLUMNA DERECHA -->
+          {
+            canRightStack && (
+              <aside class="dashboard-side-column bento-side-column">
 
-        </section>
-
-        <!-- Panel Cuerpos Colegiados alineado a la izquierda junto al Semáforo SLA -->
-        <div class="panel-box bento-feed-card">
-          <div class="panel-header">
-            <div class="panel-title">
-              <div class="panel-icon-wrap amber">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-              </div>
-              <span>Cuerpos Colegiados: Resoluciones y Acuerdos</span>
-            </div>
-            <a href="/normas" class="panel-link-action" title="Explorar todo el catálogo de actos colegiados">
-              <span>Explorar ({dashSnap.totalNormas})</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-            </a>
-          </div>
-
-          <div
-            class="dashboard-colegiados-mini-list bento-feed-list"
-            id="dashboard-colegiados-recent-list"
-          >
-            {
-              dashSnap.recentNormas.length > 0 ? (
-                dashSnap.recentNormas.slice(0, 4).map((norma: any) => (
-                  <div class="colegiado-mini-item promax-feed-item">
-                    <div class="feed-item-main">
-                      <div class="feed-meta-top">
-                        <span class="colegiado-badge-tag">
-                          {norma.tipo} {norma.numero}
-                        </span>
-                        <span class="feed-date tabular-nums">{norma.fecha}</span>
-                        {norma.organo && <span class="feed-organo-tag">{norma.organo}</span>}
+                {/* WIDGET 1: EFICACIA EN RESPUESTAS A PETICIONES */}
+                {
+                  canPeticiones && (
+                    <div class="panel-box bento-widget-card">
+                      <div class="panel-header widget-header">
+                        <div class="panel-title">
+                          <div class="panel-icon-wrap emerald">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><polyline points="9 10 12 7 15 10"/><line x1="12" y1="7" x2="12" y2="13"/></svg>
+                          </div>
+                          <span class="widget-title-text">Eficacia en Peticiones</span>
+                        </div>
+                        <a
+                          href="/peticiones"
+                          class="badge-response-status responded promax-efficacy-pill"
+                          id="widget-efficacy-badge"
+                        >
+                          {responseRate}% Eficacia
+                        </a>
                       </div>
-                      <div class="feed-title" title={norma.titulo}>
-                        {norma.titulo}
+
+                      <div class="efficacy-card-body bento-efficacy-content">
+                        <div class="efficacy-gauge-showcase">
+                          <div class="circular-gauge-wrapper">
+                            <svg class="circular-gauge-svg" width="96" height="96" viewBox="0 0 96 96">
+                              <circle
+                                class="gauge-track"
+                                cx="48"
+                                cy="48"
+                                r={gaugeRadius}
+                                stroke-width="8"
+                              />
+                              <circle
+                                class="gauge-fill"
+                                cx="48"
+                                cy="48"
+                                r={gaugeRadius}
+                                stroke-width="8"
+                                stroke-dasharray={gaugeCircumference}
+                                stroke-dashoffset={gaugeOffset}
+                              />
+                            </svg>
+                            <div class="gauge-center-content">
+                              <span class="gauge-number tabular-nums">{responseRate}%</span>
+                              <span class="gauge-caption">Eficacia</span>
+                            </div>
+                          </div>
+
+                          <div class="efficacy-stats-col">
+                            <div class="efficacy-metric-pill">
+                              <span class="metric-dot green"></span>
+                              <div>
+                                <span class="efficacy-metric-num tabular-nums" id="widget-responded-count">{totalRespondidas}</span>
+                                <span class="efficacy-metric-label">RADICADOS COMPLETADOS <span style="font-weight: 500; opacity: 0.85;">({dashSnap.aportesAprobadosCount || 0} aportes aprobados)</span></span>
+                              </div>
+                            </div>
+
+                            <div class="efficacy-metric-pill">
+                              <span class="metric-dot gold"></span>
+                              <div>
+                                <span class="efficacy-metric-num tabular-nums" id="widget-pending-count">{totalPendientes}</span>
+                                <span class="efficacy-metric-label">RADICADOS EN TRÁMITE <span style="font-weight: 500; opacity: 0.85;">({dashSnap.dependenciasPendientesCount || 0} dependencias por entregar)</span></span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div class="dist-item efficacy-progress-section">
+                          <div class="dist-meta">
+                            <span class="progress-legend">Tasa de Respuesta Institucional</span>
+                            <span id="widget-response-pct" class="progress-val-accent tabular-nums">{responseRate}%</span>
+                          </div>
+                          <div class="dist-progress-bg promax-track">
+                            <div
+                              class="dist-progress-fill promax-fill"
+                              id="widget-response-bar"
+                              style={`width: ${responseRate}%;`}
+                            ></div>
+                          </div>
+                        </div>
+
+                        <a
+                          href="/peticiones"
+                          class="btn-manage-petitions promax-cta-button"
+                          id="btn-quick-manage-petitions"
+                        >
+                          <div class="cta-left">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                            <span>Atender Peticiones Pendientes</span>
+                          </div>
+                          <span class="badge-counter promax-counter-badge" id="widget-pending-badge">
+                            {dashSnap.totalPendientes}
+                          </span>
+                        </a>
                       </div>
                     </div>
-                    <a
-                      href="/normas"
-                      class="btn-promax-feed-action"
-                      title="Ver contenido del acto"
-                    >
-                      <span>Ver</span>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                    </a>
-                  </div>
-                ))
-              ) : (
-                <div class="bento-empty-state">
-                  <p class="empty-desc">No hay actos colegiados registrados actualmente.</p>
-                </div>
-              )
-            }
-          </div>
+                  )
+                }
+
+                {/* WIDGET 2: DISTRIBUCIÓN DE TÉRMINOS SLA */}
+                {
+                  canPeticiones && (
+                    <div class="panel-box bento-widget-card">
+                      <div class="panel-header widget-header">
+                        <div class="panel-title">
+                          <div class="panel-icon-wrap mint">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0110 10H12V2z"/></svg>
+                          </div>
+                          <span class="widget-title-text">Términos de Radicación (SLA)</span>
+                        </div>
+                        <span class="widget-header-chip">En Tiempo Real</span>
+                      </div>
+
+                      <div class="stats-distribution-list bento-sla-interactive-list">
+                        <div class="dist-item dist-card-interactive" data-sla-trigger="safe" title="Clic para filtrar óptimos en el reparto">
+                          <div class="dist-meta">
+                            <span class="sla-label-group">
+                              <span class="dist-dot green"></span>
+                              <span>En Término Óptimo (&lt;50%)</span>
+                            </span>
+                            <span id="dist-count-safe" class="sla-count-chip green tabular-nums">
+                              {dashSnap.slaSafe} docs ({dashSnap.slaSafePct}%)
+                            </span>
+                          </div>
+                          <div class="dist-progress-bg promax-track">
+                            <div class="dist-progress-fill safe-fill" id="dist-bar-safe" style={`width: ${dashSnap.slaSafePct}%;`}></div>
+                          </div>
+                        </div>
+
+                        <div class="dist-item dist-card-interactive" data-sla-trigger="warn" title="Clic para filtrar en advertencia">
+                          <div class="dist-meta">
+                            <span class="sla-label-group">
+                              <span class="dist-dot warn"></span>
+                              <span>Advertencia Media (50%-80%)</span>
+                            </span>
+                            <span id="dist-count-warn" class="sla-count-chip warn tabular-nums">
+                              {dashSnap.slaWarn} docs ({dashSnap.slaWarnPct}%)
+                            </span>
+                          </div>
+                          <div class="dist-progress-bg promax-track">
+                            <div class="dist-progress-fill warn-fill" id="dist-bar-warn" style={`width: ${dashSnap.slaWarnPct}%;`}></div>
+                          </div>
+                        </div>
+
+                        <div class="dist-item dist-card-interactive" data-sla-trigger="danger" title="Clic para filtrar críticos en el reparto">
+                          <div class="dist-meta">
+                            <span class="sla-label-group">
+                              <span class="dist-dot danger"></span>
+                              <span>Alerta Crítica (&gt;80%)</span>
+                            </span>
+                            <span id="dist-count-danger" class="sla-count-chip danger tabular-nums">
+                              {dashSnap.slaDanger} docs ({dashSnap.slaDangerPct}%)
+                            </span>
+                          </div>
+                          <div class="dist-progress-bg promax-track">
+                            <div class="dist-progress-fill danger-fill" id="dist-bar-danger" style={`width: ${dashSnap.slaDangerPct}%;`}></div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="institutional-compliance-note bento-compliance-stamp">
+                        <div class="stamp-header">
+                          <div class="stamp-icon">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                          </div>
+                          <span class="stamp-title">Seguimiento y Cumplimiento Institucional</span>
+                        </div>
+                        <p class="stamp-text">
+                          Semáforo de plazos automatizado conforme a las directrices institucionales de archivo y gestión documental de Unitrópico.
+                        </p>
+                      </div>
+                    </div>
+                  )
+                }
+
+                {/* WIDGET 3: PLANEACIÓN CSU & CONVENIOS */}
+                {
+                  (canPlaneacion || canConvenios) && (
+                    <div class="panel-box bento-widget-card">
+                      <div class="panel-header widget-header">
+                        <div class="panel-title">
+                          <div class="panel-icon-wrap emerald">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                          </div>
+                          <span class="widget-title-text">Planeación y Convenios</span>
+                        </div>
+                      </div>
+
+                      <div class="inst-summary-stack">
+                        {
+                          canPlaneacion && (
+                            <a href="/planeacion" class="inst-summary-block">
+                              <div class="inst-block-top">
+                                <span class="inst-block-label">Planeación CSU</span>
+                                <span class="inst-block-pill green">
+                                  {dashSnap.ultimoInformePlaneacion ? dashSnap.ultimoInformePlaneacion.ejecucionFormatted : '0%'}
+                                </span>
+                              </div>
+                              {
+                                dashSnap.ultimoInformePlaneacion ? (
+                                  <>
+                                    <div class="inst-block-title">{dashSnap.ultimoInformePlaneacion.periodo}</div>
+                                    <div class="inst-block-meta">
+                                      Rad. CSU: {dashSnap.ultimoInformePlaneacion.radicado_csu} &bull; {dashSnap.ultimoInformePlaneacion.estado}
+                                    </div>
+                                    <div class="dist-progress-bg promax-track" style="margin-top: 8px;">
+                                      <div
+                                        class="dist-progress-fill safe-fill"
+                                        style={`width: ${Math.min(100, Math.max(4, dashSnap.ultimoInformePlaneacion.ejecucion_pct))}%;`}
+                                      ></div>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div class="inst-block-meta">Sin informes de planeación registrados.</div>
+                                )
+                              }
+                            </a>
+                          )
+                        }
+
+                        {
+                          canConvenios && (
+                            <a href="/relacionamiento" class="inst-summary-block">
+                              <div class="inst-block-top">
+                                <span class="inst-block-label">Convenios en Ejecución ({dashSnap.conveniosActivosCount})</span>
+                                <span class="inst-block-pill teal tabular-nums">{dashSnap.conveniosCuantiaFormateada}</span>
+                              </div>
+                              {
+                                dashSnap.conveniosAlertas.length > 0 ? (
+                                  <>
+                                    <div class="inst-block-title">
+                                      {dashSnap.conveniosAlertas[0].entidad} (#{dashSnap.conveniosAlertas[0].numero})
+                                    </div>
+                                    <div class="inst-block-meta">
+                                      {dashSnap.conveniosAlertas[0].tipo_label} &bull; Fin: {dashSnap.conveniosAlertas[0].fin}
+                                      {dashSnap.conveniosProximosVencerCount > 0 && ` • ${dashSnap.conveniosProximosVencerCount} próx. vencer`}
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div class="inst-block-meta">Sin convenios activos registrados.</div>
+                                )
+                              }
+                            </a>
+                          )
+                        }
+                      </div>
+                    </div>
+                  )
+                }
+
+                {/* WIDGET 4: ACTIVIDAD RECIENTE / AUDITORÍA (SOLO CON PERMISO AUDITORÍA) */}
+                {
+                  canAuditoria && (
+                    <div class="panel-box bento-widget-card" id="dashboard-audit-widget">
+                      <div class="panel-header widget-header">
+                        <div class="panel-title">
+                          <div class="panel-icon-wrap gold">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                          </div>
+                          <span class="widget-title-text">Actividad Reciente</span>
+                        </div>
+                        <a href="/auditoria" class="panel-link-action" title="Abrir bitácora completa de auditoría">
+                          <span>Auditoría</span>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                        </a>
+                      </div>
+
+                      <div class="audit-feed-list">
+                        {
+                          dashSnap.auditActividadReciente.length > 0 ? (
+                            dashSnap.auditActividadReciente.slice(0, 6).map((item) => (
+                              <div class="audit-feed-row">
+                                <div class="audit-avatar-badge" title={item.actorName}>
+                                  {item.initials}
+                                </div>
+                                <div class="audit-row-content">
+                                  <div class="audit-row-top">
+                                    <span class="audit-actor-name">{item.actorName}</span>
+                                    <span class="audit-time-label tabular-nums">{item.timestamp}</span>
+                                  </div>
+                                  <p class="audit-action-text">{item.actionTitle}</p>
+                                  <div class="audit-badges-row">
+                                    <span class="audit-entity-chip">{item.entity}</span>
+                                    {item.esExpediente && item.esEliminacion && (
+                                      <span class="audit-warning-chip">Expediente eliminado</span>
+                                    )}
+                                    {item.esExpediente && !item.esEliminacion && (
+                                      <span class="audit-exp-chip">Expediente</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <p class="empty-desc" style="margin: 8px 0;">Sin actividad de auditoría reciente registrada.</p>
+                          )
+                        }
+                      </div>
+                    </div>
+                  )
+                }
+
+              </aside>
+            )
+          }
+
         </div>
-      </div>
-
-      <!-- COLUMNA DERECHA: EFICACIA INSTITUCIONAL + TÉRMINOS SLA -->
-      <aside class="dashboard-side-column bento-side-column">
-        
-        <!-- WIDGET 1: EFICACIA EN RESPUESTAS A PETICIONES -->
-        <div class="panel-box bento-widget-card">
-          <div class="panel-header widget-header">
-            <div class="panel-title">
-              <div class="panel-icon-wrap emerald">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><polyline points="9 10 12 7 15 10"/><line x1="12" y1="7" x2="12" y2="13"/></svg>
-              </div>
-              <span class="widget-title-text">Eficacia en Peticiones</span>
-            </div>
-            <a
-              href="/peticiones"
-              class="badge-response-status responded promax-efficacy-pill"
-              id="widget-efficacy-badge"
-            >
-              {responseRate}% Eficacia
-            </a>
-          </div>
-
-          <div class="efficacy-card-body bento-efficacy-content">
-            
-            <!-- Medidor Gauge Circular Pro Max + Métricas Clave -->
-            <div class="efficacy-gauge-showcase">
-              <div class="circular-gauge-wrapper">
-                <svg class="circular-gauge-svg" width="96" height="96" viewBox="0 0 96 96">
-                  <!-- Pista de fondo -->
-                  <circle
-                    class="gauge-track"
-                    cx="48"
-                    cy="48"
-                    r={gaugeRadius}
-                    stroke-width="8"
-                  />
-                  <!-- Anillo de progreso -->
-                  <circle
-                    class="gauge-fill"
-                    cx="48"
-                    cy="48"
-                    r={gaugeRadius}
-                    stroke-width="8"
-                    stroke-dasharray={gaugeCircumference}
-                    stroke-dashoffset={Math.round(gaugeCircumference * (1 - responseRate / 100))}
-                  />
-                </svg>
-                <div class="gauge-center-content">
-                  <span class="gauge-number tabular-nums">{responseRate}%</span>
-                  <span class="gauge-caption">Eficacia</span>
-                </div>
-              </div>
-
-              <div class="efficacy-stats-col">
-                <div class="efficacy-metric-pill">
-                  <span class="metric-dot green"></span>
-                  <div>
-                    <span class="efficacy-metric-num tabular-nums" id="widget-responded-count">{totalRespondidas}</span>
-                    <span class="efficacy-metric-label">RADICADOS COMPLETADOS <span style="font-weight: 500; opacity: 0.85;">({dashSnap.aportesAprobadosCount || 0} aportes aprobados)</span></span>
-                  </div>
-                </div>
-
-                <div class="efficacy-metric-pill">
-                  <span class="metric-dot gold"></span>
-                  <div>
-                    <span class="efficacy-metric-num tabular-nums" id="widget-pending-count">{totalPendientes}</span>
-                    <span class="efficacy-metric-label">RADICADOS EN TRÁMITE <span style="font-weight: 500; opacity: 0.85;">({dashSnap.dependenciasPendientesCount || 0} dependencias por entregar)</span></span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Barra de progreso lineal de soporte -->
-            <div class="dist-item efficacy-progress-section">
-              <div class="dist-meta">
-                <span class="progress-legend">Tasa de Respuesta Institucional</span>
-                <span id="widget-response-pct" class="progress-val-accent tabular-nums">{responseRate}%</span>
-              </div>
-              <div class="dist-progress-bg promax-track">
-                <div
-                  class="dist-progress-fill promax-fill"
-                  id="widget-response-bar"
-                  style={`width: ${responseRate}%;`}
-                ></div>
-              </div>
-            </div>
-
-            <!-- Botón de acción rápida con Badge -->
-            <a
-              href="/peticiones"
-              class="btn-manage-petitions promax-cta-button"
-              id="btn-quick-manage-petitions"
-            >
-              <div class="cta-left">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                <span>Atender Peticiones Pendientes</span>
-              </div>
-              <span
-                class="badge-counter promax-counter-badge"
-                id="widget-pending-badge"
-              >
-                {dashSnap.totalPendientes}
-              </span>
-            </a>
-          </div>
-        </div>
-
-        <!-- WIDGET 2: DISTRIBUCIÓN DE TÉRMINOS SLA (SEMÁFORO INTERACTIVO) -->
-        <div class="panel-box bento-widget-card">
-          <div class="panel-header widget-header">
-            <div class="panel-title">
-              <div class="panel-icon-wrap mint">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0110 10H12V2z"/></svg>
-              </div>
-              <span class="widget-title-text">Términos de Radicación (SLA)</span>
-            </div>
-            <span class="widget-header-chip">En Tiempo Real</span>
-          </div>
-
-          <div class="stats-distribution-list bento-sla-interactive-list">
-            
-            <!-- Barra 1: Óptimo (<50%) -->
-            <div class="dist-item dist-card-interactive" data-sla-trigger="safe" title="Clic para filtrar óptimos en el reparto">
-              <div class="dist-meta">
-                <span class="sla-label-group">
-                  <span class="dist-dot green"></span>
-                  <span>En Término Óptimo (&lt;50%)</span>
-                </span>
-                <span id="dist-count-safe" class="sla-count-chip green tabular-nums">
-                  {dashSnap.slaSafe} docs ({dashSnap.slaSafePct}%)
-                </span>
-              </div>
-              <div class="dist-progress-bg promax-track">
-                <div
-                  class="dist-progress-fill safe-fill"
-                  id="dist-bar-safe"
-                  style={`width: ${dashSnap.slaSafePct}%;`}
-                ></div>
-              </div>
-            </div>
-
-            <!-- Barra 2: Alerta Media (50%-80%) -->
-            <div class="dist-item dist-card-interactive" data-sla-trigger="warn" title="Clic para filtrar en advertencia">
-              <div class="dist-meta">
-                <span class="sla-label-group">
-                  <span class="dist-dot warn"></span>
-                  <span>Advertencia Media (50%-80%)</span>
-                </span>
-                <span id="dist-count-warn" class="sla-count-chip warn tabular-nums">
-                  {dashSnap.slaWarn} docs ({dashSnap.slaWarnPct}%)
-                </span>
-              </div>
-              <div class="dist-progress-bg promax-track">
-                <div
-                  class="dist-progress-fill warn-fill"
-                  id="dist-bar-warn"
-                  style={`width: ${dashSnap.slaWarnPct}%;`}
-                ></div>
-              </div>
-            </div>
-
-            <!-- Barra 3: Alerta Crítica (>80%) -->
-            <div class="dist-item dist-card-interactive" data-sla-trigger="danger" title="Clic para filtrar críticos en el reparto">
-              <div class="dist-meta">
-                <span class="sla-label-group">
-                  <span class="dist-dot danger"></span>
-                  <span>Alerta Crítica (&gt;80%)</span>
-                </span>
-                <span id="dist-count-danger" class="sla-count-chip danger tabular-nums">
-                  {dashSnap.slaDanger} docs ({dashSnap.slaDangerPct}%)
-                </span>
-              </div>
-              <div class="dist-progress-bg promax-track">
-                <div
-                  class="dist-progress-fill danger-fill"
-                  id="dist-bar-danger"
-                  style={`width: ${dashSnap.slaDangerPct}%;`}
-                ></div>
-              </div>
-            </div>
-
-          </div>
-
-          <!-- SELLO DE CUMPLIMIENTO INSTITUCIONAL -->
-          <div class="institutional-compliance-note bento-compliance-stamp">
-            <div class="stamp-header">
-              <div class="stamp-icon">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              </div>
-              <span class="stamp-title">Seguimiento y Cumplimiento Institucional</span>
-            </div>
-            <p class="stamp-text">
-              Semáforo de plazos automatizado conforme a las directrices institucionales de archivo y gestión documental de Unitrópico.
-            </p>
-          </div>
-        </div>
-
-      </aside>
-
-    </div>
+      )
+    }
 
     <!-- ================================================================= -->
-    <!-- SECCIÓN D: AGENDA UNIFICADA (1 TARJETA BENTO POR EXPEDIENTE)      -->
+    <!-- SECCIÓN D: AGENDA UNIFICADA (VISIBLE CON PERMISO AGENDA)          -->
     <!-- ================================================================= -->
-    <section class="dashboard-agenda-full" aria-label="Agenda de Vencimientos">
-      <div class="panel-box bento-feed-card">
-        <div class="panel-header">
-          <div class="panel-title">
-            <div class="panel-icon-wrap emerald">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    {
+      canAgenda && (
+        <section class="dashboard-agenda-full" aria-label="Agenda de Vencimientos">
+          <div class="panel-box bento-feed-card">
+            <div class="panel-header">
+              <div class="panel-title">
+                <div class="panel-icon-wrap emerald">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                </div>
+                <span>Agenda Institucional &amp; Google Calendar</span>
+              </div>
+              <a href="/calendario" class="panel-link-action" title="Abrir Agenda de Vencimientos">
+                <span>Ver agenda completa</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              </a>
             </div>
-            <span>Agenda Institucional &amp; Google Calendar</span>
-          </div>
-          <a href="/calendario" class="panel-link-action" title="Abrir Agenda de Vencimientos">
-            <span>Ver agenda completa</span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </a>
-        </div>
 
-        <div
-          class="dashboard-cal-mini-list bento-agenda-cards-list"
-          id="dashboard-calendar-recent-list"
-        >
-          <!-- Eventos agrupados 1 por expediente cargados dinámicamente por initDashboard() -->
-        </div>
-      </div>
-    </section>
+            <div
+              class="dashboard-cal-mini-list bento-agenda-cards-list"
+              id="dashboard-calendar-recent-list"
+            >
+              <!-- Eventos agrupados 1 por expediente cargados dinámicamente por initDashboard() -->
+            </div>
+          </div>
+        </section>
+      )
+    }
 
   </section>
 </AppLayout>
@@ -1054,7 +1454,7 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
      ========================================================================== */
   .bento-kpi-grid {
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(225px, 1fr));
     gap: 16px;
   }
 
@@ -1169,6 +1569,10 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
     grid-template-columns: 1.65fr 1fr;
     gap: 24px;
     align-items: start;
+  }
+
+  .bento-split-single {
+    grid-template-columns: 1fr;
   }
 
   .bento-main-left-stack {
@@ -1888,14 +2292,371 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
   }
 
   /* ==========================================================================
-     RESPONSIVE BREAKPOINTS
+     NUEVOS WIDGETS INSTITUCIONALES, RBAC HERO BADGE & ACTIVIDAD RECIENTE
      ========================================================================== */
-  @media (max-width: 1400px) {
-    .bento-kpi-grid {
-      grid-template-columns: repeat(3, 1fr);
-    }
+  .hero-user-session-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    padding: 6px 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.09);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+  }
+  .hero-user-welcome {
+    font-size: 0.80rem;
+    color: rgba(255, 255, 255, 0.9);
+  }
+  .hero-user-welcome strong {
+    color: #ffffff;
+    font-weight: 800;
+  }
+  .hero-role-badge-exact {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: rgba(181, 161, 96, 0.25);
+    border: 1px solid rgba(181, 161, 96, 0.55);
+    color: #FDE68A;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
   }
 
+  .peticiones-state-pills-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .pet-state-chip {
+    font-size: 0.71rem;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    color: #334155;
+    white-space: nowrap;
+  }
+  .pet-state-chip.success {
+    background: #F2F7F6;
+    border-color: #B2CFCB;
+    color: #00594E;
+  }
+  .pet-state-chip.danger {
+    background: #FEF2F2;
+    border-color: #FECACA;
+    color: #B91C1C;
+  }
+
+  .badge-resp-alert {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.69rem;
+    font-weight: 800;
+    background: #FEF2F2;
+    border: 1px solid #FECACA;
+    color: #B91C1C;
+    white-space: nowrap;
+  }
+  .badge-drive-sync {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.69rem;
+    font-weight: 750;
+    white-space: nowrap;
+  }
+  .badge-drive-sync.synced {
+    background: #F2F7F6;
+    border: 1px solid #B2CFCB;
+    color: #00594E;
+  }
+  .badge-drive-sync.local {
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    color: #64748B;
+  }
+
+  .module-summary-chips-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  .mod-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.73rem;
+    font-weight: 650;
+    white-space: nowrap;
+  }
+  .mod-chip.emerald {
+    background: #F2F7F6;
+    border: 1px solid #B2CFCB;
+    color: #00594E;
+  }
+  .mod-chip.gold {
+    background: #F7F5EE;
+    border: 1px solid #DBD2B0;
+    color: #786832;
+  }
+  .mod-chip.danger {
+    background: #FEF2F2;
+    border: 1px solid #FECACA;
+    color: #B91C1C;
+  }
+  .mod-chip.muted {
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    color: #475569;
+  }
+
+  .feed-vigencia-tag {
+    font-size: 0.68rem;
+    font-weight: 750;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: #F2F7F6;
+    border: 1px solid #B2CFCB;
+    color: #00594E;
+    white-space: nowrap;
+  }
+
+  .bento-dual-subgrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+  }
+
+  .juridico-categories-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .juridico-cat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #F8FAFB;
+    border: 1px solid #E2E8F0;
+    text-decoration: none;
+    color: #0F172A;
+    font-size: 0.80rem;
+    font-weight: 650;
+    transition: border-color 0.16s ease, background 0.16s ease;
+  }
+  .juridico-cat-row:hover {
+    border-color: #00594E;
+    background: #F2F7F6;
+  }
+  .juridico-cat-row strong {
+    color: #00594E;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+  .subcard-recent-note {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #F1F5F9;
+    font-size: 0.74rem;
+    color: #475569;
+    line-height: 1.45;
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+  .subcard-recent-note strong {
+    color: #0F172A;
+    margin: 0 4px;
+  }
+
+  .inst-summary-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .inst-summary-block {
+    display: block;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #F8FAFB;
+    border: 1px solid #E2E8F0;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.16s ease, transform 0.16s ease;
+  }
+  .inst-summary-block:hover {
+    border-color: #00594E;
+    transform: translateY(-1px);
+  }
+  .inst-block-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .inst-block-label {
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #475569;
+  }
+  .inst-block-pill {
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .inst-block-pill.green {
+    background: #F2F7F6;
+    border: 1px solid #B2CFCB;
+    color: #00594E;
+  }
+  .inst-block-pill.teal {
+    background: #F7F5EE;
+    border: 1px solid #DBD2B0;
+    color: #786832;
+  }
+  .inst-block-title {
+    font-size: 0.84rem;
+    font-weight: 800;
+    color: #0F172A;
+    line-height: 1.35;
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+  .inst-block-meta {
+    font-size: 0.75rem;
+    color: #64748B;
+    margin-top: 3px;
+    line-height: 1.4;
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+
+  /* ==========================================================================
+     WIDGET ACTIVIDAD RECIENTE / AUDITORÍA (SIN RECORTE HORIZONTAL)
+     ========================================================================== */
+  .audit-feed-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .audit-feed-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: #F8FAFB;
+    border: 1px solid #E2E8F0;
+    min-width: 0;
+  }
+  .audit-avatar-badge {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: #00594E;
+    color: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.74rem;
+    font-weight: 850;
+    flex-shrink: 0;
+    letter-spacing: 0.02em;
+  }
+  .audit-row-content {
+    flex: 1;
+    min-width: 0;
+  }
+  .audit-row-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 3px;
+  }
+  .audit-actor-name {
+    font-size: 0.79rem;
+    font-weight: 800;
+    color: #0F172A;
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+  .audit-time-label {
+    font-size: 0.68rem;
+    color: #64748B;
+    white-space: nowrap;
+  }
+  .audit-action-text {
+    margin: 0 0 6px 0;
+    font-size: 0.76rem;
+    color: #334155;
+    line-height: 1.42;
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+  .audit-badges-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+  .audit-entity-chip {
+    font-size: 0.68rem;
+    font-weight: 750;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: #F2F7F6;
+    border: 1px solid #B2CFCB;
+    color: #00594E;
+    white-space: nowrap;
+  }
+  .audit-exp-chip {
+    font-size: 0.68rem;
+    font-weight: 750;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: #F7F5EE;
+    border: 1px solid #DBD2B0;
+    color: #786832;
+    white-space: nowrap;
+  }
+  .audit-warning-chip {
+    font-size: 0.68rem;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: #FEF2F2;
+    border: 1px solid #FECACA;
+    color: #B91C1C;
+    white-space: nowrap;
+  }
+
+  /* ==========================================================================
+     RESPONSIVE BREAKPOINTS
+     ========================================================================== */
   @media (max-width: 1100px) {
     .bento-hero-promax {
       flex-direction: column;
@@ -1940,9 +2701,6 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
     .btn-hero-cta {
       justify-content: center;
       width: 100%;
-    }
-    .bento-kpi-grid {
-      grid-template-columns: repeat(2, 1fr);
     }
     .bento-hero-capsules {
       grid-template-columns: 1fr;
@@ -2108,19 +2866,22 @@ const gaugeOffset = gaugeCircumference - (gaugeCircumference * responseRate) / 1
     });
   });
 
-  // 4. Disparo automático silencioso de recordatorios preventivos a dependencias (<= 3 días)
-  setTimeout(() => {
-    fetch('/api/peticiones/recordatorio-dependencias', { method: 'POST' })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data?.remindersSent > 0 && typeof (window as any).showToast === 'function') {
-          (window as any).showToast(
-            `Se enviaron ${data.remindersSent} recordatorio(s) preventivo(s) por vencimiento próximo a dependencias pendientes.`,
-            'info',
-            'Recordatorios Automáticos'
-          );
-        }
-      })
-      .catch(() => {});
-  }, 600);
+  // 4. Disparo automático silencioso de recordatorios preventivos a dependencias (<= 3 días, solo con permiso Peticiones)
+  const workspaceEl = document.querySelector(".dash-promax-workspace");
+  if (workspaceEl?.getAttribute("data-can-peticiones") === "true") {
+    setTimeout(() => {
+      fetch('/api/peticiones/recordatorio-dependencias', { method: 'POST' })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.remindersSent > 0 && typeof (window as any).showToast === 'function') {
+            (window as any).showToast(
+              `Se enviaron ${data.remindersSent} recordatorio(s) preventivo(s) por vencimiento próximo a dependencias pendientes.`,
+              'info',
+              'Recordatorios Automáticos'
+            );
+          }
+        })
+        .catch(() => {});
+    }, 600);
+  }
 </script>
