@@ -5,7 +5,7 @@ import { supabase } from '@lib/supabase';
 import { logSystemActivity, getClientAuditActor } from '@lib/audit';
 
 export function initNormas() {
-  const rows = document.querySelectorAll('.norma-row, .colegiado-card') as NodeListOf<HTMLElement>;
+  const rows = document.querySelectorAll('.norma-row') as NodeListOf<HTMLElement>;
   const orgTabs = document.querySelectorAll('#normas-module-tabs .module-tab-btn');
   const yearPills = document.querySelectorAll('#normas-year-tabs .normas-year-pill');
   const searchInput = document.getElementById('normas-search-input') as HTMLInputElement | null;

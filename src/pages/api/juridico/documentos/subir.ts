@@ -40,50 +40,25 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
 
     const fileName = file.name || 'documento.pdf';
     const cleanFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
     const mimeType = file.type || 'application/octet-stream';
     const lowerName = fileName.toLowerCase();
 
-    // 1. Extracción Automática de Texto en Memoria (no bloqueante ante errores)
-    let extractedText = '';
-    try {
-      if (lowerName.endsWith('.pdf') || mimeType.includes('pdf')) {
-        const pdfResult = await extractText(new Uint8Array(arrayBuffer)).catch(() => null);
-        if (pdfResult) {
-          if (Array.isArray(pdfResult.text)) {
-            extractedText = pdfResult.text.join(' ');
-          } else {
-            extractedText = String(pdfResult.text || '');
-          }
-        }
-      } else if (lowerName.endsWith('.docx') || mimeType.includes('wordprocessingml')) {
-        const docxResult = await mammoth.extractRawText({ buffer }).catch(() => null);
-        if (docxResult && docxResult.value) {
-          extractedText = String(docxResult.value || '');
-        }
-      } else if (lowerName.endsWith('.txt') || lowerName.endsWith('.csv') || mimeType.includes('text')) {
-        extractedText = buffer.toString('utf-8');
-      }
-    } catch (extractErr: any) {
-      console.warn('[JURIDICO EXTRACTION] Advertencia extrayendo texto (no fatal):', extractErr?.message);
-    }
+    // Clonar copias independientes ANTES de consumir el ArrayBuffer (previene detached ArrayBuffer en unpdf/Storage)
+    const rawBuffer = await file.arrayBuffer();
+    // Copia 1: exclusiva para subir a Supabase Storage
+    const storageBytes = Buffer.from(rawBuffer.slice(0));
+    // Copia 2: exclusiva para extracción de texto (si la librería la detacha, no afecta a Storage)
+    const extractBytes = new Uint8Array(rawBuffer.slice(0));
+    const extractNodeBuffer = Buffer.from(extractBytes);
 
-    // Normalizar texto extraído y limitar tamaño de seguridad a 150,000 caracteres
-    const cleanedText = extractedText
-      .replace(/\r\n/g, '\n')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .slice(0, 150000);
-
-    // 2. Subir Archivo Original a Supabase Storage (bucket dedicado 'juridico', con respaldo a 'peticiones')
+    // 1. Subir Archivo Original primero a Supabase Storage (bucket dedicado 'juridico', con respaldo a 'peticiones')
     const storagePath = `${categoriaRaiz}/${Date.now()}_${cleanFileName}`;
     const storageClient = supabaseAdmin || supabase;
     let targetBucket = 'juridico';
     let targetPath = storagePath;
     let { error: uploadError } = await storageClient.storage
       .from(targetBucket)
-      .upload(targetPath, buffer, {
+      .upload(targetPath, storageBytes, {
         contentType: mimeType,
         upsert: true,
       });
@@ -93,7 +68,7 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
       targetPath = `juridico/${storagePath}`;
       const fallbackRes = await storageClient.storage
         .from(targetBucket)
-        .upload(targetPath, buffer, {
+        .upload(targetPath, storageBytes, {
           contentType: mimeType,
           upsert: true,
         });
@@ -110,6 +85,37 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
 
     const { data: publicData } = storageClient.storage.from(targetBucket).getPublicUrl(targetPath);
     const archivoUrl = publicData?.publicUrl || '';
+
+    // 2. Extracción Automática de Texto en Memoria con copia independiente (no bloqueante ante errores o PDFs escaneados)
+    let extractedText = '';
+    try {
+      if (lowerName.endsWith('.pdf') || mimeType.includes('pdf')) {
+        const pdfResult = await extractText(extractBytes).catch(() => null);
+        if (pdfResult) {
+          if (Array.isArray(pdfResult.text)) {
+            extractedText = pdfResult.text.join(' ');
+          } else {
+            extractedText = String(pdfResult.text || '');
+          }
+        }
+      } else if (lowerName.endsWith('.docx') || mimeType.includes('wordprocessingml')) {
+        const docxResult = await mammoth.extractRawText({ buffer: extractNodeBuffer }).catch(() => null);
+        if (docxResult && docxResult.value) {
+          extractedText = String(docxResult.value || '');
+        }
+      } else if (lowerName.endsWith('.txt') || lowerName.endsWith('.csv') || mimeType.includes('text')) {
+        extractedText = extractNodeBuffer.toString('utf-8');
+      }
+    } catch (extractErr: any) {
+      console.warn('[JURIDICO EXTRACTION] Advertencia extrayendo texto (no fatal):', extractErr?.message);
+    }
+
+    // Normalizar texto extraído y limitar tamaño de seguridad a 150,000 caracteres
+    const cleanedText = extractedText
+      .replace(/\r\n/g, '\n')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 150000);
 
     // 3. Insertar Registro en juridico_documentos
     const dbClient = (supabaseAdmin || supabase) as any;

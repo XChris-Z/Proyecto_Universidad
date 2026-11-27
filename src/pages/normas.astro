@@ -285,18 +285,18 @@ const normasView = rawNormas.map((norma: any) => {
           <table class="normas-pro-table">
             <thead>
               <tr>
-                <th style="width: 175px;">Órgano Colegiado</th>
-                <th style="width: 165px;">Acto / Consecutivo</th>
-                <th>Título Oficial y Descriptor Temático</th>
-                <th style="width: 195px;">Expedición y Signatarios</th>
-                <th style="width: 120px;">Vigencia</th>
-                <th style="width: 130px; text-align: right;">Documento</th>
+                <th style="width: 19%;">Órgano Colegiado</th>
+                <th style="width: 13%;">Acto / Consecutivo</th>
+                <th style="width: 25%;">Título Oficial y Descriptor Temático</th>
+                <th style="width: 17%;">Expedición y Signatarios</th>
+                <th style="width: 10%;">Vigencia</th>
+                <th style="width: 16%; text-align: right;">Documento</th>
               </tr>
             </thead>
             <tbody id="normas-table-body">
               {normasView.map((norma: any) => (
                 <tr
-                  class="norma-row colegiado-card"
+                  class="norma-row"
                   data-org={norma.organo_code}
                   data-vigencia={norma.vigStyle.key}
                   data-year={norma.year}
@@ -347,7 +347,7 @@ const normasView = rawNormas.map((norma: any) => {
                   </td>
                   <td style="text-align: right;">
                     {norma.archivo_url ? (
-                      <div style="display: inline-flex; align-items: center; justify-content: flex-end; gap: 5px;">
+                      <div class="norma-doc-actions">
                         <a
                           href={norma.archivo_url}
                           target="_blank"
@@ -371,14 +371,16 @@ const normasView = rawNormas.map((norma: any) => {
                         </a>
                       </div>
                     ) : (
-                      <button
-                        type="button"
-                        class="btn-norma-download"
-                        data-norma-label={`${norma.tipo} ${norma.numero}`}
-                      >
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                        <span>PDF</span>
-                      </button>
+                      <div class="norma-doc-actions">
+                        <button
+                          type="button"
+                          class="btn-norma-download"
+                          data-norma-label={`${norma.tipo} ${norma.numero}`}
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                          <span>PDF</span>
+                        </button>
+                      </div>
                     )}
                   </td>
                 </tr>
@@ -905,7 +907,7 @@ const normasView = rawNormas.map((norma: any) => {
     .normas-pro-table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 820px;
+      table-layout: fixed;
     }
 
     .normas-pro-table thead th {
@@ -917,38 +919,98 @@ const normasView = rawNormas.map((norma: any) => {
       font-size: 0.72rem;
       font-weight: 800;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
-      padding: 11px 14px;
+      letter-spacing: 0.04em;
+      padding: 12px 14px;
       text-align: left;
       border-bottom: 1px solid #B2CFCB;
-      white-space: nowrap;
+      white-space: normal;
+      line-height: 1.25;
+      vertical-align: middle;
     }
 
-    .normas-pro-table tbody td {
-      padding: 13px 14px;
-      border-bottom: 1px solid #EEF2F2;
-      vertical-align: top;
+    .normas-scroll-box :global(.normas-pro-table tbody tr) {
+      display: table-row;
+      border-radius: 0;
+      border: none;
+      padding: 0;
+      position: static;
+      overflow: visible;
+      background: transparent;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .normas-scroll-box :global(.normas-pro-table tbody tr::before) {
+      content: none !important;
+      display: none !important;
+    }
+
+    .normas-scroll-box :global(.normas-pro-table tbody td) {
+      display: table-cell;
+      padding: 14px 16px;
+      border-bottom: 1px solid #EEF2F5;
+      vertical-align: middle;
       font-size: 0.83rem;
       color: #111827;
+      min-width: 0;
+      overflow-wrap: break-word;
     }
 
-    .normas-pro-table tbody tr:hover {
+    .normas-scroll-box :global(.normas-pro-table tbody tr:hover) {
       background: #F8FAFC;
     }
 
-    .normas-pro-table tbody tr:last-child td {
+    .normas-scroll-box :global(.normas-pro-table tbody tr:last-child td) {
       border-bottom: none;
     }
 
-    .norma-organ-pill {
+    @media (min-width: 1024px) {
+      .normas-scroll-box {
+        overflow-x: hidden;
+      }
+
+      .normas-scroll-box :global(.normas-pro-table tbody tr) {
+        display: table-row !important;
+      }
+
+      .normas-scroll-box :global(.normas-pro-table tbody td) {
+        display: table-cell !important;
+        vertical-align: middle !important;
+        padding: 14px 16px;
+        border-bottom: 1px solid #EEF2F5;
+      }
+    }
+
+    @media (max-width: 1023px) {
+      .normas-pro-table {
+        min-width: 820px;
+      }
+    }
+
+    .normas-scroll-box :global(.norma-organ-pill) {
       display: inline-flex;
       align-items: center;
+      max-width: 100%;
       padding: 4px 10px;
       border-radius: 999px;
       font-size: 0.72rem;
       font-weight: 800;
       line-height: 1.25;
+      white-space: normal;
+      overflow-wrap: break-word;
+    }
+
+    .normas-scroll-box :global(.norma-doc-actions) {
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
       white-space: nowrap;
+    }
+
+    .normas-scroll-box :global(.norma-doc-actions .btn-norma-download) {
+      padding: 5px 8px;
+      font-size: 0.73rem;
     }
 
     .norma-consecutivo-wrap {
