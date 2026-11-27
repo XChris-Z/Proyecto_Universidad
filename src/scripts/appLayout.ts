@@ -722,8 +722,13 @@ export function initAppLayout() {
         }
       }
 
-      const userEmail = activeUser.email || 'christianlemus.es@unitropico.edu.co';
-      const userFilter = `id.eq.${activeUser.id},email.eq.${userEmail}`;
+      // Solo consultar si hay un ID o email real — NUNCA usar un email fijo como fallback
+      if (!activeUser.id && !activeUser.email) return;
+      const userEmail = activeUser.email;
+      const filterParts: string[] = [];
+      if (activeUser.id) filterParts.push(`id.eq.${activeUser.id}`);
+      if (userEmail) filterParts.push(`email.eq.${userEmail}`);
+      const userFilter = filterParts.join(',');
       const { data: profile } = await supabase
         .from('profiles')
         .select('avatar_url, full_name, role')
