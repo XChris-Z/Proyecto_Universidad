@@ -4,6 +4,9 @@
 import {
   getUnifiedCalendarEvents,
   computeActivePeticionSlaCounts,
+  clasificarEstadoAgenda,
+  categoriaToUrgency,
+  getTodayBogotaYmd,
   createGoogleCalendarEvent,
   connectGoogleCalendar,
 } from '@lib/calendar';
@@ -165,14 +168,18 @@ export async function initCalendario() {
     });
   });
 
-  // Botón Limpiar Selección de Día en Timeline
+  // Botón Limpiar Selección / Filtros en Timeline
   document.getElementById('btn-clear-day-filter')?.addEventListener('click', () => {
     selectedDayStr = '';
+    activeSlaFilter = 'all';
+    updateBentoActiveIndicator();
     document.querySelectorAll('.gcal-cell.is-selected').forEach((c) => c.classList.remove('is-selected'));
     const clearBtn = document.getElementById('btn-clear-day-filter');
     if (clearBtn) clearBtn.style.display = 'none';
     transitionDOMUpdate(() => {
+      renderCurrentView();
       renderTimelineMonitor();
+      renderMiniCal();
     });
   });
 
@@ -336,9 +343,24 @@ async function loadEvents() {
 
   try {
     const res = await getUnifiedCalendarEvents(timeMin, timeMax);
-    const liveIds = new Set(res.events.map((e) => e.id));
-    const missingSsrDeadlines = ssrEvents.filter((e) => !liveIds.has(e.id));
-    allEvents = [...res.events, ...missingSsrDeadlines].sort((a, b) => a.fecha.localeCompare(b.fecha));
+    const hasLivePeticiones = res.events.some((e) => e.tipo === 'peticion');
+    const hoyYmd = getTodayBogotaYmd();
+
+    const baseEvents = hasLivePeticiones
+      ? res.events
+      : [...res.events, ...ssrEvents.filter((se) => !res.events.some((le) => le.id === se.id))];
+
+    allEvents = baseEvents
+      .map((ev) => {
+        const cat = clasificarEstadoAgenda(ev, hoyYmd);
+        return {
+          ...ev,
+          completada: cat === 'completado',
+          urgencia: categoriaToUrgency(cat),
+        };
+      })
+      .sort((a, b) => a.fecha.localeCompare(b.fecha));
+
     isGoogleConnected = res.isGoogleConnected;
 
     updateSlaCountersFromEvents(allEvents);
@@ -463,13 +485,16 @@ function switchView(view: 'month' | 'week' | 'day' | 'agenda') {
  * Retorna eventos filtrados por categorías, búsqueda y SLA
  */
 function getFilteredEvents(): CalendarioEvent[] {
+  const hoyYmd = getTodayBogotaYmd();
   return allEvents.filter((ev) => {
-    // 1. Filtro por categoría
+    // 1. Filtro por categoría (solo peticiones radicadas o eventos agendados en Agenda)
     if (!activeCategories.has(ev.tipo)) return false;
 
-    // 2. Filtro SLA (desde Bento Header)
+    // 2. Filtro SLA (desde Bento Header) usando la función única clasificarEstadoAgenda
     if (activeSlaFilter !== 'all') {
-      if (ev.urgencia !== activeSlaFilter) return false;
+      const cat = clasificarEstadoAgenda(ev, hoyYmd);
+      const urg = categoriaToUrgency(cat);
+      if (urg !== activeSlaFilter) return false;
     }
 
     // 3. Filtro por búsqueda
@@ -477,7 +502,8 @@ function getFilteredEvents(): CalendarioEvent[] {
       const matchTitle = ev.titulo.toLowerCase().includes(searchQuery);
       const matchDesc = ev.descripcion.toLowerCase().includes(searchQuery);
       const matchDest = ev.destino.toLowerCase().includes(searchQuery);
-      if (!matchTitle && !matchDesc && !matchDest) return false;
+      const matchResp = (ev.responsable || '').toLowerCase().includes(searchQuery);
+      if (!matchTitle && !matchDesc && !matchDest && !matchResp) return false;
     }
 
     return true;
@@ -508,18 +534,17 @@ function getRadicadoCode(ev: CalendarioEvent): string {
       const url = new URL(ev.link, 'https://dummy.co');
       const radParam = url.searchParams.get('radicado');
       if (radParam) return radParam;
-    } catch (e) {}
+    } catch {}
   }
   const titlePrefixMatch = ev.titulo.match(/(?:Vence Radicado|L\u00EDmite Dependencias|Completado|Radicado)\s+([^:]+):/i);
   if (titlePrefixMatch && titlePrefixMatch[1]) return titlePrefixMatch[1].trim();
 
-  const match = ev.titulo.match(/(?:RAD-\d{4}-\d+|[A-Z0-9]+(?:[-_][A-Z0-9]+)+|\d{4}-\d{4,})/i) || 
-                ev.descripcion.match(/(?:RAD-\d{4}-\d+|[A-Z0-9]+(?:[-_][A-Z0-9]+)+|\d{4}-\d{4,})/i);
+  const match =
+    ev.titulo.match(/(?:RAD-\d{4}-\d+|[A-Z0-9]+(?:[-_][A-Z0-9]+)+|\d{4}-\d{4,})/i) ||
+    ev.descripcion.match(/(?:RAD-\d{4}-\d+|[A-Z0-9]+(?:[-_][A-Z0-9]+)+|\d{4}-\d{4,})/i);
   if (match) return match[0];
   if (ev.tipo === 'peticion') return `PQRS-${ev.id.slice(0, 6)}`;
-  if (ev.tipo === 'reporte') return `REP-${ev.id.slice(0, 6)}`;
-  if (ev.tipo === 'colegiado') return `CSU-${ev.id.slice(0, 6)}`;
-  return `ACT-${ev.id.slice(0, 6)}`;
+  return `AGD-${ev.id.slice(0, 6)}`;
 }
 
 /**
@@ -572,9 +597,10 @@ function renderMonthView() {
     const dayEvents = events.filter((e) => e.fecha === dateStr);
     const isToday = dateStr === todayStr;
     const isSelected = dateStr === selectedDayStr;
+    const isHighlighted = activeSlaFilter !== 'all' && dayEvents.length > 0;
 
     const cell = document.createElement('div');
-    cell.className = `gcal-cell ${isToday ? 'today' : ''} ${isSelected ? 'is-selected' : ''}`;
+    cell.className = `gcal-cell ${isToday ? 'today' : ''} ${isSelected ? 'is-selected' : ''} ${isHighlighted ? `is-filter-highlighted filter-${activeSlaFilter}` : ''}`;
     cell.setAttribute('data-day', dateStr);
 
     // Indicador visual de puntos de semáforo

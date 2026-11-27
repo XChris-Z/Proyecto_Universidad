@@ -1,14 +1,24 @@
 // src/lib/calendar.ts
-// Servicio de integración en tiempo real con Google Calendar API y Supabase
+// Servicio de integración en tiempo real con Google Calendar API y Supabase (fuente exclusiva de Peticiones Radicadas)
 
 import { supabase } from '@lib/supabase';
 import {
   isPeticionRespondida,
   isAuditLogOfficialResponse,
-  getSlaBucket,
   separarRespuestaMeta,
 } from '@lib/subcarpetas';
 import type { CalendarioEvent, CalendarioEventType, EventUrgency } from '@lib/types';
+
+export type AgendaCategoria = 'completado' | 'critico' | 'proximo' | 'seguro';
+
+export function getTodayBogotaYmd(): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Bogota',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+}
 
 /**
  * Obtiene el token de acceso de Google OAuth desde sessionStorage o perfil en Supabase
@@ -16,16 +26,16 @@ import type { CalendarioEvent, CalendarioEventType, EventUrgency } from '@lib/ty
 export async function getGoogleAccessToken(userId?: string): Promise<string | null> {
   if (typeof window === 'undefined') return null;
 
-  // 1. Verificar sessionStorage
   let token = sessionStorage.getItem('google_provider_token');
   if (token) return token;
 
-  // 2. Verificar perfil del usuario en Supabase
   try {
     const rawUser = localStorage.getItem('sgd_current_user');
     let uid = userId;
     if (!uid && rawUser) {
-      try { uid = JSON.parse(rawUser).id; } catch(e) {}
+      try {
+        uid = JSON.parse(rawUser).id;
+      } catch {}
     }
     uid = uid || 'usr-root';
 
@@ -51,55 +61,82 @@ export async function getGoogleAccessToken(userId?: string): Promise<string | nu
  */
 export function normalizeCalendarDate(raw?: string | null): string {
   if (!raw) return '';
-  const match = String(raw).match(/^(\d{4}-\d{2}-\d{2})/);
+  const match = String(raw).trim().match(/^(\d{4}-\d{2}-\d{2})/);
   return match?.[1] ?? '';
 }
 
-function subtractCalendarDays(dateStr: string, days: number): string {
-  const clean = normalizeCalendarDate(dateStr);
-  if (!clean) return '';
-  const parts = clean.split('-');
-  const y = parseInt(parts[0] || '2026', 10);
-  const m = parseInt(parts[1] || '1', 10) - 1;
-  const d = parseInt(parts[2] || '1', 10);
-  const dt = new Date(y, m, d - days);
-  const yy = dt.getFullYear();
-  const mm = String(dt.getMonth() + 1).padStart(2, '0');
-  const dd = String(dt.getDate()).padStart(2, '0');
-  return `${yy}-${mm}-${dd}`;
-}
-
 /**
- * Calcula la urgencia y días restantes según la fecha límite respecto a hoy
+ * Calcula los días calendario respecto a hoy (zona horaria America/Bogota)
  */
-export function calculateEventUrgency(targetDateStr: string): { diasRestantes: number; urgencia: EventUrgency } {
+export function calculateEventUrgency(
+  targetDateStr: string,
+  hoyYmd?: string
+): { diasRestantes: number; urgencia: EventUrgency } {
   const cleanDate = normalizeCalendarDate(targetDateStr);
   if (!cleanDate) {
     return { diasRestantes: 999, urgencia: 'safe' };
   }
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const baseYmd = normalizeCalendarDate(hoyYmd) || getTodayBogotaYmd();
+  const targetMs = Date.parse(`${cleanDate}T00:00:00Z`);
+  const baseMs = Date.parse(`${baseYmd}T00:00:00Z`);
+  const diffDays = Math.round((targetMs - baseMs) / 86_400_000);
 
-  const parts = cleanDate.split('-');
-  const y = parseInt(parts[0] || '2026', 10);
-  const m = parseInt(parts[1] || '1', 10) - 1;
-  const d = parseInt(parts[2] || '1', 10);
-  const target = new Date(y, m, d);
-  target.setHours(0, 0, 0, 0);
-
-  const diffTime = target.getTime() - today.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-  const bucket = getSlaBucket(diffDays);
   const urgencia: EventUrgency =
-    bucket === 'critical' ? 'danger' : bucket === 'warn' ? 'warning' : 'safe';
+    diffDays <= 0 ? 'danger' : diffDays <= 5 ? 'warning' : 'safe';
 
   return { diasRestantes: diffDays, urgencia };
 }
 
 /**
- * Clasifica la categoría institucional de un evento según palabras clave
+ * FUNCIÓN ÚNICA Y AUTORITATIVA DE CLASIFICACIÓN DE ESTADO EN AGENDA
+ * Fuente única de verdad para KPIs superiores, Calendario y Panel Derecho.
+ */
+export function clasificarEstadoAgenda(
+  item: {
+    completada?: boolean;
+    estado?: string | null;
+    urgencia?: EventUrgency;
+    diasRestantes?: number;
+    fecha?: string;
+  },
+  hoyYmd?: string
+): AgendaCategoria {
+  const st = String(item?.estado || '').toLowerCase().trim();
+  if (
+    item?.completada === true ||
+    item?.urgencia === 'completed' ||
+    st === 'respondida' ||
+    st === 'respondido' ||
+    st === 'completada' ||
+    st === 'completado' ||
+    st === 'cerrada' ||
+    st === 'cerrado' ||
+    st === 'resuelta' ||
+    st === 'finalizada'
+  ) {
+    return 'completado';
+  }
+
+  const dias =
+    typeof item?.diasRestantes === 'number' && Number.isFinite(item.diasRestantes)
+      ? item.diasRestantes
+      : calculateEventUrgency(item?.fecha || '', hoyYmd).diasRestantes;
+
+  if (dias <= 0) return 'critico';
+  if (dias <= 5) return 'proximo';
+  return 'seguro';
+}
+
+export function categoriaToUrgency(cat: AgendaCategoria): EventUrgency {
+  if (cat === 'completado') return 'completed';
+  if (cat === 'critico') return 'danger';
+  if (cat === 'proximo') return 'warning';
+  return 'safe';
+}
+
+/**
+ * Clasifica la categoría institucional de un evento manual de Google Calendar
  */
 export function categorizeEvent(title: string = '', desc: string = ''): CalendarioEventType {
   const text = `${title} ${desc}`.toLowerCase();
@@ -120,7 +157,7 @@ export function categorizeEvent(title: string = '', desc: string = ''): Calendar
 }
 
 /**
- * Consulta eventos reales directamente desde la API oficial de Google Calendar
+ * Consulta compromisos creados en Google Calendar (si está vinculado)
  */
 export async function fetchGoogleCalendarEvents(
   timeMin?: string,
@@ -163,13 +200,16 @@ export async function fetchGoogleCalendarEvents(
 
     const data = await response.json();
     const items = data.items || [];
+    const hoyYmd = getTodayBogotaYmd();
 
     const mappedEvents: CalendarioEvent[] = items.map((item: any) => {
       const dateStr = item.start?.dateTime
         ? item.start.dateTime.slice(0, 10)
         : item.start?.date || '';
 
-      const { diasRestantes, urgencia } = calculateEventUrgency(dateStr);
+      const { diasRestantes } = calculateEventUrgency(dateStr, hoyYmd);
+      const categoria = clasificarEstadoAgenda({ fecha: dateStr, diasRestantes, completada: false }, hoyYmd);
+      const urgencia = categoriaToUrgency(categoria);
       const tipo = categorizeEvent(item.summary, item.description);
 
       const hora = item.start?.dateTime
@@ -185,6 +225,7 @@ export async function fetchGoogleCalendarEvents(
         responsable: item.organizer?.displayName || item.organizer?.email || 'Institucional',
         urgencia,
         diasRestantes,
+        completada: false,
         descripcion: item.description || '',
         link: item.htmlLink,
         hora,
@@ -199,13 +240,14 @@ export async function fetchGoogleCalendarEvents(
 }
 
 /**
- * Consulta fechas límites y compromisos oficiales reales registrados en Supabase
+ * Consulta EXCLUSIVAMENTE fechas límites de Peticiones Radicadas (`public.peticiones`).
+ * Sin auto-importación de otros módulos (colegiados_normas, convenios, miembros_consejo, etc.).
  */
 export async function fetchSupabaseDeadlines(): Promise<CalendarioEvent[]> {
   const events: CalendarioEvent[] = [];
+  const hoyYmd = getTodayBogotaYmd();
 
   try {
-    // 1. Peticiones institucionales (activas y completadas) sin joins frágiles ni columnas inexistentes
     const [petRes, anexosRes, auditRes, respRes] = await Promise.all([
       (supabase
         .from('peticiones' as any)
@@ -220,7 +262,7 @@ export async function fetchSupabaseDeadlines(): Promise<CalendarioEvent[]> {
         .limit(450) as any),
       (supabase
         .from('peticion_responsables' as any)
-        .select('peticion_id, estado') as any),
+        .select('peticion_id') as any),
     ]);
 
     const peticiones = petRes?.data || [];
@@ -244,8 +286,8 @@ export async function fetchSupabaseDeadlines(): Promise<CalendarioEvent[]> {
       return t === 'RESPUESTA' || t === 'GESTION' || String(l?.action || '').includes('EXPEDIENTE_COMPLETO');
     });
 
-    if (petitionsHasActiveRows(peticiones)) {
-      (peticiones || []).forEach((pet: any) => {
+    if (Array.isArray(peticiones) && peticiones.length > 0) {
+      peticiones.forEach((pet: any) => {
         const auditMatch = auditRespLogs.some((log: any) =>
           isAuditLogOfficialResponse(log, pet)
         );
@@ -273,11 +315,17 @@ export async function fetchSupabaseDeadlines(): Promise<CalendarioEvent[]> {
         const destinoTxt = depCount > 0 ? `${depCount} dependencia(s) asignadas` : 'Expediente Institucional';
 
         if (entregaFecha) {
-          const { diasRestantes, urgencia: rawUrgencia } = calculateEventUrgency(entregaFecha);
-          const urgencia: EventUrgency = completada ? 'completed' : rawUrgencia;
+          const { diasRestantes } = calculateEventUrgency(entregaFecha, hoyYmd);
+          const categoria = clasificarEstadoAgenda(
+            { completada, estado: pet.estado, diasRestantes, fecha: entregaFecha },
+            hoyYmd
+          );
+          const urgencia = categoriaToUrgency(categoria);
+          const isDone = categoria === 'completado';
+
           events.push({
             id: `pet-${pet.id}`,
-            titulo: completada
+            titulo: isDone
               ? `Completado ${pet.numero_radicado}: ${pet.asunto}`
               : `Vence Radicado ${pet.numero_radicado}: ${pet.asunto}`,
             tipo: 'peticion',
@@ -285,21 +333,28 @@ export async function fetchSupabaseDeadlines(): Promise<CalendarioEvent[]> {
             destino: destinoTxt,
             responsable: pet.solicitante_nombre || 'SGD Unitrópico',
             urgencia,
-            diasRestantes: completada ? Math.max(diasRestantes, 1) : diasRestantes,
-            completada,
-            descripcion: completada
+            diasRestantes: isDone ? Math.max(diasRestantes, 1) : diasRestantes,
+            completada: isDone,
+            descripcion: isDone
               ? `Expediente completado y archivado institucionalmente (límite ${entregaFecha}).`
               : `Petición oficial con plazo de entrega hasta el ${entregaFecha}.`,
             link: radicadoUrl,
-            hora: completada ? 'Expediente Completo' : '17:00 (Cierre de Despacho)',
+            hora: isDone ? 'Expediente Completo' : '17:00 (Cierre de Despacho)',
           });
         }
 
-        const depFecha = normalizeCalendarDate(pet.fecha_limite_responsable) ||
+        const depFecha =
+          normalizeCalendarDate(pet.fecha_limite_responsable) ||
           normalizeCalendarDate(ultimaProrroga?.nueva_fecha_responsable);
 
         if (!completada && depFecha && depFecha !== entregaFecha) {
-          const { diasRestantes, urgencia } = calculateEventUrgency(depFecha);
+          const { diasRestantes } = calculateEventUrgency(depFecha, hoyYmd);
+          const categoria = clasificarEstadoAgenda(
+            { completada: false, estado: pet.estado, diasRestantes, fecha: depFecha },
+            hoyYmd
+          );
+          const urgencia = categoriaToUrgency(categoria);
+
           events.push({
             id: `pet-dep-${pet.id}`,
             titulo: `Límite Dependencias ${pet.numero_radicado}: ${pet.asunto}`,
@@ -317,70 +372,13 @@ export async function fetchSupabaseDeadlines(): Promise<CalendarioEvent[]> {
         }
       });
     } else if (petError) {
-      console.warn('Aviso consultando peticiones para calendario:', petError.message);
-    }
-
-    // 2. Convenios interinstitucionales con fecha de finalización
-    const { data: convenios } = await supabase
-      .from('convenios')
-      .select('id, numero, entidad, fin, supervisor, objeto')
-      .not('fin', 'is', null);
-
-    if (convenios && convenios.length > 0) {
-      convenios.forEach((conv: any) => {
-        const finFecha = normalizeCalendarDate(conv.fin);
-        if (finFecha) {
-          const { diasRestantes, urgencia } = calculateEventUrgency(finFecha);
-          events.push({
-            id: `conv-${conv.id}`,
-            titulo: `Vencimiento Convenio ${conv.numero}: ${conv.entidad}`,
-            tipo: 'reporte',
-            fecha: finFecha,
-            destino: conv.entidad,
-            responsable: conv.supervisor || 'Dirección de Planeación',
-            urgencia,
-            diasRestantes,
-            descripcion: conv.objeto || 'Fecha límite para liquidación o prórroga de convenio.',
-            link: '/planeacion',
-            hora: 'Todo el día',
-          });
-        }
-      });
-    }
-
-    // 3. Cuerpos Colegiados (Normas y Sesiones)
-    const { data: colegiados } = await supabase
-      .from('colegiados_normas')
-      .select('id, numero, organo, fecha, titulo')
-      .not('fecha', 'is', null)
-      .limit(20);
-
-    if (colegiados && colegiados.length > 0) {
-      colegiados.forEach((col: any) => {
-        const colFecha = normalizeCalendarDate(col.fecha);
-        if (colFecha) {
-          const { diasRestantes, urgencia } = calculateEventUrgency(colFecha);
-          events.push({
-            id: `col-${col.id}`,
-            titulo: `Sesión / Norma ${col.organo}: ${col.numero} - ${col.titulo}`,
-            tipo: 'colegiado',
-            fecha: colFecha,
-            destino: col.organo,
-            responsable: 'Secretaría General',
-            urgencia,
-            diasRestantes,
-            descripcion: col.titulo,
-            link: '/colegiados',
-            hora: '09:00',
-          });
-        }
-      });
+      console.warn('Aviso consultando peticiones para agenda:', petError.message);
     }
   } catch (err) {
-    console.warn('Error cargando fechas de Supabase:', err);
+    console.warn('Error cargando fechas de Peticiones desde Supabase:', err);
   }
 
-  // Fallback / mezcla segura con datos SSR incrustados si el navegador tiene restricciones RLS anon
+  // Fallback / mezcla segura con datos SSR incrustados (solo eventos de peticiones)
   if (typeof document !== 'undefined') {
     const ssrEl = document.getElementById('calendario-ssr-events');
     if (ssrEl?.textContent) {
@@ -389,7 +387,7 @@ export async function fetchSupabaseDeadlines(): Promise<CalendarioEvent[]> {
         if (Array.isArray(ssrList) && ssrList.length > 0) {
           const existingIds = new Set(events.map((e) => e.id));
           ssrList.forEach((ev) => {
-            if (ev?.id && !existingIds.has(ev.id)) {
+            if (ev?.id && ev.tipo === 'peticion' && !existingIds.has(ev.id)) {
               events.push(ev);
               existingIds.add(ev.id);
             }
@@ -402,16 +400,9 @@ export async function fetchSupabaseDeadlines(): Promise<CalendarioEvent[]> {
   return events;
 }
 
-function petitionsHasActiveRows(rows: any[] | null | undefined): boolean {
-  return Array.isArray(rows) && rows.length > 0;
-}
-
 /**
- * Obtiene la lista unificada de eventos (Google Calendar + Base de Datos Real)
- */
-/**
- * Calcula los contadores del semáforo SLA sobre peticiones activas únicas,
- * evitando doble conteo entre expiración general (pet-) y límite de oficinas (pet-dep-).
+ * Calcula los 4 contadores directamente sobre el arreglo clasificado mostrado en Calendario y Panel Derecho,
+ * garantizando coincidencia 100% exacta entre tarjetas KPI, calendario y "Vencimientos y Entregas".
  */
 export function computeActivePeticionSlaCounts(events: CalendarioEvent[]): {
   critCount: number;
@@ -419,39 +410,18 @@ export function computeActivePeticionSlaCounts(events: CalendarioEvent[]): {
   safeCount: number;
   completedCount: number;
 } {
-  const petUrgencies = new Map<string, EventUrgency>();
-
-  (events || []).forEach((ev) => {
-    if (!ev || ev.tipo !== 'peticion') return;
-    if (String(ev.id || '').startsWith('pet-dep-')) return;
-    const key = String(ev.id || '').startsWith('pet-')
-      ? String(ev.id).slice(4)
-      : String(ev.id || '');
-    if (!key) return;
-    if (!petUrgencies.has(key)) {
-      petUrgencies.set(key, ev.completada ? 'completed' : ev.urgencia);
-    }
-  });
-
-  // Fallback si existe pet-dep-<id> sin su evento general pet-<id>
-  (events || []).forEach((ev) => {
-    if (!ev || ev.tipo !== 'peticion') return;
-    if (!String(ev.id || '').startsWith('pet-dep-')) return;
-    const key = String(ev.id).slice(8);
-    if (key && !petUrgencies.has(key)) {
-      petUrgencies.set(key, ev.completada ? 'completed' : ev.urgencia);
-    }
-  });
-
+  const hoyYmd = getTodayBogotaYmd();
   let critCount = 0;
   let warnCount = 0;
   let safeCount = 0;
   let completedCount = 0;
 
-  petUrgencies.forEach((urg) => {
-    if (urg === 'completed') completedCount++;
-    else if (urg === 'danger') critCount++;
-    else if (urg === 'warning') warnCount++;
+  (events || []).forEach((ev) => {
+    if (!ev) return;
+    const cat = clasificarEstadoAgenda(ev, hoyYmd);
+    if (cat === 'completado') completedCount++;
+    else if (cat === 'critico') critCount++;
+    else if (cat === 'proximo') warnCount++;
     else safeCount++;
   });
 
@@ -475,10 +445,16 @@ export async function getUnifiedCalendarEvents(
     fetchSupabaseDeadlines(),
   ]);
 
-  // Unificar eventos
-  const allEvents = [...googleRes.events, ...supabaseEvents];
+  const hoyYmd = getTodayBogotaYmd();
+  const allEvents = [...googleRes.events, ...supabaseEvents].map((ev) => {
+    const cat = clasificarEstadoAgenda(ev, hoyYmd);
+    return {
+      ...ev,
+      completada: cat === 'completado',
+      urgencia: categoriaToUrgency(cat),
+    };
+  });
 
-  // Ordenar cronológicamente
   allEvents.sort((a, b) => a.fecha.localeCompare(b.fecha));
 
   const { critCount, warnCount, safeCount, completedCount } = computeActivePeticionSlaCounts(allEvents);
@@ -495,7 +471,7 @@ export async function getUnifiedCalendarEvents(
 }
 
 /**
- * Agendar un nuevo evento en Google Calendar si está autenticado
+ * Agendar un nuevo evento manual en Google Calendar si está autenticado
  */
 export async function createGoogleCalendarEvent(eventData: {
   titulo: string;
@@ -547,7 +523,9 @@ export async function connectGoogleCalendar(userId?: string): Promise<void> {
   const rawUser = localStorage.getItem('sgd_current_user');
   let uid = userId;
   if (!uid && rawUser) {
-    try { uid = JSON.parse(rawUser).id; } catch(e) {}
+    try {
+      uid = JSON.parse(rawUser).id;
+    } catch {}
   }
   uid = uid || 'usr-root';
 
@@ -561,7 +539,9 @@ export async function disconnectGoogleCalendar(userId?: string): Promise<boolean
   const rawUser = localStorage.getItem('sgd_current_user');
   let uid = userId;
   if (!uid && rawUser) {
-    try { uid = JSON.parse(rawUser).id; } catch(e) {}
+    try {
+      uid = JSON.parse(rawUser).id;
+    } catch {}
   }
   uid = uid || 'usr-root';
 
