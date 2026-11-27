@@ -60,6 +60,33 @@ export function initRelacionamiento() {
 
   searchInput?.addEventListener('input', filterConvenios);
 
+  function formatCuantiaInputValue(rawValue: string): string {
+    const clean = rawValue.trim();
+    if (!clean) return '';
+    const withoutPrefix = clean.replace(/COP/gi, '').replace(/\$/g, '').trim();
+    if (/^[\d.\s]+$/.test(withoutPrefix)) {
+      const digits = withoutPrefix.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+      if (!digits || digits === '0') return '';
+      return `$ ${digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
+    }
+    return clean;
+  }
+
+  const cuantiaInput = document.getElementById('input-conv-cuantia') as HTMLInputElement | null;
+  const inicioInput = document.getElementById('input-conv-inicio') as HTMLInputElement | null;
+  const finInput = document.getElementById('input-conv-fin') as HTMLInputElement | null;
+
+  cuantiaInput?.addEventListener('blur', () => {
+    const formatted = formatCuantiaInputValue(cuantiaInput.value);
+    if (formatted) cuantiaInput.value = formatted;
+  });
+
+  inicioInput?.addEventListener('change', () => {
+    if (finInput && inicioInput.value) {
+      finInput.min = inicioInput.value;
+    }
+  });
+
   // Guardar convenio en Supabase
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -67,10 +94,17 @@ export function initRelacionamiento() {
     const numero = (document.getElementById('input-conv-numero') as HTMLInputElement).value.trim();
     const entidad = (document.getElementById('input-conv-entidad') as HTMLInputElement).value.trim();
     const objeto = (document.getElementById('input-conv-objeto') as HTMLTextAreaElement).value.trim();
-    const inicio = (document.getElementById('input-conv-inicio') as HTMLInputElement).value;
-    const fin = (document.getElementById('input-conv-fin') as HTMLInputElement).value;
+    const inicio = inicioInput?.value || '';
+    const fin = finInput?.value || '';
     const supervisor = (document.getElementById('input-conv-supervisor') as HTMLInputElement).value.trim() || 'Secretaría General';
-    const cuantia = (document.getElementById('input-conv-cuantia') as HTMLInputElement).value.trim() || 'Sin cuantía';
+    const rawCuantia = cuantiaInput?.value.trim() || '';
+    const cuantia = rawCuantia ? formatCuantiaInputValue(rawCuantia) : 'Sin cuantía';
+
+    if (inicio && fin && fin < inicio) {
+      (window as any).showToast?.('La fecha de terminación debe ser igual o posterior a la fecha de inicio.', 'error');
+      finInput?.focus();
+      return;
+    }
 
     let tipoLabel = 'Cooperación Nacional';
     if (tipo === 'gubernamental') tipoLabel = 'Ente Gubernamental';

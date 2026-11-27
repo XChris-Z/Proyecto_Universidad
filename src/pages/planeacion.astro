@@ -98,8 +98,8 @@ const countRec = informesList.filter((i: any) => i.tipo === 'rectoral').length;
 
   <!-- Modal: Radicar Informe de Planeación ante CSU -->
   <div class="modal-backdrop" id="new-planeacion-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(2px);">
-    <div class="modal-card" style="background: #ffffff; width: 100%; max-width: 620px; border-radius: 16px; box-shadow: 0 20px 45px rgba(0,0,0,0.2); overflow: hidden; border-top: 4px solid #00594E;">
-      <div class="modal-header" style="background: #F2F7F6; border-bottom: 1.5px solid #DCE4E3; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
+    <div class="modal-card plan-modal-card" style="background: #ffffff; width: 100%; max-width: 640px; max-height: 92vh; overflow-y: auto; border-radius: 16px; box-shadow: 0 20px 45px rgba(0,0,0,0.2); border-top: 4px solid #00594E;">
+      <div class="modal-header" style="background: #F2F7F6; border-bottom: 1.5px solid #DCE4E3; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 5;">
         <h3 style="font-size: 1.15rem; font-weight: 800; color: #00594E; margin: 0; display: flex; align-items: center; gap: 8px;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
           <span>Radicar Informe ante el Consejo Superior (CSU)</span>
@@ -107,51 +107,94 @@ const countRec = informesList.filter((i: any) => i.tipo === 'rectoral').length;
         <button type="button" class="btn-close-modal" id="btn-close-plan-modal" style="background: transparent; border: none; font-size: 1.5rem; color: #64748B; cursor: pointer; line-height: 1;">&times;</button>
       </div>
 
-      <form id="form-new-planeacion" style="padding: 24px; display: flex; flex-direction: column; gap: 14px;">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-          <div class="form-group">
-            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Tipo de Informe *</label>
-            <select id="new-plan-tipo" class="form-input" style="cursor: pointer; border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem;" required>
-              <option value="financiero" selected>Informe Financiero Mensual CSU</option>
-              <option value="rectoral">Informe de Gestión Rectoral PDI</option>
-            </select>
+      <form id="form-new-planeacion" class="plan-modal-form">
+        <!-- Sección 1: Datos del Informe y Período con Calendario -->
+        <div class="plan-modal-section">
+          <div class="plan-section-heading">
+            <span class="plan-section-dot"></span>
+            <span>Datos del Informe</span>
           </div>
-          <div class="form-group">
-            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Período / Vigencia *</label>
-            <input type="text" id="new-plan-periodo" class="form-input" placeholder="Ej: Octubre 2026 / Vigencia 2026" style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem;" required />
+
+          <div class="plan-grid-2">
+            <div class="form-group">
+              <label for="new-plan-tipo" class="plan-field-label">Tipo de Informe *</label>
+              <select id="new-plan-tipo" class="form-input plan-field-input" style="cursor: pointer;" required>
+                <option value="financiero" selected>Informe Financiero Mensual CSU</option>
+                <option value="rectoral">Informe de Gestión Rectoral PDI</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="new-plan-radicado" class="plan-field-label">Radicado ante CSU</label>
+              <input type="text" id="new-plan-radicado" class="form-input plan-field-input" placeholder="Ej: CSU-INF-2026-012" />
+            </div>
+          </div>
+
+          <div class="plan-period-calendar-box">
+            <div class="plan-period-calendar-header">
+              <span class="plan-field-label" style="margin: 0; color: #00594E;">Período / Vigencia con Calendario *</span>
+              <span id="new-plan-periodo-preview" class="plan-period-preview-chip">Seleccione rango de fechas</span>
+            </div>
+            <div class="plan-grid-2">
+              <div class="form-group">
+                <label for="new-plan-fecha-inicio" class="plan-field-label">Fecha de Inicio del Período *</label>
+                <input type="date" id="new-plan-fecha-inicio" class="form-input plan-field-input" required />
+              </div>
+              <div class="form-group">
+                <label for="new-plan-fecha-fin" class="plan-field-label">Fecha de Corte / Fin *</label>
+                <input type="date" id="new-plan-fecha-fin" class="form-input plan-field-input" required />
+              </div>
+            </div>
           </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-          <div class="form-group">
-            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Radicado ante CSU</label>
-            <input type="text" id="new-plan-radicado" class="form-input" placeholder="Ej: CSU-INF-2026-012" style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem;" />
+        <!-- Sección 2: Resumen Financiero -->
+        <div class="plan-financial-card">
+          <div class="plan-section-heading">
+            <span class="plan-section-dot"></span>
+            <span>Resumen Financiero</span>
           </div>
-          <div class="form-group">
-            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">% Ejecución Presupuestal</label>
-            <input type="number" id="new-plan-ejecucion" class="form-input" min="0" max="100" value="0" style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem;" />
+
+          <div class="plan-grid-2">
+            <div class="form-group">
+              <label for="new-plan-ingresos" class="plan-field-label">Ingresos Totales (COP)</label>
+              <div class="plan-affix-wrap">
+                <span class="plan-prefix-symbol" aria-hidden="true">$</span>
+                <input type="text" inputmode="numeric" id="new-plan-ingresos" class="form-input plan-field-input has-prefix" placeholder="4.250.000.000" autocomplete="off" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="new-plan-gastos" class="plan-field-label">Gastos Ejecutados (COP)</label>
+              <div class="plan-affix-wrap">
+                <span class="plan-prefix-symbol" aria-hidden="true">$</span>
+                <input type="text" inputmode="numeric" id="new-plan-gastos" class="form-input plan-field-input has-prefix" placeholder="3.890.000.000" autocomplete="off" />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 2px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 5px;">
+              <label for="new-plan-ejecucion" class="plan-field-label" style="margin: 0;">% Ejecución Presupuestal</label>
+              <span id="new-plan-ejecucion-badge" class="plan-pct-live-label">0% ejecutado</span>
+            </div>
+            <div class="plan-affix-wrap">
+              <input type="number" id="new-plan-ejecucion" class="form-input plan-field-input has-suffix" min="0" max="100" step="0.1" value="0" />
+              <span class="plan-suffix-symbol" aria-hidden="true">%</span>
+            </div>
+            <div class="plan-mini-progress-track" aria-hidden="true">
+              <div id="new-plan-ejecucion-bar" class="plan-mini-progress-fill" style="width: 0%;"></div>
+            </div>
           </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-          <div class="form-group">
-            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Ingresos Totales (COP)</label>
-            <input type="text" id="new-plan-ingresos" class="form-input" placeholder="Ej: $4.250.000.000" style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem;" />
-          </div>
-          <div class="form-group">
-            <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Gastos Ejecutados (COP)</label>
-            <input type="text" id="new-plan-gastos" class="form-input" placeholder="Ej: $3.890.000.000" style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem;" />
-          </div>
-        </div>
-
+        <!-- Sección 3: Resumen Ejecutivo -->
         <div class="form-group">
-          <label style="font-size: 0.74rem; font-weight: 750; color: #52606D; text-transform: uppercase;">Resumen Ejecutivo / Observaciones</label>
-          <textarea id="new-plan-observaciones" class="form-input" rows="3" placeholder="Síntesis de los logros alcanzados y ejecución reportada al Consejo Superior..." style="border-radius: 8px; border: 1.5px solid #DCE4E3; padding: 8px 12px; font-size: 0.82rem;"></textarea>
+          <label for="new-plan-observaciones" class="plan-field-label">Resumen Ejecutivo / Observaciones</label>
+          <textarea id="new-plan-observaciones" class="form-input plan-field-input" rows="3" placeholder="Síntesis de los logros alcanzados y ejecución reportada al Consejo Superior..." style="resize: vertical; min-height: 82px; line-height: 1.5;"></textarea>
         </div>
 
-        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; padding-top: 14px; border-top: 1px solid #DCE4E3;">
-          <button type="button" class="btn btn-secondary" id="btn-cancel-plan" style="border: 1.5px solid #DCE4E3; color: #52606D; background: #ffffff; font-weight: 700; border-radius: 8px; padding: 8px 16px; cursor: pointer;">Cancelar</button>
-          <button type="submit" class="btn btn-primary" id="btn-submit-plan" style="background: #00594E; border: none; color: #ffffff; font-weight: 800; border-radius: 8px; padding: 9px 20px; cursor: pointer; box-shadow: 0 2px 6px rgba(0,89,78,0.25);">
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; padding-top: 14px; border-top: 1px solid #DCE4E3;">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-plan" style="border: 1.5px solid #DCE4E3; color: #52606D; background: #ffffff; font-weight: 700; border-radius: 8px; padding: 9px 18px; cursor: pointer;">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-plan" style="background: #00594E; border: none; color: #ffffff; font-weight: 800; border-radius: 8px; padding: 9px 22px; cursor: pointer; box-shadow: 0 2px 6px rgba(0,89,78,0.25);">
             Radicar Informe
           </button>
         </div>
@@ -159,6 +202,185 @@ const countRec = informesList.filter((i: any) => i.tipo === 'rectoral').length;
     </div>
   </div>
 </AppLayout>
+
+<style>
+  .plan-modal-form {
+    padding: 20px 24px 24px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .plan-modal-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .plan-financial-card {
+    background: #F8FAFB;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .plan-section-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #00594E;
+  }
+
+  .plan-section-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: #00594E;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+
+  .plan-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .plan-field-label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 750;
+    color: #52606D;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    margin-bottom: 5px;
+  }
+
+  .plan-field-input {
+    width: 100%;
+    box-sizing: border-box;
+    border-radius: 8px;
+    border: 1.5px solid #DCE4E3;
+    padding: 9px 12px;
+    font-size: 0.84rem;
+    background: #FFFFFF;
+    color: #0F172A;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  .plan-field-input:focus {
+    outline: none;
+    border-color: #00594E;
+    box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.12);
+  }
+
+  .plan-period-calendar-box {
+    background: #F4F8F7;
+    border: 1px solid #D5E4E0;
+    border-radius: 10px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .plan-period-calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .plan-period-preview-chip {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #00594E;
+    background: #FFFFFF;
+    border: 1px solid #B2CFCB;
+    padding: 2px 9px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  .plan-affix-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+  }
+
+  .plan-prefix-symbol {
+    position: absolute;
+    left: 12px;
+    font-weight: 800;
+    font-size: 0.86rem;
+    color: #00594E;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .plan-suffix-symbol {
+    position: absolute;
+    right: 12px;
+    font-weight: 800;
+    font-size: 0.84rem;
+    color: #52606D;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .plan-field-input.has-prefix {
+    padding-left: 28px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+
+  .plan-field-input.has-suffix {
+    padding-right: 32px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+  }
+
+  .plan-pct-live-label {
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #00594E;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .plan-mini-progress-track {
+    width: 100%;
+    height: 7px;
+    background: #E2E8F0;
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 7px;
+  }
+
+  .plan-mini-progress-fill {
+    height: 100%;
+    background: #00594E;
+    border-radius: 999px;
+    transition: width 0.2s ease;
+  }
+
+  @media (max-width: 580px) {
+    .plan-grid-2 {
+      grid-template-columns: 1fr;
+    }
+    .plan-modal-form {
+      padding: 16px;
+    }
+  }
+</style>
 
 <script>
   import { initPlaneacion } from '@scripts/planeacion';

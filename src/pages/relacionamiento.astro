@@ -15,6 +15,76 @@ const totalCount = conveniosList.length;
 const gobCount = conveniosList.filter((c: any) => c.tipo === 'gubernamental').length;
 const intCount = conveniosList.filter((c: any) => c.tipo === 'internacional').length;
 const nalCount = conveniosList.filter((c: any) => c.tipo === 'nacional').length;
+
+const LOWERCASE_CONNECTORS = new Set(['de', 'del', 'la', 'las', 'el', 'los', 'y', 'e', 'o', 'u', 'en', 'con', 'para', 'por', 'a', 'al']);
+
+function formatEntityOrPersonName(raw?: string | null, fallback = ''): string {
+  const clean = String(raw || '').trim().replace(/\s+/g, ' ');
+  if (!clean) return fallback;
+  return clean
+    .split(' ')
+    .map((word, idx) => {
+      if (!word) return '';
+      if (/^[A-ZÁÉÍÓÚÑ0-9.-]{2,}$/.test(word) && /[A-ZÁÉÍÓÚÑ]/.test(word)) {
+        return word;
+      }
+      const lower = word.toLowerCase();
+      if (idx > 0 && LOWERCASE_CONNECTORS.has(lower)) {
+        return lower;
+      }
+      if (word !== lower && /[A-ZÁÉÍÓÚÑ]/.test(word.charAt(0))) {
+        return word;
+      }
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
+    })
+    .join(' ');
+}
+
+function formatSentenceText(raw?: string | null): string {
+  const clean = String(raw || '').trim();
+  if (!clean) return 'Sin objeto especificado.';
+  return clean.charAt(0).toUpperCase() + clean.slice(1);
+}
+
+function formatCopCuantia(raw?: string | number | null): string {
+  const str = String(raw ?? '').trim();
+  if (!str || /^sin\s*cuant[ií]a$/i.test(str) || str === '0') {
+    return 'Sin cuantía';
+  }
+  const stripped = str.replace(/COP/gi, '').replace(/\$/g, '').trim();
+  if (/^[\d.\s,]+$/.test(stripped)) {
+    const digitsOnly = stripped.replace(/[^\d]/g, '').replace(/^0+(?=\d)/, '');
+    if (digitsOnly && digitsOnly !== '0') {
+      return `$ ${digitsOnly.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
+    }
+    return 'Sin cuantía';
+  }
+  return str;
+}
+
+const SHORT_MONTHS_ES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+function formatVigenciaDate(dateStr?: string | null): string {
+  if (!dateStr) return 'N/D';
+  const match = String(dateStr).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    const [, year, month, day] = match;
+    const mIdx = parseInt(month!, 10) - 1;
+    const monthAbbr = SHORT_MONTHS_ES[mIdx] || month;
+    return `${day} ${monthAbbr} ${year}`;
+  }
+  try {
+    return formatNiceDate(String(dateStr).slice(0, 10)).replace(/\./g, '').replace(/\s+/g, ' ').trim();
+  } catch {
+    return String(dateStr);
+  }
+}
+
+function formatConvenioCode(numero?: string | null): string {
+  const clean = String(numero || '').trim();
+  if (!clean) return '#SIN-NUM';
+  return clean.startsWith('#') ? clean : `#${clean}`;
+}
 ---
 
 <AppLayout title="Relacionamiento Institucional y Convenios" activeNav="relacionamiento">
@@ -71,55 +141,74 @@ const nalCount = conveniosList.filter((c: any) => c.tipo === 'nacional').length;
     </div>
 
     <!-- Tarjeta Contenedora Principal con Scrollbar Interna Propia -->
-    <div class="table-wrapper" style="padding: 16px;">
-      <div class="pro-scroll-container records-card-body" style="max-height: 580px; overflow-y: auto; overflow-x: auto; width: 100%; padding: 4px;">
-        <div class="convenios-grid" id="convenios-cards-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;">
+    <div class="table-wrapper relacionamiento-board-wrapper" style="padding: 18px;">
+      <div class="pro-scroll-container records-card-body relacionamiento-scroll" style="max-height: 620px; overflow-y: auto; overflow-x: hidden; width: 100%; padding: 4px;">
+        <div class="convenios-grid" id="convenios-cards-grid">
           {conveniosList.length > 0 ? (
-            conveniosList.map((c: any) => (
-              <div class="convenio-card" data-tipo={c.tipo} style="background: #ffffff; border: 1.5px solid #DCE4E3; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.03); min-width: 0; overflow-wrap: anywhere; transition: all 0.2s ease;">
-                <div>
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 8px;">
-                    <span class={`convenio-type-badge ${c.tipo}`} style="font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 6px; background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB;">
-                      {c.tipo_label || c.tipo}
-                    </span>
-                    <span class="norma-num-badge" style="font-family: monospace; font-size: 0.76rem; font-weight: 800; background: #F8FAFC; color: #00594E; border: 1px solid #DCE4E3; padding: 2px 8px; border-radius: 6px;">
-                      {c.numero}
-                    </span>
-                  </div>
-                  <h4 style="font-size: 1.02rem; font-weight: 800; color: #111827; margin: 4px 0 6px 0; line-height: 1.35;">
-                    {c.entidad}
-                  </h4>
-                  <p style="font-size: 0.82rem; color: #52606D; line-height: 1.45; margin: 0 0 12px 0;">
-                    {c.objeto}
-                  </p>
-                  
-                  <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; font-size: 0.78rem; margin-bottom: 12px;">
-                    <div style="display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
-                      <span style="color: #64748B;">Vigencia:</span>
-                      <strong style="color: #111827; text-align: right;">{formatNiceDate(c.inicio)} &rarr; {formatNiceDate(c.fin)}</strong>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
-                      <span style="color: #64748B;">Cuantía / Aporte:</span>
-                      <strong style="color: #00594E; text-align: right;">{c.cuantia}</strong>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
-                      <span style="color: #64748B;">Supervisor:</span>
-                      <span style="color: #111827; font-weight: 600; text-align: right;">{c.supervisor}</span>
-                    </div>
-                  </div>
-                </div>
+            conveniosList.map((c: any) => {
+              const categoryLabel = c.tipo_label || (c.tipo === 'gubernamental' ? 'Ente Gubernamental' : c.tipo === 'internacional' ? 'Cooperación Internacional' : 'Cooperación Nacional');
+              const formattedCode = formatConvenioCode(c.numero);
+              const formattedEntidad = formatEntityOrPersonName(c.entidad, 'Entidad Aliada');
+              const formattedObjeto = formatSentenceText(c.objeto);
+              const formattedVigencia = `${formatVigenciaDate(c.inicio)} → ${formatVigenciaDate(c.fin)}`;
+              const formattedCuantia = formatCopCuantia(c.cuantia);
+              const formattedSupervisor = formatEntityOrPersonName(c.supervisor, 'Secretaría General');
+              const estadoLabel = String(c.estado || 'Activo / En Ejecución').trim();
 
-                <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid #E2E8F0;">
-                  <span class="badge" style="font-size: 0.70rem; font-weight: 800; background: #DCFCE7; color: #00594E; border: 1px solid #B2CFCB; padding: 2px 8px; border-radius: 6px;">
-                    {c.estado}
-                  </span>
-                  <button class="btn btn-secondary btn-sm" onclick={`window.showToast('Descargando expediente ${c.numero}...')`} title="Descargar minuta y constancia formal" style="border: 1px solid #DCE4E3; background: #ffffff; color: #00594E; font-weight: 750; font-size: 0.76rem; border-radius: 6px; padding: 5px 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    <span>Minuta</span>
-                  </button>
-                </div>
-              </div>
-            ))
+              return (
+                <article class="convenio-card" data-tipo={c.tipo}>
+                  <div class="convenio-card-body-wrap">
+                    <div class="convenio-card-header">
+                      <span class={`convenio-type-badge ${c.tipo}`}>
+                        {categoryLabel}
+                      </span>
+                      <span class="convenio-code-chip" title={`Convenio ${formattedCode}`}>
+                        {formattedCode}
+                      </span>
+                    </div>
+
+                    <h4 class="convenio-entity-title">
+                      {formattedEntidad}
+                    </h4>
+                    <p class="convenio-objeto-desc">
+                      {formattedObjeto}
+                    </p>
+
+                    <div class="convenio-meta-box">
+                      <div class="convenio-meta-item">
+                        <span class="convenio-meta-label">Vigencia:</span>
+                        <strong class="convenio-meta-value convenio-vigencia-val">{formattedVigencia}</strong>
+                      </div>
+                      <div class="convenio-meta-item">
+                        <span class="convenio-meta-label">Cuantía / Aporte:</span>
+                        <strong class="convenio-meta-value convenio-cuantia-val">{formattedCuantia}</strong>
+                      </div>
+                      <div class="convenio-meta-item">
+                        <span class="convenio-meta-label">Supervisor:</span>
+                        <span class="convenio-meta-value convenio-supervisor-val">{formattedSupervisor}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="convenio-card-footer">
+                    <span class="convenio-status-badge">
+                      {estadoLabel}
+                    </span>
+                    <div class="convenio-card-actions">
+                      <button
+                        type="button"
+                        class="btn-convenio-minuta"
+                        onclick={`window.showToast('Descargando expediente ${c.numero}...')`}
+                        title="Descargar minuta y constancia formal"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        <span>Minuta</span>
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              );
+            })
           ) : (
             <div style="grid-column: 1 / -1; text-align: center; padding: 48px 16px; color: #64748B; background: #F8FAFC; border-radius: 12px; border: 1px dashed #DCE4E3;">
               <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#00594E" stroke-width="1.8" style="margin-bottom: 8px; display: inline-block;"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
@@ -193,6 +282,231 @@ const nalCount = conveniosList.filter((c: any) => c.tipo === 'nacional').length;
     </div>
   </div>
 </AppLayout>
+
+<style>
+  .relacionamiento-container :global(.relacionamiento-board-wrapper) {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .relacionamiento-container :global(.convenios-grid),
+  .relacionamiento-container :global(#convenios-cards-grid) {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)) !important;
+    gap: 18px !important;
+    width: 100%;
+    margin-top: 0;
+  }
+
+  .relacionamiento-container :global(.convenio-card) {
+    background: #ffffff;
+    border: 1.5px solid #DCE4E3;
+    border-radius: 14px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 14px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-break: normal;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  }
+
+  .relacionamiento-container :global(.convenio-card:hover) {
+    border-color: #9EC5BE;
+    box-shadow: 0 10px 24px -8px rgba(0, 89, 78, 0.14);
+    transform: translateY(-2px);
+  }
+
+  .relacionamiento-container :global(.convenio-card-body-wrap) {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .relacionamiento-container :global(.convenio-card-header) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .relacionamiento-container :global(.convenio-type-badge) {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: #F2F7F6;
+    color: #00594E;
+    border: 1px solid #B2CFCB;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .relacionamiento-container :global(.convenio-type-badge.internacional) {
+    background: #EAF4F2;
+    color: #004239;
+    border-color: #9EC5BE;
+  }
+
+  .relacionamiento-container :global(.convenio-type-badge.nacional) {
+    background: #F7F5EE;
+    color: #786832;
+    border-color: #DBD2B0;
+  }
+
+  .relacionamiento-container :global(.convenio-code-chip) {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.76rem;
+    font-weight: 800;
+    background: #F8FAFC;
+    color: #00594E;
+    border: 1px solid #DCE4E3;
+    padding: 3px 9px;
+    border-radius: 6px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .relacionamiento-container :global(.convenio-entity-title) {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #0F172A;
+    margin: 0 0 6px 0;
+    line-height: 1.35;
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+
+  .relacionamiento-container :global(.convenio-objeto-desc) {
+    color: #475569;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    margin: 0 0 14px 0;
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+
+  .relacionamiento-container :global(.convenio-meta-box) {
+    background: #F8FAFB;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 0.80rem;
+  }
+
+  .relacionamiento-container :global(.convenio-meta-item) {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  .relacionamiento-container :global(.convenio-meta-label) {
+    color: #64748B;
+    font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .relacionamiento-container :global(.convenio-meta-value) {
+    color: #0F172A;
+    text-align: right;
+    min-width: 0;
+  }
+
+  .relacionamiento-container :global(.convenio-vigencia-val) {
+    font-weight: 700;
+    color: #111827;
+    white-space: nowrap;
+  }
+
+  .relacionamiento-container :global(.convenio-cuantia-val) {
+    color: #00594E;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .relacionamiento-container :global(.convenio-supervisor-val) {
+    font-weight: 600;
+    color: #1E293B;
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+
+  .relacionamiento-container :global(.convenio-card-footer) {
+    border-top: 1px solid #EEF2F5;
+    padding-top: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .relacionamiento-container :global(.convenio-status-badge) {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.72rem;
+    font-weight: 800;
+    background: #DCFCE7;
+    color: #00594E;
+    border: 1px solid #B2CFCB;
+    padding: 4px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .relacionamiento-container :global(.convenio-card-actions) {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .relacionamiento-container :global(.btn-convenio-minuta) {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid #DCE4E3;
+    background: #FFFFFF;
+    color: #00594E;
+    font-weight: 750;
+    font-size: 0.78rem;
+    border-radius: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+
+  .relacionamiento-container :global(.btn-convenio-minuta:hover) {
+    background: #F2F7F6;
+    border-color: #00594E;
+  }
+
+  @media (max-width: 440px) {
+    .relacionamiento-container :global(.convenios-grid),
+    .relacionamiento-container :global(#convenios-cards-grid) {
+      grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    .relacionamiento-container :global(.convenio-vigencia-val),
+    .relacionamiento-container :global(.convenio-cuantia-val) {
+      white-space: normal;
+    }
+  }
+</style>
 
 <script>
   import { initRelacionamiento } from '@scripts/relacionamiento';

@@ -8,6 +8,57 @@ let currentPlanTab = 'financieros';
 let informesList: any[] = [];
 let planSearchQuery = '';
 
+function parseMoneyDigits(raw?: string | number | null): number {
+  const clean = String(raw ?? '').replace(/[^\d]/g, '');
+  if (!clean) return 0;
+  const parsed = Number(clean);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatDigitsWithDots(digits: string): string {
+  const normalized = digits.replace(/^0+(?=\d)/, '');
+  return normalized.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+function formatCopDisplay(raw?: string | number | null): string {
+  const str = String(raw ?? '').trim();
+  if (!str) return '$ 0';
+  const stripped = str.replace(/COP/gi, '').replace(/\$/g, '').trim();
+  if (/^[\d.\s,]+$/.test(stripped)) {
+    const digits = stripped.replace(/[^\d]/g, '');
+    if (!digits) return '$ 0';
+    return `$ ${formatDigitsWithDots(digits)}`;
+  }
+  return str;
+}
+
+const MONTHS_ES_FULL = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+];
+
+function formatDateDmy(isoDate: string): string {
+  const parts = isoDate.split('-');
+  if (parts.length !== 3) return isoDate;
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+function buildPeriodoLabel(fechaInicio: string, fechaFin: string): string {
+  if (!fechaInicio || !fechaFin) return '';
+  const startMatch = fechaInicio.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const endMatch = fechaFin.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const startDmy = formatDateDmy(fechaInicio);
+  const endDmy = formatDateDmy(fechaFin);
+
+  if (startMatch && endMatch && startMatch[1] === endMatch[1] && startMatch[2] === endMatch[2]) {
+    const monthName = MONTHS_ES_FULL[parseInt(startMatch[2]!, 10) - 1] || '';
+    if (monthName) {
+      return `${monthName} ${startMatch[1]} (${startDmy} - ${endDmy})`;
+    }
+  }
+  return `${startDmy} - ${endDmy}`;
+}
+
 export async function initPlaneacion() {
   const container = document.getElementById('planeacion-tab-content');
   const tabs = document.querySelectorAll('#planeacion-module-tabs .module-tab-btn');
@@ -134,8 +185,8 @@ export async function initPlaneacion() {
                 <tr style="border-bottom: 1px solid #E2E8F0; font-size: 0.84rem;">
                   <td style="padding: 12px 16px; font-weight: 700; color: #111827;">${inf.periodo}</td>
                   <td style="padding: 12px 16px;"><span style="font-family: monospace; font-size: 0.82rem; font-weight: 800; color: #00594E; background: #F2F7F6; padding: 2px 8px; border-radius: 6px; border: 1px solid #B2CFCB;">${inf.radicado_csu || 'N/A'}</span></td>
-                  <td style="padding: 12px 16px;"><strong style="color: #00594E;">${inf.ingresos || '$0 COP'}</strong></td>
-                  <td style="padding: 12px 16px; color: #52606D;">${inf.gastos || '$0 COP'}</td>
+                  <td style="padding: 12px 16px; white-space: nowrap;"><strong style="color: #00594E;">${formatCopDisplay(inf.ingresos)}</strong></td>
+                  <td style="padding: 12px 16px; color: #52606D; white-space: nowrap;">${formatCopDisplay(inf.gastos)}</td>
                   <td style="padding: 12px 16px;">
                     <div style="display: flex; align-items: center; gap: 8px;">
                       <div class="dist-progress-bg" style="width: 80px; height: 6px; background: #E2E8F0; border-radius: 4px; overflow: hidden;">
@@ -237,10 +288,95 @@ export async function initPlaneacion() {
   const form = document.getElementById('form-new-planeacion') as HTMLFormElement | null;
   const submitBtn = document.getElementById('btn-submit-plan') as HTMLButtonElement | null;
 
+  const fechaInicioInput = document.getElementById('new-plan-fecha-inicio') as HTMLInputElement | null;
+  const fechaFinInput = document.getElementById('new-plan-fecha-fin') as HTMLInputElement | null;
+  const periodoPreviewEl = document.getElementById('new-plan-periodo-preview');
+  const ingresosInput = document.getElementById('new-plan-ingresos') as HTMLInputElement | null;
+  const gastosInput = document.getElementById('new-plan-gastos') as HTMLInputElement | null;
+  const ejecucionInput = document.getElementById('new-plan-ejecucion') as HTMLInputElement | null;
+  const ejecucionBadge = document.getElementById('new-plan-ejecucion-badge');
+  const ejecucionBar = document.getElementById('new-plan-ejecucion-bar') as HTMLElement | null;
+
+  function syncEjecucionProgress(rawValue?: number | string) {
+    const valNum = Number(rawValue !== undefined ? rawValue : ejecucionInput?.value || 0);
+    const clamped = Number.isFinite(valNum) ? Math.max(0, Math.min(100, valNum)) : 0;
+    const displayNum = Number.isInteger(clamped) ? String(clamped) : clamped.toFixed(1).replace(/\.0$/, '');
+    if (ejecucionBar) {
+      ejecucionBar.style.width = `${clamped}%`;
+    }
+    if (ejecucionBadge) {
+      ejecucionBadge.textContent = `${displayNum}% ejecutado`;
+    }
+  }
+
+  function updatePeriodoPreview() {
+    const startVal = fechaInicioInput?.value || '';
+    const endVal = fechaFinInput?.value || '';
+    if (fechaFinInput && startVal) {
+      fechaFinInput.min = startVal;
+    }
+    if (!periodoPreviewEl) return;
+    if (!startVal && !endVal) {
+      periodoPreviewEl.textContent = 'Seleccione rango de fechas';
+      return;
+    }
+    if (startVal && endVal) {
+      if (endVal < startVal) {
+        periodoPreviewEl.textContent = 'La fecha fin debe ser ≥ inicio';
+        return;
+      }
+      periodoPreviewEl.textContent = buildPeriodoLabel(startVal, endVal);
+      return;
+    }
+    periodoPreviewEl.textContent = startVal ? `Desde ${formatDateDmy(startVal)}...` : `Hasta ${formatDateDmy(endVal)}`;
+  }
+
+  function formatMoneyInputLive(inputEl: HTMLInputElement | null) {
+    if (!inputEl) return;
+    const digits = inputEl.value.replace(/[^\d]/g, '');
+    if (!digits) {
+      inputEl.value = '';
+      return;
+    }
+    inputEl.value = formatDigitsWithDots(digits);
+  }
+
+  function suggestEjecucionFromFinancials() {
+    const ingresosVal = parseMoneyDigits(ingresosInput?.value);
+    const gastosVal = parseMoneyDigits(gastosInput?.value);
+    if (ingresosVal > 0 && gastosInput?.value.trim()) {
+      const pct = Math.max(0, Math.min(100, Math.round((gastosVal / ingresosVal) * 1000) / 10));
+      const cleanPct = Number.isInteger(pct) ? String(pct) : pct.toFixed(1).replace(/\.0$/, '');
+      if (ejecucionInput) {
+        ejecucionInput.value = cleanPct;
+      }
+      syncEjecucionProgress(pct);
+    }
+  }
+
+  fechaInicioInput?.addEventListener('change', updatePeriodoPreview);
+  fechaFinInput?.addEventListener('change', updatePeriodoPreview);
+
+  ingresosInput?.addEventListener('input', () => {
+    formatMoneyInputLive(ingresosInput);
+    suggestEjecucionFromFinancials();
+  });
+
+  gastosInput?.addEventListener('input', () => {
+    formatMoneyInputLive(gastosInput);
+    suggestEjecucionFromFinancials();
+  });
+
+  ejecucionInput?.addEventListener('input', () => {
+    syncEjecucionProgress(ejecucionInput.value);
+  });
+
   openBtn?.addEventListener('click', () => {
     if (modal) {
       modal.classList.add('open');
       modal.style.display = 'flex';
+      updatePeriodoPreview();
+      syncEjecucionProgress(ejecucionInput?.value || 0);
     }
   });
 
@@ -257,12 +393,27 @@ export async function initPlaneacion() {
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const tipo = (document.getElementById('new-plan-tipo') as HTMLSelectElement).value;
-    const periodo = (document.getElementById('new-plan-periodo') as HTMLInputElement).value.trim();
+    const fechaInicio = fechaInicioInput?.value || '';
+    const fechaFin = fechaFinInput?.value || '';
     const radicado = (document.getElementById('new-plan-radicado') as HTMLInputElement).value.trim();
-    const ejecucion = Number((document.getElementById('new-plan-ejecucion') as HTMLInputElement).value) || 0;
-    const ingresos = (document.getElementById('new-plan-ingresos') as HTMLInputElement).value.trim();
-    const gastos = (document.getElementById('new-plan-gastos') as HTMLInputElement).value.trim();
+    const ejecucion = Math.max(0, Math.min(100, Number(ejecucionInput?.value) || 0));
+    const ingresosClean = (ingresosInput?.value || '').replace(/\./g, '').trim();
+    const gastosClean = (gastosInput?.value || '').replace(/\./g, '').trim();
     const observaciones = (document.getElementById('new-plan-observaciones') as HTMLTextAreaElement).value.trim();
+
+    if (!fechaInicio || !fechaFin) {
+      (window as any).showToast?.('Debe seleccionar la fecha de inicio y la fecha de corte / fin del período.', 'error');
+      (!fechaInicio ? fechaInicioInput : fechaFinInput)?.focus();
+      return;
+    }
+
+    if (fechaFin < fechaInicio) {
+      (window as any).showToast?.('La fecha de corte / fin debe ser igual o posterior a la fecha de inicio.', 'error');
+      fechaFinInput?.focus();
+      return;
+    }
+
+    const periodo = buildPeriodoLabel(fechaInicio, fechaFin);
 
     const newId = `plan-${Date.now().toString(36)}`;
     if (submitBtn) {
@@ -277,8 +428,8 @@ export async function initPlaneacion() {
         periodo,
         radicado_csu: radicado || null,
         ejecucion_pct: ejecucion,
-        ingresos: ingresos || null,
-        gastos: gastos || null,
+        ingresos: ingresosClean || null,
+        gastos: gastosClean || null,
         observaciones: observaciones || null,
         estado: 'Aprobado CSU',
         created_at: new Date().toISOString()
@@ -301,6 +452,8 @@ export async function initPlaneacion() {
       }
       closeModal();
       form.reset();
+      updatePeriodoPreview();
+      syncEjecucionProgress(0);
       await loadInformes();
     } catch (err: any) {
       console.error('Error guardando informe:', err);
