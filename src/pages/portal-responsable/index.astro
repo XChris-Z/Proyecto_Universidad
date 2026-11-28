@@ -9,27 +9,21 @@ import ModalSubidaArchivo from '@components/ModalSubidaArchivo.astro';
   <div class="portal-promax-wrapper portal-background app-content-area">
     
     <!-- =====================================================================
-        1. CABECERA INSTITUCIONAL SUPERIOR (LIMPIA, SIN RAYONES NI ARTEFACTOS)
+        1. CABECERA INSTITUCIONAL COMPACTA
         ===================================================================== -->
     <header class="portal-top-header">
       <div class="portal-header-container">
-        
         <div class="portal-header-brand">
           <div class="portal-logo-card">
-            <img 
-              src="/logo.png" 
-              alt="Logo Oficial Unitrópico" 
-              class="portal-logo-img" 
+            <img
+              src="/logo.png"
+              alt="Logo Oficial Unitrópico"
+              class="portal-logo-img"
               loading="eager"
             />
           </div>
-          <div class="portal-brand-text">
-            <div class="portal-official-badge">
-              <span class="badge-dot-gold"></span>
-              <span>Portal Oficial de Recepción Documental &bull; Unitrópico</span>
-            </div>
-            <h1 class="portal-system-title">Entrega de Anexos y Respuestas Oficiales</h1>
-          </div>
+          <span class="portal-header-divider" aria-hidden="true"></span>
+          <span class="portal-brand-kicker">Portal Oficial de Recepción Documental</span>
         </div>
 
         <div class="portal-header-actions">
@@ -38,21 +32,20 @@ import ModalSubidaArchivo from '@components/ModalSubidaArchivo.astro';
             <span>Acceso Funcionarios</span>
           </a>
         </div>
-
       </div>
     </header>
 
     <!-- =====================================================================
-         2. STEPPER GUÍA EN 3 ETAPAS CON INDICADOR VISUAL SHARED ELEMENT
+         2. STEPPER COMPACTO EN 3 ETAPAS
          ===================================================================== -->
     <div class="portal-stepper-container">
       <div class="portal-stepper-inner">
-        
+
         <!-- Paso 1 -->
         <div class="stepper-step active" id="step-node-1">
           <div class="step-icon-circle">
             <span class="step-num">1</span>
-            <svg class="step-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            <svg class="step-check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
           <div class="step-labels">
             <span class="step-title">Validación de Radicado</span>
@@ -69,7 +62,7 @@ import ModalSubidaArchivo from '@components/ModalSubidaArchivo.astro';
         <div class="stepper-step" id="step-node-2">
           <div class="step-icon-circle">
             <span class="step-num">2</span>
-            <svg class="step-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            <svg class="step-check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
           <div class="step-labels">
             <span class="step-title">Verificación de Términos</span>
@@ -84,7 +77,7 @@ import ModalSubidaArchivo from '@components/ModalSubidaArchivo.astro';
         <div class="stepper-step" id="step-node-3">
           <div class="step-icon-circle">
             <span class="step-num">3</span>
-            <svg class="step-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            <svg class="step-check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
           <div class="step-labels">
             <span class="step-title">Carga de Soportes</span>
@@ -101,112 +94,157 @@ import ModalSubidaArchivo from '@components/ModalSubidaArchivo.astro';
     <main class="portal-main-area">
 
       <!-- ===================================================================
-           PANTALLA 1: FORMULARIO DE ACCESO POR CÓDIGO TEMPORAL (PASO 1)
+           PANTALLA 1: SPLIT CARD DE AUTENTICACIÓN DE DEPENDENCIA (PASO 1)
            =================================================================== -->
-      <section id="portal-login-section" class="portal-card-login">
-        
-        <div class="portal-login-card-header">
-          <div class="portal-shield-icon">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-              <path d="M9 12l2 2 4-4"/>
-            </svg>
-          </div>
-          <h2 class="portal-login-title">Autenticación de Dependencia</h2>
-          <p class="portal-login-desc">
-            Ingrese el correo institucional de la oficina requerida y el código único temporal recibido en la notificación oficial para radicar anexos.
-          </p>
-        </div>
+      <section id="portal-login-section" class="portal-card-login" aria-label="Autenticación de Dependencia">
+        <div class="split-card-grid">
 
-        <form id="form-portal-login" class="portal-form-body">
-          
-          <!-- Correo de la Dependencia -->
-          <div class="portal-form-group">
-            <label for="portal-input-email" class="portal-label">Correo Institucional de la Oficina *</label>
-            <div class="portal-input-wrap">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="portal-field-icon">
-                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                <polyline points="22,6 12,13 2,6"/>
-              </svg>
-              <input 
-                type="email" 
-                id="portal-input-email" 
-                required 
-                placeholder="ej. juridica@unitropico.edu.co" 
-                class="portal-input" 
-                autocomplete="email"
-              />
+          <!-- Columna Izquierda: Panel Institucional -->
+          <div class="split-brand-panel">
+            <div class="split-brand-top">
+              <span class="split-brand-badge">
+                <span class="split-badge-dot" aria-hidden="true"></span>
+                CANAL OFICIAL UNITRÓPICO
+              </span>
+              <h1 class="split-brand-title">Entrega de Anexos y Respuestas Oficiales</h1>
+              <p class="split-brand-desc">
+                Acceso verificado para que las dependencias radicadas carguen sus soportes dentro del término establecido.
+              </p>
             </div>
-          </div>
 
-          <!-- Código Único Temporal -->
-          <div class="portal-form-group">
-            <div class="label-with-hint">
-              <label for="portal-input-codigo" class="portal-label">Código Único Temporal de Acceso *</label>
-              <span class="hint-badge">Expira 5 días antes</span>
-            </div>
-            <div class="portal-input-wrap">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="portal-field-icon">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              </svg>
-              <input 
-                type="text" 
-                id="portal-input-codigo" 
-                required 
-                placeholder="RAD-XXXXX-COD" 
-                class="portal-input code-style" 
-                autocomplete="off"
-              />
-            </div>
-            <small class="portal-help-text">
-              Consulte el correo de asignación oficial. El código es de uso exclusivo de su dependencia.
-            </small>
-          </div>
+            <div class="split-steps-list" aria-label="Guía rápida del portal">
+              <div class="split-step-item">
+                <div class="split-step-icon" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><polyline points="3 7 12 13 21 7"/></svg>
+                </div>
+                <div class="split-step-copy">
+                  <strong>Credenciales del Oficio</strong>
+                  <span>Correo institucional de la oficina, código temporal y PIN de 6 dígitos.</span>
+                </div>
+              </div>
 
-          <!-- PIN Criptográfico de Seguridad de 6 Dígitos -->
-          <div class="portal-form-group">
-            <div class="label-with-hint">
-              <label for="portal-input-pin" class="portal-label">PIN de Seguridad (6 Dígitos) *</label>
-              <span class="hint-badge" style="background: rgba(184, 134, 11, 0.12); color: #92400e; border: 1px solid rgba(184, 134, 11, 0.3);">Anti-Enumeración</span>
+              <div class="split-step-item">
+                <div class="split-step-icon" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+                </div>
+                <div class="split-step-copy">
+                  <strong>Control de Términos</strong>
+                  <span>Verifique las fechas límite y las instrucciones asignadas a su dependencia.</span>
+                </div>
+              </div>
+
+              <div class="split-step-item">
+                <div class="split-step-icon" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="9 15 11 17 15 13"/></svg>
+                </div>
+                <div class="split-step-copy">
+                  <strong>Constancia Automática</strong>
+                  <span>Cada entrega queda registrada con fecha, hora y trazabilidad oficial.</span>
+                </div>
+              </div>
             </div>
-            <div class="portal-input-wrap">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="portal-field-icon">
+
+            <div class="split-security-footer">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#B5A160" stroke-width="2.1" class="split-security-shield" aria-hidden="true">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                 <path d="M9 12l2 2 4-4"/>
               </svg>
-              <input 
-                type="text" 
-                id="portal-input-pin" 
-                maxlength="6"
-                pattern="[0-9]{6}"
-                placeholder="Ej. 849201" 
-                class="portal-input code-style" 
-                style="letter-spacing: 4px; font-weight: 800;"
-                autocomplete="one-time-code"
-              />
+              <span>Acceso cifrado &middot; Trazabilidad oficial &mdash; Universidad Internacional del Trópico Americano</span>
             </div>
-            <small class="portal-help-text">
-              PIN criptográfico remitido en la notificación institucional o facilitado por el Administrador documental.
-            </small>
           </div>
 
-          <!-- Alerta de Error -->
-          <div id="portal-login-error" class="portal-error-box" style="display: none;" role="alert"></div>
+          <!-- Columna Derecha: Formulario de Autenticación -->
+          <div class="split-form-panel">
+            <div class="portal-login-card-header">
+              <h2 class="portal-login-title">Autenticación de Dependencia</h2>
+              <p class="portal-login-desc">
+                Ingrese los datos recibidos en la notificación oficial de asignación.
+              </p>
+            </div>
 
-          <!-- Botón de Envío -->
-          <button type="submit" id="btn-portal-enter" class="btn-portal-submit">
-            <span>Validar Acceso y Continuar</span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-          </button>
+            <form id="form-portal-login" class="portal-form-body" novalidate>
 
-        </form>
+              <!-- Campo 1: Correo de la Dependencia -->
+              <div class="portal-form-group">
+                <label for="portal-input-email" class="portal-label">Correo Institucional de la Oficina *</label>
+                <div class="portal-input-wrap">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="portal-field-icon" aria-hidden="true">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                    <polyline points="22,6 12,13 2,6"/>
+                  </svg>
+                  <input
+                    type="email"
+                    id="portal-input-email"
+                    name="email"
+                    required
+                    placeholder="ej. juridica@unitropico.edu.co"
+                    class="portal-input"
+                    autocomplete="email"
+                  />
+                </div>
+              </div>
 
-        <div class="portal-login-footer-info">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-          <span>Trazabilidad y fe pública oficial &bull; Universidad Internacional del Trópico Americano</span>
+              <!-- Campo 2: Código Único Temporal -->
+              <div class="portal-form-group">
+                <div class="label-with-hint">
+                  <label for="portal-input-codigo" class="portal-label">Código Único Temporal de Acceso *</label>
+                  <span class="hint-badge">Expira 5 días antes</span>
+                </div>
+                <div class="portal-input-wrap">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="portal-field-icon" aria-hidden="true">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  </svg>
+                  <input
+                    type="text"
+                    id="portal-input-codigo"
+                    name="codigo"
+                    required
+                    placeholder="RAD-XXXXX-COD"
+                    class="portal-input code-style"
+                    autocomplete="off"
+                  />
+                </div>
+                <small class="portal-help-text">
+                  Consulte el correo de asignación oficial. Uso exclusivo de su dependencia.
+                </small>
+              </div>
+
+              <!-- Campo 3: PIN de Seguridad (6 Dígitos) con 6 Casillas OTP -->
+              <div class="portal-form-group">
+                <div class="label-with-hint">
+                  <label for="portal-otp-0" class="portal-label">PIN de Seguridad (6 Dígitos) *</label>
+                  <span class="hint-badge neutral">6 dígitos</span>
+                </div>
+
+                <input type="hidden" id="portal-input-pin" name="pin" value="" />
+
+                <div class="portal-otp-grid" id="portal-otp-grid" role="group" aria-label="PIN de seguridad de 6 dígitos">
+                  <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" id="portal-otp-0" class="portal-otp-box" data-otp-index="0" autocomplete="one-time-code" aria-label="Dígito 1 del PIN" />
+                  <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" id="portal-otp-1" class="portal-otp-box" data-otp-index="1" autocomplete="off" aria-label="Dígito 2 del PIN" />
+                  <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" id="portal-otp-2" class="portal-otp-box" data-otp-index="2" autocomplete="off" aria-label="Dígito 3 del PIN" />
+                  <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" id="portal-otp-3" class="portal-otp-box" data-otp-index="3" autocomplete="off" aria-label="Dígito 4 del PIN" />
+                  <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" id="portal-otp-4" class="portal-otp-box" data-otp-index="4" autocomplete="off" aria-label="Dígito 5 del PIN" />
+                  <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" id="portal-otp-5" class="portal-otp-box" data-otp-index="5" autocomplete="off" aria-label="Dígito 6 del PIN" />
+                </div>
+                <small class="portal-help-text">
+                  PIN criptográfico remitido en la notificación institucional o facilitado por el Administrador.
+                </small>
+              </div>
+
+              <!-- Alerta de Error -->
+              <div id="portal-login-error" class="portal-error-box" style="display: none;" role="alert"></div>
+
+              <!-- Botón de Envío -->
+              <button type="submit" id="btn-portal-enter" class="btn-portal-submit">
+                <span>Validar Acceso y Continuar</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </button>
+
+            </form>
+          </div>
+
         </div>
-
       </section>
 
       <!-- ===================================================================
@@ -471,32 +509,32 @@ import ModalSubidaArchivo from '@components/ModalSubidaArchivo.astro';
   }
 
   /* ==========================================================================
-     CABECERA SUPERIOR (UI/UX PRO MAX SOBRIO)
+     CABECERA INSTITUCIONAL COMPACTA
      ========================================================================== */
   .portal-top-header {
     width: 100%;
-    background: var(--uni-white);
+    background: #FFFFFF;
     color: var(--uni-black);
-    border-top: 4px solid var(--uni-green-primary);
-    border-bottom: 1px solid var(--uni-border);
-    padding: 12px 20px;
-    box-shadow: 0 2px 10px rgba(0, 89, 78, 0.05);
+    border-bottom: 1px solid #E2E8F0;
+    padding: 11px 24px;
+    box-sizing: border-box;
   }
 
   .portal-header-container {
-    max-width: 1040px;
+    max-width: 1080px;
     margin: 0 auto;
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
-    gap: 14px;
+    gap: 12px;
   }
 
   .portal-header-brand {
     display: flex;
     align-items: center;
     gap: 14px;
+    min-width: 0;
   }
 
   .portal-logo-card {
@@ -505,73 +543,64 @@ import ModalSubidaArchivo from '@components/ModalSubidaArchivo.astro';
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
   }
 
   .portal-logo-img {
-    height: 44px;
+    height: 38px;
     width: auto;
-    max-width: 220px;
+    max-width: 190px;
     object-fit: contain;
   }
 
-  .portal-official-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.68rem;
-    font-weight: 750;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--uni-gold-primary);
-    margin-bottom: 2px;
+  .portal-header-divider {
+    width: 1px;
+    height: 24px;
+    background: #E2E8F0;
+    flex-shrink: 0;
   }
 
-  .badge-dot-gold {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--uni-gold-primary);
-  }
-
-  .portal-system-title {
-    font-size: 1.05rem;
-    font-weight: 800;
-    margin: 0;
-    color: var(--uni-black);
+  .portal-brand-kicker {
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: #334155;
     letter-spacing: -0.01em;
+    white-space: nowrap;
   }
 
   .btn-portal-back-login {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 7px 14px;
-    background: var(--uni-green-05);
-    border: 1px solid var(--uni-green-25);
-    color: var(--uni-green-primary);
-    font-size: 0.76rem;
-    font-weight: 750;
-    border-radius: 8px;
+    padding: 8px 14px;
+    background: #FFFFFF;
+    border: 1px solid #CBD5E1;
+    color: #1E293B;
+    font-size: 0.78rem;
+    font-weight: 600;
+    border-radius: 10px;
     text-decoration: none;
-    transition: all 0.2s ease;
+    transition: all 0.18s ease;
+    white-space: nowrap;
   }
 
   .btn-portal-back-login:hover {
-    background: var(--uni-green-primary);
-    color: var(--uni-white);
-    border-color: var(--uni-green-primary);
-    box-shadow: 0 2px 6px rgba(0, 89, 78, 0.2);
-    transform: translateY(-1px);
+    background: #F0F7F5;
+    color: #00594E;
+    border-color: #00594E;
+    box-shadow: 0 2px 8px rgba(0, 89, 78, 0.1);
   }
 
   /* ==========================================================================
-     STEPPER GUÍA EN 3 ETAPAS
+     STEPPER COMPACTO EN 3 ETAPAS
      ========================================================================== */
   .portal-stepper-container {
     width: 100%;
-    background: #ffffff;
-    border-bottom: 1px solid #e2e8f0;
-    padding: 16px 20px;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid #E2E8F0;
+    padding: 12px 24px;
+    box-sizing: border-box;
   }
 
   .portal-stepper-inner {
@@ -580,14 +609,14 @@ import ModalSubidaArchivo from '@components/ModalSubidaArchivo.astro';
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 10px;
   }
 
   .stepper-step {
     display: flex;
     align-items: center;
     gap: 10px;
-    opacity: 0.5;
+    opacity: 0.52;
     transition: opacity 0.25s ease;
   }
 
@@ -597,32 +626,33 @@ import ModalSubidaArchivo from '@components/ModalSubidaArchivo.astro';
   }
 
   .step-icon-circle {
-    width: 32px;
-    height: 32px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
-    background: #f1f5f9;
-    border: 2px solid #cbd5e1;
-    color: #64748b;
+    background: #F1F5F9;
+    border: 1.5px solid #CBD5E1;
+    color: #64748B;
     font-weight: 800;
-    font-size: 0.82rem;
+    font-size: 0.8rem;
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
+    flex-shrink: 0;
     transition: all 0.25s ease;
   }
 
   .stepper-step.active .step-icon-circle {
-    background: var(--uni-green-primary);
-    border-color: var(--uni-green-primary);
-    color: #ffffff;
-    box-shadow: 0 0 0 4px rgba(0, 89, 78, 0.15);
+    background: #00594E;
+    border-color: #00594E;
+    color: #FFFFFF;
+    box-shadow: 0 0 0 4px rgba(0, 89, 78, 0.14);
   }
 
   .stepper-step.completed .step-icon-circle {
-    background: var(--uni-green-90);
-    border-color: var(--uni-green-90);
-    color: #ffffff;
+    background: #00594E;
+    border-color: #00594E;
+    color: #FFFFFF;
   }
 
   .step-check {
@@ -643,25 +673,25 @@ import ModalSubidaArchivo from '@components/ModalSubidaArchivo.astro';
   }
 
   .step-title {
-    font-size: 0.78rem;
-    font-weight: 800;
-    color: var(--uni-black);
+    font-size: 0.77rem;
+    font-weight: 750;
+    color: #0F172A;
     line-height: 1.2;
   }
 
   .step-desc {
-    font-size: 0.70rem;
-    color: var(--uni-text-muted);
+    font-size: 0.69rem;
+    color: #64748B;
     line-height: 1.2;
   }
 
   .stepper-line {
     flex: 1;
     height: 3px;
-    background: var(--uni-border);
-    border-radius: 2px;
+    background: #E2E8F0;
+    border-radius: 9999px;
     position: relative;
-    margin: 0 10px;
+    margin: 0 8px;
     overflow: hidden;
   }
 
@@ -671,7 +701,7 @@ import ModalSubidaArchivo from '@components/ModalSubidaArchivo.astro';
     top: 0;
     bottom: 0;
     width: 33%;
-    background: var(--uni-green-primary);
+    background: #00594E;
     transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
@@ -683,25 +713,31 @@ import ModalSubidaArchivo from '@components/ModalSubidaArchivo.astro';
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: clamp(1.5rem, 3.5vw, 3rem) clamp(1rem, 2vw, 2rem);
+    padding: clamp(1rem, 3vw, 2.25rem) clamp(0.85rem, 2vw, 1.75rem);
     width: 100%;
     box-sizing: border-box;
   }
 
   /* ==========================================================================
-     PANTALLA 1: FORMULARIO DE ACCESO (CARD UI/UX PRO MAX SOBRIO)
+     PANTALLA 1: SPLIT CARD DE AUTENTICACIÓN DE DEPENDENCIA
      ========================================================================== */
   .portal-card-login {
     width: 100%;
-    max-width: 500px;
-    background: var(--uni-white);
-    border: 1px solid var(--uni-border);
-    border-top: 4px solid var(--uni-green-primary);
-    border-radius: 18px;
-    padding: clamp(24px, 4vw, 36px);
-    box-shadow: 0 8px 30px -6px rgba(0, 89, 78, 0.06), 0 1px 3px rgba(0, 0, 0, 0.02);
+    max-width: 960px;
+    margin: 28px auto;
+    border-radius: 20px;
+    overflow: hidden;
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    box-shadow: 0 22px 48px -16px rgba(0, 59, 52, 0.16);
     box-sizing: border-box;
     animation: portalCrossfade 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .split-card-grid {
+    display: grid;
+    grid-template-columns: 42% 58%;
+    min-height: 540px;
   }
 
   @keyframes portalCrossfade {
@@ -715,37 +751,164 @@ import ModalSubidaArchivo from '@components/ModalSubidaArchivo.astro';
     }
   }
 
-  .portal-login-card-header {
-    text-align: center;
-    margin-bottom: 24px;
+  /* Columna Izquierda: Panel Institucional */
+  .split-brand-panel {
+    position: relative;
+    background: linear-gradient(155deg, #00594E 0%, #00433B 60%, #00312B 100%);
+    padding: 36px 32px;
+    color: #FFFFFF;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 28px;
+    overflow: hidden;
   }
 
-  .portal-shield-icon {
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    background: var(--uni-gold-05);
-    color: var(--uni-gold-primary);
-    border: 1.5px solid var(--uni-gold-25);
+  .split-brand-panel::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.9) 1px, transparent 1px);
+    background-size: 18px 18px;
+    opacity: 0.08;
+    pointer-events: none;
+  }
+
+  .split-brand-top,
+  .split-steps-list,
+  .split-security-footer {
+    position: relative;
+    z-index: 1;
+  }
+
+  .split-brand-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: rgba(181, 161, 96, 0.18);
+    border: 1px solid rgba(181, 161, 96, 0.42);
+    color: #F5E6B8;
+    border-radius: 9999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 5px 12px;
+    width: fit-content;
+  }
+
+  .split-badge-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    background: #B5A160;
+  }
+
+  .split-brand-title {
+    font-size: 1.55rem;
+    font-weight: 800;
+    line-height: 1.22;
+    color: #FFFFFF;
+    margin: 16px 0 10px 0;
+    letter-spacing: -0.02em;
+  }
+
+  .split-brand-desc {
+    font-size: 0.88rem;
+    color: rgba(255, 255, 255, 0.82);
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .split-steps-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .split-step-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .split-step-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: #F5E6B8;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto 12px auto;
+    flex-shrink: 0;
+  }
+
+  .split-step-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .split-step-copy strong {
+    font-size: 0.84rem;
+    font-weight: 750;
+    color: #FFFFFF;
+    line-height: 1.25;
+  }
+
+  .split-step-copy span {
+    font-size: 0.76rem;
+    color: rgba(255, 255, 255, 0.78);
+    line-height: 1.4;
+  }
+
+  .split-security-footer {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 0.76rem;
+    color: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    line-height: 1.4;
+  }
+
+  .split-security-shield {
+    flex-shrink: 0;
+  }
+
+  /* Columna Derecha: Formulario */
+  .split-form-panel {
+    padding: 38px 40px;
+    background: #FFFFFF;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  .portal-login-card-header {
+    text-align: left;
+    margin-bottom: 24px;
   }
 
   .portal-login-title {
-    font-size: 1.35rem;
-    font-weight: 850;
-    color: var(--uni-black);
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #0F172A;
     margin: 0 0 6px 0;
     letter-spacing: -0.02em;
   }
 
   .portal-login-desc {
-    font-size: 0.82rem;
-    color: var(--uni-text-muted);
+    font-size: 0.86rem;
+    color: #64748B;
     margin: 0;
-    line-height: 1.5;
+    line-height: 1.45;
   }
 
   .portal-form-body {
@@ -764,24 +927,33 @@ import ModalSubidaArchivo from '@components/ModalSubidaArchivo.astro';
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 10px;
   }
 
   .portal-label {
-    font-size: 0.78rem;
+    font-size: 0.74rem;
     font-weight: 750;
-    color: var(--uni-text-dark);
+    color: #334155;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.04em;
   }
 
   .hint-badge {
     font-size: 0.68rem;
-    font-weight: 750;
-    color: #854d0e;
-    background: var(--uni-gold-05);
-    padding: 2px 8px;
-    border-radius: 4px;
-    border: 1px solid var(--uni-gold-25);
+    font-weight: 700;
+    color: #8A6D1B;
+    background: #FEF8E7;
+    padding: 2px 9px;
+    border-radius: 9999px;
+    border: 1px solid rgba(181, 161, 96, 0.45);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .hint-badge.neutral {
+    color: #475569;
+    background: #F1F5F9;
+    border-color: #CBD5E1;
   }
 
   .portal-input-wrap {
@@ -793,103 +965,134 @@ import ModalSubidaArchivo from '@components/ModalSubidaArchivo.astro';
   .portal-field-icon {
     position: absolute;
     left: 14px;
-    color: #94a3b8;
+    color: #94A3B8;
     pointer-events: none;
     transition: color 0.2s ease;
   }
 
   .portal-input {
     width: 100%;
-    padding: 12px 14px 12px 42px;
-    font-size: 0.90rem;
-    color: var(--uni-black);
-    background: var(--uni-white);
-    border: 1.5px solid var(--uni-border);
-    border-radius: 10px;
+    height: 44px;
+    padding: 0 14px 0 42px;
+    font-size: 0.9rem;
+    color: #0F172A;
+    background: #FFFFFF;
+    border: 1.5px solid #CBD5E1;
+    border-radius: 11px;
     outline: none;
     font-family: inherit;
     font-weight: 500;
     box-sizing: border-box;
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
   }
 
   .portal-input.code-style {
-    font-family: monospace;
-    font-size: 1.02rem;
-    font-weight: 800;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.96rem;
+    font-weight: 750;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
   }
 
   .portal-input:focus {
-    background: #ffffff;
-    border-color: var(--uni-green-primary);
+    background: #FFFFFF;
+    border-color: #00594E;
     box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.12);
   }
 
   .portal-input-wrap:focus-within .portal-field-icon {
-    color: var(--uni-green-primary);
+    color: #00594E;
+  }
+
+  /* 6 Casillas OTP Interactivas */
+  .portal-otp-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+  }
+
+  .portal-otp-box {
+    width: 100%;
+    min-width: 0;
+    height: 50px;
+    text-align: center;
+    font-size: 1.25rem;
+    font-weight: 700;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    border: 1.5px solid #CBD5E1;
+    border-radius: 11px;
+    background: #F8FAFC;
+    color: #0F172A;
+    transition: all 0.16s ease;
+    box-sizing: border-box;
+    outline: none;
+    padding: 0;
+  }
+
+  .portal-otp-box:hover {
+    border-color: #94A3B8;
+  }
+
+  .portal-otp-box.is-filled {
+    border-color: #00594E;
+    background: #FFFFFF;
+  }
+
+  .portal-otp-box:focus {
+    border-color: #00594E;
+    background: #FFFFFF;
+    box-shadow: 0 0 0 3px rgba(0, 89, 78, 0.12);
   }
 
   .portal-help-text {
-    font-size: 0.70rem;
-    color: var(--uni-text-muted);
+    font-size: 0.72rem;
+    color: #64748B;
     line-height: 1.35;
-    margin-top: 3px;
+    margin-top: 2px;
   }
 
   .portal-error-box {
-    background: #fef2f2;
-    border: 1px solid #fecaca;
-    border-left: 4px solid #dc2626;
-    color: #b91c1c;
+    background: #FEF2F2;
+    border: 1px solid #FECACA;
+    border-left: 4px solid #DC2626;
+    color: #B91C1C;
     padding: 10px 14px;
-    border-radius: 8px;
-    font-size: 0.80rem;
+    border-radius: 10px;
+    font-size: 0.82rem;
     font-weight: 600;
     line-height: 1.4;
   }
 
   .btn-portal-submit {
     width: 100%;
-    padding: 13px 20px;
-    background: var(--uni-green-primary);
-    color: #ffffff;
+    height: 46px;
+    padding: 0 20px;
+    background: #00594E;
+    color: #FFFFFF;
     border: none;
-    border-radius: 10px;
+    border-radius: 12px;
     font-size: 0.94rem;
-    font-weight: 750;
+    font-weight: 700;
     font-family: inherit;
     cursor: pointer;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    box-shadow: 0 4px 14px rgba(0, 89, 78, 0.25);
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    margin-top: 6px;
+    box-shadow: 0 6px 16px -4px rgba(0, 89, 78, 0.3);
+    transition: background-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+    margin-top: 4px;
   }
 
-  .btn-portal-submit:hover {
-    background: var(--uni-green-90);
-    box-shadow: 0 6px 18px rgba(0, 89, 78, 0.35);
-    transform: translateY(-2px);
+  .btn-portal-submit:hover:not(:disabled) {
+    background: #00463E;
+    box-shadow: 0 10px 22px -6px rgba(0, 89, 78, 0.38);
+    transform: translateY(-1px);
   }
 
-  .portal-login-footer-info {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    margin-top: 20px;
-    font-size: 0.70rem;
-    color: #94a3b8;
-    text-align: center;
-  }
-
-  .portal-login-footer-info svg {
-    color: #006837;
-    flex-shrink: 0;
+  .btn-portal-submit:disabled {
+    opacity: 0.85;
+    cursor: not-allowed;
   }
 
   /* ==========================================================================
@@ -1534,11 +1737,38 @@ import ModalSubidaArchivo from '@components/ModalSubidaArchivo.astro';
   /* ==========================================================================
      RESPONSIVE BREAKPOINTS
      ========================================================================== */
+  @media (max-width: 860px) {
+    .portal-card-login {
+      margin: 12px auto;
+    }
+    .split-card-grid {
+      grid-template-columns: 1fr;
+      min-height: auto;
+    }
+    .split-brand-panel {
+      padding: 28px 24px;
+      gap: 20px;
+    }
+    .split-form-panel {
+      padding: 28px 22px;
+    }
+  }
+
   @media (max-width: 768px) {
+    .portal-top-header {
+      padding: 10px 16px;
+    }
+    .portal-header-divider,
+    .portal-brand-kicker {
+      display: none;
+    }
+    .portal-stepper-container {
+      padding: 12px 16px;
+    }
     .portal-stepper-inner {
       flex-direction: column;
       align-items: flex-start;
-      gap: 12px;
+      gap: 10px;
     }
     .stepper-line {
       display: none;
@@ -1554,6 +1784,16 @@ import ModalSubidaArchivo from '@components/ModalSubidaArchivo.astro';
     .btn-confirm-upload {
       width: 100%;
       justify-content: center;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .portal-otp-grid {
+      gap: 6px;
+    }
+    .portal-otp-box {
+      height: 46px;
+      font-size: 1.1rem;
     }
   }
 </style>
@@ -1591,25 +1831,155 @@ import ModalSubidaArchivo from '@components/ModalSubidaArchivo.astro';
   const inputEmail = document.getElementById('portal-input-email') as HTMLInputElement;
   const inputCodigo = document.getElementById('portal-input-codigo') as HTMLInputElement;
   const inputPin = document.getElementById('portal-input-pin') as HTMLInputElement;
+  const otpBoxes = Array.from(document.querySelectorAll<HTMLInputElement>('.portal-otp-box'));
+
+  const submitDefaultHtml =
+    '<span>Validar Acceso y Continuar</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
+
+  function syncOtpToHidden(): string {
+    const pinValue = otpBoxes
+      .map((box) => {
+        const cleanDigit = (box.value || '').replace(/\D/g, '').slice(0, 1);
+        box.value = cleanDigit;
+        box.classList.toggle('is-filled', cleanDigit.length === 1);
+        return cleanDigit;
+      })
+      .join('');
+    if (inputPin) {
+      inputPin.value = pinValue;
+    }
+    return pinValue;
+  }
+
+  function fillOtpFromString(rawValue: string, startIndex = 0, shouldFocus = true) {
+    const digits = String(rawValue || '').replace(/\D/g, '');
+    if (!digits) return;
+    const effectiveStart = digits.length >= otpBoxes.length ? 0 : Math.max(0, Math.min(startIndex, otpBoxes.length - 1));
+    for (let i = 0; i < digits.length && effectiveStart + i < otpBoxes.length; i++) {
+      const targetBox = otpBoxes[effectiveStart + i];
+      const ch = digits.charAt(i);
+      if (targetBox && ch) targetBox.value = ch;
+    }
+    syncOtpToHidden();
+    if (shouldFocus) {
+      const nextIdx = Math.min(otpBoxes.length - 1, effectiveStart + digits.length);
+      otpBoxes[nextIdx]?.focus();
+      otpBoxes[nextIdx]?.select();
+    }
+  }
+
+  function clearOtpBoxes() {
+    otpBoxes.forEach((box) => {
+      box.value = '';
+      box.classList.remove('is-filled');
+    });
+    if (inputPin) inputPin.value = '';
+  }
+
+  otpBoxes.forEach((box, idx) => {
+    box.addEventListener('focus', () => {
+      box.select();
+    });
+
+    box.addEventListener('input', () => {
+      const onlyDigits = (box.value || '').replace(/\D/g, '');
+      if (onlyDigits.length > 1) {
+        fillOtpFromString(onlyDigits, idx, true);
+        return;
+      }
+      box.value = onlyDigits;
+      syncOtpToHidden();
+      if (onlyDigits && idx < otpBoxes.length - 1) {
+        otpBoxes[idx + 1]?.focus();
+        otpBoxes[idx + 1]?.select();
+      }
+    });
+
+    box.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace') {
+        if (!box.value && idx > 0) {
+          e.preventDefault();
+          const prevBox = otpBoxes[idx - 1];
+          if (prevBox) prevBox.value = '';
+          syncOtpToHidden();
+          prevBox?.focus();
+        } else {
+          window.setTimeout(() => syncOtpToHidden(), 0);
+        }
+        return;
+      }
+      if (e.key === 'ArrowLeft' && idx > 0) {
+        e.preventDefault();
+        otpBoxes[idx - 1]?.focus();
+        otpBoxes[idx - 1]?.select();
+        return;
+      }
+      if (e.key === 'ArrowRight' && idx < otpBoxes.length - 1) {
+        e.preventDefault();
+        otpBoxes[idx + 1]?.focus();
+        otpBoxes[idx + 1]?.select();
+      }
+    });
+
+    box.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const pasted = e.clipboardData?.getData('text') || '';
+      fillOtpFromString(pasted, idx, true);
+    });
+  });
 
   if (paramEmail && inputEmail) inputEmail.value = paramEmail.trim();
   if (paramCodigo && inputCodigo) inputCodigo.value = paramCodigo.replace(/\s+/g, '').toUpperCase().trim();
-  if (paramPin && inputPin) inputPin.value = paramPin.replace(/\s+/g, '').trim();
+  if (paramPin) fillOtpFromString(paramPin, 0, false);
 
   // 1. Manejo del Login de Responsables
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const email = (document.getElementById('portal-input-email') as HTMLInputElement)?.value.trim().toLowerCase();
-      const codigo = (document.getElementById('portal-input-codigo') as HTMLInputElement)?.value.replace(/\s+/g, '').toUpperCase().trim();
-      const pin = (document.getElementById('portal-input-pin') as HTMLInputElement)?.value.replace(/\s+/g, '').trim();
+      const email = (document.getElementById('portal-input-email') as HTMLInputElement)?.value.trim().toLowerCase() || '';
+      const codigo = (document.getElementById('portal-input-codigo') as HTMLInputElement)?.value.replace(/\s+/g, '').toUpperCase().trim() || '';
+      const pin = syncOtpToHidden() || (document.getElementById('portal-input-pin') as HTMLInputElement)?.value.replace(/\s+/g, '').trim() || '';
 
       if (loginError) loginError.style.display = 'none';
+
+      if (!email || !email.includes('@')) {
+        const msg = 'Ingrese un correo institucional válido de la oficina requerida.';
+        if (loginError) {
+          loginError.textContent = msg;
+          loginError.style.display = 'block';
+        }
+        showPortalToast(msg, 'warning');
+        inputEmail?.focus();
+        return;
+      }
+
+      if (!codigo) {
+        const msg = 'Ingrese el código único temporal de acceso.';
+        if (loginError) {
+          loginError.textContent = msg;
+          loginError.style.display = 'block';
+        }
+        showPortalToast(msg, 'warning');
+        inputCodigo?.focus();
+        return;
+      }
+
+      if (pin.length !== 6) {
+        const msg = 'Complete los 6 dígitos del PIN de seguridad.';
+        if (loginError) {
+          loginError.textContent = msg;
+          loginError.style.display = 'block';
+        }
+        showPortalToast(msg, 'warning');
+        const firstEmpty = otpBoxes.find((b) => !b.value) || otpBoxes[0];
+        firstEmpty?.focus();
+        return;
+      }
 
       const submitBtn = document.getElementById('btn-portal-enter') as HTMLButtonElement | null;
       if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span>Verificando credenciales y PIN...</span>';
+        submitBtn.innerHTML = '<span>Validando acceso...</span>';
       }
 
       try {
@@ -1622,19 +1992,22 @@ import ModalSubidaArchivo from '@components/ModalSubidaArchivo.astro';
         const resData = await res.json();
 
         if (!res.ok || !resData.success) {
+          const errMsg = resData.message || 'Código de acceso, correo o PIN no válidos.';
           if (loginError) {
-            loginError.textContent = resData.message || 'Código de acceso o correo institucional no válidos.';
+            loginError.textContent = errMsg;
             loginError.style.display = 'block';
           }
+          showPortalToast(errMsg, 'error');
           if (submitBtn) {
             submitBtn.disabled = false;
-            submitBtn.innerHTML = '<span>Validar Acceso y Continuar</span>';
+            submitBtn.innerHTML = submitDefaultHtml;
           }
           return;
         }
 
         // Sesión autorizada
         activeSessionData = resData.data;
+        showPortalToast('Acceso verificado correctamente.', 'success');
 
         // Transición fluida Crossfade
         if (typeof document !== 'undefined' && 'startViewTransition' in document) {
@@ -1650,14 +2023,16 @@ import ModalSubidaArchivo from '@components/ModalSubidaArchivo.astro';
 
       } catch (err) {
         console.error(err);
+        const netMsg = 'Error de conexión con el servidor.';
         if (loginError) {
-          loginError.textContent = 'Error de conexión con el servidor.';
+          loginError.textContent = netMsg;
           loginError.style.display = 'block';
         }
+        showPortalToast(netMsg, 'error');
       } finally {
         if (submitBtn) {
           submitBtn.disabled = false;
-          submitBtn.innerHTML = '<span>Validar Acceso y Continuar</span>';
+          submitBtn.innerHTML = submitDefaultHtml;
         }
       }
     });
@@ -2334,6 +2709,8 @@ import ModalSubidaArchivo from '@components/ModalSubidaArchivo.astro';
     if (loginSection) loginSection.style.display = 'block';
     if (uploadSection) uploadSection.style.display = 'none';
     if (loginForm) (loginForm as HTMLFormElement).reset();
+    clearOtpBoxes();
+    if (loginError) loginError.style.display = 'none';
 
     // Reset Stepper
     if (stepNode1) {
@@ -2349,6 +2726,7 @@ import ModalSubidaArchivo from '@components/ModalSubidaArchivo.astro';
     if (progressBar) {
       progressBar.style.width = '33%';
     }
+    showPortalToast('Sesión del portal finalizada.', 'info');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 </script>
