@@ -56,15 +56,18 @@ const canLeftStack = canPeticiones || canMiembros || canNormas || canJuridicos |
 const canRightStack = canPeticiones || canPlaneacion || canConvenios || canAuditoria;
 const isSingleSplit = (canLeftStack && !canRightStack) || (!canLeftStack && canRightStack);
 
-const hasVisibleKpis =
-  canPeticiones ||
-  canNormas ||
-  canMiembros ||
-  canJuridicos ||
-  canJuzgamiento ||
-  canPlaneacion ||
-  canConvenios ||
-  canProgramas;
+const visibleKpiFlags = [
+  canPeticiones,
+  canNormas,
+  canMiembros,
+  canJuridicos,
+  canJuzgamiento,
+  canPlaneacion,
+  canConvenios,
+  canProgramas,
+];
+const visibleKpiCount = visibleKpiFlags.filter(Boolean).length;
+const hasVisibleKpis = visibleKpiCount > 0;
 
 // Cálculo del medidor circular SVG para tasa de respuesta
 const gaugeRadius = 38;
@@ -191,31 +194,49 @@ const categoryLabelsMap: Record<string, string> = {
     <!-- ================================================================= -->
     {
       hasVisibleKpis && (
-        <section class="kpi-grid-6 bento-kpi-grid" aria-label="Indicadores Clave de Gestión">
+        <section
+          class={`kpi-grid-6 bento-kpi-grid ${visibleKpiCount > 0 && visibleKpiCount <= 3 ? 'is-compact-rbac' : ''}`}
+          aria-label="Indicadores Clave de Gestión"
+        >
 
           {
             canPeticiones && (
               <a
                 href="/peticiones"
-                class="kpi-card bento-kpi-card gold interactive"
+                class={`kpi-card bento-kpi-card interactive ${dashSnap.totalPendientes > 0 ? 'accent-gold' : 'accent-green'}`}
                 title="Ir al módulo de Peticiones y Expedientes"
               >
-                <div class="kpi-accent-bar gold"></div>
-                <div class="kpi-header">
-                  <span class="kpi-title">Peticiones / Expedientes</span>
-                  <div class="kpi-icon-wrap gold">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                <div class="kpi-zone-top">
+                  <div class="kpi-identity-left">
+                    <div class={`kpi-icon-box ${dashSnap.totalPendientes > 0 ? 'tone-gold' : 'tone-green'}`}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    </div>
+                    <span class="kpi-title-clean">Peticiones / Expedientes</span>
+                  </div>
+                  <svg class="kpi-arrow-diag" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M7 17L17 7M17 7H8M17 7V16"/></svg>
+                </div>
+
+                <div class="kpi-zone-center">
+                  <div class="kpi-value-row">
+                    <span class="kpi-number-main tabular-nums" id="kpi-total-docs">{dashSnap.totalPeticiones}</span>
+                    <span class={`kpi-status-pill ${dashSnap.totalPendientes > 0 ? 'pill-gold' : 'pill-green'}`} id="kpi-pending-docs">
+                      <span class="kpi-pill-dot"></span>
+                      <span>{dashSnap.totalPendientes === 1 ? '1 Pendiente' : `${dashSnap.totalPendientes} Pendientes`}</span>
+                    </span>
+                  </div>
+                  <div class="kpi-mini-progress-track" aria-hidden="true">
+                    <div
+                      class="kpi-mini-progress-fill"
+                      style={`width: ${Math.min(100, Math.max(0, dashSnap.responseRate))}%; background: ${dashSnap.responseRate >= 50 ? '#00594E' : '#B5A160'};`}
+                    ></div>
                   </div>
                 </div>
-                <div class="kpi-value-row">
-                  <div class="kpi-number tabular-nums" id="kpi-total-docs">{dashSnap.totalPeticiones}</div>
-                  <span class="kpi-trend-badge warning" id="kpi-pending-docs">
-                    {dashSnap.totalPendientes} Pendientes
+
+                <div class="kpi-zone-bottom">
+                  <span class="kpi-foot-left">Drive: {dashSnap.peticionesConDriveCount}/{dashSnap.totalPeticiones}</span>
+                  <span class={`kpi-foot-right ${dashSnap.totalPendientes > 0 ? 'tone-gold' : 'tone-green'}`} id="kpi-response-rate">
+                    {dashSnap.responseRate}% Resuelto
                   </span>
-                </div>
-                <div class="kpi-footer">
-                  <span class="footer-label">Drive: {dashSnap.peticionesConDriveCount}/{dashSnap.totalPeticiones}</span>
-                  <span class="footer-val gold" id="kpi-response-rate">{dashSnap.responseRate}% Resuelto</span>
                 </div>
               </a>
             )
@@ -225,23 +246,32 @@ const categoryLabelsMap: Record<string, string> = {
             canNormas && (
               <a
                 href="/normas"
-                class="kpi-card bento-kpi-card emerald interactive"
+                class="kpi-card bento-kpi-card interactive accent-green"
                 title="Ir a Cuerpos Colegiados"
               >
-                <div class="kpi-accent-bar emerald"></div>
-                <div class="kpi-header">
-                  <span class="kpi-title">Cuerpos Colegiados</span>
-                  <div class="kpi-icon-wrap emerald">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                <div class="kpi-zone-top">
+                  <div class="kpi-identity-left">
+                    <div class="kpi-icon-box tone-green">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                    </div>
+                    <span class="kpi-title-clean">Cuerpos Colegiados</span>
+                  </div>
+                  <svg class="kpi-arrow-diag" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M7 17L17 7M17 7H8M17 7V16"/></svg>
+                </div>
+
+                <div class="kpi-zone-center">
+                  <div class="kpi-value-row">
+                    <span class="kpi-number-main tabular-nums" id="kpi-total-normas">{dashSnap.totalNormas}</span>
+                    <span class="kpi-status-pill pill-green">
+                      <span class="kpi-pill-dot"></span>
+                      <span>{dashSnap.normasVigentesCount === 1 ? '1 Vigente' : `${dashSnap.normasVigentesCount} Vigentes`}</span>
+                    </span>
                   </div>
                 </div>
-                <div class="kpi-value-row">
-                  <div class="kpi-number tabular-nums" id="kpi-total-normas">{dashSnap.totalNormas}</div>
-                  <span class="kpi-trend-badge success">{dashSnap.normasVigentesCount} Vigentes</span>
-                </div>
-                <div class="kpi-footer">
-                  <span class="footer-label">CSU {dashSnap.normasPorOrgano.csu} &bull; CA {dashSnap.normasPorOrgano.ca}</span>
-                  <span class="footer-val emerald">Rec. {dashSnap.normasPorOrgano.rectoria}</span>
+
+                <div class="kpi-zone-bottom">
+                  <span class="kpi-foot-left">CSU {dashSnap.normasPorOrgano.csu} &bull; CA {dashSnap.normasPorOrgano.ca}</span>
+                  <span class="kpi-foot-right tone-green">Rectoría {dashSnap.normasPorOrgano.rectoria}</span>
                 </div>
               </a>
             )
@@ -251,27 +281,36 @@ const categoryLabelsMap: Record<string, string> = {
             canMiembros && (
               <a
                 href="/miembros-consejo"
-                class="kpi-card bento-kpi-card teal interactive"
+                class={`kpi-card bento-kpi-card interactive ${dashSnap.miembrosProximosVencer.length > 0 ? 'accent-gold' : 'accent-green'}`}
                 title="Ir a Miembros de Consejo"
               >
-                <div class="kpi-accent-bar teal"></div>
-                <div class="kpi-header">
-                  <span class="kpi-title">Miembros de Consejo</span>
-                  <div class="kpi-icon-wrap teal">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <div class="kpi-zone-top">
+                  <div class="kpi-identity-left">
+                    <div class={`kpi-icon-box ${dashSnap.miembrosProximosVencer.length > 0 ? 'tone-gold' : 'tone-green'}`}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    </div>
+                    <span class="kpi-title-clean">Miembros de Consejo</span>
+                  </div>
+                  <svg class="kpi-arrow-diag" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M7 17L17 7M17 7H8M17 7V16"/></svg>
+                </div>
+
+                <div class="kpi-zone-center">
+                  <div class="kpi-value-row">
+                    <span class="kpi-number-main tabular-nums" id="kpi-total-miembros">{dashSnap.miembrosActivosCount}</span>
+                    <span class={`kpi-status-pill ${dashSnap.miembrosProximosVencer.length > 0 ? 'pill-gold' : 'pill-green'}`}>
+                      <span class="kpi-pill-dot"></span>
+                      <span>
+                        {dashSnap.miembrosProximosVencer.length > 0
+                          ? `${dashSnap.miembrosProximosVencer.length} Próx. Vencer`
+                          : 'Activos Vigentes'}
+                      </span>
+                    </span>
                   </div>
                 </div>
-                <div class="kpi-value-row">
-                  <div class="kpi-number tabular-nums" id="kpi-total-miembros">{dashSnap.miembrosActivosCount}</div>
-                  <span class={`kpi-trend-badge ${dashSnap.miembrosProximosVencer.length > 0 ? 'warning' : 'success'}`}>
-                    {dashSnap.miembrosProximosVencer.length > 0
-                      ? `${dashSnap.miembrosProximosVencer.length} Próx. Vencer`
-                      : 'Activos Vigentes'}
-                  </span>
-                </div>
-                <div class="kpi-footer">
-                  <span class="footer-label">Archivo histórico</span>
-                  <span class="footer-val teal">{dashSnap.miembrosArchivoCount} en archivo</span>
+
+                <div class="kpi-zone-bottom">
+                  <span class="kpi-foot-left">Archivo histórico</span>
+                  <span class="kpi-foot-right tone-green">{dashSnap.miembrosArchivoCount} en archivo</span>
                 </div>
               </a>
             )
@@ -281,23 +320,36 @@ const categoryLabelsMap: Record<string, string> = {
             canJuridicos && (
               <a
                 href="/asuntos-juridicos"
-                class="kpi-card bento-kpi-card emerald interactive"
+                class="kpi-card bento-kpi-card interactive accent-green"
                 title="Ir a Asuntos Jurídicos"
               >
-                <div class="kpi-accent-bar emerald"></div>
-                <div class="kpi-header">
-                  <span class="kpi-title">Asuntos Jurídicos</span>
-                  <div class="kpi-icon-wrap emerald">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>
+                <div class="kpi-zone-top">
+                  <div class="kpi-identity-left">
+                    <div class="kpi-icon-box tone-green">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>
+                    </div>
+                    <span class="kpi-title-clean">Asuntos Jurídicos</span>
+                  </div>
+                  <svg class="kpi-arrow-diag" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M7 17L17 7M17 7H8M17 7V16"/></svg>
+                </div>
+
+                <div class="kpi-zone-center">
+                  <div class="kpi-value-row">
+                    <span class="kpi-number-main tabular-nums" id="kpi-total-juridicos-dash">{dashSnap.totalJuridicos}</span>
+                    <span class="kpi-status-pill pill-green">
+                      <span class="kpi-pill-dot"></span>
+                      <span>
+                        {dashSnap.totalJuridicoCarpetas === 1
+                          ? '1 Carpeta'
+                          : `${dashSnap.totalJuridicoCarpetas} Carpetas`}
+                      </span>
+                    </span>
                   </div>
                 </div>
-                <div class="kpi-value-row">
-                  <div class="kpi-number tabular-nums" id="kpi-total-juridicos-dash">{dashSnap.totalJuridicos}</div>
-                  <span class="kpi-trend-badge success">{dashSnap.totalJuridicoCarpetas} Carpetas</span>
-                </div>
-                <div class="kpi-footer">
-                  <span class="footer-label">Concep. {dashSnap.juridicosPorCategoria.conceptos_internos} &bull; Lit. {dashSnap.juridicosPorCategoria.litigios_judiciales}</span>
-                  <span class="footer-val emerald">Aud. {dashSnap.juridicosPorCategoria.auditoria_entes_control}</span>
+
+                <div class="kpi-zone-bottom">
+                  <span class="kpi-foot-left">Concep. {dashSnap.juridicosPorCategoria.conceptos_internos} &bull; Lit. {dashSnap.juridicosPorCategoria.litigios_judiciales}</span>
+                  <span class="kpi-foot-right tone-green">Aud. {dashSnap.juridicosPorCategoria.auditoria_entes_control}</span>
                 </div>
               </a>
             )
@@ -307,23 +359,32 @@ const categoryLabelsMap: Record<string, string> = {
             canJuzgamiento && (
               <a
                 href="/juzgamiento"
-                class="kpi-card bento-kpi-card gold interactive"
+                class={`kpi-card bento-kpi-card interactive ${(dashSnap.juzgamientoProximosVencerCount > 0 || dashSnap.juzgamientoActivosCount > 0) ? 'accent-gold' : 'accent-green'}`}
                 title="Ir a Fase de Juzgamiento Disciplinario"
               >
-                <div class="kpi-accent-bar gold"></div>
-                <div class="kpi-header">
-                  <span class="kpi-title">Juzgamiento Disciplinario</span>
-                  <div class="kpi-icon-wrap gold">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <div class="kpi-zone-top">
+                  <div class="kpi-identity-left">
+                    <div class={`kpi-icon-box ${(dashSnap.juzgamientoProximosVencerCount > 0 || dashSnap.juzgamientoActivosCount > 0) ? 'tone-gold' : 'tone-green'}`}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    </div>
+                    <span class="kpi-title-clean">Juzgamiento Disciplinario</span>
+                  </div>
+                  <svg class="kpi-arrow-diag" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M7 17L17 7M17 7H8M17 7V16"/></svg>
+                </div>
+
+                <div class="kpi-zone-center">
+                  <div class="kpi-value-row">
+                    <span class="kpi-number-main tabular-nums" id="kpi-total-juzgamiento-dash">{dashSnap.juzgamientoActivosCount}</span>
+                    <span class={`kpi-status-pill ${dashSnap.juzgamientoSegundaInstanciaCount > 0 ? 'pill-gold' : 'pill-green'}`}>
+                      <span class="kpi-pill-dot"></span>
+                      <span>{dashSnap.juzgamientoSegundaInstanciaCount} en 2da Inst.</span>
+                    </span>
                   </div>
                 </div>
-                <div class="kpi-value-row">
-                  <div class="kpi-number tabular-nums" id="kpi-total-juzgamiento-dash">{dashSnap.juzgamientoActivosCount}</div>
-                  <span class="kpi-trend-badge warning">{dashSnap.juzgamientoSegundaInstanciaCount} en 2da Inst.</span>
-                </div>
-                <div class="kpi-footer">
-                  <span class="footer-label">Total procesos: {dashSnap.totalJuzgamiento}</span>
-                  <span class="footer-val gold">{dashSnap.juzgamientoProximosVencerCount} próx. vencer</span>
+
+                <div class="kpi-zone-bottom">
+                  <span class="kpi-foot-left">Total: {dashSnap.totalJuzgamiento}</span>
+                  <span class="kpi-foot-right tone-gold">{dashSnap.juzgamientoProximosVencerCount} próx. a vencer</span>
                 </div>
               </a>
             )
@@ -333,25 +394,40 @@ const categoryLabelsMap: Record<string, string> = {
             canPlaneacion && (
               <a
                 href="/planeacion"
-                class="kpi-card bento-kpi-card green interactive"
+                class="kpi-card bento-kpi-card interactive accent-green"
                 title="Ir a Planeación y Gestión CSU"
               >
-                <div class="kpi-accent-bar green"></div>
-                <div class="kpi-header">
-                  <span class="kpi-title">Planeación y CSU</span>
-                  <div class="kpi-icon-wrap green">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                <div class="kpi-zone-top">
+                  <div class="kpi-identity-left">
+                    <div class="kpi-icon-box tone-green">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                    </div>
+                    <span class="kpi-title-clean">Planeación y CSU</span>
+                  </div>
+                  <svg class="kpi-arrow-diag" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M7 17L17 7M17 7H8M17 7V16"/></svg>
+                </div>
+
+                <div class="kpi-zone-center">
+                  <div class="kpi-value-row">
+                    <span class="kpi-number-main tabular-nums" id="kpi-total-budget-dash">{dashSnap.totalPlaneacion}</span>
+                    <span class="kpi-status-pill pill-neutral">
+                      <span class="kpi-pill-dot"></span>
+                      <span>
+                        {dashSnap.ultimoInformePlaneacion ? `${dashSnap.ultimoInformePlaneacion.ejecucionFormatted} Ejec.` : '0% Ejec.'}
+                      </span>
+                    </span>
+                  </div>
+                  <div class="kpi-mini-progress-track" aria-hidden="true">
+                    <div
+                      class="kpi-mini-progress-fill"
+                      style={`width: ${Math.min(100, Math.max(0, dashSnap.ultimoInformePlaneacion?.ejecucion_pct ?? 0))}%; background: #00594E;`}
+                    ></div>
                   </div>
                 </div>
-                <div class="kpi-value-row">
-                  <div class="kpi-number tabular-nums" id="kpi-total-budget-dash">{dashSnap.totalPlaneacion}</div>
-                  <span class="kpi-trend-badge subtle">
-                    {dashSnap.ultimoInformePlaneacion ? `${dashSnap.ultimoInformePlaneacion.ejecucionFormatted} Ejec.` : '0 Informes'}
-                  </span>
-                </div>
-                <div class="kpi-footer">
-                  <span class="footer-label">Último reporte</span>
-                  <span class="footer-val green">
+
+                <div class="kpi-zone-bottom">
+                  <span class="kpi-foot-left">Último reporte</span>
+                  <span class="kpi-foot-right tone-green">
                     {dashSnap.ultimoInformePlaneacion ? dashSnap.ultimoInformePlaneacion.estado : 'Sin registros'}
                   </span>
                 </div>
@@ -363,27 +439,38 @@ const categoryLabelsMap: Record<string, string> = {
             canConvenios && (
               <a
                 href="/relacionamiento"
-                class="kpi-card bento-kpi-card teal interactive"
+                class={`kpi-card bento-kpi-card interactive ${dashSnap.conveniosProximosVencerCount > 0 ? 'accent-gold' : 'accent-green'}`}
                 title="Ir a Relacionamiento Institucional y Convenios"
               >
-                <div class="kpi-accent-bar teal"></div>
-                <div class="kpi-header">
-                  <span class="kpi-title">Convenios Activos</span>
-                  <div class="kpi-icon-wrap teal">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
+                <div class="kpi-zone-top">
+                  <div class="kpi-identity-left">
+                    <div class={`kpi-icon-box ${dashSnap.conveniosProximosVencerCount > 0 ? 'tone-gold' : 'tone-green'}`}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
+                    </div>
+                    <span class="kpi-title-clean">Convenios Activos</span>
+                  </div>
+                  <svg class="kpi-arrow-diag" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M7 17L17 7M17 7H8M17 7V16"/></svg>
+                </div>
+
+                <div class="kpi-zone-center">
+                  <div class="kpi-value-row">
+                    <span class="kpi-number-main tabular-nums" id="kpi-total-convenios">{dashSnap.conveniosActivosCount}</span>
+                    <span class={`kpi-status-pill ${dashSnap.conveniosProximosVencerCount > 0 ? 'pill-gold' : 'pill-green'}`}>
+                      <span class="kpi-pill-dot"></span>
+                      <span>
+                        {dashSnap.conveniosProximosVencerCount > 0
+                          ? `${dashSnap.conveniosProximosVencerCount} Próx. Vencer`
+                          : `Total: ${dashSnap.totalConvenios}`}
+                      </span>
+                    </span>
                   </div>
                 </div>
-                <div class="kpi-value-row">
-                  <div class="kpi-number tabular-nums" id="kpi-total-convenios">{dashSnap.conveniosActivosCount}</div>
-                  <span class={`kpi-trend-badge ${dashSnap.conveniosProximosVencerCount > 0 ? 'warning' : 'info'}`}>
-                    {dashSnap.conveniosProximosVencerCount > 0
-                      ? `${dashSnap.conveniosProximosVencerCount} Próx. Vencer`
-                      : `Total: ${dashSnap.totalConvenios}`}
+
+                <div class="kpi-zone-bottom">
+                  <span class="kpi-foot-left">Cuantía</span>
+                  <span class={`kpi-foot-right tabular-nums ${dashSnap.conveniosProximosVencerCount > 0 ? 'tone-gold' : 'tone-green'}`}>
+                    {dashSnap.conveniosCuantiaFormateada}
                   </span>
-                </div>
-                <div class="kpi-footer">
-                  <span class="footer-label">Cuantía</span>
-                  <span class="footer-val teal tabular-nums">{dashSnap.conveniosCuantiaFormateada}</span>
                 </div>
               </a>
             )
@@ -393,23 +480,36 @@ const categoryLabelsMap: Record<string, string> = {
             canProgramas && (
               <a
                 href="/programas"
-                class="kpi-card bento-kpi-card green interactive"
+                class="kpi-card bento-kpi-card interactive accent-green"
                 title="Ir a Programas Académicos"
               >
-                <div class="kpi-accent-bar green"></div>
-                <div class="kpi-header">
-                  <span class="kpi-title">Programas Académicos</span>
-                  <div class="kpi-icon-wrap green">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 14l9-5-9-5-9 5 9 5z"/><path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg>
+                <div class="kpi-zone-top">
+                  <div class="kpi-identity-left">
+                    <div class="kpi-icon-box tone-green">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 14l9-5-9-5-9 5 9 5z"/><path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg>
+                    </div>
+                    <span class="kpi-title-clean">Programas Académicos</span>
+                  </div>
+                  <svg class="kpi-arrow-diag" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M7 17L17 7M17 7H8M17 7V16"/></svg>
+                </div>
+
+                <div class="kpi-zone-center">
+                  <div class="kpi-value-row">
+                    <span class="kpi-number-main tabular-nums" id="kpi-total-programas-dash">{dashSnap.totalProgramas}</span>
+                    <span class="kpi-status-pill pill-green">
+                      <span class="kpi-pill-dot"></span>
+                      <span>
+                        {dashSnap.programasActivosCount === 1
+                          ? '1 Activo'
+                          : `${dashSnap.programasActivosCount} Activos`}
+                      </span>
+                    </span>
                   </div>
                 </div>
-                <div class="kpi-value-row">
-                  <div class="kpi-number tabular-nums" id="kpi-total-programas-dash">{dashSnap.totalProgramas}</div>
-                  <span class="kpi-trend-badge success">{dashSnap.programasActivosCount} Activos</span>
-                </div>
-                <div class="kpi-footer">
-                  <span class="footer-label">SACES / MEN</span>
-                  <span class="footer-val green">Oferta Oficial</span>
+
+                <div class="kpi-zone-bottom">
+                  <span class="kpi-foot-left">SACES / MEN</span>
+                  <span class="kpi-foot-right tone-green">Oferta Oficial</span>
                 </div>
               </a>
             )
@@ -1452,116 +1552,253 @@ const categoryLabelsMap: Record<string, string> = {
   }
 
   /* ==========================================================================
-     B. BENTO KPIS GRID (6 TARJETAS)
+     B. BENTO KPIS GRID (4x2 EJECUTIVO, SIN BORDE EN "L")
      ========================================================================== */
   .bento-kpi-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(225px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px;
+    align-items: stretch;
+    width: 100%;
   }
 
-  .bento-kpi-card {
+  .bento-kpi-grid.is-compact-rbac {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  }
+
+  @media (max-width: 1200px) {
+    .bento-kpi-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 640px) {
+    .bento-kpi-grid,
+    .bento-kpi-grid.is-compact-rbac {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .dash-promax-workspace .bento-kpi-grid .bento-kpi-card {
     position: relative;
-    background: #ffffff;
-    border: 1px solid rgba(15, 23, 42, 0.07);
-    border-radius: 18px;
-    padding: 18px 20px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 8px 24px -4px rgba(0, 0, 0, 0.04);
-    text-decoration: none;
+    background: #FFFFFF !important;
+    background-color: #FFFFFF !important;
+    border: 1px solid #E2E8F0 !important;
+    border-top: 3px solid #00594E !important;
+    border-radius: 16px !important;
+    padding: 0 !important;
+    min-height: 0 !important;
+    gap: 0 !important;
     overflow: hidden;
-    transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1),
-                box-shadow 0.24s cubic-bezier(0.16, 1, 0.3, 1),
-                border-color 0.24s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  .bento-kpi-card:hover {
-    transform: translateY(-3px) scale(1.008);
-    box-shadow: 0 12px 28px -4px rgba(0, 89, 78, 0.12);
-    border-color: rgba(0, 89, 78, 0.3);
-  }
-
-  .kpi-accent-bar {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-  }
-  .kpi-accent-bar.gold { background: linear-gradient(90deg, #B5A160, #786832); }
-  .kpi-accent-bar.emerald,
-  .kpi-accent-bar.teal,
-  .kpi-accent-bar.green { background: linear-gradient(90deg, #00594E, #004239); }
-
-  .kpi-header {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    justify-content: flex-start;
+    height: 100%;
+    text-decoration: none;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03) !important;
+    transition: transform 0.2s ease,
+                box-shadow 0.2s ease,
+                border-color 0.2s ease;
+  }
+
+  /* Anular barra lateral izquierda (::before en global.css) que creaba borde en "L" */
+  .dash-promax-workspace .bento-kpi-grid .bento-kpi-card::before {
+    content: none !important;
+    display: none !important;
+  }
+
+  .dash-promax-workspace .bento-kpi-grid .bento-kpi-card.accent-gold {
+    border-top-color: #B5A160 !important;
+  }
+
+  .dash-promax-workspace .bento-kpi-grid .bento-kpi-card.accent-green {
+    border-top-color: #00594E !important;
+  }
+
+  .dash-promax-workspace .bento-kpi-grid .bento-kpi-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 24px -8px rgba(0, 89, 78, 0.14) !important;
+    border-color: rgba(0, 89, 78, 0.35) !important;
+  }
+
+  .dash-promax-workspace .bento-kpi-grid .bento-kpi-card.accent-gold:hover {
+    border-top-color: #B5A160 !important;
+  }
+
+  .dash-promax-workspace .bento-kpi-grid .bento-kpi-card.accent-green:hover {
+    border-top-color: #00594E !important;
+  }
+
+  /* Zona 1: Identidad del módulo */
+  .kpi-zone-top {
+    padding: 18px 18px 0 18px;
+    display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 12px;
+    justify-content: space-between;
+    gap: 10px;
   }
-  .kpi-title {
-    font-size: 0.82rem;
-    font-weight: 750;
-    color: #475569;
+
+  .kpi-identity-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
   }
-  .kpi-icon-wrap {
-    width: 34px;
-    height: 34px;
-    border-radius: 9px;
+
+  .kpi-icon-box {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
   }
-  .kpi-icon-wrap.gold { background: #F7F5EE; color: #786832; border: 1px solid #DBD2B0; }
-  .kpi-icon-wrap.emerald,
-  .kpi-icon-wrap.teal,
-  .kpi-icon-wrap.green { background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; }
+
+  .kpi-icon-box.tone-green {
+    background: #ECFDF5;
+    color: #00594E;
+  }
+
+  .kpi-icon-box.tone-gold {
+    background: #FEF9EC;
+    color: #9A7B2C;
+  }
+
+  .kpi-title-clean {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #334155;
+    line-height: 1.25;
+  }
+
+  .kpi-arrow-diag {
+    color: #94A3B8;
+    flex-shrink: 0;
+    transition: color 0.2s ease, transform 0.2s ease;
+  }
+
+  .bento-kpi-card:hover .kpi-arrow-diag {
+    color: #00594E;
+    transform: translate(2px, -2px);
+  }
+
+  /* Zona 2: Cifra protagonista + Badge semántico + Barra discreta */
+  .kpi-zone-center {
+    padding: 16px 18px 14px 18px;
+  }
 
   .kpi-value-row {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 12px;
-  }
-  .kpi-number {
-    font-size: 1.95rem;
-    font-weight: 850;
-    color: #0f172a;
-    line-height: 1;
-    letter-spacing: -0.04em;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 0;
   }
 
-  .kpi-trend-badge {
-    font-size: 0.70rem;
+  .kpi-number-main {
+    font-size: 2.15rem;
     font-weight: 800;
-    padding: 3px 8px;
-    border-radius: 6px;
-    letter-spacing: 0.02em;
+    color: #0F172A;
+    line-height: 1;
+    letter-spacing: -0.03em;
   }
-  .kpi-trend-badge.warning { background: #F7F5EE; color: #786832; border: 1px solid #DBD2B0; }
-  .kpi-trend-badge.success { background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; }
-  .kpi-trend-badge.info { background: #F2F7F6; color: #00594E; border: 1px solid #B2CFCB; }
-  .kpi-trend-badge.subtle { background: #F8FAFC; color: #475569; border: 1px solid #E2E8F0; }
 
-  .kpi-footer {
-    display: flex;
-    justify-content: space-between;
+  .kpi-status-pill {
+    display: inline-flex;
     align-items: center;
-    padding-top: 10px;
-    border-top: 1px solid #f1f5f9;
+    gap: 6px;
+    white-space: nowrap;
     font-size: 0.74rem;
-  }
-  .footer-label {
-    color: #64748b;
     font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 9999px;
   }
-  .footer-val {
-    font-weight: 750;
+
+  .kpi-pill-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    flex-shrink: 0;
   }
-  .footer-val.gold { color: #786832; }
-  .footer-val.emerald,
-  .footer-val.teal,
-  .footer-val.green { color: #00594E; }
+
+  .kpi-status-pill.pill-green {
+    background: #ECFDF5;
+    color: #00594E;
+  }
+  .kpi-status-pill.pill-green .kpi-pill-dot {
+    background: #00594E;
+  }
+
+  .kpi-status-pill.pill-gold {
+    background: #FEF8E7;
+    color: #8A6D1B;
+  }
+  .kpi-status-pill.pill-gold .kpi-pill-dot {
+    background: #B5A160;
+  }
+
+  .kpi-status-pill.pill-neutral {
+    background: #F1F5F9;
+    color: #334155;
+  }
+  .kpi-status-pill.pill-neutral .kpi-pill-dot {
+    background: #64748B;
+  }
+
+  .kpi-mini-progress-track {
+    height: 5px;
+    border-radius: 9999px;
+    background: #E2E8F0;
+    overflow: hidden;
+    margin-top: 12px;
+    width: 100%;
+  }
+
+  .kpi-mini-progress-fill {
+    height: 100%;
+    border-radius: 9999px;
+    transition: width 0.3s ease;
+  }
+
+  /* Zona 3: Franja inferior diferenciada */
+  .kpi-zone-bottom {
+    margin-top: auto;
+    background: #F8FAFC;
+    border-top: 1px solid #EEF2F5;
+    padding: 11px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 0.76rem;
+  }
+
+  .kpi-foot-left {
+    color: #64748B;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+
+  .kpi-foot-right {
+    font-weight: 700;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .kpi-foot-right.tone-green {
+    color: #00594E;
+  }
+
+  .kpi-foot-right.tone-gold {
+    color: #9A7B2C;
+  }
 
   /* ==========================================================================
      C. SPLIT GRID PRINCIPAL (REPARTO + EFICACIA Y SEMÁFORO)
