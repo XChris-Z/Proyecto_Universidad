@@ -49,6 +49,12 @@ const { title = 'SGD Unitrópico - Sistema de Gestión Documental' } = Astro.pro
     }
   </script>
   <slot />
+  <!-- Contenedor Único Global Toast (Isla Dinámica Superior) -->
+  <div class="toast-container" id="global-toast-container" aria-live="polite" aria-atomic="false"></div>
+  <script>
+    import { initGlobalToast } from '@scripts/toast';
+    initGlobalToast();
+  </script>
 </body>
 </html>
 
